@@ -1,0 +1,3125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股海沉浮 - 模拟炒股训练</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="data/stocks_data.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1a2332;
+            --bg-card: rgba(26, 35, 50, 0.8);
+            --border-color: rgba(59, 130, 246, 0.2);
+            --border-glow: rgba(59, 130, 246, 0.5);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --gain-color: #ef4444;
+            --gain-glow: rgba(239, 68, 68, 0.4);
+            --loss-color: #22c55e;
+            --loss-glow: rgba(34, 197, 94, 0.4);
+            --warning-color: #f59e0b;
+            --grid-line: rgba(59, 130, 246, 0.1);
+        }
+
+        /* ===== Light Theme ===== */
+        [data-theme="light"] {
+            --bg-primary: #f1f5f9;
+            --bg-secondary: #e2e8f0;
+            --bg-tertiary: #cbd5e1;
+            --bg-card: rgba(255, 255, 255, 0.82);
+            --border-color: rgba(100, 116, 139, 0.18);
+            --border-glow: rgba(59, 130, 246, 0.3);
+            --text-primary: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-blue: #2563eb;
+            --accent-cyan: #0891b2;
+            --gain-color: #dc2626;
+            --gain-glow: rgba(220, 38, 38, 0.15);
+            --loss-color: #16a34a;
+            --loss-glow: rgba(22, 163, 74, 0.15);
+            --warning-color: #d97706;
+            --grid-line: rgba(100, 116, 139, 0.08);
+        }
+
+        [data-theme="light"] .bg-grid { opacity: 0.25; }
+
+        [data-theme="light"] .bg-gradient {
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+        }
+
+        [data-theme="light"] .logo { text-shadow: none; }
+        [data-theme="light"] .pattern-card { background: rgba(255, 255, 255, 0.65); }
+        [data-theme="light"] .pattern-illust { background: rgba(241, 245, 249, 0.9); border-color: rgba(100, 116, 139, 0.1); }
+        [data-theme="light"] .bs-report { background: rgba(241, 245, 249, 0.8); }
+        [data-theme="light"] .best-point-card { background: rgba(241, 245, 249, 0.6); }
+        [data-theme="light"] .academy-tabs { background: rgba(241, 245, 249, 0.8); }
+        [data-theme="light"] .start-btn { box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25); }
+        [data-theme="light"] ::-webkit-scrollbar-track { background: #e2e8f0; }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 24px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+            transform: scale(1.08);
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--text-secondary);
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.3s ease;
+        }
+
+        .theme-toggle:hover svg { stroke: var(--accent-cyan); }
+
+        .theme-toggle .icon-sun { display: block; }
+        .theme-toggle .icon-moon { display: none; }
+        [data-theme="light"] .theme-toggle .icon-sun { display: none; }
+        [data-theme="light"] .theme-toggle .icon-moon { display: block; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background grid */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 10px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .header.compact {
+            padding: 8px 0;
+            margin-bottom: 8px;
+        }
+
+        .header.compact .logo {
+            font-size: 1.2rem;
+            margin-bottom: 0;
+        }
+
+        .header.compact .tagline {
+            display: none;
+        }
+
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 60px rgba(59, 130, 246, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+        }
+
+        /* Start Screen */
+        .start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .start-btn {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 20px 60px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        .start-btn:hover::before {
+            left: 100%;
+        }
+
+        .rules-card {
+            margin-top: 50px;
+            padding: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+
+        .rules-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            color: var(--accent-cyan);
+            margin-bottom: 20px;
+            letter-spacing: 0.2em;
+        }
+
+        .rules-list {
+            list-style: none;
+        }
+
+        .rules-list li {
+            padding: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .rules-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--accent-blue);
+        }
+
+        /* Game Screen */
+        .game-screen {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .game-screen.active {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            min-height: 600px;
+        }
+
+        /* Status Bar - compact single row */
+        .status-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .status-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px 14px;
+            backdrop-filter: blur(10px);
+            flex: 1;
+            min-width: 0;
+        }
+
+        .status-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 2px;
+        }
+
+        .status-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .status-value.gain {
+            color: var(--gain-color);
+            text-shadow: 0 0 20px var(--gain-glow);
+        }
+
+        .status-value.loss {
+            color: var(--loss-color);
+            text-shadow: 0 0 20px var(--loss-glow);
+        }
+
+        .status-value.neutral {
+            color: var(--text-primary);
+        }
+
+        .status-value.locked {
+            color: var(--warning-color);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-screen .chart-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+
+        .chart-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            color: var(--accent-cyan);
+            letter-spacing: 0.1em;
+        }
+
+        .chart-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #kline-chart {
+            width: 100%;
+            flex: 1;
+            min-height: 280px;
+        }
+
+        /* Game Top Bar */
+        .game-top-bar {
+            flex-shrink: 0;
+            margin-bottom: 8px;
+        }
+
+        .action-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .action-row .action-hint {
+            margin: 0;
+            flex: 1;
+            text-align: right;
+        }
+
+        .action-btn {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 8px 28px;
+            border: 2px solid;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.buy {
+            background: transparent;
+            border-color: var(--gain-color);
+            color: var(--gain-color);
+        }
+
+        .action-btn.buy:hover:not(:disabled) {
+            background: var(--gain-color);
+            color: white;
+            box-shadow: 0 0 30px var(--gain-glow);
+        }
+
+        .action-btn.sell {
+            background: transparent;
+            border-color: var(--loss-color);
+            color: var(--loss-color);
+        }
+
+        .action-btn.sell:hover:not(:disabled) {
+            background: var(--loss-color);
+            color: white;
+            box-shadow: 0 0 30px var(--loss-glow);
+        }
+
+        .action-btn.hold {
+            background: transparent;
+            border-color: var(--text-muted);
+            color: var(--text-muted);
+        }
+
+        .action-btn.hold:hover:not(:disabled) {
+            background: var(--bg-tertiary);
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .action-hint {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .action-hint.warning {
+            color: var(--warning-color);
+        }
+
+        /* Result Screen */
+        .result-screen {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .result-screen.active {
+            display: block;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+
+        .result-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            letter-spacing: 0.1em;
+        }
+
+        .stock-reveal {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 20px 0;
+            color: var(--accent-cyan);
+        }
+
+        .date-range {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+        }
+
+        .final-return {
+            font-family: 'Orbitron', monospace;
+            font-size: 4rem;
+            font-weight: 900;
+            margin: 30px 0;
+        }
+
+        .final-return.positive {
+            color: var(--gain-color);
+            text-shadow: 0 0 60px var(--gain-glow);
+        }
+
+        .final-return.negative {
+            color: var(--loss-color);
+            text-shadow: 0 0 60px var(--loss-glow);
+        }
+
+        .final-return.zero {
+            color: var(--text-primary);
+        }
+
+        .result-summary {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .summary-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-top: 5px;
+        }
+
+        .play-again-btn {
+            font-family: 'Orbitron', monospace;
+            font-size: 1rem;
+            padding: 15px 50px;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-top: 20px;
+        }
+
+        .play-again-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        /* BS Report */
+        .bs-report {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-align: left;
+            backdrop-filter: blur(10px);
+        }
+
+        .bs-score-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .bs-score-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            letter-spacing: 0.1em;
+        }
+
+        .bs-score-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            padding: 4px 16px;
+            border-radius: 8px;
+        }
+
+        .bs-score-badge.excellent { color: #fbbf24; background: rgba(251,191,36,0.15); }
+        .bs-score-badge.good { color: #34d399; background: rgba(52,211,153,0.15); }
+        .bs-score-badge.average { color: #60a5fa; background: rgba(96,165,250,0.15); }
+        .bs-score-badge.poor { color: #f87171; background: rgba(248,113,113,0.15); }
+
+        .bs-report-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .bs-report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(59, 130, 246, 0.08);
+        }
+
+        .bs-report-item:last-child { border-bottom: none; }
+
+        .bs-item-label { color: var(--text-muted); }
+
+        .bs-item-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+        .bs-item-value.positive { color: #ef4444; }
+        .bs-item-value.negative { color: #22c55e; }
+        .bs-item-value.neutral { color: var(--text-secondary); }
+
+        .bs-comment {
+            margin-top: 14px;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* K-line Analysis & Best Points */
+        .analysis-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .analysis-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.95rem;
+            color: var(--accent-cyan);
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .analysis-title::before {
+            content: '';
+            display: inline-block;
+            width: 3px;
+            height: 16px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+
+        .trend-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .trend-tag {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+
+        .trend-tag.up { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .trend-tag.down { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .trend-tag.neutral { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .trend-tag.info { background: rgba(96,165,250,0.15); color: #60a5fa; }
+
+        .analysis-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        .analysis-text p {
+            margin: 0 0 10px 0;
+        }
+
+        .analysis-text p:last-child { margin-bottom: 0; }
+
+        .best-point-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.12);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .best-point-card:last-child { margin-bottom: 0; }
+
+        .point-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .point-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 4px;
+        }
+
+        .point-badge.buy { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .point-badge.sell { background: rgba(34,197,94,0.2); color: #22c55e; }
+
+        .point-day {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .point-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .point-reason {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .point-reason-tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-right: 4px;
+            background: rgba(96,165,250,0.12);
+            color: #60a5fa;
+        }
+
+        /* KB Popup (hover knowledge card) */
+        .kb-link {
+            color: var(--accent-cyan);
+            cursor: help;
+            border-bottom: 1px dashed var(--accent-cyan);
+            transition: color 0.2s;
+        }
+        .kb-link:hover {
+            color: var(--accent-blue);
+        }
+
+        .kb-popup {
+            display: none;
+            position: fixed;
+            z-index: 200;
+            width: 300px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+            pointer-events: none;
+        }
+        .kb-popup.visible { display: block; }
+
+        .kb-popup-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .kb-popup-name {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .kb-popup-signal {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .kb-popup-signal.bullish { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .kb-popup-signal.bearish { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .kb-popup-signal.neutral { background: rgba(148,163,184,0.12); color: #94a3b8; }
+
+        .kb-popup-illust {
+            height: 70px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            background: rgba(10, 14, 23, 0.4);
+            border-radius: 6px;
+            border: 1px solid rgba(59,130,246,0.06);
+        }
+        [data-theme="light"] .kb-popup-illust {
+            background: rgba(241, 245, 249, 0.8);
+        }
+
+        .kb-popup-desc {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        /* Trade History */
+        .trade-history {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 10px 16px;
+            backdrop-filter: blur(10px);
+            flex-shrink: 0;
+        }
+
+        .history-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            margin-bottom: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        .history-list {
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-action {
+            font-weight: 500;
+        }
+
+        .history-action.buy {
+            color: var(--gain-color);
+        }
+
+        .history-action.sell {
+            color: var(--loss-color);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+            }
+
+            .header {
+                padding: 15px 0;
+            }
+
+            .status-bar {
+                flex-wrap: wrap;
+            }
+
+            .status-item {
+                flex: 1 1 30%;
+            }
+
+            #kline-chart {
+                min-height: 220px;
+            }
+
+            .action-row {
+                flex-wrap: wrap;
+            }
+
+            .action-btn {
+                flex: 1;
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+
+            .action-row .action-hint {
+                width: 100%;
+                text-align: center;
+            }
+
+            .final-return {
+                font-size: 2.5rem;
+            }
+
+            .result-summary {
+                gap: 20px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--border-glow);
+        }
+
+        /* ===== 韭菜修炼基地 ===== */
+        .academy-btn {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 14px 44px;
+            background: transparent;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            color: var(--accent-cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 24px;
+            letter-spacing: 0.15em;
+            position: relative;
+            overflow: hidden;
+        }
+        .academy-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(6,182,212,0.12) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .academy-btn:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 30px rgba(6,182,212,0.25), inset 0 0 30px rgba(6,182,212,0.06);
+            transform: translateY(-2px);
+        }
+        .academy-btn:hover::before { opacity: 1; }
+
+        .academy-screen {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .academy-screen.active { display: block; }
+
+        .academy-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .academy-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, var(--accent-cyan), #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 0.08em;
+        }
+        .academy-back {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.82rem;
+            padding: 8px 20px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .academy-back:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* Tabs */
+        .academy-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 10px;
+            padding: 4px;
+            border: 1px solid var(--border-color);
+        }
+        .academy-tab {
+            flex: 1;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 7px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.25s;
+            letter-spacing: 0.05em;
+        }
+        .academy-tab:hover { color: var(--text-secondary); }
+        .academy-tab.active {
+            background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.15));
+            color: var(--accent-cyan);
+            box-shadow: 0 2px 12px rgba(6,182,212,0.1);
+        }
+
+        /* Pattern grid */
+        .pattern-grid {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .pattern-grid.active { display: grid; }
+
+        .pattern-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .pattern-card:hover {
+            border-color: rgba(6, 182, 212, 0.25);
+            box-shadow: 0 4px 24px rgba(6,182,212,0.06);
+            transform: translateY(-2px);
+        }
+
+        .pattern-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .pattern-name {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .pattern-signal {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .pattern-signal.bullish { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .pattern-signal.bearish { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .pattern-signal.neutral { background: rgba(148,163,184,0.12); color: #94a3b8; }
+
+        /* CSS illustration area */
+        .pattern-illust {
+            height: 90px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 14px;
+            padding: 10px 0;
+            background: rgba(10, 14, 23, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(59,130,246,0.06);
+            position: relative;
+            overflow: hidden;
+        }
+        .pattern-illust::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent);
+        }
+
+        /* CSS Candle */
+        .ck { display: flex; flex-direction: column; align-items: center; width: 14px; }
+        .ck .wu { width: 2px; } /* upper wick */
+        .ck .bd { width: 100%; border-radius: 1px; min-height: 2px; } /* body */
+        .ck .wl { width: 2px; } /* lower wick */
+        .ck.r .wu, .ck.r .wl { background: #ef4444; }
+        .ck.r .bd { background: #ef4444; }
+        .ck.g .wu, .ck.g .wl { background: #22c55e; }
+        .ck.g .bd { background: #22c55e; }
+        .ck.d .wu, .ck.d .wl { background: #94a3b8; }
+        .ck.d .bd { background: #94a3b8; width: 60%; }
+
+        /* CSS Volume bar */
+        .vbar {
+            width: 14px;
+            border-radius: 2px 2px 0 0;
+            min-height: 3px;
+        }
+        .vbar.r { background: rgba(239,68,68,0.7); }
+        .vbar.g { background: rgba(34,197,94,0.7); }
+        .vbar.m { background: rgba(148,163,184,0.35); }
+
+        /* SVG trend lines */
+        .pattern-illust svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0; left: 0;
+        }
+        .pattern-illust svg polyline, .pattern-illust svg line {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Price annotation dots */
+        .price-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            position: absolute;
+        }
+
+        .pattern-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        @media (max-width: 768px) {
+            .pattern-grid { grid-template-columns: 1fr; }
+            .academy-tabs { flex-wrap: wrap; }
+            .academy-tab { flex: 1 1 auto; font-size: 0.8rem; padding: 8px 12px; }
+            .academy-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+        }
+
+        /* Loading spinner */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+    <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-gradient"></div>
+
+    <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
+        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <h1 class="logo">股海沉浮</h1>
+            <p class="tagline">Stock Trading Simulator</p>
+        </header>
+
+        <!-- Start Screen -->
+        <section class="start-screen" id="startScreen">
+            <button class="start-btn" onclick="startGame()">开始游戏</button>
+
+            <div class="rules-card">
+                <h3 class="rules-title">游戏规则</h3>
+                <ul class="rules-list">
+                    <li>系统随机抽取一只股票的 30 日 K 线数据</li>
+                    <li>每天观察收盘价后，决定次日操作</li>
+                    <li>遵循 T+1 规则：当日买入，次日方可卖出</li>
+                    <li>可多次买卖，收益率累计计算</li>
+                    <li>游戏结束后揭晓股票真实身份</li>
+                </ul>
+            </div>
+            <button class="academy-btn" onclick="showAcademy()">韭菜修炼基地</button>
+        </section>
+
+        <!-- Academy Screen -->
+        <section class="academy-screen" id="academyScreen">
+            <div class="academy-header">
+                <span class="academy-title">韭菜修炼基地</span>
+                <button class="academy-back" onclick="hideAcademy()">← 返回首页</button>
+            </div>
+
+            <div class="academy-tabs">
+                <button class="academy-tab active" onclick="switchTab(this, 'tab-kline')">K线形态</button>
+                <button class="academy-tab" onclick="switchTab(this, 'tab-volume')">成交量形态</button>
+                <button class="academy-tab" onclick="switchTab(this, 'tab-trend')">走势形态</button>
+            </div>
+
+            <!-- K线形态 -->
+            <div class="pattern-grid active" id="tab-kline">
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">大阳线</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust"><div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:50px"></div><div class="wl" style="height:6px"></div></div></div>
+                    <div class="pattern-desc">实体长、上下影线短的阳线。表示多方力量强劲，买盘从开盘一路推升至收盘。出现在低位或上升趋势中是强烈的做多信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">大阴线</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust"><div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:50px"></div><div class="wl" style="height:6px"></div></div></div>
+                    <div class="pattern-desc">实体长、上下影线短的阴线。表示空方力量占据绝对优势，卖盘从开盘持续打压至收盘。出现在高位或下行趋势中是离场信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">锤子线</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g" style="opacity:0.4"><div class="wu" style="height:4px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:6px"></div></div>
+                        <div class="ck g" style="opacity:0.5"><div class="wu" style="height:3px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:8px"></div></div>
+                        <div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:40px"></div></div>
+                    </div>
+                    <div class="pattern-desc">下影线很长（至少为实体2倍），上影线极短或没有。出现在下跌末端，说明空方将价格打下去后被多方强力拉回，是底部反转信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">射击之星</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r" style="opacity:0.4"><div class="wu" style="height:6px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:3px"></div></div>
+                        <div class="ck r" style="opacity:0.5"><div class="wu" style="height:8px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:3px"></div></div>
+                        <div class="ck g"><div class="wu" style="height:40px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:3px"></div></div>
+                    </div>
+                    <div class="pattern-desc">上影线很长，实体小且位于底部。出现在上涨末端，说明多方尝试拉升但遭到强烈抛压打回，是顶部反转的警告信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">十字星</span><span class="pattern-signal neutral">中性</span></div>
+                    <div class="pattern-illust"><div class="ck d"><div class="wu" style="height:25px"></div><div class="bd" style="height:2px"></div><div class="wl" style="height:25px"></div></div></div>
+                    <div class="pattern-desc">开盘价和收盘价几乎相同，上下影线等长。代表多空力量达到平衡。在趋势末端出现往往预示着反转，需结合前后K线确认方向。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">看涨吞没</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:6px"></div></div>
+                        <div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:40px"></div><div class="wl" style="height:4px"></div></div>
+                    </div>
+                    <div class="pattern-desc">一根大阳线完全包住前一根阴线的实体。多方以压倒性力量反攻，是下跌趋势中最可靠的反转形态之一，阳线实体越大信号越强。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">看跌吞没</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:6px"></div></div>
+                        <div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:40px"></div><div class="wl" style="height:4px"></div></div>
+                    </div>
+                    <div class="pattern-desc">一根大阴线完全包住前一根阳线的实体。空方全面压制多方，上涨趋势中出现预示着行情可能见顶，尤其伴随放量时更需警惕。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">早晨之星</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck d" style="margin-top:16px"><div class="wu" style="height:10px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:10px"></div></div>
+                        <div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>
+                    </div>
+                    <div class="pattern-desc">阴线 + 低位十字星 + 阳线的三日组合。中间的十字星表示空方力量衰竭，第三天阳线确认多方接管。是经典的底部反转形态。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">黄昏之星</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck d" style="margin-bottom:16px"><div class="wu" style="height:10px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:10px"></div></div>
+                        <div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>
+                    </div>
+                    <div class="pattern-desc">阳线 + 高位十字星 + 阴线的三日组合。中间的十字星显示多方动力枯竭，第三天阴线确认空方夺回主导权。是可靠的顶部反转信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">红三兵</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck r" style="margin-bottom:6px"><div class="wu" style="height:3px"></div><div class="bd" style="height:26px"></div><div class="wl" style="height:3px"></div></div>
+                        <div class="ck r" style="margin-bottom:14px"><div class="wu" style="height:2px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:3px"></div></div>
+                    </div>
+                    <div class="pattern-desc">连续三根阳线，每根收盘价逐步抬高，实体饱满、上下影线短。出现在底部区域是强烈的趋势反转信号，多方力量持续增强，适合跟随做多。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">三只乌鸦</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g" style="margin-bottom:14px"><div class="wu" style="height:3px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck g" style="margin-bottom:6px"><div class="wu" style="height:3px"></div><div class="bd" style="height:26px"></div><div class="wl" style="height:3px"></div></div>
+                        <div class="ck g"><div class="wu" style="height:2px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:3px"></div></div>
+                    </div>
+                    <div class="pattern-desc">连续三根阴线，每根收盘价逐步走低。与红三兵相反，是顶部区域的强烈看跌信号，表示空方已完全掌控局面，应及时止盈或止损离场。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">乌云盖顶</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:36px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck g" style="margin-bottom:8px"><div class="wu" style="height:3px"></div><div class="bd" style="height:28px"></div><div class="wl" style="height:10px"></div></div>
+                    </div>
+                    <div class="pattern-desc">先出现一根大阳线，次日高开后大幅回落，阴线收盘深入阳线实体过半。乌云笼罩意味着上涨动力被空方扼杀，是可靠的见顶信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">刺透形态</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:36px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck r" style="margin-top:8px"><div class="wu" style="height:10px"></div><div class="bd" style="height:28px"></div><div class="wl" style="height:3px"></div></div>
+                    </div>
+                    <div class="pattern-desc">与乌云盖顶相反。先出现一根大阴线，次日低开后强力反弹，阳线收盘升入阴线实体过半。在下跌趋势中出现是底部反转的积极信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">看涨孕线</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:42px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:16px"></div><div class="wl" style="height:6px"></div></div>
+                    </div>
+                    <div class="pattern-desc">大阴线后跟随一根小阳线，小阳线实体完全被前一根阴线包含。说明下跌动能减弱，多方开始试探反攻。需次日阳线确认后方可介入。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">看跌孕线</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:42px"></div><div class="wl" style="height:4px"></div></div>
+                        <div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:16px"></div><div class="wl" style="height:6px"></div></div>
+                    </div>
+                    <div class="pattern-desc">大阳线后跟随一根小阴线，小阴线实体完全被前一根阳线包含。表明上涨动力开始衰减，应警惕趋势逆转，可考虑减仓或设置止损。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">T字线</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:0px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:42px"></div></div>
+                    </div>
+                    <div class="pattern-desc">开盘价、收盘价与最高价相同，仅有下影线，形如"T"字。说明盘中大幅下探后被完全收回，多方力量极强。出现在底部是强烈反转信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">倒T字线</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck g"><div class="wu" style="height:42px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:0px"></div></div>
+                    </div>
+                    <div class="pattern-desc">开盘价、收盘价与最低价相同，仅有上影线，形如倒"T"字。说明盘中冲高后被完全打回，空方力量极强。出现在顶部预示下跌风险。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">螺旋桨</span><span class="pattern-signal neutral">中性</span></div>
+                    <div class="pattern-illust">
+                        <div class="ck r"><div class="wu" style="height:22px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:22px"></div></div>
+                    </div>
+                    <div class="pattern-desc">实体较小而上下影线都很长的K线，形似螺旋桨。表示多空双方激烈交锋，市场分歧极大。单独出现意义有限，若出现在趋势末端则暗示变盘在即。</div>
+                </div>
+            </div>
+
+            <!-- 成交量形态 -->
+            <div class="pattern-grid" id="tab-volume">
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">放量上涨</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar r" style="height:14px"></div><div class="vbar r" style="height:22px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:42px"></div><div class="vbar r" style="height:56px"></div>
+                    </div>
+                    <div class="pattern-desc">价格上涨伴随成交量逐步放大，说明越来越多的资金入场追捧，量价齐升是最健康的上涨模式，趋势延续性强。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">缩量回调</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:36px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>
+                    </div>
+                    <div class="pattern-desc">价格小幅回落但成交量逐渐萎缩。说明卖出意愿不强，持股者惜售。在上升趋势中的缩量回调是健康的技术性修正，常是低吸良机。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">放量下跌</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar g" style="height:14px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:35px"></div><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:60px"></div>
+                    </div>
+                    <div class="pattern-desc">价格下跌同时成交量持续放大，说明恐慌性抛售加剧，大量资金夺路而逃。这是最危险的量价形态，应果断止损回避。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">地量见底</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#94a3b8" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg>
+                        <div class="vbar m" style="height:18px"></div><div class="vbar m" style="height:12px"></div><div class="vbar m" style="height:7px"></div><div class="vbar m" style="height:4px"></div><div class="vbar m" style="height:5px"></div><div class="vbar r" style="height:10px"></div><div class="vbar r" style="height:18px"></div>
+                    </div>
+                    <div class="pattern-desc">"地量之后有地价"。成交量萎缩到极低水平，说明抛压已近枯竭。随后若出现温和放量阳线，往往是底部确立的标志。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">天量见顶</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar r" style="height:18px"></div><div class="vbar r" style="height:28px"></div><div class="vbar r" style="height:65px"></div><div class="vbar g" style="height:40px"></div><div class="vbar g" style="height:22px"></div>
+                    </div>
+                    <div class="pattern-desc">"天量之后有天价"。成交量突然放出历史级巨量，往往是主力资金大规模出货的标志。若伴随长上影线或高位阴线，是强烈的见顶信号，应果断离场。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">温和放量</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar r" style="height:12px"></div><div class="vbar r" style="height:16px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:25px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:36px"></div>
+                    </div>
+                    <div class="pattern-desc">成交量像上台阶一样逐步温和放大，而非突然暴增。说明资金有序入场，筹码交换充分，是最健康的上涨形态。这种"量堆"出来的涨势持续性最强。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">量价背离（看跌）</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar r" style="height:50px"></div><div class="vbar r" style="height:40px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:12px"></div>
+                    </div>
+                    <div class="pattern-desc">价格持续创新高，但成交量反而逐渐萎缩。说明跟风买入的资金越来越少，上涨缺乏量能支撑。这是"顶背离"的经典信号，需警惕随时可能出现的回调。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">量价背离（看涨）</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <div class="vbar g" style="height:50px"></div><div class="vbar g" style="height:38px"></div><div class="vbar g" style="height:26px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>
+                    </div>
+                    <div class="pattern-desc">价格持续创新低，但成交量反而逐步减少。说明抛售力量正在枯竭，卖无可卖。这是"底背离"信号，预示下跌接近尾声，后续可能出现反弹甚至反转。</div>
+                </div>
+            </div>
+
+            <!-- 走势形态 -->
+            <div class="pattern-grid" id="tab-trend">
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">金叉（MA5上穿MA10）</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="10,55 50,50 90,42 110,35 140,25 180,18" stroke="#f5c542" stroke-width="2.5" fill="none"/>
+                            <polyline points="10,40 50,42 90,43 110,40 140,34 180,30" stroke="#42a5f5" stroke-width="2" fill="none"/>
+                            <circle cx="100" cy="42" r="4" fill="#fbbf24" opacity="0.8"/>
+                            <text x="100" y="72" text-anchor="middle" fill="#fbbf24" font-size="10" font-family="JetBrains Mono">金叉</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">短期均线（MA5 黄）从下方穿越长期均线（MA10 蓝），表示短期买力增强、趋势由弱转强。是经典的买入信号，配合放量更可靠。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">死叉（MA5下穿MA10）</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="10,18 50,25 90,38 110,45 140,55 180,60" stroke="#f5c542" stroke-width="2.5" fill="none"/>
+                            <polyline points="10,30 50,32 90,36 110,40 140,44 180,48" stroke="#42a5f5" stroke-width="2" fill="none"/>
+                            <circle cx="100" cy="37" r="4" fill="#f87171" opacity="0.8"/>
+                            <text x="100" y="72" text-anchor="middle" fill="#f87171" font-size="10" font-family="JetBrains Mono">死叉</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">短期均线（MA5 黄）从上方跌破长期均线（MA10 蓝），表示短期卖压增大、价格走弱。是经典的卖出信号，持仓者应考虑减仓。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">多头排列</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="10,62 60,48 110,35 160,24 190,18" stroke="#f5c542" stroke-width="2.5" fill="none"/>
+                            <polyline points="10,66 60,54 110,42 160,32 190,27" stroke="#42a5f5" stroke-width="2" fill="none"/>
+                            <polyline points="10,70 60,60 110,50 160,42 190,38" stroke="#ab47bc" stroke-width="2" fill="none"/>
+                            <text x="194" y="18" fill="#f5c542" font-size="9" font-family="JetBrains Mono">5</text>
+                            <text x="194" y="28" fill="#42a5f5" font-size="9" font-family="JetBrains Mono">10</text>
+                            <text x="194" y="39" fill="#ab47bc" font-size="9" font-family="JetBrains Mono">20</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">MA5 在最上方、MA10 居中、MA20 在最下方，三线同步上行。这是最强的趋势信号，表明各周期投资者一致看多，适合持股不动。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">空头排列</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="10,18 60,32 110,45 160,56 190,62" stroke="#f5c542" stroke-width="2.5" fill="none"/>
+                            <polyline points="10,14 60,26 110,38 160,48 190,53" stroke="#42a5f5" stroke-width="2" fill="none"/>
+                            <polyline points="10,10 60,20 110,30 160,38 190,42" stroke="#ab47bc" stroke-width="2" fill="none"/>
+                            <text x="194" y="63" fill="#f5c542" font-size="9" font-family="JetBrains Mono">5</text>
+                            <text x="194" y="54" fill="#42a5f5" font-size="9" font-family="JetBrains Mono">10</text>
+                            <text x="194" y="43" fill="#ab47bc" font-size="9" font-family="JetBrains Mono">20</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">MA5 在最下方、MA10 居中、MA20 在最上方，三线同步下行。各周期投资者一致看空，应空仓观望，切勿盲目抄底。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">W底（双底）</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="15,20 40,35 65,58 85,42 105,25 125,42 150,58 170,35 195,15" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/>
+                            <line x1="15" y1="25" x2="195" y2="25" stroke="var(--accent-cyan)" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                            <text x="100" y="75" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">颈线</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">价格两次探底到相近价位后反弹，形成"W"形。当价格突破两次反弹的高点（颈线）时双底成立，上涨空间通常等于底部到颈线的距离。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">M顶（双顶）</span><span class="pattern-signal bearish">看跌</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <polyline points="15,60 40,45 65,22 85,38 105,55 125,38 150,22 170,45 195,65" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/>
+                            <line x1="15" y1="55" x2="195" y2="55" stroke="var(--accent-cyan)" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                            <text x="100" y="75" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">颈线</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">价格两次冲高到相近价位后回落，形成"M"形。当价格跌破两次回落的低点（颈线）时双顶成立，是明确的卖出信号。</div>
+                </div>
+                <div class="pattern-card">
+                    <div class="pattern-card-top"><span class="pattern-name">上升三角形</span><span class="pattern-signal bullish">看涨</span></div>
+                    <div class="pattern-illust">
+                        <svg viewBox="0 0 200 80">
+                            <line x1="15" y1="20" x2="165" y2="20" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>
+                            <polyline points="15,65 50,20 70,50 105,20 120,40 155,20" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/>
+                            <polyline points="155,20 175,12 195,5" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/>
+                            <text x="180" y="72" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">突破</text>
+                        </svg>
+                    </div>
+                    <div class="pattern-desc">顶部压力线水平、底部支撑线逐步抬高，形成收敛三角形。买方力量逐渐增强，一旦放量突破上方压力线，往往开启快速上涨。</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Game Screen -->
+        <section class="game-screen" id="gameScreen">
+            <div class="game-top-bar">
+                <div class="status-bar">
+                    <div class="status-item">
+                        <div class="status-label">第 <span id="currentDay">1</span> / 30 天</div>
+                        <div class="status-value neutral" id="currentPrice">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">持仓状态</div>
+                        <div class="status-value neutral" id="positionStatus">空仓</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">累计收益率</div>
+                        <div class="status-value neutral" id="totalReturn">0.00%</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">买入成本</div>
+                        <div class="status-value neutral" id="costBasis">--</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">交易次数</div>
+                        <div class="status-value neutral" id="tradeCount">0</div>
+                    </div>
+                </div>
+                <div class="action-row">
+                    <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
+                    <button class="action-btn hold" id="holdBtn" onclick="handleAction('hold')">不动</button>
+                    <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
+                    <span class="action-hint" id="actionHint">选择你的操作，将在明日开盘时执行</span>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <div>
+                        <span class="chart-title">K 线走势</span>
+                    </div>
+                    <div class="chart-subtitle" id="chartSubtitle">股票代码: ******</div>
+                </div>
+                <div id="kline-chart"></div>
+            </div>
+
+            <div class="trade-history">
+                <h4 class="history-title">交易记录</h4>
+                <div class="history-list" id="historyList">
+                    <div class="history-item" style="color: var(--text-muted);">暂无交易记录</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Result Screen -->
+        <section class="result-screen" id="resultScreen">
+            <div class="result-card">
+                <h2 class="result-title">游戏结束</h2>
+                <div class="stock-reveal" id="stockReveal">贵州茅台 (600519)</div>
+                <div class="date-range" id="dateRange">2024-01-02 ~ 2024-01-29</div>
+
+                <div class="final-return positive" id="finalReturn">+12.34%</div>
+
+                <div class="result-summary">
+                    <div class="summary-item">
+                        <div class="summary-label">总交易次数</div>
+                        <div class="summary-value" id="finalTradeCount">4</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">持仓天数</div>
+                        <div class="summary-value" id="holdingDays">12</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">最大单笔收益</div>
+                        <div class="summary-value" id="maxGain">+5.23%</div>
+                    </div>
+                </div>
+
+                <button class="play-again-btn" onclick="resetGame()">再来一局</button>
+
+                <div class="bs-report" id="bsReport"></div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">完整 K 线回顾</span>
+                    <div class="chart-subtitle" id="resultChartSubtitle">--</div>
+                </div>
+                <div id="result-kline-chart" style="width: 100%; height: 500px;"></div>
+            </div>
+
+            <div class="analysis-container" id="klineAnalysis"></div>
+            <div class="analysis-container" id="bestPointsAnalysis"></div>
+        </section>
+    </div>
+
+    <script>
+        // ========== GAME STATE ==========
+        let gameState = {
+            stocksData: [],
+            currentStock: null,
+            gameKline: [],        // history + 31 days of kline data
+            historyLength: 0,     // number of history days before game starts
+            currentDay: 1,        // 1-30
+            position: 'empty',    // 'empty' | 'holding' | 'locked'
+            costBasis: 0,
+            totalReturn: 1,       // Multiplicative return
+            tradeHistory: [],
+            pendingAction: null,
+            holdingDays: 0,
+            tradeGains: []
+        };
+
+        // ========== THEME ==========
+        function getChartColors() {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            return {
+                tooltipBg: isLight ? 'rgba(255,255,255,0.96)' : 'rgba(17,24,39,0.95)',
+                tooltipBorder: isLight ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.3)',
+                tooltipText: isLight ? '#1e293b' : '#e2e8f0',
+                axisLine: isLight ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.3)',
+                axisLabel: isLight ? '#94a3b8' : '#64748b',
+                splitLine: isLight ? 'rgba(148,163,184,0.12)' : 'rgba(59,130,246,0.1)'
+            };
+        }
+
+        function applyChartTheme(chart) {
+            if (!chart) return;
+            const tc = getChartColors();
+            chart.setOption({
+                tooltip: {
+                    backgroundColor: tc.tooltipBg,
+                    borderColor: tc.tooltipBorder,
+                    textStyle: { color: tc.tooltipText }
+                },
+                legend: {
+                    textStyle: { color: tc.axisLabel }
+                },
+                xAxis: [
+                    { axisLine: { lineStyle: { color: tc.axisLine } } },
+                    { axisLine: { lineStyle: { color: tc.axisLine } }, axisLabel: { color: tc.axisLabel } }
+                ],
+                yAxis: [
+                    { scale: true, axisLabel: { color: tc.axisLabel }, splitLine: { lineStyle: { color: tc.splitLine } } },
+                    { scale: true }
+                ]
+            });
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const next = (html.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            // Re-apply chart theme
+            applyChartTheme(klineChart);
+            applyChartTheme(resultChart);
+        }
+
+        let klineChart = null;
+        let resultChart = null;
+
+        // ========== INITIALIZATION ==========
+        async function init() {
+            if (typeof STOCKS_DATA !== 'undefined' && STOCKS_DATA.length > 0) {
+                gameState.stocksData = STOCKS_DATA;
+                console.log(`Loaded ${gameState.stocksData.length} stocks`);
+            } else {
+                console.error('股票数据加载失败');
+                alert('股票数据加载失败，请先运行 python fetch_stock_data.py 生成数据');
+            }
+        }
+
+        // ========== GAME FUNCTIONS ==========
+        function startGame() {
+            // Reset state
+            gameState.currentDay = 1;
+            gameState.position = 'empty';
+            gameState.costBasis = 0;
+            gameState.totalReturn = 1;
+            gameState.tradeHistory = [];
+            gameState.pendingAction = null;
+            gameState.holdingDays = 0;
+            gameState.tradeGains = [];
+            gameState.historyLength = 0;
+
+            // Pick random stock and random start position
+            const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
+            gameState.currentStock = gameState.stocksData[stockIndex];
+
+            // 取最多30天历史 + 31天游戏数据
+            const gameDays = 31;
+            const klineLen = gameState.currentStock.kline.length;
+            const historyDays = Math.min(30, klineLen - gameDays);
+            const minStart = historyDays;
+            const maxStart = klineLen - gameDays;
+            const gameStartIndex = minStart + Math.floor(Math.random() * Math.max(1, maxStart - minStart));
+            gameState.historyLength = historyDays;
+            gameState.gameKline = gameState.currentStock.kline.slice(gameStartIndex - historyDays, gameStartIndex + gameDays);
+
+            // Switch screens
+            document.querySelector('.header').classList.add('compact');
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').classList.add('active');
+            document.getElementById('resultScreen').classList.remove('active');
+
+            // Initialize chart
+            initChart();
+            updateUI();
+        }
+
+        function initChart() {
+            const chartDom = document.getElementById('kline-chart');
+            if (klineChart) {
+                klineChart.dispose();
+            }
+            klineChart = echarts.init(chartDom);
+            updateChart();
+            // Resize after flex layout settles
+            setTimeout(() => klineChart.resize(), 50);
+        }
+
+        function calculateMA(data, period) {
+            const result = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) {
+                    result.push(null);
+                } else {
+                    let sum = 0;
+                    for (let j = 0; j < period; j++) {
+                        sum += data[i - j].close;
+                    }
+                    result.push(parseFloat((sum / period).toFixed(2)));
+                }
+            }
+            return result;
+        }
+
+        function updateChart() {
+            const histLen = gameState.historyLength;
+            const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
+
+            const dates = visibleData.map(d => d.date);
+            const ohlc = visibleData.map(d => [d.open, d.close, d.low, d.high]);
+            const volumes = visibleData.map(d => d.volume);
+            const volumeColors = visibleData.map(d => d.close >= d.open ? '#ef4444' : '#22c55e');
+
+            const ma5 = calculateMA(visibleData, 5);
+            const ma10 = calculateMA(visibleData, 10);
+            const ma20 = calculateMA(visibleData, 20);
+            const ma30 = calculateMA(visibleData, 30);
+
+            // Buy/sell markers on game chart
+            const markPoints = gameState.tradeHistory.map(trade => ({
+                coord: [histLen + trade.day - 1, trade.price],
+                value: trade.type === 'buy' ? '买' : '卖',
+                itemStyle: {
+                    color: trade.type === 'buy' ? '#ef4444' : '#22c55e'
+                }
+            })).filter(p => p.coord[0] < visibleData.length);
+
+            const option = {
+                backgroundColor: 'transparent',
+                animation: true,
+                animationDuration: 500,
+                legend: {
+                    data: ['MA5', 'MA10', 'MA20', 'MA30'],
+                    top: 5,
+                    left: 10,
+                    textStyle: { color: '#94a3b8', fontFamily: 'JetBrains Mono', fontSize: 11 },
+                    itemWidth: 18,
+                    itemHeight: 2,
+                    itemGap: 12
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    textStyle: {
+                        color: '#e2e8f0',
+                        fontFamily: 'JetBrains Mono'
+                    },
+                    formatter: function(params) {
+                        const candlestick = params.find(p => p.seriesName === 'K线');
+                        const volume = params.find(p => p.seriesName === '成交量');
+                        if (!candlestick) return '';
+                        const ohlc = candlestick.data;
+                        let html = `
+                            <div style="padding: 5px;">
+                                <div style="margin-bottom: 5px; color: #94a3b8;">${candlestick.axisValue}</div>
+                                <div>开: ${ohlc[0].toFixed(2)}</div>
+                                <div>收: ${ohlc[1].toFixed(2)}</div>
+                                <div>低: ${ohlc[2].toFixed(2)}</div>
+                                <div>高: ${ohlc[3].toFixed(2)}</div>`;
+                        if (volume) {
+                            html += `<div>量: ${(volume.data / 10000).toFixed(0)}万</div>`;
+                        }
+                        const maNames = ['MA5', 'MA10', 'MA20', 'MA30'];
+                        const maColors = ['#f5c542', '#42a5f5', '#ab47bc', '#26a69a'];
+                        params.forEach(p => {
+                            const idx = maNames.indexOf(p.seriesName);
+                            if (idx >= 0 && p.data != null) {
+                                html += `<div style="color:${maColors[idx]}">${p.seriesName}: ${p.data.toFixed(2)}</div>`;
+                            }
+                        });
+                        html += `</div>`;
+                        return html;
+                    }
+                },
+                axisPointer: {
+                    link: [{ xAxisIndex: 'all' }]
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '2%',
+                        top: '5%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '10%',
+                        right: '2%',
+                        top: '72%',
+                        bottom: '8%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLabel: { show: false },
+                        axisTick: { show: false },
+                        splitLine: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLabel: {
+                            color: '#64748b',
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10,
+                            rotate: 45
+                        },
+                        splitLine: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        gridIndex: 0,
+                        axisLabel: {
+                            color: '#64748b',
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10
+                        },
+                        axisLine: { show: false },
+                        splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.1)' } }
+                    },
+                    {
+                        type: 'value',
+                        scale: true,
+                        gridIndex: 1,
+                        show: false
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ohlc,
+                        itemStyle: {
+                            color: '#ef4444',
+                            color0: '#22c55e',
+                            borderColor: '#ef4444',
+                            borderColor0: '#22c55e'
+                        },
+                        markPoint: {
+                            data: markPoints,
+                            symbol: 'pin',
+                            symbolSize: 35,
+                            label: {
+                                formatter: '{b}',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                fontSize: 11
+                            }
+                        }
+                    },
+                    {
+                        name: 'MA5',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma5,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#f5c542' }
+                    },
+                    {
+                        name: 'MA10',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma10,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#42a5f5' }
+                    },
+                    {
+                        name: 'MA20',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma20,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#ab47bc' }
+                    },
+                    {
+                        name: 'MA30',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma30,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#26a69a' }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: {
+                            color: function(params) {
+                                return volumeColors[params.dataIndex];
+                            }
+                        }
+                    }
+                ]
+            };
+
+            klineChart.setOption(option);
+            applyChartTheme(klineChart);
+        }
+
+        function handleAction(action) {
+            if (action === 'buy' && gameState.position !== 'empty') return;
+            if (action === 'sell' && gameState.position !== 'holding') return;
+
+            gameState.pendingAction = action;
+
+            // Move to next day
+            nextDay();
+        }
+
+        function nextDay() {
+            const action = gameState.pendingAction;
+            const histLen = gameState.historyLength;
+            const todayIndex = histLen + gameState.currentDay - 1;
+            const nextDayIndex = histLen + gameState.currentDay;
+            const nextDayData = gameState.gameKline[nextDayIndex];
+
+            // Execute pending action at next day's open price
+            if (action === 'buy' && gameState.position === 'empty') {
+                gameState.costBasis = nextDayData.open;
+                gameState.position = 'locked'; // T+1: Can't sell today
+                addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
+            } else if (action === 'sell' && gameState.position === 'holding') {
+                const sellPrice = nextDayData.open;
+                const tradeReturn = sellPrice / gameState.costBasis;
+                gameState.totalReturn *= tradeReturn;
+                gameState.tradeGains.push((tradeReturn - 1) * 100);
+                addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
+                gameState.position = 'empty';
+                gameState.costBasis = 0;
+            }
+
+            // If was locked, now can sell
+            if (gameState.position === 'locked' && action !== 'buy') {
+                // This is after a buy, so the lock was from previous action
+            }
+
+            // Update position status
+            if (gameState.position === 'locked') {
+                gameState.position = 'holding';
+            }
+
+            // Track holding days
+            if (gameState.position === 'holding' || gameState.position === 'locked') {
+                gameState.holdingDays++;
+            }
+
+            gameState.pendingAction = null;
+            gameState.currentDay++;
+
+            if (gameState.currentDay > 30) {
+                endGame();
+            } else {
+                updateUI();
+                updateChart();
+            }
+        }
+
+        function addTradeHistory(type, day, price, returnVal = null) {
+            const record = {
+                type,
+                day,
+                price,
+                return: returnVal
+            };
+            gameState.tradeHistory.push(record);
+        }
+
+        function updateUI() {
+            const todayData = gameState.gameKline[gameState.historyLength + gameState.currentDay - 1];
+
+            // Update day indicator and price (merged into first status item)
+            document.getElementById('currentDay').textContent = gameState.currentDay;
+            document.getElementById('currentPrice').textContent = todayData.close.toFixed(2);
+
+            // Update position status
+            const positionEl = document.getElementById('positionStatus');
+            if (gameState.position === 'empty') {
+                positionEl.textContent = '空仓';
+                positionEl.className = 'status-value neutral';
+            } else if (gameState.position === 'locked') {
+                positionEl.textContent = '持仓 (锁定)';
+                positionEl.className = 'status-value locked';
+            } else {
+                positionEl.textContent = '持仓中';
+                positionEl.className = 'status-value gain';
+            }
+
+            // Update total return (include unrealized P&L when holding)
+            const returnEl = document.getElementById('totalReturn');
+            let displayReturn;
+            if ((gameState.position === 'holding' || gameState.position === 'locked') && gameState.costBasis > 0) {
+                const unrealizedReturn = todayData.close / gameState.costBasis;
+                displayReturn = (gameState.totalReturn * unrealizedReturn - 1) * 100;
+            } else {
+                displayReturn = (gameState.totalReturn - 1) * 100;
+            }
+            returnEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
+            returnEl.className = 'status-value ' + (displayReturn > 0 ? 'gain' : displayReturn < 0 ? 'loss' : 'neutral');
+
+            // Update cost basis
+            const costEl = document.getElementById('costBasis');
+            costEl.textContent = gameState.costBasis > 0 ? gameState.costBasis.toFixed(2) : '--';
+
+            // Update trade count
+            document.getElementById('tradeCount').textContent = gameState.tradeHistory.length;
+
+            // Update buttons
+            const buyBtn = document.getElementById('buyBtn');
+            const sellBtn = document.getElementById('sellBtn');
+            const holdBtn = document.getElementById('holdBtn');
+            const hintEl = document.getElementById('actionHint');
+
+            buyBtn.disabled = gameState.position !== 'empty';
+            sellBtn.disabled = gameState.position !== 'holding';
+            holdBtn.disabled = false;
+
+            if (gameState.position === 'locked') {
+                hintEl.textContent = 'T+1 锁定中，今日只能持仓观望';
+                hintEl.className = 'action-hint warning';
+            } else if (gameState.position === 'empty') {
+                hintEl.textContent = '当前空仓，可以选择买入或继续观望';
+                hintEl.className = 'action-hint';
+            } else {
+                hintEl.textContent = '当前持仓，可以选择卖出或继续持有';
+                hintEl.className = 'action-hint';
+            }
+
+            // Update trade history
+            updateTradeHistory();
+        }
+
+        function updateTradeHistory() {
+            const listEl = document.getElementById('historyList');
+            if (gameState.tradeHistory.length === 0) {
+                listEl.innerHTML = '<div class="history-item" style="color: var(--text-muted);">暂无交易记录</div>';
+                return;
+            }
+
+            listEl.innerHTML = gameState.tradeHistory.map(trade => {
+                const returnStr = trade.return ?
+                    ` (${((trade.return - 1) * 100).toFixed(2)}%)` : '';
+                return `
+                    <div class="history-item">
+                        <span class="history-action ${trade.type}">${trade.type === 'buy' ? '买入' : '卖出'}</span>
+                        <span>第${trade.day}天 @ ${trade.price.toFixed(2)}${returnStr}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ========== TECHNICAL ANALYSIS HELPERS ==========
+        function calcMA(data, period) {
+            // Returns array same length as data, null for insufficient data
+            const result = [];
+            for (let i = 0; i < data.length; i++) {
+                if (i < period - 1) { result.push(null); continue; }
+                let sum = 0;
+                for (let j = 0; j < period; j++) sum += data[i - j].close;
+                result.push(sum / period);
+            }
+            return result;
+        }
+
+        function calcSlope(arr, start, end) {
+            // Linear regression slope over a segment (normalized by mean)
+            const seg = arr.slice(start, end).filter(v => v !== null);
+            if (seg.length < 2) return 0;
+            const n = seg.length;
+            const mean = seg.reduce((a, b) => a + b, 0) / n;
+            let num = 0, den = 0;
+            for (let i = 0; i < n; i++) {
+                num += (i - (n - 1) / 2) * (seg[i] - mean);
+                den += (i - (n - 1) / 2) ** 2;
+            }
+            return den === 0 ? 0 : (num / den) / mean;
+        }
+
+        function generateKlineAnalysis() {
+            const histLen = gameState.historyLength;
+            const kline = gameState.gameKline;
+            const gameDays = 30;
+            const gameData = kline.slice(histLen, histLen + gameDays);
+
+            const closes = gameData.map(d => d.close);
+            const opens = gameData.map(d => d.open);
+            const highs = gameData.map(d => d.high);
+            const lows = gameData.map(d => d.low);
+            const volumes = gameData.map(d => d.volume);
+
+            // Use full visible data (history + game) for MA calculation
+            const allData = kline.slice(0, histLen + gameDays);
+            const ma5 = calcMA(allData, 5);
+            const ma10 = calcMA(allData, 10);
+            const ma20 = calcMA(allData, 20);
+            const ma30 = calcMA(allData, 30);
+
+            // Game-period MAs (offset by histLen)
+            const gma5 = ma5.slice(histLen);
+            const gma10 = ma10.slice(histLen);
+            const gma20 = ma20.slice(histLen);
+            const gma30 = ma30.slice(histLen);
+
+            // === Trend analysis ===
+            const firstClose = closes[0];
+            const lastClose = closes[gameDays - 1];
+            const periodReturn = (lastClose - firstClose) / firstClose * 100;
+
+            const slope = calcSlope(gameData, 0, gameDays);
+            let trend, trendCls;
+            if (slope > 0.002) { trend = '上行趋势'; trendCls = 'up'; }
+            else if (slope < -0.002) { trend = '下行趋势'; trendCls = 'down'; }
+            else { trend = '横盘震荡'; trendCls = 'neutral'; }
+
+            // === Volatility ===
+            const avgRange = gameData.reduce((s, d) => s + (d.high - d.low) / d.close, 0) / gameDays;
+            let volatility, volCls;
+            if (avgRange > 0.04) { volatility = '高波动'; volCls = 'up'; }
+            else if (avgRange > 0.02) { volatility = '中等波动'; volCls = 'info'; }
+            else { volatility = '低波动'; volCls = 'neutral'; }
+
+            // === MA alignment ===
+            const endMa5 = gma5[gameDays - 1];
+            const endMa10 = gma10[gameDays - 1];
+            const endMa20 = gma20[gameDays - 1];
+            let maAlignment, maCls;
+            if (endMa5 && endMa10 && endMa20) {
+                if (endMa5 > endMa10 && endMa10 > endMa20) { maAlignment = '多头排列'; maCls = 'up'; }
+                else if (endMa5 < endMa10 && endMa10 < endMa20) { maAlignment = '空头排列'; maCls = 'down'; }
+                else { maAlignment = '均线缠绕'; maCls = 'neutral'; }
+            } else { maAlignment = '数据不足'; maCls = 'neutral'; }
+
+            // === Volume trend ===
+            const vol1 = volumes.slice(0, Math.floor(gameDays / 2));
+            const vol2 = volumes.slice(Math.floor(gameDays / 2));
+            const avgVol1 = vol1.reduce((a, b) => a + b, 0) / vol1.length;
+            const avgVol2 = vol2.reduce((a, b) => a + b, 0) / vol2.length;
+            let volTrend;
+            if (avgVol2 > avgVol1 * 1.3) volTrend = '后半段放量';
+            else if (avgVol2 < avgVol1 * 0.7) volTrend = '后半段缩量';
+            else volTrend = '成交量平稳';
+
+            // === T+0 suitability ===
+            const dailySwings = gameData.map(d => (d.high - d.low) / d.close * 100);
+            const avgSwing = dailySwings.reduce((a, b) => a + b, 0) / gameDays;
+            let tSuitability;
+            if (avgSwing > 4 && trend === '横盘震荡') tSuitability = '适合做T';
+            else if (avgSwing > 3) tSuitability = '可尝试做T';
+            else tSuitability = '不太适合做T';
+
+            // === Support / Resistance ===
+            const minPrice = Math.min(...lows);
+            const maxPrice = Math.max(...highs);
+
+            // === Generate text ===
+            const tags = [
+                { text: trend, cls: trendCls },
+                { text: volatility, cls: volCls },
+                { text: maAlignment, cls: maCls },
+                { text: `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%`, cls: periodReturn > 0 ? 'up' : periodReturn < 0 ? 'down' : 'neutral' }
+            ];
+
+            let analysis = '';
+
+            // Trend paragraph
+            if (trendCls === 'up') {
+                analysis += `<p>该波段整体呈<strong>上行趋势</strong>，区间涨幅 ${periodReturn.toFixed(2)}%。`;
+                if (maCls === 'up') analysis += `均线呈多头排列（MA5 > MA10 > MA20），趋势信号明确，适合顺势持股。`;
+                else analysis += `但均线${maAlignment}，上行动力存在分歧，追高需谨慎。`;
+                analysis += `</p>`;
+            } else if (trendCls === 'down') {
+                analysis += `<p>该波段整体呈<strong>下行趋势</strong>，区间跌幅 ${periodReturn.toFixed(2)}%。`;
+                if (maCls === 'down') analysis += `均线呈空头排列（MA5 < MA10 < MA20），下行压力较大，宜观望或轻仓试探反弹。`;
+                else analysis += `均线${maAlignment}，可能存在阶段性反弹机会，但需注意控制仓位。`;
+                analysis += `</p>`;
+            } else {
+                analysis += `<p>该波段呈<strong>横盘震荡</strong>格局，区间涨跌幅仅 ${periodReturn.toFixed(2)}%。`;
+                analysis += `价格在 ${minPrice.toFixed(2)} ~ ${maxPrice.toFixed(2)} 区间内波动，没有明确的趋势方向。`;
+                analysis += `</p>`;
+            }
+
+            // Volume & T
+            analysis += `<p>成交量方面，${volTrend}。`;
+            if (volTrend === '后半段放量' && trendCls === 'up') analysis += `放量上涨是健康的量价配合，说明资金认可当前趋势。`;
+            else if (volTrend === '后半段放量' && trendCls === 'down') analysis += `放量下跌说明抛压较重，需警惕进一步调整。`;
+            else if (volTrend === '后半段缩量' && trendCls === 'up') analysis += `缩量上涨需关注上方压力，量价背离可能预示回调。`;
+            else if (volTrend === '后半段缩量' && trendCls === 'down') analysis += `缩量下跌说明抛压衰减，可能接近底部区域。`;
+            analysis += `</p>`;
+
+            analysis += `<p>日均振幅 ${avgSwing.toFixed(2)}%，${tSuitability}。`;
+            if (tSuitability === '适合做T') analysis += `震荡区间明确，可在支撑位附近低吸、压力位附近高抛来降低持仓成本。`;
+            else if (tSuitability === '可尝试做T') analysis += `波动空间尚可，但需注意判断日内高低点，避免做反方向。`;
+            else analysis += `振幅较小，日内差价空间有限，频繁操作反而容易增加摩擦成本。`;
+            analysis += `</p>`;
+
+            // Entry/exit suggestion
+            if (trendCls === 'up' && maCls === 'up') {
+                analysis += `<p><strong>操作建议：</strong>趋势向上且均线多头排列，适合在回踩均线支撑时买入持有，不宜频繁做空。</p>`;
+            } else if (trendCls === 'down' && maCls === 'down') {
+                analysis += `<p><strong>操作建议：</strong>趋势向下且均线空头排列，以观望为主。如需操作，建议在超跌反弹至均线压力位时轻仓短线。</p>`;
+            } else {
+                analysis += `<p><strong>操作建议：</strong>趋势不明朗，适合区间操作策略 —— 在区间下沿（${minPrice.toFixed(2)} 附近）分批低吸，在区间上沿（${maxPrice.toFixed(2)} 附近）逢高减仓。</p>`;
+            }
+
+            document.getElementById('klineAnalysis').innerHTML = `
+                <div class="analysis-title">波段分析</div>
+                <div class="trend-tags">${tags.map(t => `<span class="trend-tag ${t.cls}">${t.text}</span>`).join('')}</div>
+                <div class="analysis-text">${analysis}</div>
+            `;
+        }
+
+        // ========== PATTERN KNOWLEDGE BASE ==========
+        const PATTERN_KB = {
+            '大阳线': {
+                signal: '看涨', signalCls: 'bullish',
+                illust: '<div class="ck r"><div class="wu" style="height:5px"></div><div class="bd" style="height:44px"></div><div class="wl" style="height:5px"></div></div>',
+                desc: '实体长、上下影线短的阳线。表示多方力量强劲，买盘从开盘一路推升至收盘。出现在低位或上升趋势中是强烈的做多信号。'
+            },
+            '大阴线': {
+                signal: '看跌', signalCls: 'bearish',
+                illust: '<div class="ck g"><div class="wu" style="height:5px"></div><div class="bd" style="height:44px"></div><div class="wl" style="height:5px"></div></div>',
+                desc: '实体长、上下影线短的阴线。表示空方力量占据绝对优势，卖盘从开盘持续打压至收盘。出现在高位或下行趋势中是离场信号。'
+            },
+            '锤子线': {
+                signal: '看涨', signalCls: 'bullish',
+                illust: '<div class="ck g" style="opacity:0.4"><div class="wu" style="height:3px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:5px"></div></div><div class="ck g" style="opacity:0.5"><div class="wu" style="height:2px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:7px"></div></div><div class="ck r"><div class="wu" style="height:2px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:35px"></div></div>',
+                desc: '下影线很长（至少为实体2倍），上影线极短或没有。出现在下跌末端，说明空方将价格打下去后被多方强力拉回，是底部反转信号。'
+            },
+            '射击之星': {
+                signal: '看跌', signalCls: 'bearish',
+                illust: '<div class="ck r" style="opacity:0.4"><div class="wu" style="height:5px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:2px"></div></div><div class="ck r" style="opacity:0.5"><div class="wu" style="height:7px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:2px"></div></div><div class="ck g"><div class="wu" style="height:35px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:2px"></div></div>',
+                desc: '上影线很长，实体小且位于底部。出现在上涨末端，说明多方尝试拉升但遭到强烈抛压打回，是顶部反转的警告信号。'
+            },
+            '十字星': {
+                signal: '中性', signalCls: 'neutral',
+                illust: '<div class="ck d"><div class="wu" style="height:22px"></div><div class="bd" style="height:2px"></div><div class="wl" style="height:22px"></div></div>',
+                desc: '开盘价和收盘价几乎相同，上下影线等长。代表多空力量达到平衡。在趋势末端出现往往预示着反转，需结合前后K线确认方向。'
+            },
+            '看涨吞没': {
+                signal: '看涨', signalCls: 'bullish',
+                illust: '<div class="ck g"><div class="wu" style="height:5px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:5px"></div></div><div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:35px"></div><div class="wl" style="height:3px"></div></div>',
+                desc: '一根大阳线完全包住前一根阴线的实体。多方以压倒性力量反攻，是下跌趋势中最可靠的反转形态之一，阳线实体越大信号越强。'
+            },
+            '看跌吞没': {
+                signal: '看跌', signalCls: 'bearish',
+                illust: '<div class="ck r"><div class="wu" style="height:5px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:5px"></div></div><div class="ck g"><div class="wu" style="height:3px"></div><div class="bd" style="height:35px"></div><div class="wl" style="height:3px"></div></div>',
+                desc: '一根大阴线完全包住前一根阳线的实体。空方全面压制多方，上涨趋势中出现预示着行情可能见顶，尤其伴随放量时更需警惕。'
+            }
+        };
+
+        function kbTag(name) {
+            if (!PATTERN_KB[name]) return name;
+            return '<span class="kb-link" data-pattern="' + name + '" onmouseenter="showKBPopup(this)" onmouseleave="hideKBPopup()">' + name + '</span>';
+        }
+
+        function showKBPopup(el) {
+            const key = el.getAttribute('data-pattern');
+            const p = PATTERN_KB[key];
+            if (!p) return;
+            const popup = document.getElementById('kbPopup');
+            popup.querySelector('.kb-popup-name').textContent = key;
+            const sig = popup.querySelector('.kb-popup-signal');
+            sig.textContent = p.signal;
+            sig.className = 'kb-popup-signal ' + p.signalCls;
+            popup.querySelector('.kb-popup-illust').innerHTML = p.illust;
+            popup.querySelector('.kb-popup-desc').textContent = p.desc;
+
+            const rect = el.getBoundingClientRect();
+            let left = rect.left;
+            let top = rect.bottom + 8;
+            // Keep within viewport
+            if (left + 310 > window.innerWidth) left = window.innerWidth - 320;
+            if (left < 8) left = 8;
+            if (top + 250 > window.innerHeight) top = rect.top - 250;
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.classList.add('visible');
+        }
+
+        function hideKBPopup() {
+            document.getElementById('kbPopup').classList.remove('visible');
+        }
+
+        function generateBestPoints() {
+            const histLen = gameState.historyLength;
+            const kline = gameState.gameKline;
+            const gameDays = 30;
+
+            const allData = kline.slice(0, histLen + gameDays);
+            const ma5 = calcMA(allData, 5);
+            const ma10 = calcMA(allData, 10);
+            const ma20 = calcMA(allData, 20);
+            const ma30 = calcMA(allData, 30);
+
+            const gameData = kline.slice(histLen, histLen + gameDays);
+            const closes = gameData.map(d => d.close);
+            const volumes = gameData.map(d => d.volume);
+            const avgVol = volumes.reduce((a, b) => a + b, 0) / gameDays;
+
+            // Score each day as a buy point and sell point
+            const buyScores = [];
+            const sellScores = [];
+
+            for (let i = 0; i < gameDays; i++) {
+                const gi = histLen + i; // global index
+                const d = gameData[i];
+                let buyScore = 0;
+                let sellScore = 0;
+                const buyReasons = [];
+                const sellReasons = [];
+
+                const m5 = ma5[gi], m10 = ma10[gi], m20 = ma20[gi], m30 = ma30[gi];
+                const pm5 = i > 0 ? ma5[gi - 1] : null;
+                const pm10 = i > 0 ? ma10[gi - 1] : null;
+                const pm20 = i > 0 ? ma20[gi - 1] : null;
+
+                // 1. Price near support (near recent lows)
+                const recentLows = closes.slice(Math.max(0, i - 10), i + 1);
+                const recentHighs = closes.slice(Math.max(0, i - 10), i + 1);
+                const localMin = Math.min(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.low));
+                const localMax = Math.max(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.high));
+
+                if (d.low <= localMin * 1.005) {
+                    buyScore += 3;
+                    buyReasons.push({ tag: '支撑', text: `触及近期低点支撑位 ${localMin.toFixed(2)}` });
+                }
+                if (d.high >= localMax * 0.995) {
+                    sellScore += 3;
+                    sellReasons.push({ tag: '压力', text: `触及近期高点压力位 ${localMax.toFixed(2)}` });
+                }
+
+                // 2. MA golden cross / death cross
+                if (m5 && m10 && pm5 && pm10) {
+                    if (pm5 <= pm10 && m5 > m10) {
+                        buyScore += 4;
+                        buyReasons.push({ tag: '金叉', text: 'MA5 上穿 MA10 形成金叉，短期趋势转多' });
+                    }
+                    if (pm5 >= pm10 && m5 < m10) {
+                        sellScore += 4;
+                        sellReasons.push({ tag: '死叉', text: 'MA5 下穿 MA10 形成死叉，短期趋势转空' });
+                    }
+                }
+
+                if (m5 && m20 && pm5 && pm20) {
+                    if (pm5 <= pm20 && m5 > m20) {
+                        buyScore += 3;
+                        buyReasons.push({ tag: '金叉', text: 'MA5 上穿 MA20，中期趋势向好' });
+                    }
+                    if (pm5 >= pm20 && m5 < m20) {
+                        sellScore += 3;
+                        sellReasons.push({ tag: '死叉', text: 'MA5 下穿 MA20，中期趋势走弱' });
+                    }
+                }
+
+                // 3. Price bouncing off MA support / hitting MA resistance
+                if (m20 && d.low <= m20 * 1.01 && d.close > m20 && d.close > d.open) {
+                    buyScore += 3;
+                    buyReasons.push({ tag: '均线支撑', text: `回踩 MA20（${m20.toFixed(2)}）后收阳，获得均线支撑` });
+                }
+                if (m10 && d.low <= m10 * 1.01 && d.close > m10 && d.close > d.open) {
+                    buyScore += 2;
+                    buyReasons.push({ tag: '均线支撑', text: `回踩 MA10（${m10.toFixed(2)}）后企稳` });
+                }
+                if (m20 && d.high >= m20 * 0.99 && d.close < m20 && d.close < d.open) {
+                    sellScore += 3;
+                    sellReasons.push({ tag: '均线压力', text: `上冲 MA20（${m20.toFixed(2)}）后受阻回落` });
+                }
+
+                // 4. Volume breakout
+                if (volumes[i] > avgVol * 1.8 && d.close > d.open) {
+                    buyScore += 2;
+                    buyReasons.push({ tag: '放量', text: `成交量达均量 ${(volumes[i] / avgVol).toFixed(1)} 倍，放量阳线突破` });
+                }
+                if (volumes[i] > avgVol * 1.8 && d.close < d.open) {
+                    sellScore += 2;
+                    sellReasons.push({ tag: '放量', text: `放量阴线（${(volumes[i] / avgVol).toFixed(1)} 倍均量），抛压涌出` });
+                }
+
+                // 5. Candlestick patterns
+                const bodyRatio = Math.abs(d.close - d.open) / (d.high - d.low || 0.01);
+                const lowerShadow = Math.min(d.open, d.close) - d.low;
+                const upperShadow = d.high - Math.max(d.open, d.close);
+                const bodySize = Math.abs(d.close - d.open);
+
+                // Big Bull Candle (大阳线)
+                if (d.close > d.open && bodySize / d.close > 0.03 && bodyRatio > 0.7) {
+                    buyScore += 2;
+                    buyReasons.push({ tag: '形态', text: '出现' + kbTag('大阳线') + '，多方力量强劲，买盘推升明显' });
+                }
+                // Big Bear Candle (大阴线)
+                if (d.close < d.open && bodySize / d.close > 0.03 && bodyRatio > 0.7) {
+                    sellScore += 2;
+                    sellReasons.push({ tag: '形态', text: '出现' + kbTag('大阴线') + '，空方力量占优，卖盘压制明显' });
+                }
+
+                // Hammer (long lower shadow, small body at top)
+                if (lowerShadow > bodySize * 2 && upperShadow < bodySize * 0.5 && i > 2) {
+                    const prevDown = closes[i - 1] < closes[Math.max(0, i - 3)];
+                    if (prevDown) {
+                        buyScore += 3;
+                        buyReasons.push({ tag: '形态', text: '下跌后出现' + kbTag('锤子线') + '，下影线较长，空方力量衰竭' });
+                    }
+                }
+                // Shooting star (long upper shadow, small body at bottom)
+                if (upperShadow > bodySize * 2 && lowerShadow < bodySize * 0.5 && i > 2) {
+                    const prevUp = closes[i - 1] > closes[Math.max(0, i - 3)];
+                    if (prevUp) {
+                        sellScore += 3;
+                        sellReasons.push({ tag: '形态', text: '上涨后出现' + kbTag('射击之星') + '，上影线较长，多方力量受阻' });
+                    }
+                }
+
+                // Doji (十字星)
+                if (bodyRatio < 0.1 && (d.high - d.low) > 0 && i > 2) {
+                    const prevUp = closes[i - 1] > closes[Math.max(0, i - 3)];
+                    const prevDown = closes[i - 1] < closes[Math.max(0, i - 3)];
+                    if (prevUp) {
+                        sellScore += 2;
+                        sellReasons.push({ tag: '形态', text: '上涨后出现' + kbTag('十字星') + '，多空力量达到平衡，需警惕趋势反转' });
+                    }
+                    if (prevDown) {
+                        buyScore += 2;
+                        buyReasons.push({ tag: '形态', text: '下跌后出现' + kbTag('十字星') + '，多空力量达到平衡，可能预示底部反转' });
+                    }
+                }
+
+                // Engulfing
+                if (i > 0) {
+                    const prev = gameData[i - 1];
+                    if (prev.close < prev.open && d.close > d.open && d.close > prev.open && d.open < prev.close) {
+                        buyScore += 3;
+                        buyReasons.push({ tag: '形态', text: kbTag('看涨吞没') + '形态（阳包阴），多方强力反攻' });
+                    }
+                    if (prev.close > prev.open && d.close < d.open && d.close < prev.open && d.open > prev.close) {
+                        sellScore += 3;
+                        sellReasons.push({ tag: '形态', text: kbTag('看跌吞没') + '形态（阴包阳），空方占据主导' });
+                    }
+                }
+
+                // 6. Consecutive down days (oversold bounce candidate)
+                if (i >= 3) {
+                    const consDown = closes[i - 3] > closes[i - 2] && closes[i - 2] > closes[i - 1] && closes[i - 1] > d.close;
+                    if (consDown) {
+                        buyScore += 2;
+                        buyReasons.push({ tag: '超跌', text: '连续4日下跌，短线超跌，存在技术性反弹需求' });
+                    }
+                    const consUp = closes[i - 3] < closes[i - 2] && closes[i - 2] < closes[i - 1] && closes[i - 1] < d.close;
+                    if (consUp) {
+                        sellScore += 2;
+                        sellReasons.push({ tag: '超涨', text: '连续4日上涨，短线涨幅过大，注意获利回吐压力' });
+                    }
+                }
+
+                // 7. MA bullish/bearish alignment bonus
+                if (m5 && m10 && m20 && m5 > m10 && m10 > m20 && d.close > d.open) {
+                    buyScore += 1;
+                    if (!buyReasons.find(r => r.tag === '趋势')) {
+                        buyReasons.push({ tag: '趋势', text: '均线多头排列，趋势向上，顺势做多' });
+                    }
+                }
+                if (m5 && m10 && m20 && m5 < m10 && m10 < m20 && d.close < d.open) {
+                    sellScore += 1;
+                    if (!sellReasons.find(r => r.tag === '趋势')) {
+                        sellReasons.push({ tag: '趋势', text: '均线空头排列，趋势向下，宜离场观望' });
+                    }
+                }
+
+                if (buyReasons.length > 0) buyScores.push({ day: i + 1, score: buyScore, reasons: buyReasons, price: d.close, date: d.date });
+                if (sellReasons.length > 0) sellScores.push({ day: i + 1, score: sellScore, reasons: sellReasons, price: d.close, date: d.date });
+            }
+
+            // Sort and pick top 3
+            buyScores.sort((a, b) => b.score - a.score);
+            sellScores.sort((a, b) => b.score - a.score);
+
+            const topBuys = buyScores.slice(0, 3);
+            const topSells = sellScores.slice(0, 3);
+
+            // Store for chart marking
+            gameState.bestPoints = { buys: topBuys, sells: topSells };
+
+            // Render
+            let html = `<div class="analysis-title">最佳买卖点分析</div>`;
+
+            if (topBuys.length > 0) {
+                html += `<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-muted);">买入机会 TOP ${topBuys.length}</div>`;
+                topBuys.forEach((p, idx) => {
+                    html += `<div class="best-point-card">
+                        <div class="point-header">
+                            <span class="point-badge buy">B${idx + 1}</span>
+                            <span class="point-day">第 ${p.day} 天（${p.date}）</span>
+                            <span class="point-price">收盘 ${p.price.toFixed(2)}</span>
+                        </div>
+                        <div class="point-reason">${p.reasons.map(r =>
+                            `<span class="point-reason-tag">${r.tag}</span>${r.text}`
+                        ).join('<br>')}</div>
+                    </div>`;
+                });
+            }
+
+            if (topSells.length > 0) {
+                html += `<div style="margin:16px 0 8px;font-size:0.85rem;color:var(--text-muted);">卖出机会 TOP ${topSells.length}</div>`;
+                topSells.forEach((p, idx) => {
+                    html += `<div class="best-point-card">
+                        <div class="point-header">
+                            <span class="point-badge sell">S${idx + 1}</span>
+                            <span class="point-day">第 ${p.day} 天（${p.date}）</span>
+                            <span class="point-price">收盘 ${p.price.toFixed(2)}</span>
+                        </div>
+                        <div class="point-reason">${p.reasons.map(r =>
+                            `<span class="point-reason-tag">${r.tag}</span>${r.text}`
+                        ).join('<br>')}</div>
+                    </div>`;
+                });
+            }
+
+            if (topBuys.length === 0 && topSells.length === 0) {
+                html += `<div class="analysis-text"><p>该区间技术信号较少，未识别出明显的买卖点。</p></div>`;
+            }
+
+            document.getElementById('bestPointsAnalysis').innerHTML = html;
+        }
+
+        function generateBSReport() {
+            const histLen = gameState.historyLength;
+            const kline = gameState.gameKline;
+            const trades = gameState.tradeHistory;
+            const gameDays = 30;
+
+            // 计算30天内的最优买卖点（用收盘价近似）
+            let bestBuyDay = 0, bestSellDay = 0, bestProfit = 0;
+            for (let i = 0; i < gameDays - 1; i++) {
+                for (let j = i + 2; j < gameDays; j++) { // T+1: at least 2 days apart
+                    const buyPrice = kline[histLen + i + 1].open;  // next day open
+                    const sellPrice = kline[histLen + j + 1] ? kline[histLen + j + 1].open : kline[histLen + j].close;
+                    const profit = (sellPrice - buyPrice) / buyPrice;
+                    if (profit > bestProfit) {
+                        bestProfit = profit;
+                        bestBuyDay = i + 1;
+                        bestSellDay = j + 1;
+                    }
+                }
+            }
+
+            // 全段涨跌幅（第1天开盘 vs 第30天收盘）
+            const periodOpen = kline[histLen].open;
+            const periodClose = kline[histLen + gameDays - 1].close;
+            const periodReturn = (periodClose - periodOpen) / periodOpen * 100;
+
+            const userReturn = (gameState.totalReturn - 1) * 100;
+            const buyTrades = trades.filter(t => t.type === 'buy');
+            const sellTrades = trades.filter(t => t.type === 'sell');
+
+            // ===== 评分维度 =====
+            let score = 70; // 基准分
+            const details = [];
+
+            // 1. 收益率评分 (±15分)
+            if (bestProfit > 0.001) {
+                const returnRatio = userReturn / (bestProfit * 100);
+                const returnScore = Math.max(-15, Math.min(15, returnRatio * 15));
+                score += returnScore;
+                details.push({
+                    label: '收益率表现',
+                    value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
+                    cls: userReturn > 0 ? 'positive' : userReturn < 0 ? 'negative' : 'neutral',
+                    note: `最优单次收益 ${(bestProfit * 100).toFixed(2)}%`
+                });
+            } else {
+                // 区间无明显机会
+                if (Math.abs(userReturn) < 2) {
+                    score += 8; // 能守住不亏就很好
+                } else if (userReturn < -2) {
+                    score -= 5;
+                }
+                details.push({
+                    label: '收益率表现',
+                    value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
+                    cls: userReturn > 0 ? 'positive' : userReturn < 0 ? 'negative' : 'neutral',
+                    note: '区间机会有限'
+                });
+            }
+
+            // 2. 跑赢大盘（区间涨跌）(±8分)
+            const alpha = userReturn - periodReturn;
+            if (alpha > 3) score += 8;
+            else if (alpha > 0) score += 4;
+            else if (alpha > -3) score -= 2;
+            else score -= 8;
+            details.push({
+                label: '相对区间涨跌',
+                value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`,
+                cls: alpha > 0 ? 'positive' : alpha < 0 ? 'negative' : 'neutral',
+                note: `区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`
+            });
+
+            // 3. 买点质量 (±5分)
+            if (buyTrades.length > 0) {
+                const prices = [];
+                for (let i = 0; i < gameDays; i++) prices.push(kline[histLen + i].close);
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                const range = maxPrice - minPrice || 1;
+                const avgBuyPos = buyTrades.reduce((s, t) => s + (t.price - minPrice) / range, 0) / buyTrades.length;
+                // avgBuyPos 越低越好（在低位买入）
+                if (avgBuyPos < 0.3) score += 5;
+                else if (avgBuyPos < 0.5) score += 2;
+                else if (avgBuyPos > 0.7) score -= 5;
+                else score -= 2;
+                details.push({
+                    label: '买点位置',
+                    value: avgBuyPos < 0.3 ? '低位' : avgBuyPos < 0.5 ? '中低位' : avgBuyPos < 0.7 ? '中高位' : '高位',
+                    cls: avgBuyPos < 0.5 ? 'positive' : 'negative',
+                    note: `区间位置 ${(avgBuyPos * 100).toFixed(0)}%`
+                });
+            }
+
+            // 4. 卖点质量 (±5分)
+            if (sellTrades.length > 0) {
+                const prices = [];
+                for (let i = 0; i < gameDays; i++) prices.push(kline[histLen + i].close);
+                const minPrice = Math.min(...prices);
+                const maxPrice = Math.max(...prices);
+                const range = maxPrice - minPrice || 1;
+                const avgSellPos = sellTrades.reduce((s, t) => s + (t.price - minPrice) / range, 0) / sellTrades.length;
+                // avgSellPos 越高越好
+                if (avgSellPos > 0.7) score += 5;
+                else if (avgSellPos > 0.5) score += 2;
+                else if (avgSellPos < 0.3) score -= 5;
+                else score -= 2;
+                details.push({
+                    label: '卖点位置',
+                    value: avgSellPos > 0.7 ? '高位' : avgSellPos > 0.5 ? '中高位' : avgSellPos > 0.3 ? '中低位' : '低位',
+                    cls: avgSellPos > 0.5 ? 'positive' : 'negative',
+                    note: `区间位置 ${(avgSellPos * 100).toFixed(0)}%`
+                });
+            }
+
+            // 5. 交易频率合理性 (±3分)
+            const tradeCount = buyTrades.length;
+            if (tradeCount === 0) {
+                score -= 3;
+                details.push({ label: '交易频率', value: '未交易', cls: 'negative', note: '空仓观望' });
+            } else if (tradeCount <= 3) {
+                score += 3;
+                details.push({ label: '交易频率', value: '适度', cls: 'positive', note: `${tradeCount} 次买入` });
+            } else {
+                score -= 3;
+                details.push({ label: '交易频率', value: '频繁', cls: 'negative', note: `${tradeCount} 次买入` });
+            }
+
+            // 6. 止损意识: 单笔最大亏损 (±4分)
+            if (gameState.tradeGains.length > 0) {
+                const maxLoss = Math.min(...gameState.tradeGains);
+                if (maxLoss >= -2) score += 4;
+                else if (maxLoss >= -5) score += 1;
+                else if (maxLoss < -10) score -= 4;
+                else score -= 2;
+            }
+
+            // Clamp score
+            score = Math.max(59, Math.min(100, Math.round(score)));
+
+            // Grade label
+            let grade, gradeCls;
+            if (score >= 90) { grade = '优秀'; gradeCls = 'excellent'; }
+            else if (score >= 80) { grade = '良好'; gradeCls = 'good'; }
+            else if (score >= 70) { grade = '中等'; gradeCls = 'average'; }
+            else { grade = '待提升'; gradeCls = 'poor'; }
+
+            // 生成评语
+            let comment = '';
+            if (tradeCount === 0) {
+                comment = '全程空仓观望，错过了市场机会。适当参与才能积累经验。';
+            } else if (score >= 90) {
+                comment = '操作精准，买卖时机把握出色，展现了优秀的盘感和纪律性！';
+            } else if (score >= 80) {
+                comment = '整体操作不错，对趋势有较好的判断。可以在买卖点的精确度上进一步优化。';
+            } else if (score >= 70) {
+                comment = '操作中规中矩，有一定的判断力。建议关注均线支撑/压力位来优化进出场时机。';
+            } else {
+                if (userReturn < -5) {
+                    comment = '亏损较大，需注意止损纪律。追高买入或恐慌卖出是常见的误区，建议冷静分析趋势后再操作。';
+                } else {
+                    comment = '操作时机有待改善。建议结合均线和成交量信号来辅助判断买卖点。';
+                }
+            }
+
+            // Render
+            const el = document.getElementById('bsReport');
+            el.innerHTML = `
+                <div class="bs-score-header">
+                    <span class="bs-score-title">BS 点评分</span>
+                    <span class="bs-score-badge ${gradeCls}">${score}分 · ${grade}</span>
+                </div>
+                <div class="bs-report-items">
+                    ${details.map(d => `
+                        <div class="bs-report-item">
+                            <span class="bs-item-label">${d.label}</span>
+                            <span>
+                                <span class="bs-item-value ${d.cls}">${d.value}</span>
+                                <span style="color:var(--text-muted); font-size:0.75rem; margin-left:8px;">${d.note}</span>
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="bs-comment">${comment}</div>
+            `;
+        }
+
+        function endGame() {
+            // Calculate final return if still holding
+            if (gameState.position === 'holding' || gameState.position === 'locked') {
+                const histLen = gameState.historyLength;
+                const finalPrice = gameState.gameKline[histLen + 30].open; // Day 31 open price
+                const tradeReturn = finalPrice / gameState.costBasis;
+                gameState.totalReturn *= tradeReturn;
+                gameState.tradeGains.push((tradeReturn - 1) * 100);
+                addTradeHistory('sell', 31, finalPrice, tradeReturn);
+            }
+
+            // Switch to result screen
+            document.getElementById('gameScreen').classList.remove('active');
+            document.getElementById('resultScreen').classList.add('active');
+
+            // Display results
+            document.getElementById('stockReveal').textContent =
+                `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+
+            document.getElementById('dateRange').textContent =
+                `${gameState.gameKline[gameState.historyLength].date} ~ ${gameState.gameKline[gameState.historyLength + 29].date}`;
+
+            const finalReturnPercent = (gameState.totalReturn - 1) * 100;
+            const finalReturnEl = document.getElementById('finalReturn');
+            finalReturnEl.textContent = (finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2) + '%';
+            finalReturnEl.className = 'final-return ' +
+                (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
+
+            document.getElementById('finalTradeCount').textContent = gameState.tradeHistory.length;
+            document.getElementById('holdingDays').textContent = gameState.holdingDays;
+
+            const maxGain = gameState.tradeGains.length > 0 ?
+                Math.max(...gameState.tradeGains) : 0;
+            document.getElementById('maxGain').textContent =
+                (maxGain >= 0 ? '+' : '') + maxGain.toFixed(2) + '%';
+
+            document.getElementById('resultChartSubtitle').textContent =
+                `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+
+            // Draw full chart and reports
+            generateBSReport();
+            generateBestPoints();
+            drawResultChart();
+            generateKlineAnalysis();
+        }
+
+        function drawResultChart() {
+            const chartDom = document.getElementById('result-kline-chart');
+            if (resultChart) {
+                resultChart.dispose();
+            }
+            resultChart = echarts.init(chartDom);
+
+            const histLen = gameState.historyLength;
+            const fullData = gameState.gameKline.slice(0, histLen + 30);
+            const dates = fullData.map(d => d.date);
+            const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
+            const volumes = fullData.map(d => d.volume);
+            const volumeColors = fullData.map(d => d.close >= d.open ? '#ef4444' : '#22c55e');
+
+            const ma5 = calculateMA(fullData, 5);
+            const ma10 = calculateMA(fullData, 10);
+            const ma20 = calculateMA(fullData, 20);
+            const ma30 = calculateMA(fullData, 30);
+
+            // Mark buy/sell points (offset by histLen)
+            const markPoints = gameState.tradeHistory.map(trade => ({
+                coord: [histLen + trade.day - 1, trade.price],
+                value: trade.type === 'buy' ? '买' : '卖',
+                itemStyle: {
+                    color: trade.type === 'buy' ? '#ef4444' : '#22c55e'
+                }
+            })).filter(p => p.coord[0] < histLen + 30);
+
+            // Mark best buy/sell points (from analysis)
+            const bp = gameState.bestPoints || { buys: [], sells: [] };
+            const bestMarkPoints = [];
+            bp.buys.forEach((p, idx) => {
+                bestMarkPoints.push({
+                    coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
+                    value: 'B' + (idx + 1),
+                    symbolOffset: [0, 20],
+                    symbol: 'diamond',
+                    symbolSize: 14,
+                    itemStyle: { color: '#fbbf24' },
+                    label: { color: '#fbbf24', fontSize: 10, fontWeight: 'bold', position: 'bottom' }
+                });
+            });
+            bp.sells.forEach((p, idx) => {
+                bestMarkPoints.push({
+                    coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
+                    value: 'S' + (idx + 1),
+                    symbol: 'diamond',
+                    symbolSize: 14,
+                    itemStyle: { color: '#a78bfa' },
+                    label: { color: '#a78bfa', fontSize: 10, fontWeight: 'bold', position: 'top' }
+                });
+            });
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' },
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    textStyle: {
+                        color: '#e2e8f0',
+                        fontFamily: 'JetBrains Mono'
+                    }
+                },
+                axisPointer: {
+                    link: [{ xAxisIndex: 'all' }]
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '2%',
+                        top: '5%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '10%',
+                        right: '2%',
+                        top: '72%',
+                        bottom: '8%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLabel: { show: false },
+                        axisTick: { show: false },
+                        splitLine: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLabel: {
+                            color: '#64748b',
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10,
+                            rotate: 45
+                        }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        gridIndex: 0,
+                        axisLabel: {
+                            color: '#64748b',
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10
+                        },
+                        axisLine: { show: false },
+                        splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.1)' } }
+                    },
+                    {
+                        type: 'value',
+                        scale: true,
+                        gridIndex: 1,
+                        show: false
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ohlc,
+                        itemStyle: {
+                            color: '#ef4444',
+                            color0: '#22c55e',
+                            borderColor: '#ef4444',
+                            borderColor0: '#22c55e'
+                        },
+                        markPoint: {
+                            data: [...markPoints, ...bestMarkPoints],
+                            symbol: 'pin',
+                            symbolSize: 40,
+                            label: {
+                                formatter: '{b}',
+                                color: '#fff',
+                                fontWeight: 'bold'
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: {
+                            color: function(params) {
+                                return volumeColors[params.dataIndex];
+                            }
+                        }
+                    },
+                    {
+                        name: 'MA5',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma5,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#f5c542' }
+                    },
+                    {
+                        name: 'MA10',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma10,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#42a5f5' }
+                    },
+                    {
+                        name: 'MA20',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma20,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#ab47bc' }
+                    },
+                    {
+                        name: 'MA30',
+                        type: 'line',
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        data: ma30,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: { width: 1, color: '#26a69a' }
+                    }
+                ]
+            };
+
+            resultChart.setOption(option);
+            applyChartTheme(resultChart);
+        }
+
+        function resetGame() {
+            document.querySelector('.header').classList.remove('compact');
+            document.getElementById('resultScreen').classList.remove('active');
+            document.getElementById('startScreen').style.display = 'flex';
+        }
+
+        // ========== ACADEMY ==========
+        function showAcademy() {
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('academyScreen').classList.add('active');
+        }
+
+        function hideAcademy() {
+            document.getElementById('academyScreen').classList.remove('active');
+            document.getElementById('startScreen').style.display = 'flex';
+        }
+
+        function switchTab(btn, tabId) {
+            document.querySelectorAll('.academy-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.pattern-grid').forEach(g => g.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // ========== WINDOW EVENTS ==========
+        window.addEventListener('resize', () => {
+            if (klineChart) klineChart.resize();
+            if (resultChart) resultChart.resize();
+        });
+
+        // Initialize on load
+        init();
+    </script>
+
+    <div class="kb-popup" id="kbPopup">
+        <div class="kb-popup-header">
+            <span class="kb-popup-name"></span>
+            <span class="kb-popup-signal"></span>
+        </div>
+        <div class="kb-popup-illust"></div>
+        <div class="kb-popup-desc"></div>
+    </div>
+</body>
+</html>
