@@ -1190,7 +1190,185 @@
             .academy-tabs { flex-wrap: wrap; }
             .academy-tab { flex: 1 1 auto; font-size: 0.8rem; padding: 8px 12px; }
             .academy-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .academy-zone-cards { grid-template-columns: 1fr !important; }
+            .quiz-options { grid-template-columns: 1fr !important; }
+            .quiz-kline-display { height: 200px !important; }
+            .quiz-option-chart { height: 100px !important; }
         }
+
+        /* ===== Academy Landing ===== */
+        .academy-landing { animation: fadeIn 0.5s ease-out; }
+        .academy-zone-cards {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;
+            max-width: 800px; margin: 0 auto;
+        }
+        .academy-zone-card {
+            background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 40px 32px; text-align: center;
+            cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px);
+            position: relative; overflow: hidden;
+        }
+        .academy-zone-card::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(6,182,212,0.06) 0%, transparent 60%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .academy-zone-card:hover { transform: translateY(-4px); }
+        .academy-zone-card:hover::before { opacity: 1; }
+        .academy-zone-card.knowledge:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 8px 40px rgba(6,182,212,0.15);
+        }
+        .academy-zone-card.training { border-color: rgba(239, 68, 68, 0.2); }
+        .academy-zone-card.training::before {
+            background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, transparent 60%);
+        }
+        .academy-zone-card.training:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 8px 40px rgba(239, 68, 68, 0.15);
+        }
+        .zone-icon { margin-bottom: 20px; }
+        .zone-title {
+            font-family: 'Noto Sans SC', sans-serif; font-size: 1.4rem;
+            font-weight: 700; color: var(--text-primary); margin: 0 0 12px;
+        }
+        .zone-desc {
+            font-size: 0.88rem; color: var(--text-secondary);
+            line-height: 1.7; margin-bottom: 20px;
+        }
+        .zone-enter-hint {
+            font-size: 0.82rem; color: var(--accent-cyan); letter-spacing: 0.1em;
+        }
+        .academy-zone-card.training .zone-enter-hint { color: #ef4444; }
+        .zone-back-btn {
+            font-family: 'Noto Sans SC', sans-serif; font-size: 0.82rem;
+            padding: 8px 20px; background: transparent;
+            border: 1px solid var(--border-color); border-radius: 6px;
+            color: var(--text-muted); cursor: pointer; transition: all 0.25s;
+            margin-bottom: 20px;
+        }
+        .zone-back-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+        /* ===== Quiz Progress ===== */
+        .quiz-progress {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+        }
+        .quiz-progress-track {
+            flex: 1; height: 6px; background: rgba(59, 130, 246, 0.1);
+            border-radius: 3px; overflow: hidden;
+        }
+        .quiz-progress-bar {
+            height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 3px; transition: width 0.4s ease;
+        }
+        .quiz-progress-text {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+            color: var(--text-muted); white-space: nowrap;
+        }
+
+        /* ===== Quiz Question ===== */
+        .quiz-question-container { animation: fadeIn 0.4s ease-out; }
+        .quiz-question-type {
+            display: inline-block; font-size: 0.72rem; font-weight: 600;
+            padding: 3px 10px; border-radius: 4px; margin-bottom: 12px;
+        }
+        .quiz-question-type.theory { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
+        .quiz-question-type.practical { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .quiz-question-text {
+            font-size: 1.05rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 20px; line-height: 1.6;
+        }
+        .quiz-pattern-display {
+            height: 120px; display: flex; align-items: flex-end;
+            justify-content: center; gap: 6px; margin-bottom: 20px; padding: 16px;
+            background: rgba(10, 14, 23, 0.5); border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+            position: relative; overflow: hidden; max-width: 400px;
+        }
+        .quiz-pattern-display svg {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+        }
+        .quiz-kline-display {
+            width: 100%; height: 280px; margin-bottom: 20px;
+            background: rgba(10, 14, 23, 0.3); border-radius: 12px;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+        }
+        .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .quiz-option {
+            background: rgba(15, 23, 42, 0.5); border: 2px solid rgba(59, 130, 246, 0.1);
+            border-radius: 10px; padding: 16px; cursor: pointer;
+            transition: all 0.25s; text-align: center;
+        }
+        .quiz-option:hover:not(.correct):not(.wrong) {
+            border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.05);
+        }
+        .quiz-option.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        .quiz-option.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .quiz-option.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .quiz-option-label {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
+            color: var(--text-muted); margin-bottom: 6px;
+        }
+        .quiz-option-text { font-size: 0.92rem; color: var(--text-primary); }
+        .quiz-option-chart { width: 100%; height: 120px; }
+        .quiz-explanation {
+            margin-top: 16px; padding: 16px;
+            background: rgba(15, 23, 42, 0.5); border-radius: 10px;
+            border-left: 3px solid var(--accent-cyan);
+            font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7;
+            animation: fadeIn 0.3s ease-out;
+        }
+        .quiz-nav { display: flex; justify-content: flex-end; margin-top: 24px; }
+        .quiz-nav-btn {
+            font-family: 'Noto Sans SC', sans-serif; font-size: 0.92rem; font-weight: 600;
+            padding: 12px 36px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border: none; border-radius: 8px; color: white;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .quiz-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .quiz-nav-btn:not(:disabled):hover {
+            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3);
+        }
+
+        /* ===== Quiz Results ===== */
+        .quiz-result-card {
+            text-align: center; padding: 40px;
+            background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color);
+            border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 24px;
+        }
+        .quiz-score {
+            font-family: 'Orbitron', monospace; font-size: 3rem; font-weight: 900; margin: 16px 0;
+        }
+        .quiz-score.high { color: #22c55e; }
+        .quiz-score.medium { color: #f59e0b; }
+        .quiz-score.low { color: #ef4444; }
+        .quiz-result-details { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+        .quiz-result-item {
+            background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(59, 130, 246, 0.1);
+            border-radius: 12px; padding: 20px;
+        }
+        .quiz-result-item.wrong { border-color: rgba(239, 68, 68, 0.3); }
+        .quiz-result-item.correct-item { border-color: rgba(34, 197, 94, 0.15); }
+        .quiz-retry-btn {
+            font-family: 'Noto Sans SC', sans-serif; font-size: 1rem; font-weight: 600;
+            padding: 14px 48px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border: none; border-radius: 8px; color: white;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .quiz-retry-btn:hover {
+            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Light theme overrides for quiz */
+        [data-theme="light"] .academy-zone-card { background: rgba(255, 255, 255, 0.65); }
+        [data-theme="light"] .quiz-pattern-display { background: rgba(241, 245, 249, 0.9); }
+        [data-theme="light"] .quiz-option { background: rgba(255, 255, 255, 0.6); }
+        [data-theme="light"] .quiz-explanation { background: rgba(241, 245, 249, 0.8); }
+        [data-theme="light"] .quiz-result-card { background: rgba(255, 255, 255, 0.65); }
+        [data-theme="light"] .quiz-result-item { background: rgba(241, 245, 249, 0.6); }
+        [data-theme="light"] .quiz-kline-display { background: rgba(241, 245, 249, 0.5); }
 
         /* Loading spinner */
         .loading {
@@ -1254,11 +1432,32 @@
                 <button class="academy-back" onclick="hideAcademy()">← 返回首页</button>
             </div>
 
-            <div class="academy-tabs">
-                <button class="academy-tab active" onclick="switchTab(this, 'tab-kline')">K线形态</button>
-                <button class="academy-tab" onclick="switchTab(this, 'tab-volume')">成交量形态</button>
-                <button class="academy-tab" onclick="switchTab(this, 'tab-trend')">走势形态</button>
+            <!-- Academy Landing -->
+            <div class="academy-landing" id="academyLanding">
+                <div class="academy-zone-cards">
+                    <div class="academy-zone-card training" onclick="enterTrainingZone()">
+                        <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#ef4444" stroke-width="2" opacity="0.3"/><circle cx="24" cy="24" r="13" stroke="#ef4444" stroke-width="2" opacity="0.5"/><circle cx="24" cy="24" r="6" fill="#ef4444" opacity="0.8"/><line x1="24" y1="0" x2="24" y2="8" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="24" y1="40" x2="24" y2="48" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="0" y1="24" x2="8" y2="24" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="40" y1="24" x2="48" y2="24" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/></svg></div>
+                        <h3 class="zone-title">训练区</h3>
+                        <p class="zone-desc">10道随机题目，理论与实操结合<br>检验你的炒股知识</p>
+                        <span class="zone-enter-hint">点击进入 &rarr;</span>
+                    </div>
+                    <div class="academy-zone-card knowledge" onclick="enterKnowledgeZone()">
+                        <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M8 38V14a4 4 0 014-4h24a4 4 0 014 4v24" stroke="var(--accent-cyan)" stroke-width="2" opacity="0.5"/><path d="M12 42h24" stroke="var(--accent-cyan)" stroke-width="2" opacity="0.3"/><path d="M16 18h16M16 24h12M16 30h8" stroke="var(--accent-cyan)" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/></svg></div>
+                        <h3 class="zone-title">知识区</h3>
+                        <p class="zone-desc">K线形态、成交量形态、走势形态<br>系统学习炒股基础知识</p>
+                        <span class="zone-enter-hint">点击进入 &rarr;</span>
+                    </div>
+                </div>
             </div>
+
+            <!-- Knowledge Zone -->
+            <div class="knowledge-zone" id="knowledgeZone" style="display:none;">
+                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="academy-tabs">
+                    <button class="academy-tab active" onclick="switchTab(this, 'tab-kline')">K线形态</button>
+                    <button class="academy-tab" onclick="switchTab(this, 'tab-volume')">成交量形态</button>
+                    <button class="academy-tab" onclick="switchTab(this, 'tab-trend')">走势形态</button>
+                </div>
 
             <!-- K线形态 -->
             <div class="pattern-grid active" id="tab-kline">
@@ -1559,6 +1758,28 @@
                     <div class="pattern-desc">顶部压力线水平、底部支撑线逐步抬高，形成收敛三角形。买方力量逐渐增强，一旦放量突破上方压力线，往往开启快速上涨。</div>
                 </div>
             </div>
+            </div><!-- /knowledgeZone -->
+
+            <!-- Training Zone -->
+            <div class="training-zone" id="trainingZone" style="display:none;">
+                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="quiz-progress">
+                    <span class="quiz-progress-text" id="quizProgressText">1 / 10</span>
+                    <div class="quiz-progress-track"><div class="quiz-progress-bar" id="quizProgressBar" style="width:10%"></div></div>
+                </div>
+                <div class="quiz-question-container" id="quizQuestionContainer"></div>
+                <div class="quiz-nav">
+                    <button class="quiz-nav-btn" id="quizNextBtn" onclick="quizNext()" disabled>下一题</button>
+                </div>
+            </div>
+
+            <!-- Training Results -->
+            <div class="training-results" id="trainingResults" style="display:none;">
+                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="quiz-result-card" id="quizResultCard"></div>
+                <div class="quiz-result-details" id="quizResultDetails"></div>
+                <div style="text-align:center;"><button class="quiz-retry-btn" onclick="enterTrainingZone()">再来一轮</button></div>
+            </div>
         </section>
 
         <!-- Game Screen -->
@@ -1715,6 +1936,7 @@
             // Re-apply chart theme
             applyChartTheme(klineChart);
             applyChartTheme(resultChart);
+            quizState.charts.forEach(c => applyChartTheme(c));
         }
 
         let klineChart = null;
@@ -2327,43 +2549,107 @@
         }
 
         // ========== PATTERN KNOWLEDGE BASE ==========
-        const PATTERN_KB = {
-            '大阳线': {
-                signal: '看涨', signalCls: 'bullish',
-                illust: '<div class="ck r"><div class="wu" style="height:5px"></div><div class="bd" style="height:44px"></div><div class="wl" style="height:5px"></div></div>',
-                desc: '实体长、上下影线短的阳线。表示多方力量强劲，买盘从开盘一路推升至收盘。出现在低位或上升趋势中是强烈的做多信号。'
-            },
-            '大阴线': {
-                signal: '看跌', signalCls: 'bearish',
-                illust: '<div class="ck g"><div class="wu" style="height:5px"></div><div class="bd" style="height:44px"></div><div class="wl" style="height:5px"></div></div>',
-                desc: '实体长、上下影线短的阴线。表示空方力量占据绝对优势，卖盘从开盘持续打压至收盘。出现在高位或下行趋势中是离场信号。'
-            },
-            '锤子线': {
-                signal: '看涨', signalCls: 'bullish',
-                illust: '<div class="ck g" style="opacity:0.4"><div class="wu" style="height:3px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:5px"></div></div><div class="ck g" style="opacity:0.5"><div class="wu" style="height:2px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:7px"></div></div><div class="ck r"><div class="wu" style="height:2px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:35px"></div></div>',
-                desc: '下影线很长（至少为实体2倍），上影线极短或没有。出现在下跌末端，说明空方将价格打下去后被多方强力拉回，是底部反转信号。'
-            },
-            '射击之星': {
-                signal: '看跌', signalCls: 'bearish',
-                illust: '<div class="ck r" style="opacity:0.4"><div class="wu" style="height:5px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:2px"></div></div><div class="ck r" style="opacity:0.5"><div class="wu" style="height:7px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:2px"></div></div><div class="ck g"><div class="wu" style="height:35px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:2px"></div></div>',
-                desc: '上影线很长，实体小且位于底部。出现在上涨末端，说明多方尝试拉升但遭到强烈抛压打回，是顶部反转的警告信号。'
-            },
-            '十字星': {
-                signal: '中性', signalCls: 'neutral',
-                illust: '<div class="ck d"><div class="wu" style="height:22px"></div><div class="bd" style="height:2px"></div><div class="wl" style="height:22px"></div></div>',
-                desc: '开盘价和收盘价几乎相同，上下影线等长。代表多空力量达到平衡。在趋势末端出现往往预示着反转，需结合前后K线确认方向。'
-            },
-            '看涨吞没': {
-                signal: '看涨', signalCls: 'bullish',
-                illust: '<div class="ck g"><div class="wu" style="height:5px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:5px"></div></div><div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:35px"></div><div class="wl" style="height:3px"></div></div>',
-                desc: '一根大阳线完全包住前一根阴线的实体。多方以压倒性力量反攻，是下跌趋势中最可靠的反转形态之一，阳线实体越大信号越强。'
-            },
-            '看跌吞没': {
-                signal: '看跌', signalCls: 'bearish',
-                illust: '<div class="ck r"><div class="wu" style="height:5px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:5px"></div></div><div class="ck g"><div class="wu" style="height:3px"></div><div class="bd" style="height:35px"></div><div class="wl" style="height:3px"></div></div>',
-                desc: '一根大阴线完全包住前一根阳线的实体。空方全面压制多方，上涨趋势中出现预示着行情可能见顶，尤其伴随放量时更需警惕。'
-            }
-        };
+        const QUIZ_PATTERNS = [
+            // K线形态 (18)
+            { name: '大阳线', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:50px"></div><div class="wl" style="height:6px"></div></div>',
+              desc: '实体长、上下影线短的阳线。表示多方力量强劲，买盘从开盘一路推升至收盘。出现在低位或上升趋势中是强烈的做多信号。' },
+            { name: '大阴线', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:50px"></div><div class="wl" style="height:6px"></div></div>',
+              desc: '实体长、上下影线短的阴线。表示空方力量占据绝对优势，卖盘从开盘持续打压至收盘。出现在高位或下行趋势中是离场信号。' },
+            { name: '锤子线', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck g" style="opacity:0.4"><div class="wu" style="height:4px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:6px"></div></div><div class="ck g" style="opacity:0.5"><div class="wu" style="height:3px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:8px"></div></div><div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:40px"></div></div>',
+              desc: '下影线很长（至少为实体2倍），上影线极短或没有。出现在下跌末端，说明空方将价格打下去后被多方强力拉回，是底部反转信号。' },
+            { name: '射击之星', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck r" style="opacity:0.4"><div class="wu" style="height:6px"></div><div class="bd" style="height:18px"></div><div class="wl" style="height:3px"></div></div><div class="ck r" style="opacity:0.5"><div class="wu" style="height:8px"></div><div class="bd" style="height:14px"></div><div class="wl" style="height:3px"></div></div><div class="ck g"><div class="wu" style="height:40px"></div><div class="bd" style="height:12px"></div><div class="wl" style="height:3px"></div></div>',
+              desc: '上影线很长，实体小且位于底部。出现在上涨末端，说明多方尝试拉升但遭到强烈抛压打回，是顶部反转的警告信号。' },
+            { name: '十字星', signal: '中性', signalCls: 'neutral', category: 'kline',
+              illust: '<div class="ck d"><div class="wu" style="height:25px"></div><div class="bd" style="height:2px"></div><div class="wl" style="height:25px"></div></div>',
+              desc: '开盘价和收盘价几乎相同，上下影线等长。代表多空力量达到平衡。在趋势末端出现往往预示着反转，需结合前后K线确认方向。' },
+            { name: '看涨吞没', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:6px"></div></div><div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:40px"></div><div class="wl" style="height:4px"></div></div>',
+              desc: '一根大阳线完全包住前一根阴线的实体。多方以压倒性力量反攻，是下跌趋势中最可靠的反转形态之一，阳线实体越大信号越强。' },
+            { name: '看跌吞没', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:6px"></div></div><div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:40px"></div><div class="wl" style="height:4px"></div></div>',
+              desc: '一根大阴线完全包住前一根阳线的实体。空方全面压制多方，上涨趋势中出现预示着行情可能见顶，尤其伴随放量时更需警惕。' },
+            { name: '早晨之星', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div><div class="ck d" style="margin-top:16px"><div class="wu" style="height:10px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:10px"></div></div><div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>',
+              desc: '阴线 + 低位十字星 + 阳线的三日组合。中间的十字星表示空方力量衰竭，第三天阳线确认多方接管。是经典的底部反转形态。' },
+            { name: '黄昏之星', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div><div class="ck d" style="margin-bottom:16px"><div class="wu" style="height:10px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:10px"></div></div><div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:4px"></div></div>',
+              desc: '阳线 + 高位十字星 + 阴线的三日组合。中间的十字星显示多方动力枯竭，第三天阴线确认空方夺回主导权。是可靠的顶部反转信号。' },
+            { name: '红三兵', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:3px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:4px"></div></div><div class="ck r" style="margin-bottom:6px"><div class="wu" style="height:3px"></div><div class="bd" style="height:26px"></div><div class="wl" style="height:3px"></div></div><div class="ck r" style="margin-bottom:14px"><div class="wu" style="height:2px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:3px"></div></div>',
+              desc: '连续三根阳线，每根收盘价逐步抬高，实体饱满、上下影线短。出现在底部区域是强烈的趋势反转信号，多方力量持续增强，适合跟随做多。' },
+            { name: '三只乌鸦', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck g" style="margin-bottom:14px"><div class="wu" style="height:3px"></div><div class="bd" style="height:22px"></div><div class="wl" style="height:4px"></div></div><div class="ck g" style="margin-bottom:6px"><div class="wu" style="height:3px"></div><div class="bd" style="height:26px"></div><div class="wl" style="height:3px"></div></div><div class="ck g"><div class="wu" style="height:2px"></div><div class="bd" style="height:30px"></div><div class="wl" style="height:3px"></div></div>',
+              desc: '连续三根阴线，每根收盘价逐步走低。与红三兵相反，是顶部区域的强烈看跌信号，表示空方已完全掌控局面，应及时止盈或止损离场。' },
+            { name: '乌云盖顶', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:36px"></div><div class="wl" style="height:4px"></div></div><div class="ck g" style="margin-bottom:8px"><div class="wu" style="height:3px"></div><div class="bd" style="height:28px"></div><div class="wl" style="height:10px"></div></div>',
+              desc: '先出现一根大阳线，次日高开后大幅回落，阴线收盘深入阳线实体过半。乌云笼罩意味着上涨动力被空方扼杀，是可靠的见顶信号。' },
+            { name: '刺透形态', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:36px"></div><div class="wl" style="height:4px"></div></div><div class="ck r" style="margin-top:8px"><div class="wu" style="height:10px"></div><div class="bd" style="height:28px"></div><div class="wl" style="height:3px"></div></div>',
+              desc: '与乌云盖顶相反。先出现一根大阴线，次日低开后强力反弹，阳线收盘升入阴线实体过半。在下跌趋势中出现是底部反转的积极信号。' },
+            { name: '看涨孕线', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:4px"></div><div class="bd" style="height:42px"></div><div class="wl" style="height:4px"></div></div><div class="ck r"><div class="wu" style="height:6px"></div><div class="bd" style="height:16px"></div><div class="wl" style="height:6px"></div></div>',
+              desc: '大阴线后跟随一根小阳线，小阳线实体完全被前一根阴线包含。说明下跌动能减弱，多方开始试探反攻。需次日阳线确认后方可介入。' },
+            { name: '看跌孕线', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:4px"></div><div class="bd" style="height:42px"></div><div class="wl" style="height:4px"></div></div><div class="ck g"><div class="wu" style="height:6px"></div><div class="bd" style="height:16px"></div><div class="wl" style="height:6px"></div></div>',
+              desc: '大阳线后跟随一根小阴线，小阴线实体完全被前一根阳线包含。表明上涨动力开始衰减，应警惕趋势逆转，可考虑减仓或设置止损。' },
+            { name: 'T字线', signal: '看涨', signalCls: 'bullish', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:0px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:42px"></div></div>',
+              desc: '开盘价、收盘价与最高价相同，仅有下影线，形如"T"字。说明盘中大幅下探后被完全收回，多方力量极强。出现在底部是强烈反转信号。' },
+            { name: '倒T字线', signal: '看跌', signalCls: 'bearish', category: 'kline',
+              illust: '<div class="ck g"><div class="wu" style="height:42px"></div><div class="bd" style="height:3px"></div><div class="wl" style="height:0px"></div></div>',
+              desc: '开盘价、收盘价与最低价相同，仅有上影线，形如倒"T"字。说明盘中冲高后被完全打回，空方力量极强。出现在顶部预示下跌风险。' },
+            { name: '螺旋桨', signal: '中性', signalCls: 'neutral', category: 'kline',
+              illust: '<div class="ck r"><div class="wu" style="height:22px"></div><div class="bd" style="height:10px"></div><div class="wl" style="height:22px"></div></div>',
+              desc: '实体较小而上下影线都很长的K线，形似螺旋桨。表示多空双方激烈交锋，市场分歧极大。单独出现意义有限，若出现在趋势末端则暗示变盘在即。' },
+            // 成交量形态 (8)
+            { name: '放量上涨', signal: '看涨', signalCls: 'bullish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:14px"></div><div class="vbar r" style="height:22px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:42px"></div><div class="vbar r" style="height:56px"></div>',
+              desc: '价格上涨伴随成交量逐步放大，说明越来越多的资金入场追捧，量价齐升是最健康的上涨模式，趋势延续性强。' },
+            { name: '缩量回调', signal: '看涨', signalCls: 'bullish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:36px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
+              desc: '价格小幅回落但成交量逐渐萎缩。说明卖出意愿不强，持股者惜售。在上升趋势中的缩量回调是健康的技术性修正，常是低吸良机。' },
+            { name: '放量下跌', signal: '看跌', signalCls: 'bearish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:14px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:35px"></div><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:60px"></div>',
+              desc: '价格下跌同时成交量持续放大，说明恐慌性抛售加剧，大量资金夺路而逃。这是最危险的量价形态，应果断止损回避。' },
+            { name: '地量见底', signal: '看涨', signalCls: 'bullish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#94a3b8" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg><div class="vbar m" style="height:18px"></div><div class="vbar m" style="height:12px"></div><div class="vbar m" style="height:7px"></div><div class="vbar m" style="height:4px"></div><div class="vbar m" style="height:5px"></div><div class="vbar r" style="height:10px"></div><div class="vbar r" style="height:18px"></div>',
+              desc: '"地量之后有地价"。成交量萎缩到极低水平，说明抛压已近枯竭。随后若出现温和放量阳线，往往是底部确立的标志。' },
+            { name: '天量见顶', signal: '看跌', signalCls: 'bearish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:18px"></div><div class="vbar r" style="height:28px"></div><div class="vbar r" style="height:65px"></div><div class="vbar g" style="height:40px"></div><div class="vbar g" style="height:22px"></div>',
+              desc: '"天量之后有天价"。成交量突然放出历史级巨量，往往是主力资金大规模出货的标志。若伴随长上影线或高位阴线，是强烈的见顶信号，应果断离场。' },
+            { name: '温和放量', signal: '看涨', signalCls: 'bullish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:12px"></div><div class="vbar r" style="height:16px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:25px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:36px"></div>',
+              desc: '成交量像上台阶一样逐步温和放大，而非突然暴增。说明资金有序入场，筹码交换充分，是最健康的上涨形态。这种"量堆"出来的涨势持续性最强。' },
+            { name: '量价背离（看跌）', signal: '看跌', signalCls: 'bearish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:50px"></div><div class="vbar r" style="height:40px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:12px"></div>',
+              desc: '价格持续创新高，但成交量反而逐渐萎缩。说明跟风买入的资金越来越少，上涨缺乏量能支撑。这是"顶背离"的经典信号，需警惕随时可能出现的回调。' },
+            { name: '量价背离（看涨）', signal: '看涨', signalCls: 'bullish', category: 'volume',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:50px"></div><div class="vbar g" style="height:38px"></div><div class="vbar g" style="height:26px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
+              desc: '价格持续创新低，但成交量反而逐步减少。说明抛售力量正在枯竭，卖无可卖。这是"底背离"信号，预示下跌接近尾声，后续可能出现反弹甚至反转。' },
+            // 走势形态 (5) — 金叉/死叉已移除
+            { name: '多头排列', signal: '看涨', signalCls: 'bullish', category: 'trend',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="10,62 60,48 110,35 160,24 190,18" stroke="#f5c542" stroke-width="2.5" fill="none"/><polyline points="10,66 60,54 110,42 160,32 190,27" stroke="#42a5f5" stroke-width="2" fill="none"/><polyline points="10,70 60,60 110,50 160,42 190,38" stroke="#ab47bc" stroke-width="2" fill="none"/><text x="194" y="18" fill="#f5c542" font-size="9" font-family="JetBrains Mono">5</text><text x="194" y="28" fill="#42a5f5" font-size="9" font-family="JetBrains Mono">10</text><text x="194" y="39" fill="#ab47bc" font-size="9" font-family="JetBrains Mono">20</text></svg>',
+              desc: 'MA5 在最上方、MA10 居中、MA20 在最下方，三线同步上行。这是最强的趋势信号，表明各周期投资者一致看多，适合持股不动。' },
+            { name: '空头排列', signal: '看跌', signalCls: 'bearish', category: 'trend',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="10,18 60,32 110,45 160,56 190,62" stroke="#f5c542" stroke-width="2.5" fill="none"/><polyline points="10,14 60,26 110,38 160,48 190,53" stroke="#42a5f5" stroke-width="2" fill="none"/><polyline points="10,10 60,20 110,30 160,38 190,42" stroke="#ab47bc" stroke-width="2" fill="none"/><text x="194" y="63" fill="#f5c542" font-size="9" font-family="JetBrains Mono">5</text><text x="194" y="54" fill="#42a5f5" font-size="9" font-family="JetBrains Mono">10</text><text x="194" y="43" fill="#ab47bc" font-size="9" font-family="JetBrains Mono">20</text></svg>',
+              desc: 'MA5 在最下方、MA10 居中、MA20 在最上方，三线同步下行。各周期投资者一致看空，应空仓观望，切勿盲目抄底。' },
+            { name: 'W底', signal: '看涨', signalCls: 'bullish', category: 'trend',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="15,20 40,35 65,58 85,42 105,25 125,42 150,58 170,35 195,15" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><line x1="15" y1="25" x2="195" y2="25" stroke="var(--accent-cyan)" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/><text x="100" y="75" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">颈线</text></svg>',
+              desc: '价格两次探底到相近价位后反弹，形成"W"形。当价格突破两次反弹的高点（颈线）时双底成立，上涨空间通常等于底部到颈线的距离。' },
+            { name: 'M顶', signal: '看跌', signalCls: 'bearish', category: 'trend',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="15,60 40,45 65,22 85,38 105,55 125,38 150,22 170,45 195,65" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><line x1="15" y1="55" x2="195" y2="55" stroke="var(--accent-cyan)" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/><text x="100" y="75" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">颈线</text></svg>',
+              desc: '价格两次冲高到相近价位后回落，形成"M"形。当价格跌破两次回落的低点（颈线）时双顶成立，是明确的卖出信号。' },
+            { name: '上升三角形', signal: '看涨', signalCls: 'bullish', category: 'trend',
+              illust: '<svg viewBox="0 0 200 80"><line x1="15" y1="20" x2="165" y2="20" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/><polyline points="15,65 50,20 70,50 105,20 120,40 155,20" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><polyline points="155,20 175,12 195,5" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/><text x="180" y="72" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">突破</text></svg>',
+              desc: '顶部压力线水平、底部支撑线逐步抬高，形成收敛三角形。买方力量逐渐增强，一旦放量突破上方压力线，往往开启快速上涨。' },
+        ];
+        // Build PATTERN_KB from QUIZ_PATTERNS for backward compatibility
+        const PATTERN_KB = {};
+        QUIZ_PATTERNS.forEach(p => { PATTERN_KB[p.name] = p; });
 
         function kbTag(name) {
             if (!PATTERN_KB[name]) return name;
@@ -3089,11 +3375,17 @@
         function showAcademy() {
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('academyScreen').classList.add('active');
+            // Always start at landing
+            document.getElementById('academyLanding').style.display = 'block';
+            document.getElementById('knowledgeZone').style.display = 'none';
+            document.getElementById('trainingZone').style.display = 'none';
+            document.getElementById('trainingResults').style.display = 'none';
         }
 
         function hideAcademy() {
             document.getElementById('academyScreen').classList.remove('active');
             document.getElementById('startScreen').style.display = 'flex';
+            disposeQuizCharts();
         }
 
         function switchTab(btn, tabId) {
@@ -3103,10 +3395,529 @@
             document.getElementById(tabId).classList.add('active');
         }
 
+        function enterKnowledgeZone() {
+            document.getElementById('academyLanding').style.display = 'none';
+            document.getElementById('knowledgeZone').style.display = 'block';
+        }
+
+        function enterTrainingZone() {
+            document.getElementById('academyLanding').style.display = 'none';
+            document.getElementById('trainingResults').style.display = 'none';
+            document.getElementById('trainingZone').style.display = 'block';
+            startQuiz();
+        }
+
+        function backToAcademyLanding() {
+            document.getElementById('knowledgeZone').style.display = 'none';
+            document.getElementById('trainingZone').style.display = 'none';
+            document.getElementById('trainingResults').style.display = 'none';
+            document.getElementById('academyLanding').style.display = 'block';
+            disposeQuizCharts();
+        }
+
+        // ========== QUIZ ENGINE ==========
+        let quizState = {
+            questions: [], currentIndex: 0, score: 0,
+            answers: [], answered: false, charts: []
+        };
+
+        function shuffleArray(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function disposeQuizCharts() {
+            quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.dispose(); });
+            quizState.charts = [];
+        }
+
+        // Theory question generators
+        function genSignalQuestion(pattern, allPatterns) {
+            const q = '"' + pattern.name + '" 是什么信号？';
+            const correct = pattern.signal;
+            const allSignals = ['看涨', '看跌', '中性'];
+            const wrong = allSignals.filter(s => s !== correct);
+            const extras = ['反转信号', '突破信号', '持续信号'];
+            wrong.push(extras[Math.floor(Math.random() * extras.length)]);
+            return { type: 'theory_text', question: q, correct, wrongChoices: shuffleArray(wrong).slice(0, 3), explanation: '"' + pattern.name + '"是' + pattern.signal + '信号。' + pattern.desc };
+        }
+
+        function genWhichPatternQuestion(pattern, allPatterns) {
+            if (pattern.signal === '中性') return null;
+            const signalText = pattern.signal;
+            const q = '以下哪个形态是' + signalText + '信号？';
+            const wrongPatterns = allPatterns.filter(p => p.signal !== signalText && p.name !== pattern.name);
+            if (wrongPatterns.length < 3) return null;
+            return { type: 'theory_text', question: q, correct: pattern.name, wrongChoices: shuffleArray(wrongPatterns).slice(0, 3).map(p => p.name), explanation: '"' + pattern.name + '"是' + signalText + '信号。' + pattern.desc };
+        }
+
+        function genDescQuestion(pattern, allPatterns) {
+            const firstSentence = pattern.desc.split('。')[0];
+            const snippet = firstSentence.length > 40 ? firstSentence.substring(0, 40) + '...' : firstSentence;
+            const q = '以下描述对应什么形态？"' + snippet + '"';
+            const wrongPatterns = allPatterns.filter(p => p.name !== pattern.name);
+            return { type: 'theory_text', question: q, correct: pattern.name, wrongChoices: shuffleArray(wrongPatterns).slice(0, 3).map(p => p.name), explanation: '这描述的是"' + pattern.name + '"。' + pattern.desc };
+        }
+
+        function genVisualQuestion(pattern, allPatterns) {
+            const sameCategory = allPatterns.filter(p => p.category === pattern.category && p.name !== pattern.name);
+            const others = sameCategory.length >= 3 ? sameCategory : allPatterns.filter(p => p.name !== pattern.name);
+            return { type: 'theory_visual', illustHtml: pattern.illust, question: '这是什么形态？', correct: pattern.name, wrongChoices: shuffleArray(others).slice(0, 3).map(p => p.name), explanation: '这是"' + pattern.name + '"（' + pattern.signal + '）。' + pattern.desc };
+        }
+
+        // Practical question generator
+        // Technical analysis for practical questions
+        function analyzeTechnical(shownData, correctCont) {
+            const all = shownData.concat(correctCont);
+            const n = shownData.length;
+
+            // Helper: simple moving average
+            function sma(data, period) {
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) { result.push(null); continue; }
+                    let sum = 0;
+                    for (let j = i - period + 1; j <= i; j++) sum += data[j].close;
+                    result.push(+(sum / period).toFixed(2));
+                }
+                return result;
+            }
+
+            const closes = all.map(d => d.close);
+            const ma5 = sma(all, 5);
+            const ma10 = sma(all, 10);
+            const ma20 = sma(all, 20);
+
+            const parts = [];
+
+            // 1. Recent trend of shown data (last 5 days)
+            const last5 = shownData.slice(-5);
+            const priceChange5 = ((last5[last5.length-1].close - last5[0].close) / last5[0].close * 100).toFixed(2);
+            const trendWord = priceChange5 > 1 ? '上涨' : priceChange5 < -1 ? '下跌' : '横盘整理';
+            parts.push('近5日走势' + trendWord + '（' + (priceChange5 > 0 ? '+' : '') + priceChange5 + '%）');
+
+            // 2. MA analysis at boundary
+            const boundaryMa5 = ma5[n - 1];
+            const boundaryMa10 = ma10[n - 1];
+            const boundaryMa20 = ma20[n - 1];
+            const lastClose = shownData[n - 1].close;
+            if (boundaryMa5 && boundaryMa10) {
+                if (boundaryMa5 > boundaryMa10) {
+                    parts.push('均线呈多头排列（MA5 > MA10），短期趋势偏多');
+                } else {
+                    parts.push('均线呈空头排列（MA5 < MA10），短期趋势偏空');
+                }
+                if (boundaryMa20) {
+                    if (lastClose > boundaryMa20) parts.push('股价在MA20上方运行，中期趋势向好');
+                    else parts.push('股价跌破MA20，中期支撑较弱');
+                }
+            }
+
+            // 3. Volume analysis (last 5 days)
+            const recentVol = last5.map(d => d.volume);
+            const prevVol = shownData.slice(-10, -5).map(d => d.volume);
+            if (prevVol.length >= 3) {
+                const avgRecent = recentVol.reduce((a,b) => a+b, 0) / recentVol.length;
+                const avgPrev = prevVol.reduce((a,b) => a+b, 0) / prevVol.length;
+                const volRatio = avgRecent / avgPrev;
+                if (volRatio > 1.5) parts.push('近期成交量明显放大（较前期增加' + ((volRatio-1)*100).toFixed(0) + '%），资金活跃');
+                else if (volRatio < 0.6) parts.push('近期成交量大幅萎缩（较前期减少' + ((1-volRatio)*100).toFixed(0) + '%），观望情绪浓');
+                else if (volRatio > 1.1) parts.push('成交量温和放大');
+                else if (volRatio < 0.85) parts.push('成交量略有萎缩');
+            }
+
+            // 4. K-line patterns at end of shown data
+            const lastBar = shownData[n - 1];
+            const prevBar = shownData[n - 2];
+            const bodyLen = Math.abs(lastBar.close - lastBar.open);
+            const upperWick = lastBar.high - Math.max(lastBar.open, lastBar.close);
+            const lowerWick = Math.min(lastBar.open, lastBar.close) - lastBar.low;
+
+            if (upperWick > bodyLen * 2 && bodyLen > 0) parts.push('最后一根K线上影线较长，存在上方抛压');
+            if (lowerWick > bodyLen * 2 && bodyLen > 0) parts.push('最后一根K线下影线较长，下方有支撑');
+            if (bodyLen < (lastBar.high - lastBar.low) * 0.1) parts.push('最后一根K线呈十字星形态，多空分歧明显');
+
+            // Engulfing
+            if (prevBar) {
+                const prevBody = Math.abs(prevBar.close - prevBar.open);
+                if (lastBar.close > lastBar.open && prevBar.close < prevBar.open && bodyLen > prevBody * 1.3) {
+                    parts.push('最后两日出现看涨吞没形态');
+                } else if (lastBar.close < lastBar.open && prevBar.close > prevBar.open && bodyLen > prevBody * 1.3) {
+                    parts.push('最后两日出现看跌吞没形态');
+                }
+            }
+
+            // 5. Actual continuation outcome
+            const contChange = ((correctCont[correctCont.length-1].close - correctCont[0].open) / correctCont[0].open * 100).toFixed(2);
+            const contWord = contChange > 2 ? '上涨' : contChange < -2 ? '下跌' : '震荡';
+            parts.push('实际后续走势：' + contWord + '（' + (contChange > 0 ? '+' : '') + contChange + '%）');
+
+            // 6. Volume-price correlation in continuation
+            const contUpDays = correctCont.filter(d => d.close >= d.open).length;
+            const contDownDays = correctCont.length - contUpDays;
+            parts.push('后续' + correctCont.length + '个交易日中，' + contUpDays + '天收阳、' + contDownDays + '天收阴');
+
+            return parts.join('；') + '。';
+        }
+
+        // Measure how "clear" a trend is: returns {pct, clarity}
+        // pct = overall % change, clarity = how consistently it moves in one direction
+        function trendScore(data) {
+            if (!data || data.length < 2) return { pct: 0, clarity: 0 };
+            const pct = (data[data.length - 1].close - data[0].open) / data[0].open * 100;
+            // clarity: ratio of same-direction days to total days
+            const dir = pct >= 0 ? 1 : -1;
+            let sameDirDays = 0;
+            for (let i = 0; i < data.length; i++) {
+                if ((data[i].close - data[i].open) * dir >= 0) sameDirDays++;
+            }
+            const clarity = sameDirDays / data.length;
+            return { pct, clarity };
+        }
+
+        function genPracticalQuestion() {
+            const stocks = gameState.stocksData;
+            if (!stocks || stocks.length === 0) return null;
+            const SHOW_DAYS = 25, CONT_DAYS = 12;
+            const minLen = SHOW_DAYS + CONT_DAYS + 5;
+            const MIN_TREND_PCT = 4;     // continuation must move at least 4%
+            const MIN_CLARITY = 0.5;     // at least 50% of days in same direction
+
+            // Try to find a segment with a clear trend in the continuation
+            let stock, startIdx, shownData, correctCont;
+            let found = false;
+            for (let attempt = 0; attempt < 80; attempt++) {
+                stock = stocks[Math.floor(Math.random() * stocks.length)];
+                if (stock.kline.length < minLen) continue;
+                startIdx = Math.floor(Math.random() * (stock.kline.length - SHOW_DAYS - CONT_DAYS));
+                const sd = stock.kline.slice(startIdx, startIdx + SHOW_DAYS);
+                const cc = stock.kline.slice(startIdx + SHOW_DAYS, startIdx + SHOW_DAYS + CONT_DAYS);
+                const ts = trendScore(cc);
+                if (Math.abs(ts.pct) >= MIN_TREND_PCT && ts.clarity >= MIN_CLARITY) {
+                    shownData = sd;
+                    correctCont = cc;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) return null;
+
+            const lastClose = shownData[shownData.length - 1].close;
+
+            function normalize(data) {
+                const ratio = lastClose / data[0].open;
+                return data.map(d => ({
+                    date: d.date,
+                    open: +(d.open * ratio).toFixed(2), close: +(d.close * ratio).toFixed(2),
+                    high: +(d.high * ratio).toFixed(2), low: +(d.low * ratio).toFixed(2),
+                    volume: d.volume
+                }));
+            }
+
+            // Pick wrong options that also have clear trends, ideally different from correct
+            const correctDir = trendScore(correctCont).pct > 0 ? 'up' : 'down';
+            const wrongConts = [];
+            const used = new Set([stock.code + '-' + startIdx]);
+            let wa = 0;
+            while (wrongConts.length < 3 && wa < 200) {
+                wa++;
+                const ws = stocks[Math.floor(Math.random() * stocks.length)];
+                if (ws.kline.length < CONT_DAYS + 5) continue;
+                const wi = Math.floor(Math.random() * (ws.kline.length - CONT_DAYS));
+                const key = ws.code + '-' + wi;
+                if (used.has(key)) continue;
+                const wd = ws.kline.slice(wi, wi + CONT_DAYS);
+                if (wd.length !== CONT_DAYS) continue;
+                const wts = trendScore(wd);
+                // Accept if it has a somewhat clear trend (>3%) — prefer different direction
+                if (Math.abs(wts.pct) < 3) continue;
+                used.add(key);
+                wrongConts.push(wd);
+            }
+            if (wrongConts.length < 3) return null;
+
+            const options = shuffleArray([
+                { data: normalize(correctCont), isCorrect: true },
+                ...wrongConts.map(d => ({ data: normalize(d), isCorrect: false }))
+            ]);
+            const correctIndex = options.findIndex(o => o.isCorrect);
+
+            const labels = ['A', 'B', 'C', 'D'];
+            const techAnalysis = analyzeTechnical(shownData, correctCont);
+            return {
+                type: 'practical',
+                question: '观察下方K线走势，接下来的走势大概是什么样？',
+                shownData, options, correctIndex,
+                explanation: '正确答案是选项 ' + labels[correctIndex] + '。这是 ' + stock.name + '（' + stock.code + '）在 ' + shownData[0].date + ' ~ ' + shownData[shownData.length - 1].date + ' 之后的真实走势。<br><br><strong>技术面分析：</strong>' + techAnalysis
+            };
+        }
+
+        function startQuiz() {
+            disposeQuizCharts();
+            quizState = { questions: [], currentIndex: 0, score: 0, answers: [], answered: false, charts: [] };
+
+            const allP = QUIZ_PATTERNS;
+            const shuffledP = shuffleArray([...allP]);
+            const theoryCount = 5 + Math.floor(Math.random() * 2);
+            const practicalCount = 10 - theoryCount;
+
+            // Theory: heavily favor visual (look-at-chart) questions, minimal text/terminology
+            for (let i = 0; i < theoryCount && i < shuffledP.length; i++) {
+                const p = shuffledP[i];
+                if (Math.random() < 0.8) {
+                    // 80% visual: show illustration, pick the name
+                    quizState.questions.push(genVisualQuestion(p, allP));
+                } else {
+                    // 20% "which pattern is bullish/bearish" — still chart-oriented, not pure terminology
+                    const q = genWhichPatternQuestion(p, allP);
+                    quizState.questions.push(q || genVisualQuestion(p, allP));
+                }
+            }
+
+            // Practical questions
+            for (let i = 0; i < practicalCount; i++) {
+                const pq = genPracticalQuestion();
+                if (pq) quizState.questions.push(pq);
+            }
+
+            // Pad to 10 if needed
+            let pi = theoryCount;
+            while (quizState.questions.length < 10 && pi < shuffledP.length) {
+                quizState.questions.push(genVisualQuestion(shuffledP[pi], allP));
+                pi++;
+            }
+            quizState.questions = shuffleArray(quizState.questions).slice(0, 10);
+            renderQuestion();
+        }
+
+        function renderMiniKline(chart, data, isMini) {
+            const ohlc = data.map(d => [d.open, d.close, d.low, d.high]);
+            const dates = data.map(d => d.date);
+
+            // Calculate MA lines for the main chart
+            function calcMaLine(period) {
+                const result = [];
+                for (let i = 0; i < data.length; i++) {
+                    if (i < period - 1) { result.push(null); continue; }
+                    let sum = 0;
+                    for (let j = i - period + 1; j <= i; j++) sum += data[j].close;
+                    result.push(+(sum / period).toFixed(2));
+                }
+                return result;
+            }
+
+            const series = [{
+                type: 'candlestick', data: ohlc,
+                itemStyle: { color: '#ef4444', color0: '#22c55e', borderColor: '#ef4444', borderColor0: '#22c55e' }
+            }];
+
+            const legendData = [];
+            if (!isMini) {
+                const ma5 = calcMaLine(5);
+                const ma10 = calcMaLine(10);
+                const ma20 = calcMaLine(20);
+                series.push(
+                    { name: 'MA5', type: 'line', data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#f5c542' } },
+                    { name: 'MA10', type: 'line', data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#42a5f5' } },
+                    { name: 'MA20', type: 'line', data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#ab47bc' } }
+                );
+                legendData.push('MA5', 'MA10', 'MA20');
+            }
+
+            chart.setOption({
+                backgroundColor: 'transparent', animation: false,
+                legend: !isMini ? { data: legendData, top: 0, right: 0, textStyle: { color: '#64748b', fontSize: 10 }, itemWidth: 14, itemHeight: 2 } : undefined,
+                grid: { left: isMini ? '2%' : '10%', right: '2%', top: isMini ? '8%' : '28px', bottom: isMini ? '2%' : '18%', containLabel: !isMini },
+                tooltip: isMini ? undefined : { trigger: 'axis', axisPointer: { type: 'cross' } },
+                xAxis: {
+                    type: 'category', data: dates,
+                    axisLabel: { show: !isMini, fontSize: 9, color: '#64748b', rotate: 45 },
+                    axisLine: { lineStyle: { color: 'rgba(59,130,246,0.2)' } },
+                    axisTick: { show: false }, splitLine: { show: false }
+                },
+                yAxis: {
+                    type: 'value', scale: true,
+                    axisLabel: { show: !isMini, fontSize: 9, color: '#64748b' },
+                    axisLine: { show: false },
+                    splitLine: { show: !isMini, lineStyle: { color: 'rgba(59,130,246,0.08)' } }
+                },
+                series: series
+            });
+        }
+
+        function renderQuestion() {
+            const q = quizState.questions[quizState.currentIndex];
+            const idx = quizState.currentIndex;
+            const container = document.getElementById('quizQuestionContainer');
+            const labels = ['A', 'B', 'C', 'D'];
+
+            // Build shuffled options for theory questions
+            if (q.type !== 'practical') {
+                const all = [q.correct, ...q.wrongChoices.slice(0, 3)];
+                q._options = shuffleArray(all);
+            }
+
+            let html = '';
+            if (q.type === 'theory_text') {
+                html = '<span class="quiz-question-type theory">理论题</span>' +
+                    '<div class="quiz-question-text">第 ' + (idx+1) + ' 题：' + q.question + '</div>' +
+                    '<div class="quiz-options">' + q._options.map((opt, i) =>
+                        '<div class="quiz-option" data-index="' + i + '" onclick="selectAnswer(' + i + ')">' +
+                        '<div class="quiz-option-label">' + labels[i] + '</div>' +
+                        '<div class="quiz-option-text">' + opt + '</div></div>'
+                    ).join('') + '</div>';
+            } else if (q.type === 'theory_visual') {
+                html = '<span class="quiz-question-type theory">理论题 · 看图识形</span>' +
+                    '<div class="quiz-question-text">第 ' + (idx+1) + ' 题：' + q.question + '</div>' +
+                    '<div class="quiz-pattern-display">' + q.illustHtml + '</div>' +
+                    '<div class="quiz-options">' + q._options.map((opt, i) =>
+                        '<div class="quiz-option" data-index="' + i + '" onclick="selectAnswer(' + i + ')">' +
+                        '<div class="quiz-option-label">' + labels[i] + '</div>' +
+                        '<div class="quiz-option-text">' + opt + '</div></div>'
+                    ).join('') + '</div>';
+            } else if (q.type === 'practical') {
+                html = '<span class="quiz-question-type practical">实操题</span>' +
+                    '<div class="quiz-question-text">第 ' + (idx+1) + ' 题：' + q.question + '</div>' +
+                    '<div class="quiz-kline-display" id="quizMainChart"></div>' +
+                    '<div class="quiz-options">' + q.options.map((opt, i) =>
+                        '<div class="quiz-option" data-index="' + i + '" onclick="selectAnswer(' + i + ')">' +
+                        '<div class="quiz-option-label">' + labels[i] + '</div>' +
+                        '<div class="quiz-option-chart" id="quizOptChart' + i + '"></div></div>'
+                    ).join('') + '</div>';
+            }
+            container.innerHTML = html;
+
+            // Update progress
+            document.getElementById('quizProgressBar').style.width = ((idx + 1) / 10 * 100) + '%';
+            document.getElementById('quizProgressText').textContent = (idx + 1) + ' / 10';
+            document.getElementById('quizNextBtn').disabled = true;
+            document.getElementById('quizNextBtn').textContent = idx === 9 ? '查看成绩' : '下一题';
+            quizState.answered = false;
+
+            // Init ECharts for practical
+            if (q.type === 'practical') {
+                setTimeout(() => {
+                    const mainDom = document.getElementById('quizMainChart');
+                    if (mainDom) {
+                        const mc = echarts.init(mainDom);
+                        quizState.charts.push(mc);
+                        renderMiniKline(mc, q.shownData, false);
+                        applyChartTheme(mc);
+                    }
+                    q.options.forEach((opt, i) => {
+                        const dom = document.getElementById('quizOptChart' + i);
+                        if (dom) {
+                            const c = echarts.init(dom);
+                            quizState.charts.push(c);
+                            renderMiniKline(c, opt.data, true);
+                            applyChartTheme(c);
+                        }
+                    });
+                }, 50);
+            }
+        }
+
+        function selectAnswer(optionIndex) {
+            if (quizState.answered) return;
+            quizState.answered = true;
+            quizState.answers[quizState.currentIndex] = optionIndex;
+
+            const q = quizState.questions[quizState.currentIndex];
+            let isCorrect = false;
+
+            if (q.type === 'practical') {
+                isCorrect = optionIndex === q.correctIndex;
+            } else {
+                isCorrect = q._options[optionIndex] === q.correct;
+            }
+            if (isCorrect) quizState.score++;
+
+            // Visual feedback
+            document.querySelectorAll('.quiz-option').forEach((el, i) => {
+                el.style.pointerEvents = 'none';
+                if (q.type === 'practical') {
+                    if (i === q.correctIndex) el.classList.add('correct');
+                    if (i === optionIndex && !isCorrect) el.classList.add('wrong');
+                } else {
+                    if (q._options[i] === q.correct) el.classList.add('correct');
+                    if (i === optionIndex && !isCorrect) el.classList.add('wrong');
+                }
+            });
+
+            // Only show explanation when wrong
+            if (!isCorrect) {
+                document.getElementById('quizQuestionContainer').insertAdjacentHTML('beforeend',
+                    '<div class="quiz-explanation"><strong>回答错误。</strong><br>' + q.explanation + '</div>');
+            }
+
+            document.getElementById('quizNextBtn').disabled = false;
+        }
+
+        function quizNext() {
+            if (quizState.currentIndex >= 9) { showQuizResults(); return; }
+            quizState.currentIndex++;
+            renderQuestion();
+        }
+
+        function showQuizResults() {
+            document.getElementById('trainingZone').style.display = 'none';
+            document.getElementById('trainingResults').style.display = 'block';
+            disposeQuizCharts();
+
+            const score = quizState.score;
+            let scoreCls, comment;
+            if (score >= 8) { scoreCls = 'high'; comment = '你的炒股知识非常扎实，可以去实战中检验了！'; }
+            else if (score >= 5) { scoreCls = 'medium'; comment = '基础还不错，但还需要加强学习。建议去知识区复习薄弱环节。'; }
+            else { scoreCls = 'low'; comment = '还需要多多学习哦！建议先去知识区系统学习各种形态。'; }
+
+            document.getElementById('quizResultCard').innerHTML =
+                '<h2 style="font-family:\'Orbitron\',monospace;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
+                '<div class="quiz-score ' + scoreCls + '">' + score + ' / 10</div>' +
+                '<p style="color:var(--text-secondary);font-size:0.92rem;margin:12px 0 0">' + comment + '</p>';
+
+            const labels = ['A', 'B', 'C', 'D'];
+            let detailsHtml = '';
+            quizState.questions.forEach((q, i) => {
+                const userAns = quizState.answers[i];
+                let isCorrect, userText, correctText;
+                if (q.type === 'practical') {
+                    isCorrect = userAns === q.correctIndex;
+                    userText = userAns !== undefined ? labels[userAns] : '未作答';
+                    correctText = labels[q.correctIndex];
+                } else {
+                    isCorrect = q._options && q._options[userAns] === q.correct;
+                    userText = userAns !== undefined && q._options ? q._options[userAns] : '未作答';
+                    correctText = q.correct;
+                }
+                const typeName = q.type === 'practical' ? '实操题' : '理论题';
+                const icon = isCorrect ? '&#10003;' : '&#10007;';
+                const color = isCorrect ? '#22c55e' : '#ef4444';
+
+                detailsHtml += '<div class="quiz-result-item ' + (isCorrect ? 'correct-item' : 'wrong') + '">' +
+                    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+                    '<span style="font-family:\'JetBrains Mono\';font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
+                    '<span style="font-size:0.82rem;color:var(--text-muted)">' + typeName + ' · 第 ' + (i+1) + ' 题</span></div>' +
+                    '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + q.question + '</div>';
+                if (!isCorrect) {
+                    detailsHtml += '<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px">' +
+                        '你的答案：<span style="color:#ef4444">' + userText + '</span> | ' +
+                        '正确答案：<span style="color:#22c55e">' + correctText + '</span></div>' +
+                        '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-top:6px">' + q.explanation + '</div>';
+                }
+                detailsHtml += '</div>';
+            });
+            document.getElementById('quizResultDetails').innerHTML = detailsHtml;
+        }
+
         // ========== WINDOW EVENTS ==========
         window.addEventListener('resize', () => {
             if (klineChart) klineChart.resize();
             if (resultChart) resultChart.resize();
+            quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.resize(); });
         });
 
         // Initialize on load
