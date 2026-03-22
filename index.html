@@ -8,65 +8,67 @@
     <script src="data/stocks_data.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0e17;
-            --bg-secondary: #111827;
-            --bg-tertiary: #1a2332;
-            --bg-card: rgba(26, 35, 50, 0.8);
-            --border-color: rgba(59, 130, 246, 0.2);
-            --border-glow: rgba(59, 130, 246, 0.5);
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
-            --accent-blue: #3b82f6;
-            --accent-cyan: #06b6d4;
-            --gain-color: #ef4444;
-            --gain-glow: rgba(239, 68, 68, 0.4);
-            --loss-color: #22c55e;
-            --loss-glow: rgba(34, 197, 94, 0.4);
-            --warning-color: #f59e0b;
-            --grid-line: rgba(59, 130, 246, 0.1);
+            --bg-primary: #0e0e12;
+            --bg-secondary: #16161d;
+            --bg-tertiary: #1e1e28;
+            --bg-card: rgba(24, 24, 34, 0.82);
+            --border-color: rgba(200, 164, 78, 0.14);
+            --border-glow: rgba(200, 164, 78, 0.35);
+            --text-primary: #e8e4dd;
+            --text-secondary: #9a9690;
+            --text-muted: #6b6660;
+            --accent-blue: #c8a44e;
+            --accent-cyan: #d4b86a;
+            --gain-color: #e05252;
+            --gain-glow: rgba(224, 82, 82, 0.3);
+            --loss-color: #3db86a;
+            --loss-glow: rgba(61, 184, 106, 0.3);
+            --warning-color: #e0a030;
+            --grid-line: rgba(200, 164, 78, 0.06);
+            --grain-opacity: 0.035;
         }
 
         /* ===== Light Theme ===== */
         [data-theme="light"] {
-            --bg-primary: #f1f5f9;
-            --bg-secondary: #e2e8f0;
-            --bg-tertiary: #cbd5e1;
-            --bg-card: rgba(255, 255, 255, 0.82);
-            --border-color: rgba(100, 116, 139, 0.18);
-            --border-glow: rgba(59, 130, 246, 0.3);
-            --text-primary: #1e293b;
-            --text-secondary: #475569;
-            --text-muted: #94a3b8;
-            --accent-blue: #2563eb;
-            --accent-cyan: #0891b2;
-            --gain-color: #dc2626;
-            --gain-glow: rgba(220, 38, 38, 0.15);
-            --loss-color: #16a34a;
-            --loss-glow: rgba(22, 163, 74, 0.15);
-            --warning-color: #d97706;
-            --grid-line: rgba(100, 116, 139, 0.08);
+            --bg-primary: #f5f2ec;
+            --bg-secondary: #ebe7df;
+            --bg-tertiary: #ddd8ce;
+            --bg-card: rgba(255, 253, 248, 0.85);
+            --border-color: rgba(140, 120, 80, 0.14);
+            --border-glow: rgba(180, 148, 60, 0.25);
+            --text-primary: #1a1814;
+            --text-secondary: #5c564e;
+            --text-muted: #9a948a;
+            --accent-blue: #9a7b2e;
+            --accent-cyan: #86701e;
+            --gain-color: #c43030;
+            --gain-glow: rgba(196, 48, 48, 0.12);
+            --loss-color: #1e8c48;
+            --loss-glow: rgba(30, 140, 72, 0.12);
+            --warning-color: #b07a18;
+            --grid-line: rgba(140, 120, 80, 0.06);
+            --grain-opacity: 0.02;
         }
 
-        [data-theme="light"] .bg-grid { opacity: 0.25; }
+        [data-theme="light"] .bg-grid { opacity: 0.2; }
 
         [data-theme="light"] .bg-gradient {
             background:
-                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.03) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 20%, rgba(180, 148, 60, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(140, 120, 80, 0.03) 0%, transparent 50%);
         }
 
         [data-theme="light"] .logo { text-shadow: none; }
-        [data-theme="light"] .pattern-card { background: rgba(255, 255, 255, 0.65); }
-        [data-theme="light"] .pattern-illust { background: rgba(241, 245, 249, 0.9); border-color: rgba(100, 116, 139, 0.1); }
-        [data-theme="light"] .bs-report { background: rgba(241, 245, 249, 0.8); }
-        [data-theme="light"] .best-point-card { background: rgba(241, 245, 249, 0.6); }
-        [data-theme="light"] .academy-tabs { background: rgba(241, 245, 249, 0.8); }
-        [data-theme="light"] .start-btn { box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25); }
-        [data-theme="light"] ::-webkit-scrollbar-track { background: #e2e8f0; }
+        [data-theme="light"] .pattern-card { background: rgba(255, 253, 248, 0.7); }
+        [data-theme="light"] .pattern-illust { background: rgba(245, 242, 236, 0.9); border-color: rgba(140, 120, 80, 0.08); }
+        [data-theme="light"] .bs-report { background: rgba(245, 242, 236, 0.8); }
+        [data-theme="light"] .best-point-card { background: rgba(245, 242, 236, 0.6); }
+        [data-theme="light"] .academy-tabs { background: rgba(245, 242, 236, 0.8); }
+        [data-theme="light"] .start-btn { box-shadow: 0 4px 24px rgba(154, 123, 46, 0.2); }
+        [data-theme="light"] ::-webkit-scrollbar-track { background: #ebe7df; }
 
         /* Theme Toggle */
         .theme-toggle {
@@ -74,24 +76,24 @@
             top: 16px;
             right: 24px;
             z-index: 100;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
             border: 1px solid var(--border-color);
             background: var(--bg-card);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 0;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .theme-toggle:hover {
             border-color: var(--accent-cyan);
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
-            transform: scale(1.08);
+            box-shadow: 0 2px 16px rgba(200, 164, 78, 0.1);
+            transform: scale(1.06);
         }
 
         .theme-toggle svg {
@@ -134,12 +136,29 @@
             right: 0;
             bottom: 0;
             background-image:
-                linear-gradient(var(--grid-line) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-            background-size: 50px 50px;
+                repeating-linear-gradient(
+                    135deg,
+                    var(--grid-line) 0px,
+                    var(--grid-line) 1px,
+                    transparent 1px,
+                    transparent 40px
+                );
             opacity: 0.5;
             pointer-events: none;
             z-index: 0;
+        }
+
+        /* Grain texture overlay */
+        .bg-grid::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: var(--grain-opacity);
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .bg-gradient {
@@ -149,8 +168,8 @@
             right: 0;
             bottom: 0;
             background:
-                radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.06) 0%, transparent 50%);
+                radial-gradient(ellipse at 15% 10%, rgba(200, 164, 78, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 85% 85%, rgba(200, 164, 78, 0.03) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
@@ -186,23 +205,25 @@
         }
 
         .logo {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Bodoni Moda', 'Noto Sans SC', serif;
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 900;
-            letter-spacing: 0.1em;
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            letter-spacing: 0.15em;
+            background: linear-gradient(135deg, #d4b86a 0%, #f0d88a 45%, #c8a44e 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 60px rgba(59, 130, 246, 0.5);
+            text-shadow: 0 0 80px rgba(200, 164, 78, 0.25);
             margin-bottom: 10px;
         }
 
         .tagline {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            letter-spacing: 0.3em;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            letter-spacing: 0.4em;
             text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
         }
 
         /* Start Screen */
@@ -221,20 +242,21 @@
         }
 
         .start-btn {
-            font-family: 'Orbitron', monospace;
-            font-size: 1.2rem;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.1rem;
             font-weight: 700;
-            padding: 20px 60px;
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            padding: 18px 60px;
+            background: linear-gradient(135deg, #c8a44e 0%, #d4b86a 50%, #c8a44e 100%);
+            background-size: 200% 200%;
             border: none;
-            border-radius: 8px;
-            color: white;
+            border-radius: 4px;
+            color: #0e0e12;
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             text-transform: uppercase;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.3em;
         }
 
         .start-btn::before {
@@ -244,13 +266,14 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s ease;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.6s ease;
         }
 
         .start-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(200, 164, 78, 0.3);
+            background-position: 100% 0;
         }
 
         .start-btn:hover::before {
@@ -259,20 +282,33 @@
 
         .rules-card {
             margin-top: 50px;
-            padding: 30px;
+            padding: 32px;
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 4px;
             max-width: 600px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            position: relative;
+        }
+
+        .rules-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--accent-blue), transparent);
+            border-radius: 2px;
         }
 
         .rules-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 1rem;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 700;
             color: var(--accent-cyan);
             margin-bottom: 20px;
-            letter-spacing: 0.2em;
+            letter-spacing: 0.15em;
         }
 
         .rules-list {
@@ -319,9 +355,9 @@
         .status-item {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 4px;
             padding: 8px 14px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             flex: 1;
             min-width: 0;
         }
@@ -362,10 +398,10 @@
         .chart-container {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 12px 16px;
             margin-bottom: 10px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .game-screen .chart-container {
@@ -386,10 +422,11 @@
         }
 
         .chart-title {
-            font-family: 'Orbitron', monospace;
-            font-size: 1rem;
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
             color: var(--accent-cyan);
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
         }
 
         .chart-subtitle {
@@ -426,12 +463,12 @@
         .action-btn {
             font-family: 'Noto Sans SC', sans-serif;
             font-size: 0.85rem;
-            font-weight: 500;
+            font-weight: 600;
             padding: 8px 28px;
-            border: 2px solid;
-            border-radius: 8px;
+            border: 1.5px solid;
+            border-radius: 3px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .action-btn.buy {
@@ -443,7 +480,7 @@
         .action-btn.buy:hover:not(:disabled) {
             background: var(--gain-color);
             color: white;
-            box-shadow: 0 0 30px var(--gain-glow);
+            box-shadow: 0 4px 20px var(--gain-glow);
         }
 
         .action-btn.sell {
@@ -455,7 +492,7 @@
         .action-btn.sell:hover:not(:disabled) {
             background: var(--loss-color);
             color: white;
-            box-shadow: 0 0 30px var(--loss-glow);
+            box-shadow: 0 4px 20px var(--loss-glow);
         }
 
         .action-btn.hold {
@@ -499,18 +536,30 @@
         .result-card {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 40px;
             text-align: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             margin-bottom: 30px;
+            position: relative;
+        }
+
+        .result-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
         }
 
         .result-title {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Bodoni Moda', serif;
             font-size: 1.5rem;
             margin-bottom: 10px;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.12em;
         }
 
         .stock-reveal {
@@ -527,20 +576,21 @@
         }
 
         .final-return {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Space Mono', monospace;
             font-size: 4rem;
-            font-weight: 900;
+            font-weight: 700;
             margin: 30px 0;
+            letter-spacing: -0.02em;
         }
 
         .final-return.positive {
             color: var(--gain-color);
-            text-shadow: 0 0 60px var(--gain-glow);
+            text-shadow: 0 0 40px var(--gain-glow);
         }
 
         .final-return.negative {
             color: var(--loss-color);
-            text-shadow: 0 0 60px var(--loss-glow);
+            text-shadow: 0 0 40px var(--loss-glow);
         }
 
         .final-return.zero {
@@ -574,34 +624,35 @@
         }
 
         .play-again-btn {
-            font-family: 'Orbitron', monospace;
-            font-size: 1rem;
-            padding: 15px 50px;
-            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 14px 48px;
+            background: linear-gradient(135deg, #c8a44e 0%, #d4b86a 100%);
             border: none;
-            border-radius: 8px;
-            color: white;
+            border-radius: 3px;
+            color: #0e0e12;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.2em;
             margin-top: 20px;
         }
 
         .play-again-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 32px rgba(200, 164, 78, 0.3);
         }
 
         /* BS Report */
         .bs-report {
             margin-top: 24px;
             padding: 20px;
-            background: rgba(15, 23, 42, 0.6);
+            background: rgba(14, 14, 18, 0.5);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 4px;
             text-align: left;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .bs-score-header {
@@ -612,8 +663,9 @@
         }
 
         .bs-score-title {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Noto Sans SC', sans-serif;
             font-size: 0.9rem;
+            font-weight: 700;
             color: var(--accent-cyan);
             letter-spacing: 0.1em;
         }
@@ -623,7 +675,7 @@
             font-size: 1.4rem;
             font-weight: 700;
             padding: 4px 16px;
-            border-radius: 8px;
+            border-radius: 3px;
         }
 
         .bs-score-badge.excellent { color: #fbbf24; background: rgba(251,191,36,0.15); }
@@ -644,7 +696,7 @@
             font-size: 0.85rem;
             color: var(--text-secondary);
             padding: 6px 0;
-            border-bottom: 1px solid rgba(59, 130, 246, 0.08);
+            border-bottom: 1px solid rgba(200, 164, 78, 0.06);
         }
 
         .bs-report-item:last-child { border-bottom: none; }
@@ -652,15 +704,15 @@
         .bs-item-label { color: var(--text-muted); }
 
         .bs-item-value { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
-        .bs-item-value.positive { color: #ef4444; }
-        .bs-item-value.negative { color: #22c55e; }
+        .bs-item-value.positive { color: #e05252; }
+        .bs-item-value.negative { color: #3db86a; }
         .bs-item-value.neutral { color: var(--text-secondary); }
 
         .bs-comment {
             margin-top: 14px;
             padding: 12px;
-            background: rgba(59, 130, 246, 0.05);
-            border-radius: 8px;
+            background: rgba(200, 164, 78, 0.04);
+            border-radius: 3px;
             font-size: 0.85rem;
             color: var(--text-secondary);
             line-height: 1.6;
@@ -670,15 +722,16 @@
         .analysis-container {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 16px;
+            border-radius: 4px;
             padding: 24px;
             margin-top: 20px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .analysis-title {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Noto Sans SC', sans-serif;
             font-size: 0.95rem;
+            font-weight: 700;
             color: var(--accent-cyan);
             letter-spacing: 0.1em;
             margin-bottom: 16px;
@@ -692,7 +745,7 @@
             display: inline-block;
             width: 3px;
             height: 16px;
-            background: var(--accent-cyan);
+            background: linear-gradient(180deg, var(--accent-cyan), transparent);
             border-radius: 2px;
         }
 
@@ -705,15 +758,15 @@
 
         .trend-tag {
             padding: 4px 12px;
-            border-radius: 20px;
+            border-radius: 2px;
             font-size: 0.78rem;
             font-weight: 600;
         }
 
-        .trend-tag.up { background: rgba(239,68,68,0.15); color: #ef4444; }
-        .trend-tag.down { background: rgba(34,197,94,0.15); color: #22c55e; }
-        .trend-tag.neutral { background: rgba(148,163,184,0.15); color: #94a3b8; }
-        .trend-tag.info { background: rgba(96,165,250,0.15); color: #60a5fa; }
+        .trend-tag.up { background: rgba(224,82,82,0.12); color: #e05252; }
+        .trend-tag.down { background: rgba(61,184,106,0.12); color: #3db86a; }
+        .trend-tag.neutral { background: rgba(154,150,144,0.12); color: #9a9690; }
+        .trend-tag.info { background: rgba(200,164,78,0.12); color: #d4b86a; }
 
         .analysis-text {
             font-size: 0.85rem;
@@ -728,9 +781,9 @@
         .analysis-text p:last-child { margin-bottom: 0; }
 
         .best-point-card {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(59, 130, 246, 0.12);
-            border-radius: 10px;
+            background: rgba(14, 14, 18, 0.4);
+            border: 1px solid rgba(200, 164, 78, 0.08);
+            border-radius: 3px;
             padding: 16px;
             margin-bottom: 12px;
         }
@@ -749,11 +802,11 @@
             font-size: 0.75rem;
             font-weight: 700;
             padding: 3px 10px;
-            border-radius: 4px;
+            border-radius: 2px;
         }
 
-        .point-badge.buy { background: rgba(239,68,68,0.2); color: #ef4444; }
-        .point-badge.sell { background: rgba(34,197,94,0.2); color: #22c55e; }
+        .point-badge.buy { background: rgba(224,82,82,0.15); color: #e05252; }
+        .point-badge.sell { background: rgba(61,184,106,0.15); color: #3db86a; }
 
         .point-day {
             font-family: 'JetBrains Mono', monospace;
@@ -778,10 +831,135 @@
             display: inline-block;
             font-size: 0.72rem;
             padding: 1px 6px;
-            border-radius: 3px;
+            border-radius: 2px;
             margin-right: 4px;
-            background: rgba(96,165,250,0.12);
-            color: #60a5fa;
+            background: rgba(200,164,78,0.1);
+            color: var(--accent-cyan);
+        }
+
+        /* Point Navigator (interactive strip below chart) */
+        .point-nav-strip {
+            display: flex;
+            gap: 8px;
+            padding: 14px 4px 10px;
+            overflow-x: auto;
+            flex-wrap: wrap;
+        }
+
+        .point-nav-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 3px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .point-nav-badge:hover { transform: translateY(-1px); }
+
+        .point-nav-badge.best-buy {
+            background: rgba(251, 191, 36, 0.12);
+            color: #fbbf24;
+            border-color: rgba(251, 191, 36, 0.2);
+        }
+        .point-nav-badge.best-buy:hover,
+        .point-nav-badge.best-buy.active {
+            background: rgba(251, 191, 36, 0.25);
+            border-color: #fbbf24;
+            box-shadow: 0 0 12px rgba(251, 191, 36, 0.15);
+        }
+
+        .point-nav-badge.best-sell {
+            background: rgba(167, 139, 250, 0.12);
+            color: #a78bfa;
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+        .point-nav-badge.best-sell:hover,
+        .point-nav-badge.best-sell.active {
+            background: rgba(167, 139, 250, 0.25);
+            border-color: #a78bfa;
+            box-shadow: 0 0 12px rgba(167, 139, 250, 0.15);
+        }
+
+        .point-nav-badge.user-buy {
+            background: rgba(224, 82, 82, 0.12);
+            color: #e05252;
+            border-color: rgba(224, 82, 82, 0.2);
+        }
+        .point-nav-badge.user-buy:hover,
+        .point-nav-badge.user-buy.active {
+            background: rgba(224, 82, 82, 0.25);
+            border-color: #e05252;
+            box-shadow: 0 0 12px rgba(224, 82, 82, 0.15);
+        }
+
+        .point-nav-badge.user-sell {
+            background: rgba(61, 184, 106, 0.12);
+            color: #3db86a;
+            border-color: rgba(61, 184, 106, 0.2);
+        }
+        .point-nav-badge.user-sell:hover,
+        .point-nav-badge.user-sell.active {
+            background: rgba(61, 184, 106, 0.25);
+            border-color: #3db86a;
+            box-shadow: 0 0 12px rgba(61, 184, 106, 0.15);
+        }
+
+        .point-nav-detail {
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+            padding: 0 16px;
+            background: rgba(14, 14, 18, 0.4);
+            border: 1px solid rgba(200, 164, 78, 0.08);
+            border-radius: 3px;
+        }
+
+        .point-nav-detail.open {
+            max-height: 300px;
+            opacity: 1;
+            padding: 14px 16px;
+        }
+
+        .point-nav-detail .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .point-nav-detail .detail-day {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .point-nav-detail .detail-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        .point-nav-detail .detail-reasons {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        .point-nav-detail .detail-user-info {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        [data-theme="light"] .point-nav-detail {
+            background: rgba(245, 242, 236, 0.6);
         }
 
         /* KB Popup (hover knowledge card) */
@@ -802,10 +980,10 @@
             width: 300px;
             background: var(--bg-secondary);
             border: 1px solid var(--border-glow);
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 16px;
             backdrop-filter: blur(16px);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
             pointer-events: none;
         }
         .kb-popup.visible { display: block; }
@@ -828,9 +1006,9 @@
             padding: 2px 8px;
             border-radius: 4px;
         }
-        .kb-popup-signal.bullish { background: rgba(239,68,68,0.15); color: #ef4444; }
-        .kb-popup-signal.bearish { background: rgba(34,197,94,0.15); color: #22c55e; }
-        .kb-popup-signal.neutral { background: rgba(148,163,184,0.12); color: #94a3b8; }
+        .kb-popup-signal.bullish { background: rgba(224,82,82,0.12); color: #e05252; }
+        .kb-popup-signal.bearish { background: rgba(61,184,106,0.12); color: #3db86a; }
+        .kb-popup-signal.neutral { background: rgba(154,150,144,0.1); color: #9a9690; }
 
         .kb-popup-illust {
             height: 70px;
@@ -840,12 +1018,12 @@
             gap: 6px;
             margin-bottom: 10px;
             padding: 8px 0;
-            background: rgba(10, 14, 23, 0.4);
-            border-radius: 6px;
-            border: 1px solid rgba(59,130,246,0.06);
+            background: rgba(14, 14, 18, 0.4);
+            border-radius: 3px;
+            border: 1px solid rgba(200,164,78,0.05);
         }
         [data-theme="light"] .kb-popup-illust {
-            background: rgba(241, 245, 249, 0.8);
+            background: rgba(245, 242, 236, 0.8);
         }
 
         .kb-popup-desc {
@@ -858,15 +1036,16 @@
         .trade-history {
             background: var(--bg-card);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 4px;
             padding: 10px 16px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
             flex-shrink: 0;
         }
 
         .history-title {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Noto Sans SC', sans-serif;
             font-size: 0.75rem;
+            font-weight: 700;
             color: var(--accent-cyan);
             margin-bottom: 6px;
             letter-spacing: 0.1em;
@@ -974,10 +1153,10 @@
             padding: 14px 44px;
             background: transparent;
             border: 1px solid var(--accent-cyan);
-            border-radius: 8px;
+            border-radius: 3px;
             color: var(--accent-cyan);
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             margin-top: 24px;
             letter-spacing: 0.15em;
             position: relative;
@@ -987,13 +1166,13 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(6,182,212,0.12) 0%, transparent 60%);
+            background: linear-gradient(135deg, rgba(200,164,78,0.08) 0%, transparent 60%);
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.4s;
         }
         .academy-btn:hover {
             border-color: var(--accent-cyan);
-            box-shadow: 0 0 30px rgba(6,182,212,0.25), inset 0 0 30px rgba(6,182,212,0.06);
+            box-shadow: 0 4px 24px rgba(200,164,78,0.15);
             transform: translateY(-2px);
         }
         .academy-btn:hover::before { opacity: 1; }
@@ -1013,9 +1192,9 @@
             margin-bottom: 24px;
         }
         .academy-title {
-            font-family: 'Orbitron', monospace;
+            font-family: 'Bodoni Moda', serif;
             font-size: 1.3rem;
-            background: linear-gradient(135deg, var(--accent-cyan), #818cf8);
+            background: linear-gradient(135deg, var(--accent-cyan), #a78bfa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -1027,10 +1206,10 @@
             padding: 8px 20px;
             background: transparent;
             border: 1px solid var(--border-color);
-            border-radius: 6px;
+            border-radius: 3px;
             color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.3s;
         }
         .academy-back:hover {
             border-color: var(--accent-cyan);
@@ -1042,8 +1221,8 @@
             display: flex;
             gap: 4px;
             margin-bottom: 24px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 10px;
+            background: rgba(14, 14, 18, 0.5);
+            border-radius: 3px;
             padding: 4px;
             border: 1px solid var(--border-color);
         }
@@ -1055,17 +1234,17 @@
             padding: 10px 16px;
             background: transparent;
             border: none;
-            border-radius: 7px;
+            border-radius: 2px;
             color: var(--text-muted);
             cursor: pointer;
-            transition: all 0.25s;
+            transition: all 0.3s;
             letter-spacing: 0.05em;
         }
         .academy-tab:hover { color: var(--text-secondary); }
         .academy-tab.active {
-            background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.15));
+            background: linear-gradient(135deg, rgba(200,164,78,0.15), rgba(200,164,78,0.08));
             color: var(--accent-cyan);
-            box-shadow: 0 2px 12px rgba(6,182,212,0.1);
+            box-shadow: 0 2px 12px rgba(200,164,78,0.08);
         }
 
         /* Pattern grid */
@@ -1077,15 +1256,15 @@
         .pattern-grid.active { display: grid; }
 
         .pattern-card {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 12px;
+            background: rgba(14, 14, 18, 0.45);
+            border: 1px solid rgba(200, 164, 78, 0.08);
+            border-radius: 4px;
             padding: 20px;
-            transition: all 0.3s;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .pattern-card:hover {
-            border-color: rgba(6, 182, 212, 0.25);
-            box-shadow: 0 4px 24px rgba(6,182,212,0.06);
+            border-color: rgba(200, 164, 78, 0.2);
+            box-shadow: 0 4px 24px rgba(200,164,78,0.06);
             transform: translateY(-2px);
         }
 
@@ -1105,12 +1284,12 @@
             font-size: 0.7rem;
             font-weight: 600;
             padding: 3px 8px;
-            border-radius: 4px;
+            border-radius: 2px;
             flex-shrink: 0;
         }
-        .pattern-signal.bullish { background: rgba(239,68,68,0.15); color: #ef4444; }
-        .pattern-signal.bearish { background: rgba(34,197,94,0.15); color: #22c55e; }
-        .pattern-signal.neutral { background: rgba(148,163,184,0.12); color: #94a3b8; }
+        .pattern-signal.bullish { background: rgba(224,82,82,0.12); color: #e05252; }
+        .pattern-signal.bearish { background: rgba(61,184,106,0.12); color: #3db86a; }
+        .pattern-signal.neutral { background: rgba(154,150,144,0.1); color: #9a9690; }
 
         /* CSS illustration area */
         .pattern-illust {
@@ -1121,9 +1300,9 @@
             gap: 6px;
             margin-bottom: 14px;
             padding: 10px 0;
-            background: rgba(10, 14, 23, 0.5);
-            border-radius: 8px;
-            border: 1px solid rgba(59,130,246,0.06);
+            background: rgba(14, 14, 18, 0.45);
+            border-radius: 3px;
+            border: 1px solid rgba(200,164,78,0.05);
             position: relative;
             overflow: hidden;
         }
@@ -1132,7 +1311,7 @@
             position: absolute;
             bottom: 0; left: 0; right: 0;
             height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(59,130,246,0.15), transparent);
+            background: linear-gradient(90deg, transparent, rgba(200,164,78,0.12), transparent);
         }
 
         /* CSS Candle */
@@ -1140,12 +1319,12 @@
         .ck .wu { width: 2px; } /* upper wick */
         .ck .bd { width: 100%; border-radius: 1px; min-height: 2px; } /* body */
         .ck .wl { width: 2px; } /* lower wick */
-        .ck.r .wu, .ck.r .wl { background: #ef4444; }
-        .ck.r .bd { background: #ef4444; }
-        .ck.g .wu, .ck.g .wl { background: #22c55e; }
-        .ck.g .bd { background: #22c55e; }
-        .ck.d .wu, .ck.d .wl { background: #94a3b8; }
-        .ck.d .bd { background: #94a3b8; width: 60%; }
+        .ck.r .wu, .ck.r .wl { background: #e05252; }
+        .ck.r .bd { background: #e05252; }
+        .ck.g .wu, .ck.g .wl { background: #3db86a; }
+        .ck.g .bd { background: #3db86a; }
+        .ck.d .wu, .ck.d .wl { background: #9a9690; }
+        .ck.d .bd { background: #9a9690; width: 60%; }
 
         /* CSS Volume bar */
         .vbar {
@@ -1153,9 +1332,9 @@
             border-radius: 2px 2px 0 0;
             min-height: 3px;
         }
-        .vbar.r { background: rgba(239,68,68,0.7); }
-        .vbar.g { background: rgba(34,197,94,0.7); }
-        .vbar.m { background: rgba(148,163,184,0.35); }
+        .vbar.r { background: rgba(224,82,82,0.65); }
+        .vbar.g { background: rgba(61,184,106,0.65); }
+        .vbar.m { background: rgba(154,150,144,0.3); }
 
         /* SVG trend lines */
         .pattern-illust svg {
@@ -1203,29 +1382,29 @@
             max-width: 800px; margin: 0 auto;
         }
         .academy-zone-card {
-            background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color);
-            border-radius: 16px; padding: 40px 32px; text-align: center;
-            cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px);
+            background: rgba(14, 14, 18, 0.45); border: 1px solid var(--border-color);
+            border-radius: 4px; padding: 40px 32px; text-align: center;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); backdrop-filter: blur(12px);
             position: relative; overflow: hidden;
         }
         .academy-zone-card::before {
             content: ''; position: absolute; inset: 0;
-            background: linear-gradient(135deg, rgba(6,182,212,0.06) 0%, transparent 60%);
-            opacity: 0; transition: opacity 0.3s;
+            background: linear-gradient(135deg, rgba(200,164,78,0.04) 0%, transparent 60%);
+            opacity: 0; transition: opacity 0.4s;
         }
-        .academy-zone-card:hover { transform: translateY(-4px); }
+        .academy-zone-card:hover { transform: translateY(-3px); }
         .academy-zone-card:hover::before { opacity: 1; }
         .academy-zone-card.knowledge:hover {
             border-color: var(--accent-cyan);
-            box-shadow: 0 8px 40px rgba(6,182,212,0.15);
+            box-shadow: 0 6px 32px rgba(200,164,78,0.1);
         }
-        .academy-zone-card.training { border-color: rgba(239, 68, 68, 0.2); }
+        .academy-zone-card.training { border-color: rgba(224, 82, 82, 0.15); }
         .academy-zone-card.training::before {
-            background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, transparent 60%);
+            background: linear-gradient(135deg, rgba(224,82,82,0.04) 0%, transparent 60%);
         }
         .academy-zone-card.training:hover {
-            border-color: rgba(239, 68, 68, 0.5);
-            box-shadow: 0 8px 40px rgba(239, 68, 68, 0.15);
+            border-color: rgba(224, 82, 82, 0.35);
+            box-shadow: 0 6px 32px rgba(224, 82, 82, 0.1);
         }
         .zone-icon { margin-bottom: 20px; }
         .zone-title {
@@ -1239,12 +1418,12 @@
         .zone-enter-hint {
             font-size: 0.82rem; color: var(--accent-cyan); letter-spacing: 0.1em;
         }
-        .academy-zone-card.training .zone-enter-hint { color: #ef4444; }
+        .academy-zone-card.training .zone-enter-hint { color: #e05252; }
         .zone-back-btn {
             font-family: 'Noto Sans SC', sans-serif; font-size: 0.82rem;
             padding: 8px 20px; background: transparent;
-            border: 1px solid var(--border-color); border-radius: 6px;
-            color: var(--text-muted); cursor: pointer; transition: all 0.25s;
+            border: 1px solid var(--border-color); border-radius: 3px;
+            color: var(--text-muted); cursor: pointer; transition: all 0.3s;
             margin-bottom: 20px;
         }
         .zone-back-btn:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
@@ -1254,12 +1433,12 @@
             display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
         }
         .quiz-progress-track {
-            flex: 1; height: 6px; background: rgba(59, 130, 246, 0.1);
-            border-radius: 3px; overflow: hidden;
+            flex: 1; height: 4px; background: rgba(200, 164, 78, 0.08);
+            border-radius: 2px; overflow: hidden;
         }
         .quiz-progress-bar {
             height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
-            border-radius: 3px; transition: width 0.4s ease;
+            border-radius: 2px; transition: width 0.4s ease;
         }
         .quiz-progress-text {
             font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
@@ -1272,8 +1451,8 @@
             display: inline-block; font-size: 0.72rem; font-weight: 600;
             padding: 3px 10px; border-radius: 4px; margin-bottom: 12px;
         }
-        .quiz-question-type.theory { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); }
-        .quiz-question-type.practical { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .quiz-question-type.theory { background: rgba(200, 164, 78, 0.12); color: var(--accent-blue); }
+        .quiz-question-type.practical { background: rgba(224, 82, 82, 0.12); color: #e05252; }
         .quiz-question-text {
             font-size: 1.05rem; font-weight: 600; color: var(--text-primary);
             margin-bottom: 20px; line-height: 1.6;
@@ -1281,8 +1460,8 @@
         .quiz-pattern-display {
             height: 120px; display: flex; align-items: flex-end;
             justify-content: center; gap: 6px; margin-bottom: 20px; padding: 16px;
-            background: rgba(10, 14, 23, 0.5); border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.1);
+            background: rgba(14, 14, 18, 0.4); border-radius: 4px;
+            border: 1px solid rgba(200, 164, 78, 0.08);
             position: relative; overflow: hidden; max-width: 400px;
         }
         .quiz-pattern-display svg {
@@ -1290,21 +1469,21 @@
         }
         .quiz-kline-display {
             width: 100%; height: 280px; margin-bottom: 20px;
-            background: rgba(10, 14, 23, 0.3); border-radius: 12px;
-            border: 1px solid rgba(59, 130, 246, 0.1);
+            background: rgba(14, 14, 18, 0.25); border-radius: 4px;
+            border: 1px solid rgba(200, 164, 78, 0.08);
         }
         .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .quiz-option {
-            background: rgba(15, 23, 42, 0.5); border: 2px solid rgba(59, 130, 246, 0.1);
-            border-radius: 10px; padding: 16px; cursor: pointer;
-            transition: all 0.25s; text-align: center;
+            background: rgba(14, 14, 18, 0.4); border: 1.5px solid rgba(200, 164, 78, 0.08);
+            border-radius: 4px; padding: 16px; cursor: pointer;
+            transition: all 0.3s; text-align: center;
         }
         .quiz-option:hover:not(.correct):not(.wrong) {
-            border-color: var(--accent-cyan); background: rgba(6, 182, 212, 0.05);
+            border-color: var(--accent-cyan); background: rgba(200, 164, 78, 0.04);
         }
-        .quiz-option.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
-        .quiz-option.correct { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
-        .quiz-option.wrong { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .quiz-option.selected { border-color: var(--accent-blue); background: rgba(200, 164, 78, 0.08); }
+        .quiz-option.correct { border-color: #3db86a; background: rgba(61, 184, 106, 0.08); }
+        .quiz-option.wrong { border-color: #e05252; background: rgba(224, 82, 82, 0.08); }
         .quiz-option-label {
             font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;
             color: var(--text-muted); margin-bottom: 6px;
@@ -1313,7 +1492,7 @@
         .quiz-option-chart { width: 100%; height: 120px; }
         .quiz-explanation {
             margin-top: 16px; padding: 16px;
-            background: rgba(15, 23, 42, 0.5); border-radius: 10px;
+            background: rgba(14, 14, 18, 0.4); border-radius: 3px;
             border-left: 3px solid var(--accent-cyan);
             font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7;
             animation: fadeIn 0.3s ease-out;
@@ -1322,53 +1501,53 @@
         .quiz-nav-btn {
             font-family: 'Noto Sans SC', sans-serif; font-size: 0.92rem; font-weight: 600;
             padding: 12px 36px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border: none; border-radius: 8px; color: white;
-            cursor: pointer; transition: all 0.3s ease;
+            background: linear-gradient(135deg, #c8a44e, #d4b86a);
+            border: none; border-radius: 3px; color: #0e0e12;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .quiz-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .quiz-nav-btn:not(:disabled):hover {
-            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(200, 164, 78, 0.25);
         }
 
         /* ===== Quiz Results ===== */
         .quiz-result-card {
             text-align: center; padding: 40px;
-            background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-color);
-            border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 24px;
+            background: rgba(14, 14, 18, 0.45); border: 1px solid var(--border-color);
+            border-radius: 4px; backdrop-filter: blur(12px); margin-bottom: 24px;
         }
         .quiz-score {
-            font-family: 'Orbitron', monospace; font-size: 3rem; font-weight: 900; margin: 16px 0;
+            font-family: 'Bodoni Moda', serif; font-size: 3rem; font-weight: 900; margin: 16px 0;
         }
-        .quiz-score.high { color: #22c55e; }
-        .quiz-score.medium { color: #f59e0b; }
-        .quiz-score.low { color: #ef4444; }
+        .quiz-score.high { color: #3db86a; }
+        .quiz-score.medium { color: #e0a030; }
+        .quiz-score.low { color: #e05252; }
         .quiz-result-details { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
         .quiz-result-item {
-            background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(59, 130, 246, 0.1);
-            border-radius: 12px; padding: 20px;
+            background: rgba(14, 14, 18, 0.4); border: 1px solid rgba(200, 164, 78, 0.08);
+            border-radius: 4px; padding: 20px;
         }
-        .quiz-result-item.wrong { border-color: rgba(239, 68, 68, 0.3); }
-        .quiz-result-item.correct-item { border-color: rgba(34, 197, 94, 0.15); }
+        .quiz-result-item.wrong { border-color: rgba(224, 82, 82, 0.2); }
+        .quiz-result-item.correct-item { border-color: rgba(61, 184, 106, 0.12); }
         .quiz-retry-btn {
             font-family: 'Noto Sans SC', sans-serif; font-size: 1rem; font-weight: 600;
             padding: 14px 48px;
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
-            border: none; border-radius: 8px; color: white;
-            cursor: pointer; transition: all 0.3s ease;
+            background: linear-gradient(135deg, #c8a44e, #d4b86a);
+            border: none; border-radius: 3px; color: #0e0e12;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .quiz-retry-btn:hover {
-            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px); box-shadow: 0 6px 24px rgba(200, 164, 78, 0.25);
         }
 
         /* Light theme overrides for quiz */
-        [data-theme="light"] .academy-zone-card { background: rgba(255, 255, 255, 0.65); }
-        [data-theme="light"] .quiz-pattern-display { background: rgba(241, 245, 249, 0.9); }
-        [data-theme="light"] .quiz-option { background: rgba(255, 255, 255, 0.6); }
-        [data-theme="light"] .quiz-explanation { background: rgba(241, 245, 249, 0.8); }
-        [data-theme="light"] .quiz-result-card { background: rgba(255, 255, 255, 0.65); }
-        [data-theme="light"] .quiz-result-item { background: rgba(241, 245, 249, 0.6); }
-        [data-theme="light"] .quiz-kline-display { background: rgba(241, 245, 249, 0.5); }
+        [data-theme="light"] .academy-zone-card { background: rgba(255, 253, 248, 0.7); }
+        [data-theme="light"] .quiz-pattern-display { background: rgba(245, 242, 236, 0.9); }
+        [data-theme="light"] .quiz-option { background: rgba(255, 253, 248, 0.6); }
+        [data-theme="light"] .quiz-explanation { background: rgba(245, 242, 236, 0.8); }
+        [data-theme="light"] .quiz-result-card { background: rgba(255, 253, 248, 0.7); }
+        [data-theme="light"] .quiz-result-item { background: rgba(245, 242, 236, 0.6); }
+        [data-theme="light"] .quiz-kline-display { background: rgba(245, 242, 236, 0.5); }
 
         /* Loading spinner */
         .loading {
@@ -1436,7 +1615,7 @@
             <div class="academy-landing" id="academyLanding">
                 <div class="academy-zone-cards">
                     <div class="academy-zone-card training" onclick="enterTrainingZone()">
-                        <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#ef4444" stroke-width="2" opacity="0.3"/><circle cx="24" cy="24" r="13" stroke="#ef4444" stroke-width="2" opacity="0.5"/><circle cx="24" cy="24" r="6" fill="#ef4444" opacity="0.8"/><line x1="24" y1="0" x2="24" y2="8" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="24" y1="40" x2="24" y2="48" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="0" y1="24" x2="8" y2="24" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/><line x1="40" y1="24" x2="48" y2="24" stroke="#ef4444" stroke-width="1.5" opacity="0.4"/></svg></div>
+                        <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#e05252" stroke-width="2" opacity="0.3"/><circle cx="24" cy="24" r="13" stroke="#e05252" stroke-width="2" opacity="0.5"/><circle cx="24" cy="24" r="6" fill="#e05252" opacity="0.8"/><line x1="24" y1="0" x2="24" y2="8" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="24" y1="40" x2="24" y2="48" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="0" y1="24" x2="8" y2="24" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="40" y1="24" x2="48" y2="24" stroke="#e05252" stroke-width="1.5" opacity="0.4"/></svg></div>
                         <h3 class="zone-title">训练区</h3>
                         <p class="zone-desc">10道随机题目，理论与实操结合<br>检验你的炒股知识</p>
                         <span class="zone-enter-hint">点击进入 &rarr;</span>
@@ -1606,7 +1785,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">放量上涨</span><span class="pattern-signal bullish">看涨</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar r" style="height:14px"></div><div class="vbar r" style="height:22px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:42px"></div><div class="vbar r" style="height:56px"></div>
                     </div>
                     <div class="pattern-desc">价格上涨伴随成交量逐步放大，说明越来越多的资金入场追捧，量价齐升是最健康的上涨模式，趋势延续性强。</div>
@@ -1614,7 +1793,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">缩量回调</span><span class="pattern-signal bullish">看涨</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:36px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>
                     </div>
                     <div class="pattern-desc">价格小幅回落但成交量逐渐萎缩。说明卖出意愿不强，持股者惜售。在上升趋势中的缩量回调是健康的技术性修正，常是低吸良机。</div>
@@ -1622,7 +1801,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">放量下跌</span><span class="pattern-signal bearish">看跌</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar g" style="height:14px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:35px"></div><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:60px"></div>
                     </div>
                     <div class="pattern-desc">价格下跌同时成交量持续放大，说明恐慌性抛售加剧，大量资金夺路而逃。这是最危险的量价形态，应果断止损回避。</div>
@@ -1630,7 +1809,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">地量见底</span><span class="pattern-signal bullish">看涨</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#94a3b8" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#9a9690" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg>
                         <div class="vbar m" style="height:18px"></div><div class="vbar m" style="height:12px"></div><div class="vbar m" style="height:7px"></div><div class="vbar m" style="height:4px"></div><div class="vbar m" style="height:5px"></div><div class="vbar r" style="height:10px"></div><div class="vbar r" style="height:18px"></div>
                     </div>
                     <div class="pattern-desc">"地量之后有地价"。成交量萎缩到极低水平，说明抛压已近枯竭。随后若出现温和放量阳线，往往是底部确立的标志。</div>
@@ -1638,7 +1817,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">天量见顶</span><span class="pattern-signal bearish">看跌</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar r" style="height:18px"></div><div class="vbar r" style="height:28px"></div><div class="vbar r" style="height:65px"></div><div class="vbar g" style="height:40px"></div><div class="vbar g" style="height:22px"></div>
                     </div>
                     <div class="pattern-desc">"天量之后有天价"。成交量突然放出历史级巨量，往往是主力资金大规模出货的标志。若伴随长上影线或高位阴线，是强烈的见顶信号，应果断离场。</div>
@@ -1646,7 +1825,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">温和放量</span><span class="pattern-signal bullish">看涨</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar r" style="height:12px"></div><div class="vbar r" style="height:16px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:25px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:36px"></div>
                     </div>
                     <div class="pattern-desc">成交量像上台阶一样逐步温和放大，而非突然暴增。说明资金有序入场，筹码交换充分，是最健康的上涨形态。这种"量堆"出来的涨势持续性最强。</div>
@@ -1654,7 +1833,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">量价背离（看跌）</span><span class="pattern-signal bearish">看跌</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar r" style="height:50px"></div><div class="vbar r" style="height:40px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:12px"></div>
                     </div>
                     <div class="pattern-desc">价格持续创新高，但成交量反而逐渐萎缩。说明跟风买入的资金越来越少，上涨缺乏量能支撑。这是"顶背离"的经典信号，需警惕随时可能出现的回调。</div>
@@ -1662,7 +1841,7 @@
                 <div class="pattern-card">
                     <div class="pattern-card-top"><span class="pattern-name">量价背离（看涨）</span><span class="pattern-signal bullish">看涨</span></div>
                     <div class="pattern-illust">
-                        <svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg>
+                        <svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg>
                         <div class="vbar g" style="height:50px"></div><div class="vbar g" style="height:38px"></div><div class="vbar g" style="height:26px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>
                     </div>
                     <div class="pattern-desc">价格持续创新低，但成交量反而逐步减少。说明抛售力量正在枯竭，卖无可卖。这是"底背离"信号，预示下跌接近尾声，后续可能出现反弹甚至反转。</div>
@@ -1751,7 +1930,7 @@
                         <svg viewBox="0 0 200 80">
                             <line x1="15" y1="20" x2="165" y2="20" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/>
                             <polyline points="15,65 50,20 70,50 105,20 120,40 155,20" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/>
-                            <polyline points="155,20 175,12 195,5" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/>
+                            <polyline points="155,20 175,12 195,5" stroke="#e05252" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/>
                             <text x="180" y="72" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">突破</text>
                         </svg>
                     </div>
@@ -1868,10 +2047,10 @@
                     <div class="chart-subtitle" id="resultChartSubtitle">--</div>
                 </div>
                 <div id="result-kline-chart" style="width: 100%; height: 500px;"></div>
+                <div id="pointNavigator"></div>
             </div>
 
             <div class="analysis-container" id="klineAnalysis"></div>
-            <div class="analysis-container" id="bestPointsAnalysis"></div>
         </section>
     </div>
 
@@ -1896,12 +2075,12 @@
         function getChartColors() {
             const isLight = document.documentElement.getAttribute('data-theme') === 'light';
             return {
-                tooltipBg: isLight ? 'rgba(255,255,255,0.96)' : 'rgba(17,24,39,0.95)',
-                tooltipBorder: isLight ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.3)',
-                tooltipText: isLight ? '#1e293b' : '#e2e8f0',
-                axisLine: isLight ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.3)',
-                axisLabel: isLight ? '#94a3b8' : '#64748b',
-                splitLine: isLight ? 'rgba(148,163,184,0.12)' : 'rgba(59,130,246,0.1)'
+                tooltipBg: isLight ? 'rgba(255,253,248,0.96)' : 'rgba(22,22,29,0.95)',
+                tooltipBorder: isLight ? 'rgba(140,120,80,0.2)' : 'rgba(200,164,78,0.2)',
+                tooltipText: isLight ? '#1a1814' : '#e8e4dd',
+                axisLine: isLight ? 'rgba(140,120,80,0.2)' : 'rgba(200,164,78,0.2)',
+                axisLabel: isLight ? '#9a948a' : '#6b6660',
+                splitLine: isLight ? 'rgba(140,120,80,0.08)' : 'rgba(200,164,78,0.06)'
             };
         }
 
@@ -2025,7 +2204,7 @@
             const dates = visibleData.map(d => d.date);
             const ohlc = visibleData.map(d => [d.open, d.close, d.low, d.high]);
             const volumes = visibleData.map(d => d.volume);
-            const volumeColors = visibleData.map(d => d.close >= d.open ? '#ef4444' : '#22c55e');
+            const volumeColors = visibleData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
 
             const ma5 = calculateMA(visibleData, 5);
             const ma10 = calculateMA(visibleData, 10);
@@ -2037,7 +2216,7 @@
                 coord: [histLen + trade.day - 1, trade.price],
                 value: trade.type === 'buy' ? '买' : '卖',
                 itemStyle: {
-                    color: trade.type === 'buy' ? '#ef4444' : '#22c55e'
+                    color: trade.type === 'buy' ? '#e05252' : '#3db86a'
                 }
             })).filter(p => p.coord[0] < visibleData.length);
 
@@ -2049,7 +2228,7 @@
                     data: ['MA5', 'MA10', 'MA20', 'MA30'],
                     top: 5,
                     left: 10,
-                    textStyle: { color: '#94a3b8', fontFamily: 'JetBrains Mono', fontSize: 11 },
+                    textStyle: { color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 11 },
                     itemWidth: 18,
                     itemHeight: 2,
                     itemGap: 12
@@ -2059,10 +2238,10 @@
                     axisPointer: {
                         type: 'cross'
                     },
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    backgroundColor: 'rgba(22, 22, 29, 0.95)',
+                    borderColor: 'rgba(200, 164, 78, 0.2)',
                     textStyle: {
-                        color: '#e2e8f0',
+                        color: '#e8e4dd',
                         fontFamily: 'JetBrains Mono'
                     },
                     formatter: function(params) {
@@ -2072,7 +2251,7 @@
                         const ohlc = candlestick.data;
                         let html = `
                             <div style="padding: 5px;">
-                                <div style="margin-bottom: 5px; color: #94a3b8;">${candlestick.axisValue}</div>
+                                <div style="margin-bottom: 5px; color: #6b6660;">${candlestick.axisValue}</div>
                                 <div>开: ${ohlc[0].toFixed(2)}</div>
                                 <div>收: ${ohlc[1].toFixed(2)}</div>
                                 <div>低: ${ohlc[2].toFixed(2)}</div>
@@ -2114,7 +2293,7 @@
                         type: 'category',
                         data: dates,
                         gridIndex: 0,
-                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
                         axisLabel: { show: false },
                         axisTick: { show: false },
                         splitLine: { show: false }
@@ -2123,9 +2302,9 @@
                         type: 'category',
                         data: dates,
                         gridIndex: 1,
-                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
                         axisLabel: {
-                            color: '#64748b',
+                            color: '#6b6660',
                             fontFamily: 'JetBrains Mono',
                             fontSize: 10,
                             rotate: 45
@@ -2139,12 +2318,12 @@
                         scale: true,
                         gridIndex: 0,
                         axisLabel: {
-                            color: '#64748b',
+                            color: '#6b6660',
                             fontFamily: 'JetBrains Mono',
                             fontSize: 10
                         },
                         axisLine: { show: false },
-                        splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.1)' } }
+                        splitLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.06)' } }
                     },
                     {
                         type: 'value',
@@ -2161,10 +2340,10 @@
                         yAxisIndex: 0,
                         data: ohlc,
                         itemStyle: {
-                            color: '#ef4444',
-                            color0: '#22c55e',
-                            borderColor: '#ef4444',
-                            borderColor0: '#22c55e'
+                            color: '#e05252',
+                            color0: '#3db86a',
+                            borderColor: '#e05252',
+                            borderColor0: '#3db86a'
                         },
                         markPoint: {
                             data: markPoints,
@@ -2607,28 +2786,28 @@
               desc: '实体较小而上下影线都很长的K线，形似螺旋桨。表示多空双方激烈交锋，市场分歧极大。单独出现意义有限，若出现在趋势末端则暗示变盘在即。' },
             // 成交量形态 (8)
             { name: '放量上涨', signal: '看涨', signalCls: 'bullish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:14px"></div><div class="vbar r" style="height:22px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:42px"></div><div class="vbar r" style="height:56px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,60 60,50 100,38 140,28 180,15" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:14px"></div><div class="vbar r" style="height:22px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:42px"></div><div class="vbar r" style="height:56px"></div>',
               desc: '价格上涨伴随成交量逐步放大，说明越来越多的资金入场追捧，量价齐升是最健康的上涨模式，趋势延续性强。' },
             { name: '缩量回调', signal: '看涨', signalCls: 'bullish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:36px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,25 60,30 100,38 140,44 180,48" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:36px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
               desc: '价格小幅回落但成交量逐渐萎缩。说明卖出意愿不强，持股者惜售。在上升趋势中的缩量回调是健康的技术性修正，常是低吸良机。' },
             { name: '放量下跌', signal: '看跌', signalCls: 'bearish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:14px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:35px"></div><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:60px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,15 60,28 100,42 140,54 180,65" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:14px"></div><div class="vbar g" style="height:24px"></div><div class="vbar g" style="height:35px"></div><div class="vbar g" style="height:48px"></div><div class="vbar g" style="height:60px"></div>',
               desc: '价格下跌同时成交量持续放大，说明恐慌性抛售加剧，大量资金夺路而逃。这是最危险的量价形态，应果断止损回避。' },
             { name: '地量见底', signal: '看涨', signalCls: 'bullish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#94a3b8" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg><div class="vbar m" style="height:18px"></div><div class="vbar m" style="height:12px"></div><div class="vbar m" style="height:7px"></div><div class="vbar m" style="height:4px"></div><div class="vbar m" style="height:5px"></div><div class="vbar r" style="height:10px"></div><div class="vbar r" style="height:18px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,30 50,42 80,52 110,58 140,55 170,46 195,38" stroke="#9a9690" stroke-width="1.5" fill="none" opacity="0.4" stroke-dasharray="4,3"/></svg><div class="vbar m" style="height:18px"></div><div class="vbar m" style="height:12px"></div><div class="vbar m" style="height:7px"></div><div class="vbar m" style="height:4px"></div><div class="vbar m" style="height:5px"></div><div class="vbar r" style="height:10px"></div><div class="vbar r" style="height:18px"></div>',
               desc: '"地量之后有地价"。成交量萎缩到极低水平，说明抛压已近枯竭。随后若出现温和放量阳线，往往是底部确立的标志。' },
             { name: '天量见顶', signal: '看跌', signalCls: 'bearish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:18px"></div><div class="vbar r" style="height:28px"></div><div class="vbar r" style="height:65px"></div><div class="vbar g" style="height:40px"></div><div class="vbar g" style="height:22px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,40 60,30 100,18 130,15 160,22 190,35" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:18px"></div><div class="vbar r" style="height:28px"></div><div class="vbar r" style="height:65px"></div><div class="vbar g" style="height:40px"></div><div class="vbar g" style="height:22px"></div>',
               desc: '"天量之后有天价"。成交量突然放出历史级巨量，往往是主力资金大规模出货的标志。若伴随长上影线或高位阴线，是强烈的见顶信号，应果断离场。' },
             { name: '温和放量', signal: '看涨', signalCls: 'bullish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:12px"></div><div class="vbar r" style="height:16px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:25px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:36px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,55 50,50 80,46 110,42 140,37 170,33 195,28" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:12px"></div><div class="vbar r" style="height:16px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:25px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:36px"></div>',
               desc: '成交量像上台阶一样逐步温和放大，而非突然暴增。说明资金有序入场，筹码交换充分，是最健康的上涨形态。这种"量堆"出来的涨势持续性最强。' },
             { name: '量价背离（看跌）', signal: '看跌', signalCls: 'bearish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#ef4444" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:50px"></div><div class="vbar r" style="height:40px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:12px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,45 60,35 100,26 140,20 180,15" stroke="#e05252" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar r" style="height:50px"></div><div class="vbar r" style="height:40px"></div><div class="vbar r" style="height:30px"></div><div class="vbar r" style="height:20px"></div><div class="vbar r" style="height:12px"></div>',
               desc: '价格持续创新高，但成交量反而逐渐萎缩。说明跟风买入的资金越来越少，上涨缺乏量能支撑。这是"顶背离"的经典信号，需警惕随时可能出现的回调。' },
             { name: '量价背离（看涨）', signal: '看涨', signalCls: 'bullish', category: 'volume',
-              illust: '<svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#22c55e" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:50px"></div><div class="vbar g" style="height:38px"></div><div class="vbar g" style="height:26px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
+              illust: '<svg viewBox="0 0 200 80"><polyline points="20,20 60,32 100,42 140,50 180,55" stroke="#3db86a" stroke-width="2" fill="none" opacity="0.5"/></svg><div class="vbar g" style="height:50px"></div><div class="vbar g" style="height:38px"></div><div class="vbar g" style="height:26px"></div><div class="vbar g" style="height:16px"></div><div class="vbar g" style="height:10px"></div>',
               desc: '价格持续创新低，但成交量反而逐步减少。说明抛售力量正在枯竭，卖无可卖。这是"底背离"信号，预示下跌接近尾声，后续可能出现反弹甚至反转。' },
             // 走势形态 (5) — 金叉/死叉已移除
             { name: '多头排列', signal: '看涨', signalCls: 'bullish', category: 'trend',
@@ -2644,7 +2823,7 @@
               illust: '<svg viewBox="0 0 200 80"><polyline points="15,60 40,45 65,22 85,38 105,55 125,38 150,22 170,45 195,65" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><line x1="15" y1="55" x2="195" y2="55" stroke="var(--accent-cyan)" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/><text x="100" y="75" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">颈线</text></svg>',
               desc: '价格两次冲高到相近价位后回落，形成"M"形。当价格跌破两次回落的低点（颈线）时双顶成立，是明确的卖出信号。' },
             { name: '上升三角形', signal: '看涨', signalCls: 'bullish', category: 'trend',
-              illust: '<svg viewBox="0 0 200 80"><line x1="15" y1="20" x2="165" y2="20" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/><polyline points="15,65 50,20 70,50 105,20 120,40 155,20" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><polyline points="155,20 175,12 195,5" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/><text x="180" y="72" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">突破</text></svg>',
+              illust: '<svg viewBox="0 0 200 80"><line x1="15" y1="20" x2="165" y2="20" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4,3" opacity="0.5"/><polyline points="15,65 50,20 70,50 105,20 120,40 155,20" stroke="var(--accent-cyan)" stroke-width="2.5" fill="none"/><polyline points="155,20 175,12 195,5" stroke="#e05252" stroke-width="2.5" fill="none" stroke-dasharray="5,3"/><text x="180" y="72" text-anchor="middle" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">突破</text></svg>',
               desc: '顶部压力线水平、底部支撑线逐步抬高，形成收敛三角形。买方力量逐渐增强，一旦放量突破上方压力线，往往开启快速上涨。' },
         ];
         // Build PATTERN_KB from QUIZ_PATTERNS for backward compatibility
@@ -2881,47 +3060,6 @@
 
             // Store for chart marking
             gameState.bestPoints = { buys: topBuys, sells: topSells };
-
-            // Render
-            let html = `<div class="analysis-title">最佳买卖点分析</div>`;
-
-            if (topBuys.length > 0) {
-                html += `<div style="margin-bottom:8px;font-size:0.85rem;color:var(--text-muted);">买入机会 TOP ${topBuys.length}</div>`;
-                topBuys.forEach((p, idx) => {
-                    html += `<div class="best-point-card">
-                        <div class="point-header">
-                            <span class="point-badge buy">B${idx + 1}</span>
-                            <span class="point-day">第 ${p.day} 天（${p.date}）</span>
-                            <span class="point-price">收盘 ${p.price.toFixed(2)}</span>
-                        </div>
-                        <div class="point-reason">${p.reasons.map(r =>
-                            `<span class="point-reason-tag">${r.tag}</span>${r.text}`
-                        ).join('<br>')}</div>
-                    </div>`;
-                });
-            }
-
-            if (topSells.length > 0) {
-                html += `<div style="margin:16px 0 8px;font-size:0.85rem;color:var(--text-muted);">卖出机会 TOP ${topSells.length}</div>`;
-                topSells.forEach((p, idx) => {
-                    html += `<div class="best-point-card">
-                        <div class="point-header">
-                            <span class="point-badge sell">S${idx + 1}</span>
-                            <span class="point-day">第 ${p.day} 天（${p.date}）</span>
-                            <span class="point-price">收盘 ${p.price.toFixed(2)}</span>
-                        </div>
-                        <div class="point-reason">${p.reasons.map(r =>
-                            `<span class="point-reason-tag">${r.tag}</span>${r.text}`
-                        ).join('<br>')}</div>
-                    </div>`;
-                });
-            }
-
-            if (topBuys.length === 0 && topSells.length === 0) {
-                html += `<div class="analysis-text"><p>该区间技术信号较少，未识别出明显的买卖点。</p></div>`;
-            }
-
-            document.getElementById('bestPointsAnalysis').innerHTML = html;
         }
 
         function generateBSReport() {
@@ -3169,7 +3307,7 @@
             const dates = fullData.map(d => d.date);
             const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
             const volumes = fullData.map(d => d.volume);
-            const volumeColors = fullData.map(d => d.close >= d.open ? '#ef4444' : '#22c55e');
+            const volumeColors = fullData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
 
             const ma5 = calculateMA(fullData, 5);
             const ma10 = calculateMA(fullData, 10);
@@ -3181,7 +3319,7 @@
                 coord: [histLen + trade.day - 1, trade.price],
                 value: trade.type === 'buy' ? '买' : '卖',
                 itemStyle: {
-                    color: trade.type === 'buy' ? '#ef4444' : '#22c55e'
+                    color: trade.type === 'buy' ? '#e05252' : '#3db86a'
                 }
             })).filter(p => p.coord[0] < histLen + 30);
 
@@ -3215,10 +3353,10 @@
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross' },
-                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                    borderColor: 'rgba(59, 130, 246, 0.3)',
+                    backgroundColor: 'rgba(22, 22, 29, 0.95)',
+                    borderColor: 'rgba(200, 164, 78, 0.2)',
                     textStyle: {
-                        color: '#e2e8f0',
+                        color: '#e8e4dd',
                         fontFamily: 'JetBrains Mono'
                     }
                 },
@@ -3244,7 +3382,7 @@
                         type: 'category',
                         data: dates,
                         gridIndex: 0,
-                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
                         axisLabel: { show: false },
                         axisTick: { show: false },
                         splitLine: { show: false }
@@ -3253,9 +3391,9 @@
                         type: 'category',
                         data: dates,
                         gridIndex: 1,
-                        axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.3)' } },
+                        axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
                         axisLabel: {
-                            color: '#64748b',
+                            color: '#6b6660',
                             fontFamily: 'JetBrains Mono',
                             fontSize: 10,
                             rotate: 45
@@ -3268,12 +3406,12 @@
                         scale: true,
                         gridIndex: 0,
                         axisLabel: {
-                            color: '#64748b',
+                            color: '#6b6660',
                             fontFamily: 'JetBrains Mono',
                             fontSize: 10
                         },
                         axisLine: { show: false },
-                        splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.1)' } }
+                        splitLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.06)' } }
                     },
                     {
                         type: 'value',
@@ -3290,10 +3428,10 @@
                         yAxisIndex: 0,
                         data: ohlc,
                         itemStyle: {
-                            color: '#ef4444',
-                            color0: '#22c55e',
-                            borderColor: '#ef4444',
-                            borderColor0: '#22c55e'
+                            color: '#e05252',
+                            color0: '#3db86a',
+                            borderColor: '#e05252',
+                            borderColor0: '#3db86a'
                         },
                         markPoint: {
                             data: [...markPoints, ...bestMarkPoints],
@@ -3363,6 +3501,137 @@
 
             resultChart.setOption(option);
             applyChartTheme(resultChart);
+
+            // Build interactive point navigator
+            buildPointNavigator(resultChart, histLen, fullData);
+        }
+
+        function buildPointNavigator(chart, histLen, fullData) {
+            const nav = document.getElementById('pointNavigator');
+            nav.innerHTML = '';
+
+            const bp = gameState.bestPoints || { buys: [], sells: [] };
+            const trades = gameState.tradeHistory || [];
+
+            // Collect all points into a unified sorted list
+            const allPoints = [];
+
+            bp.buys.forEach((p, idx) => {
+                allPoints.push({
+                    day: p.day,
+                    label: '荐买' + (idx + 1),
+                    type: 'best-buy',
+                    date: p.date,
+                    price: p.price,
+                    reasons: p.reasons
+                });
+            });
+
+            bp.sells.forEach((p, idx) => {
+                allPoints.push({
+                    day: p.day,
+                    label: '荐卖' + (idx + 1),
+                    type: 'best-sell',
+                    date: p.date,
+                    price: p.price,
+                    reasons: p.reasons
+                });
+            });
+
+            trades.forEach((t, idx) => {
+                if (t.day > 30) return; // skip forced sell at day 31
+                const dayData = fullData[histLen + t.day - 1];
+                allPoints.push({
+                    day: t.day,
+                    label: t.type === 'buy' ? '买入' + (idx + 1) : '卖出' + (idx + 1),
+                    type: t.type === 'buy' ? 'user-buy' : 'user-sell',
+                    date: dayData ? dayData.date : '',
+                    price: t.price,
+                    reasons: null,
+                    tradeReturn: t.return
+                });
+            });
+
+            // Sort by day
+            allPoints.sort((a, b) => a.day - b.day);
+
+            if (allPoints.length === 0) return;
+
+            // Build strip
+            const strip = document.createElement('div');
+            strip.className = 'point-nav-strip';
+
+            // Build detail panel
+            const detail = document.createElement('div');
+            detail.className = 'point-nav-detail';
+
+            let activeIdx = -1;
+
+            allPoints.forEach((pt, i) => {
+                const badge = document.createElement('span');
+                badge.className = 'point-nav-badge ' + pt.type;
+                badge.textContent = pt.label;
+                badge.setAttribute('data-idx', i);
+
+                badge.addEventListener('click', () => {
+                    if (activeIdx === i) {
+                        // Collapse
+                        detail.classList.remove('open');
+                        badge.classList.remove('active');
+                        activeIdx = -1;
+                        chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+                        return;
+                    }
+
+                    // Deactivate previous
+                    const prev = strip.querySelector('.point-nav-badge.active');
+                    if (prev) prev.classList.remove('active');
+
+                    badge.classList.add('active');
+                    activeIdx = i;
+
+                    // Build detail content
+                    let html = '<div class="detail-header">';
+                    html += `<span class="point-badge ${pt.type.includes('buy') ? 'buy' : 'sell'}">${pt.label}</span>`;
+                    html += `<span class="detail-day">第 ${pt.day} 天（${pt.date}）</span>`;
+                    html += `<span class="detail-price">价格 ${pt.price.toFixed(2)}</span>`;
+                    html += '</div>';
+
+                    if (pt.reasons) {
+                        html += '<div class="detail-reasons">';
+                        html += pt.reasons.map(r =>
+                            `<span class="point-reason-tag">${r.tag}</span>${r.text}`
+                        ).join('<br>');
+                        html += '</div>';
+                    } else {
+                        // User trade
+                        html += '<div class="detail-user-info">';
+                        if (pt.type === 'user-buy') {
+                            html += `你在第 ${pt.day} 天以 ${pt.price.toFixed(2)} 买入`;
+                        } else {
+                            const retPct = pt.tradeReturn ? ((pt.tradeReturn - 1) * 100).toFixed(2) : null;
+                            html += `你在第 ${pt.day} 天以 ${pt.price.toFixed(2)} 卖出`;
+                            if (retPct !== null) {
+                                const cls = parseFloat(retPct) >= 0 ? 'gain-color' : 'loss-color';
+                                html += `，本次收益 <span style="color:var(--${cls});font-weight:700">${parseFloat(retPct) >= 0 ? '+' : ''}${retPct}%</span>`;
+                            }
+                        }
+                        html += '</div>';
+                    }
+
+                    detail.innerHTML = html;
+                    detail.classList.add('open');
+
+                    // Highlight point on chart via tooltip
+                    const dataIndex = histLen + pt.day - 1;
+                    chart.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: dataIndex });
+                });
+
+                strip.appendChild(badge);
+            });
+
+            nav.appendChild(strip);
+            nav.appendChild(detail);
         }
 
         function resetGame() {
@@ -3712,7 +3981,7 @@
 
             const series = [{
                 type: 'candlestick', data: ohlc,
-                itemStyle: { color: '#ef4444', color0: '#22c55e', borderColor: '#ef4444', borderColor0: '#22c55e' }
+                itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' }
             }];
 
             const legendData = [];
@@ -3730,20 +3999,20 @@
 
             chart.setOption({
                 backgroundColor: 'transparent', animation: false,
-                legend: !isMini ? { data: legendData, top: 0, right: 0, textStyle: { color: '#64748b', fontSize: 10 }, itemWidth: 14, itemHeight: 2 } : undefined,
+                legend: !isMini ? { data: legendData, top: 0, right: 0, textStyle: { color: '#6b6660', fontSize: 10 }, itemWidth: 14, itemHeight: 2 } : undefined,
                 grid: { left: isMini ? '2%' : '10%', right: '2%', top: isMini ? '8%' : '28px', bottom: isMini ? '2%' : '18%', containLabel: !isMini },
                 tooltip: isMini ? undefined : { trigger: 'axis', axisPointer: { type: 'cross' } },
                 xAxis: {
                     type: 'category', data: dates,
-                    axisLabel: { show: !isMini, fontSize: 9, color: '#64748b', rotate: 45 },
-                    axisLine: { lineStyle: { color: 'rgba(59,130,246,0.2)' } },
+                    axisLabel: { show: !isMini, fontSize: 9, color: '#6b6660', rotate: 45 },
+                    axisLine: { lineStyle: { color: 'rgba(200,164,78,0.15)' } },
                     axisTick: { show: false }, splitLine: { show: false }
                 },
                 yAxis: {
                     type: 'value', scale: true,
-                    axisLabel: { show: !isMini, fontSize: 9, color: '#64748b' },
+                    axisLabel: { show: !isMini, fontSize: 9, color: '#6b6660' },
                     axisLine: { show: false },
-                    splitLine: { show: !isMini, lineStyle: { color: 'rgba(59,130,246,0.08)' } }
+                    splitLine: { show: !isMini, lineStyle: { color: 'rgba(200,164,78,0.05)' } }
                 },
                 series: series
             });
@@ -3875,7 +4144,7 @@
             else { scoreCls = 'low'; comment = '还需要多多学习哦！建议先去知识区系统学习各种形态。'; }
 
             document.getElementById('quizResultCard').innerHTML =
-                '<h2 style="font-family:\'Orbitron\',monospace;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
+                '<h2 style="font-family:\'Bodoni Moda\',serif;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
                 '<div class="quiz-score ' + scoreCls + '">' + score + ' / 10</div>' +
                 '<p style="color:var(--text-secondary);font-size:0.92rem;margin:12px 0 0">' + comment + '</p>';
 
@@ -3895,7 +4164,7 @@
                 }
                 const typeName = q.type === 'practical' ? '实操题' : '理论题';
                 const icon = isCorrect ? '&#10003;' : '&#10007;';
-                const color = isCorrect ? '#22c55e' : '#ef4444';
+                const color = isCorrect ? '#3db86a' : '#e05252';
 
                 detailsHtml += '<div class="quiz-result-item ' + (isCorrect ? 'correct-item' : 'wrong') + '">' +
                     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
@@ -3904,8 +4173,8 @@
                     '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + q.question + '</div>';
                 if (!isCorrect) {
                     detailsHtml += '<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px">' +
-                        '你的答案：<span style="color:#ef4444">' + userText + '</span> | ' +
-                        '正确答案：<span style="color:#22c55e">' + correctText + '</span></div>' +
+                        '你的答案：<span style="color:#e05252">' + userText + '</span> | ' +
+                        '正确答案：<span style="color:#3db86a">' + correctText + '</span></div>' +
                         '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-top:6px">' + q.explanation + '</div>';
                 }
                 detailsHtml += '</div>';
