@@ -2,13 +2,13 @@
 
 基于真实 A 股历史数据的 K 线交易模拟游戏。随机抽取一只股票的 30 个交易日，隐去名称代码，让你在未知中做出买卖决策，锻炼盘感与交易纪律。
 
-## 在线体验
+## 快速开始
 
-浏览器打开 `index.html` 即可运行，无需服务器或构建工具。
-执行指令： 
+项目使用 ES Modules，需通过 HTTP 服务器访问：
 
 ```bash
-open index.html
+python -m http.server 8000
+# 然后打开 http://localhost:8000
 ```
 
 ## 功能一览
@@ -57,13 +57,25 @@ open index.html
 
 - **浅色 / 深色主题** — 一键切换，偏好自动保存
 - **响应式布局** — 适配桌面与移动端
-- **零依赖部署** — 纯前端单文件，仅依赖 CDN 加载的 ECharts
+- **零依赖部署** — 纯前端，无需构建工具，仅依赖 CDN 加载的 ECharts
 
 ## 项目结构
 
 ```
 stock_website/
-├── index.html              # 完整应用（HTML + CSS + JS 单文件）
+├── index.html              # HTML 结构 + 模块入口
+├── css/
+│   └── style.css           # 全部样式
+├── js/
+│   ├── state.js            # 游戏状态（gameState, chartRefs, quizState）
+│   ├── utils.js            # 工具函数（MA 计算、图表主题等）
+│   ├── theme.js            # 主题切换
+│   ├── patterns.js         # K 线形态知识库（31 种形态）
+│   ├── game.js             # 游戏核心（开局、K 线图、买卖、UI 更新）
+│   ├── analysis.js         # 技术分析（波段分析、最佳买卖点、评分报告）
+│   ├── result.js           # 结算页（结果图表、导航条）
+│   ├── academy.js          # 修炼基地导航
+│   └── quiz.js             # 测验引擎（出题、答题、评分）
 ├── fetch_stock_data.py     # 股票数据抓取脚本
 ├── data/
 │   ├── stocks_data.js      # 前端加载的数据文件（~4 MB）
@@ -82,7 +94,7 @@ python fetch_stock_data.py   # 约 3-5 分钟
 
 ## 技术栈
 
-- **前端**：原生 HTML / CSS / JavaScript（无框架）
+- **前端**：原生 HTML / CSS / JavaScript（ES Modules，无框架无构建）
 - **图表**：[ECharts 5.4](https://echarts.apache.org/)（CDN）
 - **字体**：Orbitron / JetBrains Mono / Noto Sans SC（Google Fonts）
 - **数据源**：[AKShare](https://github.com/akfamily/akshare)（东方财富接口）
