@@ -1,0 +1,586 @@
+/* ============================================================
+   START SCREEN — Deep Night Financial Forge
+   Bento layout: hero → [arena-card | [academy-card / oracle-card]]
+   ============================================================ */
+
+/* ── 1. Page-level layout for start screen ── */
+.start-screen {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding-bottom: 64px;
+    animation: fadeIn 0.7s ease-out;
+}
+
+/* ── 2. Hero ── */
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 72px 0 56px;
+    text-align: center;
+    /* layered: ticker at very bottom, kline bg, then content */
+}
+
+/* Scrolling ticker tape */
+.ticker-wrap {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    overflow: hidden;
+    border-top: 1px solid rgba(200, 164, 78, 0.08);
+    background: rgba(14, 14, 18, 0.6);
+}
+
+.ticker-track {
+    display: inline-flex;
+    gap: 48px;
+    white-space: nowrap;
+    animation: ticker-scroll 40s linear infinite;
+    padding: 5px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: rgba(200, 164, 78, 0.45);
+    letter-spacing: 0.06em;
+}
+
+@keyframes ticker-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
+
+/* Ghost K-line SVG backdrop */
+.hero-kline-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Hero content */
+.hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.hero-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.35em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    border: 1px solid rgba(200, 164, 78, 0.15);
+    padding: 4px 14px;
+    border-radius: 2px;
+    background: rgba(200, 164, 78, 0.04);
+}
+
+/* Main title with glitch effect */
+.hero-title {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 900;
+    color: var(--text-primary);
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+    margin: 0;
+    position: relative;
+}
+
+.hero-title-glitch {
+    position: relative;
+    display: inline-block;
+}
+
+/* Pseudo-glitch layers */
+.hero-title-glitch::before,
+.hero-title-glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.hero-title-glitch::before {
+    color: rgba(200, 164, 78, 0.4);
+    animation: glitch-a 4s infinite steps(1);
+    clip-path: polygon(0 30%, 100% 30%, 100% 55%, 0 55%);
+}
+
+.hero-title-glitch::after {
+    color: rgba(96, 165, 250, 0.2);
+    animation: glitch-b 4s infinite steps(1);
+    clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+}
+
+@keyframes glitch-a {
+    0%, 85%, 100% { transform: none; opacity: 0; }
+    87%            { transform: translateX(-3px); opacity: 0.7; }
+    89%            { transform: translateX(2px);  opacity: 0.5; }
+    91%            { transform: none; opacity: 0; }
+}
+
+@keyframes glitch-b {
+    0%, 88%, 100% { transform: none; opacity: 0; }
+    90%            { transform: translateX(3px);  opacity: 0.5; }
+    92%            { transform: translateX(-2px); opacity: 0.4; }
+    94%            { transform: none; opacity: 0; }
+}
+
+.hero-sub {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    font-weight: 300;
+    margin: 0;
+}
+
+/* ── 3. Bento grid ── */
+.bento {
+    display: grid;
+    /* 60/40 split: arena gets more width */
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 20px;
+    margin-top: 28px;
+}
+
+.bento-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── 4. Shared card base ── */
+.bento-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 28px 28px 24px;
+    backdrop-filter: blur(16px);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.35s ease, box-shadow 0.35s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Top accent bar */
+.bento-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 6px 6px 0 0;
+    transition: opacity 0.3s;
+    opacity: 0.6;
+}
+
+.arena-card::after    { background: linear-gradient(90deg, #c8a44e, #f0d88a, #c8a44e); }
+.academy-card::after  { background: linear-gradient(90deg, #a78bfa, #818cf8); }
+.oracle-card::after   { background: linear-gradient(90deg, #e05252, #f87171); }
+
+.arena-card:hover    { border-color: rgba(200, 164, 78, 0.35); box-shadow: 0 0 40px rgba(200, 164, 78, 0.07); }
+.academy-card:hover  { border-color: rgba(167, 139, 250, 0.35); box-shadow: 0 0 40px rgba(167, 139, 250, 0.07); }
+.oracle-card:hover   { border-color: rgba(224, 82, 82, 0.25); }
+
+/* ── 5. Eyebrow row ── */
+.bento-card-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.eyebrow-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+}
+
+.eyebrow-tag.gold   { background: rgba(200, 164, 78, 0.15); color: #d4b86a; border: 1px solid rgba(200,164,78,0.2); }
+.eyebrow-tag.purple { background: rgba(167, 139, 250, 0.12); color: #a78bfa; border: 1px solid rgba(167,139,250,0.2); }
+.eyebrow-tag.red    { background: rgba(224, 82, 82, 0.1);   color: #f87171; border: 1px solid rgba(224,82,82,0.2); }
+
+.eyebrow-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+}
+
+/* ── 6. Card title ── */
+.bento-title {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 20px;
+    letter-spacing: 0.04em;
+}
+
+/* ── 7. ARENA card specifics ── */
+
+/* Mini K-line chart thumbnail */
+.arena-chart-thumb {
+    background: rgba(10, 10, 15, 0.6);
+    border: 1px solid rgba(200, 164, 78, 0.08);
+    border-radius: 4px;
+    padding: 10px 12px 6px;
+    margin-bottom: 22px;
+    overflow: hidden;
+}
+
+.arena-chart-thumb svg {
+    width: 100%;
+    height: 64px;
+    display: block;
+}
+
+.chart-thumb-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+}
+
+/* 5-step timeline */
+.arena-steps {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 0 0 28px;
+    padding: 0;
+    flex: 1;
+}
+
+.arena-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(200, 164, 78, 0.06);
+    transition: background 0.2s;
+}
+
+.arena-step:last-child {
+    border-bottom: none;
+}
+
+.step-num {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(200, 164, 78, 0.12);
+    border: 1px solid rgba(200, 164, 78, 0.25);
+    color: #d4b86a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+
+.step-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.step-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: rgba(200, 164, 78, 0.5);
+    margin-top: 2px;
+}
+
+/* Arena CTA button — glowing gold with pulse */
+.arena-btn {
+    position: relative;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    padding: 15px 0;
+    width: 100%;
+    border: none;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #b8922a 0%, #d4b86a 45%, #c8a44e 100%);
+    color: #08080d;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.35s ease;
+    margin-top: auto;
+}
+
+.arena-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(200, 164, 78, 0.35), 0 0 0 1px rgba(200, 164, 78, 0.4);
+}
+
+/* Pulse ring */
+.arena-btn-pulse {
+    position: absolute;
+    inset: 0;
+    border-radius: 4px;
+    box-shadow: 0 0 0 0 rgba(200, 164, 78, 0.5);
+    animation: btn-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    pointer-events: none;
+}
+
+@keyframes btn-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(200, 164, 78, 0.45); }
+    60%  { box-shadow: 0 0 0 10px rgba(200, 164, 78, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(200, 164, 78, 0); }
+}
+
+/* ── 8. ACADEMY card specifics ── */
+.academy-mini-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 22px;
+    flex: 1;
+}
+
+.academy-mini-card {
+    background: rgba(10, 10, 18, 0.5);
+    border: 1px solid rgba(167, 139, 250, 0.1);
+    border-radius: 4px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.25s, background 0.25s;
+}
+
+.academy-mini-card:hover {
+    border-color: rgba(167, 139, 250, 0.3);
+    background: rgba(167, 139, 250, 0.05);
+}
+
+.academy-mini-card svg {
+    width: 20px;
+    height: 20px;
+    color: #a78bfa;
+    opacity: 0.75;
+    flex-shrink: 0;
+}
+
+.academy-mini-card span {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.academy-enter-btn {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 13px 0;
+    width: 100%;
+    background: transparent;
+    border: 1px solid rgba(167, 139, 250, 0.45);
+    border-radius: 4px;
+    color: #a78bfa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: auto;
+}
+
+.academy-enter-btn:hover {
+    background: rgba(167, 139, 250, 0.1);
+    border-color: #a78bfa;
+    box-shadow: 0 4px 24px rgba(167, 139, 250, 0.15);
+    transform: translateY(-1px);
+}
+
+/* ── 9. ORACLE card specifics ── */
+
+/* CRT scanline overlay */
+.crt-overlay {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.04) 0px,
+        rgba(0, 0, 0, 0.04) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 6px;
+}
+
+/* ensure content sits above CRT overlay */
+.oracle-card > *:not(.crt-overlay) {
+    position: relative;
+    z-index: 1;
+}
+
+.oracle-title {
+    color: rgba(224, 82, 82, 0.75);
+}
+
+.oracle-badge {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: rgba(224, 82, 82, 0.1);
+    color: rgba(224, 82, 82, 0.6);
+    border: 1px solid rgba(224, 82, 82, 0.2);
+    text-transform: uppercase;
+}
+
+/* Mock input form */
+.oracle-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.oracle-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    color: rgba(224, 82, 82, 0.5);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.oracle-input-mock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 10, 15, 0.7);
+    border: 1px solid rgba(224, 82, 82, 0.12);
+    border-radius: 3px;
+    padding: 9px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: rgba(224, 82, 82, 0.3);
+    letter-spacing: 0.04em;
+    cursor: not-allowed;
+}
+
+.oracle-input-mock svg {
+    width: 14px;
+    height: 14px;
+    color: rgba(224, 82, 82, 0.3);
+    flex-shrink: 0;
+}
+
+/* Potential output teaser list */
+.oracle-outputs {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+}
+
+.oracle-outputs li {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+    opacity: 0.7;
+}
+
+.oracle-out-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    border-radius: 2px;
+    background: rgba(224, 82, 82, 0.08);
+    color: rgba(224, 82, 82, 0.5);
+    border: 1px solid rgba(224, 82, 82, 0.15);
+    flex-shrink: 0;
+    margin-top: 1px;
+    letter-spacing: 0.06em;
+}
+
+/* Disabled lock button */
+.oracle-btn {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    padding: 12px 0;
+    width: 100%;
+    background: transparent;
+    border: 1px solid rgba(224, 82, 82, 0.2);
+    border-radius: 4px;
+    color: rgba(224, 82, 82, 0.3);
+    cursor: not-allowed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: auto;
+}
+
+.oracle-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── 10. Responsive ── */
+@media (max-width: 900px) {
+    .bento {
+        grid-template-columns: 1fr;
+    }
+    .hero {
+        padding: 48px 0 44px;
+    }
+    .academy-mini-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 540px) {
+    .academy-mini-grid {
+        grid-template-columns: 1fr;
+    }
+    .bento-card {
+        padding: 22px 18px 20px;
+    }
+}
+
+/* ── 11. Light theme adjustments ── */
+[data-theme="light"] .arena-btn { box-shadow: 0 4px 24px rgba(154, 123, 46, 0.2); }
+[data-theme="light"] .arena-chart-thumb { background: rgba(235, 231, 223, 0.8); }
+[data-theme="light"] .academy-mini-card { background: rgba(255, 253, 248, 0.6); }
+[data-theme="light"] .oracle-input-mock { background: rgba(235, 231, 223, 0.8); }
+[data-theme="light"] .crt-overlay { opacity: 0.3; }
