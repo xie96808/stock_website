@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股海沉浮 - 模拟炒股训练</title>
+    <title>早知道当初不炒了</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="data/stocks_data.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,26 +22,226 @@
     </button>
 
     <div class="container">
-        <header class="header">
-            <h1 class="logo">股海沉浮</h1>
-            <p class="tagline">Stock Trading Simulator</p>
+        <!-- Compact header shown during game/result/academy (hidden on start screen) -->
+        <header class="header" style="display:none;">
+            <h1 class="logo">早知道当初不炒了</h1>
         </header>
 
-        <!-- Start Screen -->
+        <!-- Start Screen — "Deep Night Financial Forge" hero + bento layout -->
         <section class="start-screen" id="startScreen">
-            <button class="start-btn" onclick="startGame()">开始游戏</button>
 
-            <div class="rules-card">
-                <h3 class="rules-title">游戏规则</h3>
-                <ul class="rules-list">
-                    <li>系统随机抽取一只股票的 30 日 K 线数据</li>
-                    <li>每天观察收盘价后，决定次日操作</li>
-                    <li>遵循 T+1 规则：当日买入，次日方可卖出</li>
-                    <li>可多次买卖，收益率累计计算</li>
-                    <li>游戏结束后揭晓股票真实身份</li>
-                </ul>
+            <!-- ── Hero ── -->
+            <div class="hero">
+                <!-- Scrolling ticker tape background -->
+                <div class="ticker-wrap" aria-hidden="true">
+                    <div class="ticker-track">
+                        <span>贵州茅台 +2.34%</span><span>宁德时代 -1.12%</span><span>比亚迪 +4.07%</span>
+                        <span>招商银行 +0.88%</span><span>中国平安 -0.56%</span><span>阿里巴巴 +1.95%</span>
+                        <span>腾讯控股 +3.21%</span><span>中芯国际 -2.44%</span><span>隆基绿能 +5.60%</span>
+                        <span>东方财富 -0.73%</span><span>迈瑞医疗 +1.38%</span><span>海天味业 +0.29%</span>
+                        <!-- duplicate for seamless loop -->
+                        <span>贵州茅台 +2.34%</span><span>宁德时代 -1.12%</span><span>比亚迪 +4.07%</span>
+                        <span>招商银行 +0.88%</span><span>中国平安 -0.56%</span><span>阿里巴巴 +1.95%</span>
+                        <span>腾讯控股 +3.21%</span><span>中芯国际 -2.44%</span><span>隆基绿能 +5.60%</span>
+                        <span>东方财富 -0.73%</span><span>迈瑞医疗 +1.38%</span><span>海天味业 +0.29%</span>
+                    </div>
+                </div>
+
+                <!-- Ghost K-line SVG backdrop -->
+                <svg class="hero-kline-bg" viewBox="0 0 900 120" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points="0,90 60,75 120,80 180,55 240,65 300,40 360,50 420,30 480,45 540,25 600,38 660,20 720,35 780,15 840,28 900,10"
+                        fill="none" stroke="rgba(200,164,78,0.12)" stroke-width="2"/>
+                    <polyline points="0,100 60,88 120,92 180,70 240,78 300,55 360,65 420,48 480,60 540,42 600,52 660,38 720,50 780,32 840,44 900,28"
+                        fill="none" stroke="rgba(200,164,78,0.06)" stroke-width="1.5"/>
+                </svg>
+
+                <div class="hero-content">
+                    <div class="hero-badge">STOCK TRADING SIMULATOR · A-SHARE EDITION</div>
+                    <h1 class="hero-title">
+                        <span class="hero-title-glitch" data-text="早知道当初不炒了">早知道当初不炒了</span>
+                    </h1>
+                    <p class="hero-sub">用真实 A 股数据，重走每一次错过的行情</p>
+                </div>
             </div>
-            <button class="academy-btn" onclick="showAcademy()">韭菜修炼基地</button>
+
+            <!-- ── Bento grid ── -->
+            <div class="bento">
+
+                <!-- ── Block 1 · THE ARENA · 开始游戏 (tall left card) ── -->
+                <div class="bento-card arena-card">
+                    <div class="bento-card-eyebrow">
+                        <span class="eyebrow-tag gold">THE ARENA</span>
+                        <span class="eyebrow-label">模拟交易</span>
+                    </div>
+                    <h2 class="bento-title">开始游戏</h2>
+
+                    <!-- Mini sparkline chart placeholder -->
+                    <div class="arena-chart-thumb" aria-hidden="true">
+                        <svg viewBox="0 0 280 64" preserveAspectRatio="none">
+                            <!-- candles (decorative) -->
+                            <line x1="14" y1="14" x2="14" y2="50" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="10" y="22" width="8" height="20" fill="#e05252" opacity="0.7" rx="1"/>
+                            <line x1="38" y1="10" x2="38" y2="52" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
+                            <rect x="34" y="28" width="8" height="16" fill="#3db86a" opacity="0.7" rx="1"/>
+                            <line x1="62" y1="8" x2="62" y2="44" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="58" y="14" width="8" height="22" fill="#e05252" opacity="0.7" rx="1"/>
+                            <line x1="86" y1="6" x2="86" y2="42" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="82" y="12" width="8" height="24" fill="#e05252" opacity="0.85" rx="1"/>
+                            <line x1="110" y1="16" x2="110" y2="48" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
+                            <rect x="106" y="22" width="8" height="18" fill="#3db86a" opacity="0.7" rx="1"/>
+                            <line x1="134" y1="4" x2="134" y2="40" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="130" y="10" width="8" height="26" fill="#e05252" opacity="0.9" rx="1"/>
+                            <line x1="158" y1="20" x2="158" y2="54" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
+                            <rect x="154" y="26" width="8" height="20" fill="#3db86a" opacity="0.7" rx="1"/>
+                            <line x1="182" y1="2" x2="182" y2="38" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="178" y="8" width="8" height="28" fill="#e05252" opacity="0.95" rx="1"/>
+                            <line x1="206" y1="12" x2="206" y2="46" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
+                            <rect x="202" y="18" width="8" height="22" fill="#3db86a" opacity="0.7" rx="1"/>
+                            <line x1="230" y1="6" x2="230" y2="38" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
+                            <rect x="226" y="12" width="8" height="24" fill="#e05252" opacity="0.8" rx="1"/>
+                            <line x1="254" y1="18" x2="254" y2="50" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
+                            <rect x="250" y="24" width="8" height="18" fill="#3db86a" opacity="0.75" rx="1"/>
+                            <!-- trend line -->
+                            <polyline points="14,32 38,36 62,25 86,24 110,31 134,23 158,36 182,20 206,29 230,24 254,30"
+                                fill="none" stroke="#c8a44e" stroke-width="1.5" opacity="0.6" stroke-dasharray="4 2"/>
+                        </svg>
+                        <div class="chart-thumb-label">30 日 K 线示意 · 随机抽取</div>
+                    </div>
+
+                    <!-- 5-step timeline -->
+                    <ol class="arena-steps">
+                        <li class="arena-step">
+                            <div class="step-num">1</div>
+                            <div class="step-body">
+                                <!-- dice icon -->
+                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="13.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/></svg>
+                                <span>系统随机抽取一只股票的 30 日 K 线数据</span>
+                            </div>
+                        </li>
+                        <li class="arena-step">
+                            <div class="step-num">2</div>
+                            <div class="step-body">
+                                <!-- eye icon -->
+                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+                                <span>每天观察收盘价后，决定次日操作</span>
+                            </div>
+                        </li>
+                        <li class="arena-step">
+                            <div class="step-num">3</div>
+                            <div class="step-body">
+                                <!-- clock icon -->
+                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <span>遵循 T+1 规则：当日买入，次日方可卖出</span>
+                            </div>
+                        </li>
+                        <li class="arena-step">
+                            <div class="step-num">4</div>
+                            <div class="step-body">
+                                <!-- repeat icon -->
+                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 0 1 6-6h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16 6l-2-2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10a6 6 0 0 1-6 6H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 14l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <span>可多次买卖，收益率累计计算</span>
+                            </div>
+                        </li>
+                        <li class="arena-step">
+                            <div class="step-num">5</div>
+                            <div class="step-body">
+                                <!-- reveal / flag icon -->
+                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 3v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 3h9l-3 4 3 4H4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                                <span>游戏结束后揭晓股票真实身份</span>
+                            </div>
+                        </li>
+                    </ol>
+
+                    <button class="arena-btn" onclick="startGame()">
+                        <span class="arena-btn-pulse"></span>
+                        立即开始
+                    </button>
+                </div>
+
+                <!-- ── Right column (Academy + Oracle stacked) ── -->
+                <div class="bento-right">
+
+                    <!-- ── Block 2 · THE ACADEMY · 韭菜修炼基地 ── -->
+                    <div class="bento-card academy-card">
+                        <div class="bento-card-eyebrow">
+                            <span class="eyebrow-tag purple">THE ACADEMY</span>
+                            <span class="eyebrow-label">知识修炼</span>
+                        </div>
+                        <h2 class="bento-title">韭菜修炼基地</h2>
+
+                        <!-- Four knowledge mini-cards -->
+                        <div class="academy-mini-grid">
+                            <div class="academy-mini-card">
+                                <!-- kline icon -->
+                                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="3" x2="5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="18" x2="5" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="10" y="9" width="4" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="6" x2="12" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="17" y="4" width="4" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="19" y1="2" x2="19" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="19" y1="18" x2="19" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <span>K 线、成交量、走势三大形态</span>
+                            </div>
+                            <div class="academy-mini-card">
+                                <!-- book icon -->
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <span>图文并茂知识卡片，一看就懂</span>
+                            </div>
+                            <div class="academy-mini-card">
+                                <!-- question mark icon -->
+                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2.5-2.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="0.8" fill="currentColor"/></svg>
+                                <span>10 道理论与实操混合题</span>
+                            </div>
+                            <div class="academy-mini-card">
+                                <!-- steering wheel icon -->
+                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="3" x2="12" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3.8" y1="16.5" x2="9.4" y2="13.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="20.2" y1="16.5" x2="14.6" y2="13.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                                <span>答题即时解析，从韭菜到老司机</span>
+                            </div>
+                        </div>
+
+                        <button class="academy-enter-btn" onclick="showAcademy()">进入基地</button>
+                    </div>
+
+                    <!-- ── Block 3 · THE ORACLE · 当初买了该多好 ── -->
+                    <div class="bento-card oracle-card">
+                        <!-- CRT scanline overlay -->
+                        <div class="crt-overlay" aria-hidden="true"></div>
+
+                        <div class="bento-card-eyebrow">
+                            <span class="eyebrow-tag red">THE ORACLE</span>
+                            <span class="eyebrow-label">历史回溯</span>
+                            </div>
+                        <h2 class="bento-title oracle-title">当初买了该多好</h2>
+
+                        <!-- Mock input form -->
+                        <div class="oracle-form">
+                            <div class="oracle-field">
+                                <label class="oracle-label">股票名称 / 代码</label>
+                                <div class="oracle-input-mock">
+                                    <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.3"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                                    <span>例：贵州茅台 · 600519</span>
+                                </div>
+                            </div>
+                            <div class="oracle-field">
+                                <label class="oracle-label">历史区间</label>
+                                <div class="oracle-input-mock">
+                                    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="6" x2="15" y2="6" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+                                    <span>2020-01-01 → 2021-01-01</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Potential outputs (teaser) -->
+                        <ul class="oracle-outputs">
+                            <li><span class="oracle-out-tag">回溯</span>系统回溯该区间的真实行情走势</li>
+                            <li><span class="oracle-out-tag">计算</span>最优买卖点与理论最大收益</li>
+                            <li><span class="oracle-out-tag">对比</span>你"应该"赚到的钱 vs 实际结果</li>
+                            <li><span class="oracle-out-tag">治愈</span>每一个错过大牛股的遗憾灵魂</li>
+                        </ul>
+
+                        <button class="oracle-btn" onclick="showHindsight()" style="cursor:pointer;color:#f87171;border-color:rgba(224,82,82,0.45);">
+                            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            立即回溯
+                        </button>
+                    </div>
+
+                </div><!-- /bento-right -->
+            </div><!-- /bento -->
+
         </section>
 
         <!-- Academy Screen -->
@@ -199,6 +399,260 @@
 
             <div class="analysis-container" id="klineAnalysis"></div>
         </section>
+
+        <!-- ═══════════════════════════════════════════════
+             Hindsight Screen — 当初买了该多好
+             ═══════════════════════════════════════════════ -->
+        <section class="hindsight-screen" id="hindsightScreen">
+
+            <!-- 沉浸式背景层 -->
+            <div class="hs-atmosphere" aria-hidden="true">
+                <div class="hs-glow"></div>
+                <svg class="hs-kline-bg" viewBox="0 0 900 260" preserveAspectRatio="xMidYMid slice">
+                    <!-- 抽象K线线稿 -->
+                    <polyline points="0,180 40,160 80,175 120,120 160,135 200,90 240,110 280,80 320,95 360,55 400,70 440,40 480,60 520,45 560,80 600,65 620,95 660,75 700,110 740,90 780,130 820,100 860,140 900,120" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- 成交量柱 -->
+                    <line x1="40"  y1="260" x2="40"  y2="220" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="120" y1="260" x2="120" y2="205" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="200" y1="260" x2="200" y2="215" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="280" y1="260" x2="280" y2="230" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="360" y1="260" x2="360" y2="200" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="440" y1="260" x2="440" y2="240" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="520" y1="260" x2="520" y2="210" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="600" y1="260" x2="600" y2="225" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="680" y1="260" x2="680" y2="235" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="760" y1="260" x2="760" y2="215" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <line x1="840" y1="260" x2="840" y2="228" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                    <!-- 网格 -->
+                    <line x1="0" y1="65"  x2="900" y2="65"  stroke="currentColor" stroke-width="0.5" stroke-dasharray="4,8"/>
+                    <line x1="0" y1="130" x2="900" y2="130" stroke="currentColor" stroke-width="0.5" stroke-dasharray="4,8"/>
+                    <line x1="0" y1="195" x2="900" y2="195" stroke="currentColor" stroke-width="0.5" stroke-dasharray="4,8"/>
+                </svg>
+                <div class="hs-typeflow" aria-hidden="true">
+                    <span>600519</span><span>贵州茅台</span><span>000858</span><span>五 粮 液</span>
+                    <span>601318</span><span>中国平安</span><span>600036</span><span>招商银行</span>
+                    <span>000333</span><span>美的集团</span><span>300750</span><span>宁德时代</span>
+                    <span>601888</span><span>中国中免</span><span>002415</span><span>海康威视</span>
+                </div>
+            </div>
+
+            <!-- 页眉区 -->
+            <div class="hindsight-header">
+                <div class="hindsight-title-bar">
+                    <div class="hs-title-group">
+                        <span class="hindsight-screen-title">当初买了该多好</span>
+                        <!-- 藏印印章 -->
+                        <div class="hs-seal" aria-hidden="true">
+                            <div class="hs-seal-inner">
+                                <span class="hs-seal-cn">时光</span>
+                                <span class="hs-seal-cn">卷宗</span>
+                            </div>
+                        </div>
+                    </div>
+                    <span class="hindsight-screen-subtitle">治愈每一个错过大牛股的遗憾灵魂</span>
+                </div>
+                <!-- 封存档案按钮 -->
+                <button class="hindsight-back" onclick="hideHindsight()">
+                    <span class="hs-back-inner">← 封存档案</span>
+                    <span class="hs-back-sub">返回首页</span>
+                </button>
+            </div>
+
+            <!-- ── INPUT FORM STATE ── -->
+            <div class="hindsight-form-panel" id="hindsightFormPanel">
+
+                <!-- 卡片内部装饰角线 -->
+                <div class="hs-card-corner hs-card-corner-tl" aria-hidden="true"></div>
+                <div class="hs-card-corner hs-card-corner-tr" aria-hidden="true"></div>
+                <div class="hs-card-corner hs-card-corner-bl" aria-hidden="true"></div>
+                <div class="hs-card-corner hs-card-corner-br" aria-hidden="true"></div>
+
+                <!-- 卡片页眉 -->
+                <div class="hs-card-header">
+                    <span class="hs-card-archive-no">档案号：REGRET-ARCHIVE-N°001</span>
+                    <span class="hs-card-status">历史回溯 · 待启用</span>
+                </div>
+
+                <!-- 主内容区：两字段 + 中间竖线 -->
+                <div class="hs-fields-body">
+
+                    <!-- 左：股票字段 -->
+                    <div class="hindsight-field hs-field-stock">
+                        <label class="hindsight-label" for="hindsightStockInput">股票名称 / 代码</label>
+                        <div style="position:relative;">
+                            <input
+                                class="hindsight-input"
+                                id="hindsightStockInput"
+                                type="text"
+                                autocomplete="off"
+                                placeholder="例：贵州茅台 · 600519"
+                                oninput="onHindsightInput(event)"
+                                onblur="onHindsightBlur()"
+                            />
+                            <div class="hindsight-suggestions" id="hindsightSuggestions"></div>
+                        </div>
+                        <div class="hindsight-field-hint" id="hindsightStockHint"></div>
+                    </div>
+
+                    <!-- 中间装饰竖线 -->
+                    <div class="hs-divider-v" aria-hidden="true">
+                        <div class="hs-divider-line"></div>
+                        <div class="hs-divider-dot"></div>
+                        <div class="hs-divider-line"></div>
+                    </div>
+
+                    <!-- 右：日期字段 -->
+                    <div class="hindsight-field hs-field-date">
+                        <label class="hindsight-label">历史区间</label>
+                        <div class="hindsight-date-row">
+                            <input class="hindsight-date-input" id="hindsightDateFrom" type="date" />
+                            <span class="hindsight-date-sep">→</span>
+                            <input class="hindsight-date-input" id="hindsightDateTo"   type="date" />
+                        </div>
+                        <div class="hindsight-field-hint" id="hindsightDateHint"></div>
+                        <!-- 沙漏装饰 -->
+                        <div class="hs-hourglass" aria-hidden="true">
+                            <svg viewBox="0 0 24 28" width="16" height="18">
+                                <path d="M3 2 L21 2 L21 3 Q21 3 14 10 L14 18 Q21 25 21 26 L21 27 L3 27 L3 26 Q3 25 10 18 L10 10 Q3 3 3 3 Z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+                                <line x1="3" y1="2" x2="21" y2="2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <line x1="3" y1="27" x2="21" y2="27" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                <ellipse cx="12" cy="18.5" rx="3.5" ry="2" fill="currentColor" opacity="0.35"/>
+                                <line x1="12" y1="11" x2="12" y2="17" stroke="currentColor" stroke-width="0.8" stroke-dasharray="1.5,1.5"/>
+                            </svg>
+                            <span>时光有限</span>
+                        </div>
+                    </div>
+
+                </div><!-- /.hs-fields-body -->
+
+                <!-- 买入数量行 -->
+                <div class="hs-qty-row">
+                    <div class="hs-qty-field">
+                        <label class="hindsight-label" for="hindsightQtyInput">买入数量</label>
+                        <div class="hs-qty-input-wrap">
+                            <input
+                                class="hindsight-input hs-qty-input"
+                                id="hindsightQtyInput"
+                                type="number"
+                                min="1"
+                                step="1"
+                                value="10"
+                                placeholder="10"
+                            />
+                            <span class="hs-qty-unit">手</span>
+                        </div>
+                        <div class="hs-qty-hint">* 1 手 = 100 股，输入 10 代表买入 1000 股</div>
+                    </div>
+                </div>
+
+                <!-- 提交按钮 -->
+                <button class="hindsight-submit-btn" id="hindsightSubmitBtn" onclick="submitHindsight()">
+                    回 溯
+                </button>
+
+            </div><!-- /#hindsightFormPanel -->
+
+            <!-- ── RESULTS STATE — 极简治愈档案馆 · 左右二分 ── -->
+            <div class="hindsight-results-panel" id="hindsightResultsPanel">
+
+                <!-- 主卡片：标题 + 左右二分 -->
+                <div class="ar-card">
+                    <!-- 标题行 -->
+                    <div class="ar-title-row">
+                        <span class="ar-stock-name" id="hindsightResultStockName">--</span>
+                        <span class="ar-date-range"  id="hindsightResultDateRange">--</span>
+                    </div>
+
+                    <!-- 左右二分 -->
+                    <div class="ar-split">
+                        <!-- 左侧：收益大字 + 6项数据 -->
+                        <div class="ar-left">
+                            <div class="ar-return-block">
+                                <div class="ar-return-twin">
+                                    <!-- 左列：理论最大收益 -->
+                                    <div class="ar-return-col">
+                                        <div class="ar-return-label">理论最大收益</div>
+                                        <div class="hindsight-return-counter" id="hindsightReturnCounter">+0.00%</div>
+                                    </div>
+                                    <!-- 右列：理论最多赚/亏 -->
+                                    <div class="ar-return-col">
+                                        <div class="ar-return-label" id="hindsightEarnedLabel">理论最多赚</div>
+                                        <div class="ar-return-earned" id="hindsightEarnedAmt">¥ --</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ar-data-list">
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">买入价</span>
+                                    <span class="ar-data-value" id="hindsightBuyPrice">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">历史最高价</span>
+                                    <span class="ar-data-value peak" id="hindsightPeakPrice">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">卖出价</span>
+                                    <span class="ar-data-value" id="hindsightSellPrice">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">上车日期</span>
+                                    <span class="ar-data-value" id="hindsightBuyDate">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">巅峰日期</span>
+                                    <span class="ar-data-value" id="hindsightSellDate">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">下车日期</span>
+                                    <span class="ar-data-value" id="hindsightExitDate">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">买入数量</span>
+                                    <span class="ar-data-value" id="hindsightBuyQty">--</span>
+                                </div>
+                                <div class="ar-data-row">
+                                    <span class="ar-data-label">区间持有收益</span>
+                                    <span class="ar-data-value" id="hindsightComparePeriod">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧：迷你K线 -->
+                        <div class="ar-right">
+                            <div class="ar-minichart-title">
+                                价格走势 · 买入 / 卖出 / 最高点标注
+                                <span class="hindsight-chart-meta" id="hindsightChartMeta"></span>
+                            </div>
+                            <div id="hindsightChart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 中部：物换星移 + 名言 -->
+                <div class="ar-mid">
+                    <!-- 物换星移 -->
+                    <div class="ar-card ar-commodity-card">
+                        <div class="ar-section-title">物换星移</div>
+                        <div id="hindsightCommodityList"></div>
+                    </div>
+
+                    <!-- 名言框 -->
+                    <div class="ar-quote-card">
+                        <p class="ar-quote-text" id="hindsightQuoteText"></p>
+                        <div class="ar-quote-author" id="hindsightQuoteAuthor"></div>
+                    </div>
+                </div>
+
+                <!-- 底部操作栏 -->
+                <div class="ar-actions">
+                    <button class="ar-btn" onclick="hindsightShare()">📷 生成分享图</button>
+                    <button class="ar-btn" id="hindsightCopyBtn" onclick="hindsightCopy()">📋 复制文案</button>
+                    <button class="ar-btn ar-btn-primary" onclick="hindsightReset()">↩ 再来一只</button>
+                </div>
+
+            </div>
+
+        </section>
     </div>
 
     <script type="module">
@@ -209,6 +663,7 @@
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
+        import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
         window.toggleTheme = toggleTheme;
@@ -225,6 +680,14 @@
         window.quizNext = quizNext;
         window.showKBPopup = showKBPopup;
         window.hideKBPopup = hideKBPopup;
+        window.hindsightShare = hindsightShare;
+        window.hindsightCopy  = hindsightCopy;
+        window.hindsightReset = hindsightReset;
+        window.showHindsight    = showHindsight;
+        window.hideHindsight    = hideHindsight;
+        window.onHindsightInput = onHindsightInput;
+        window.onHindsightBlur  = onHindsightBlur;
+        window.submitHindsight  = submitHindsight;
 
         // Initialize: load stock data
         if (typeof STOCKS_DATA !== 'undefined' && STOCKS_DATA.length > 0) {
@@ -240,6 +703,7 @@
             if (chartRefs.klineChart) chartRefs.klineChart.resize();
             if (chartRefs.resultChart) chartRefs.resultChart.resize();
             quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.resize(); });
+            resizeHindsightChart();
         });
     </script>
 

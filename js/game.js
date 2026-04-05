@@ -30,7 +30,9 @@ export function startGame() {
     gameState.gameKline = gameState.currentStock.kline.slice(gameStartIndex - historyDays, gameStartIndex + gameDays);
 
     // Switch screens
-    document.querySelector('.header').classList.add('compact');
+    const hdr = document.querySelector('.header');
+    hdr.style.display = 'block';
+    hdr.classList.add('compact');
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameScreen').classList.add('active');
     document.getElementById('resultScreen').classList.remove('active');

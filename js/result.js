@@ -380,7 +380,9 @@ export function buildPointNavigator(chart, histLen, fullData) {
 }
 
 export function resetGame() {
-    document.querySelector('.header').classList.remove('compact');
+    const hdr = document.querySelector('.header');
+    hdr.classList.remove('compact');
+    hdr.style.display = 'none';
     document.getElementById('resultScreen').classList.remove('active');
     document.getElementById('startScreen').style.display = 'flex';
 }

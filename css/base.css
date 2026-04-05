@@ -187,7 +187,7 @@
 
         .logo {
             font-family: 'Bodoni Moda', 'Noto Sans SC', serif;
-            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-size: clamp(1.4rem, 3.5vw, 2.8rem);
             font-weight: 900;
             letter-spacing: 0.15em;
             background: linear-gradient(135deg, #d4b86a 0%, #f0d88a 45%, #c8a44e 100%);
