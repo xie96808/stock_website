@@ -25,6 +25,12 @@ python -m http.server 8000
 - **多维评分** — 收益率、买卖点位、交易频率、止损意识等 6 维度综合评分
 - **波段分析** — 趋势方向、均线排列、量价关系、波动率等
 - **最佳买卖点** — 7 维度评分模型筛选 TOP 3 买卖时机，支持形态知识卡片悬浮查看
+- **结果页改造** — 「档案馆」风格结果卡：大字收益、巅峰/买卖点标注、物换星移换算、名人名言
+
+### 时光档案馆（Hindsight 回溯）
+
+- **当初买了该多好** — 输入股票 + 历史区间 + 买入数量，回溯区间内“理论最佳卖点/收益（或亏损）”
+- **一键分享** — 生成分享图、复制文案、「再来一只」快速重置继续回溯
 
 ### 韭菜修炼基地
 
@@ -65,7 +71,13 @@ python -m http.server 8000
 stock_website/
 ├── index.html              # HTML 结构 + 模块入口
 ├── css/
-│   └── style.css           # 全部样式
+│   ├── base.css            # 全局变量/基础样式
+│   ├── start.css           # 开始页样式
+│   ├── game.css            # 交易页样式
+│   ├── result.css          # 结算页样式（档案馆风格）
+│   ├── academy.css         # 修炼基地样式
+│   ├── hindsight.css       # 时光档案馆样式
+│   └── style.css           # 通用补充/主题相关
 ├── js/
 │   ├── state.js            # 游戏状态（gameState, chartRefs, quizState）
 │   ├── utils.js            # 工具函数（MA 计算、图表主题等）
@@ -75,6 +87,7 @@ stock_website/
 │   ├── analysis.js         # 技术分析（波段分析、最佳买卖点、评分报告）
 │   ├── result.js           # 结算页（结果图表、导航条）
 │   ├── academy.js          # 修炼基地导航
+│   ├── hindsight.js         # 时光档案馆（回溯/分享/复制）
 │   └── quiz.js             # 测验引擎（出题、答题、评分）
 ├── fetch_stock_data.py     # 股票数据抓取脚本
 ├── data/
