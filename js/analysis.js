@@ -466,6 +466,7 @@ export function generateBSReport() {
     }
 
     score = Math.max(59, Math.min(100, Math.round(score)));
+    gameState.bsScore = score;
 
     let grade, gradeCls;
     if (score >= 90) { grade = '优秀'; gradeCls = 'excellent'; }

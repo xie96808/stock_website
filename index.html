@@ -75,37 +75,9 @@
                     </div>
                     <h2 class="bento-title">开始游戏</h2>
 
-                    <!-- Mini sparkline chart placeholder -->
-                    <div class="arena-chart-thumb" aria-hidden="true">
-                        <svg viewBox="0 0 280 64" preserveAspectRatio="none">
-                            <!-- candles (decorative) -->
-                            <line x1="14" y1="14" x2="14" y2="50" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="10" y="22" width="8" height="20" fill="#e05252" opacity="0.7" rx="1"/>
-                            <line x1="38" y1="10" x2="38" y2="52" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
-                            <rect x="34" y="28" width="8" height="16" fill="#3db86a" opacity="0.7" rx="1"/>
-                            <line x1="62" y1="8" x2="62" y2="44" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="58" y="14" width="8" height="22" fill="#e05252" opacity="0.7" rx="1"/>
-                            <line x1="86" y1="6" x2="86" y2="42" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="82" y="12" width="8" height="24" fill="#e05252" opacity="0.85" rx="1"/>
-                            <line x1="110" y1="16" x2="110" y2="48" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
-                            <rect x="106" y="22" width="8" height="18" fill="#3db86a" opacity="0.7" rx="1"/>
-                            <line x1="134" y1="4" x2="134" y2="40" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="130" y="10" width="8" height="26" fill="#e05252" opacity="0.9" rx="1"/>
-                            <line x1="158" y1="20" x2="158" y2="54" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
-                            <rect x="154" y="26" width="8" height="20" fill="#3db86a" opacity="0.7" rx="1"/>
-                            <line x1="182" y1="2" x2="182" y2="38" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="178" y="8" width="8" height="28" fill="#e05252" opacity="0.95" rx="1"/>
-                            <line x1="206" y1="12" x2="206" y2="46" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
-                            <rect x="202" y="18" width="8" height="22" fill="#3db86a" opacity="0.7" rx="1"/>
-                            <line x1="230" y1="6" x2="230" y2="38" stroke="rgba(224,82,82,0.25)" stroke-width="1"/>
-                            <rect x="226" y="12" width="8" height="24" fill="#e05252" opacity="0.8" rx="1"/>
-                            <line x1="254" y1="18" x2="254" y2="50" stroke="rgba(61,184,106,0.25)" stroke-width="1"/>
-                            <rect x="250" y="24" width="8" height="18" fill="#3db86a" opacity="0.75" rx="1"/>
-                            <!-- trend line -->
-                            <polyline points="14,32 38,36 62,25 86,24 110,31 134,23 158,36 182,20 206,29 230,24 254,30"
-                                fill="none" stroke="#c8a44e" stroke-width="1.5" opacity="0.6" stroke-dasharray="4 2"/>
-                        </svg>
-                        <div class="chart-thumb-label">30 日 K 线示意 · 随机抽取</div>
+                    <!-- 主角插图 -->
+                    <div class="arena-mascot">
+                        <img src="images/regret_col.png" alt="炒股后悔猫" class="arena-mascot-img">
                     </div>
 
                     <!-- 5-step timeline -->
@@ -129,21 +101,13 @@
                         <li class="arena-step">
                             <div class="step-num">3</div>
                             <div class="step-body">
-                                <!-- clock icon -->
-                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                                <span>遵循 T+1 规则：当日买入，次日方可卖出</span>
-                            </div>
-                        </li>
-                        <li class="arena-step">
-                            <div class="step-num">4</div>
-                            <div class="step-body">
                                 <!-- repeat icon -->
                                 <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 0 1 6-6h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16 6l-2-2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10a6 6 0 0 1-6 6H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 14l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 <span>可多次买卖，收益率累计计算</span>
                             </div>
                         </li>
                         <li class="arena-step">
-                            <div class="step-num">5</div>
+                            <div class="step-num">4</div>
                             <div class="step-body">
                                 <!-- reveal / flag icon -->
                                 <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 3v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 3h9l-3 4 3 4H4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
@@ -310,84 +274,204 @@
 
         <!-- Game Screen -->
         <section class="game-screen" id="gameScreen">
-            <div class="game-top-bar">
-                <div class="status-bar">
-                    <div class="status-item">
-                        <div class="status-label">第 <span id="currentDay">1</span> / 30 天</div>
-                        <div class="status-value neutral" id="currentPrice">--</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">持仓状态</div>
-                        <div class="status-value neutral" id="positionStatus">空仓</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">累计收益率</div>
-                        <div class="status-value neutral" id="totalReturn">0.00%</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">买入成本</div>
-                        <div class="status-value neutral" id="costBasis">--</div>
-                    </div>
-                    <div class="status-item">
-                        <div class="status-label">交易次数</div>
-                        <div class="status-value neutral" id="tradeCount">0</div>
-                    </div>
+
+            <!-- 顶部进度条 -->
+            <div class="game-progress-shell">
+                <div class="game-progress-meta">
+                    <span class="game-progress-label">第 <span id="currentDay">1</span> / 30 天</span>
+                    <span class="game-progress-mood" id="progressMood">市场在等待你的判断…</span>
+                    <span class="stage-subtitle" id="chartSubtitle">股票代码: ******</span>
                 </div>
-                <div class="action-row">
-                    <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
-                    <button class="action-btn hold" id="holdBtn" onclick="handleAction('hold')">不动</button>
-                    <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
-                    <span class="action-hint" id="actionHint">选择你的操作，将在明日开盘时执行</span>
+                <div class="game-progress-bar">
+                    <span id="dayProgressFill"></span>
                 </div>
             </div>
 
-            <div class="chart-container">
-                <div class="chart-header">
-                    <div>
-                        <span class="chart-title">K 线走势</span>
-                    </div>
-                    <div class="chart-subtitle" id="chartSubtitle">股票代码: ******</div>
-                </div>
-                <div id="kline-chart"></div>
-            </div>
+            <!-- 主体双栏布局 -->
+            <div class="dashboard-layout">
 
-            <div class="trade-history">
-                <h4 class="history-title">交易记录</h4>
-                <div class="history-list" id="historyList">
-                    <div class="history-item" style="color: var(--text-muted);">暂无交易记录</div>
-                </div>
-            </div>
+                <!-- 左侧资产看板 30% -->
+                <aside class="asset-board">
+                    <div class="board-kicker">SOUL PORTFOLIO</div>
+
+                    <!-- 总资产卡片 -->
+                    <div class="metric-stack">
+                        <div class="metric-card primary" id="totalAssetCard">
+                            <div class="metric-label">总资产</div>
+                            <div class="metric-value total-asset" id="totalAsset">¥100,000.00</div>
+                        </div>
+
+                        <!-- 持仓盈亏卡片 -->
+                        <div class="metric-card pnl-card neutral" id="holdingPnlCard">
+                            <div class="metric-label">持仓盈亏</div>
+                            <div class="metric-value neutral" id="holdingPnl">--</div>
+                        </div>
+
+                        <!-- 可用资金卡片 -->
+                        <div class="metric-card">
+                            <div class="metric-label">可用资金</div>
+                            <div class="metric-value" id="availableFunds">¥100,000.00</div>
+                            <div class="metric-foot">仓位状态：<span class="board-chip neutral" id="positionStatus">空仓</span></div>
+                        </div>
+                    </div>
+
+                    <!-- 2×3 小格子网格 -->
+                    <div class="board-meta-grid">
+                        <div class="meta-card">
+                            <div class="meta-label">当前价</div>
+                            <div class="meta-value neutral" id="currentPrice">--</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">累计收益</div>
+                            <div class="meta-value neutral" id="totalReturn">0.00%</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">买入成本</div>
+                            <div class="meta-value neutral" id="costBasis">--</div>
+                        </div>
+                        <div class="meta-card">
+                            <div class="meta-label">交易次数</div>
+                            <div class="meta-value neutral" id="tradeCount">0</div>
+                        </div>
+                    </div>
+
+                    <!-- OHLC 面板 -->
+                    <div class="ohlc-card">
+                        <div class="ohlc-head">
+                            <span class="ohlc-title">OHLC</span>
+                            <span class="ohlc-label" id="hoverLabel">悬停K线查看详情</span>
+                        </div>
+                        <div class="ohlc-date" id="hoverDate">--</div>
+                        <div class="ohlc-grid">
+                            <div class="ohlc-item">
+                                <span class="ohlc-key">开盘</span>
+                                <span class="ohlc-value" id="hoverOpen">--</span>
+                            </div>
+                            <div class="ohlc-item">
+                                <span class="ohlc-key">收盘</span>
+                                <span class="ohlc-value" id="hoverClose">--</span>
+                            </div>
+                            <div class="ohlc-item">
+                                <span class="ohlc-key">最高</span>
+                                <span class="ohlc-value positive" id="hoverHigh">--</span>
+                            </div>
+                            <div class="ohlc-item">
+                                <span class="ohlc-key">最低</span>
+                                <span class="ohlc-value negative" id="hoverLow">--</span>
+                            </div>
+                            <div class="ohlc-item wide">
+                                <span class="ohlc-key">成交量</span>
+                                <span class="ohlc-value" id="hoverVolume">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 操作区 -->
+                    <div class="action-zone">
+                        <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
+                        <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
+                        <button class="action-btn hold" id="holdBtn" onclick="handleAction('hold')">观望</button>
+                        <span class="action-hint" id="actionHint">选择你的操作，将在明日开盘时执行</span>
+                    </div>
+                </aside>
+
+                <!-- 右侧主视图 70% -->
+                <div class="dashboard-main">
+
+                    <!-- K线图舞台 -->
+                    <div class="market-stage">
+                        <div class="market-stage-header">
+                            <div>
+                                <div class="stage-kicker">MARKET · K-LINE</div>
+                                <h3 class="stage-title">实时走势</h3>
+                                <div class="stage-subtitle" id="chartSubtitleInner">--</div>
+                            </div>
+                            <div class="stage-tools">
+                                <button class="indicator-toggle" id="indicatorsToggle" onclick="toggleIndicatorPanel()">指标 ▾</button>
+                                <div class="indicator-panel" id="indicatorPanel">
+                                    <label><input type="checkbox" id="indicatorMA5" checked><span>MA5</span></label>
+                                    <label><input type="checkbox" id="indicatorMA10" checked><span>MA10</span></label>
+                                    <label><input type="checkbox" id="indicatorMA20" checked><span>MA20</span></label>
+                                    <label><input type="checkbox" id="indicatorMA30" checked><span>MA30</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="chart-stage">
+                            <div id="kline-chart"></div>
+                        </div>
+                    </div>
+
+                    <!-- 波段分析 -->
+                    <details class="intel-card" open>
+                        <summary><span>波段分析</span><span id="waveAnalysisTags"></span></summary>
+                        <div class="intel-body">
+                            <div class="wave-analysis-text" id="waveAnalysisText">暂无分析数据，随着行情展开将自动生成。</div>
+                        </div>
+                    </details>
+
+                    <!-- 交易日志 -->
+                    <details class="intel-card" open>
+                        <summary><span>实时交易日志</span><span id="tradeLogCount">暂无记录</span></summary>
+                        <div class="intel-body">
+                            <div class="history-list" id="historyList">
+                                <div class="log-item empty">暂无交易记录</div>
+                            </div>
+                        </div>
+                    </details>
+
+                </div><!-- /.dashboard-main -->
+
+            </div><!-- /.dashboard-layout -->
+
         </section>
 
         <!-- Result Screen -->
         <section class="result-screen" id="resultScreen">
-            <div class="result-card">
-                <h2 class="result-title">游戏结束</h2>
-                <div class="stock-reveal" id="stockReveal">贵州茅台 (600519)</div>
-                <div class="date-range" id="dateRange">2024-01-02 ~ 2024-01-29</div>
 
-                <div class="final-return positive" id="finalReturn">+12.34%</div>
-
-                <div class="result-summary">
-                    <div class="summary-item">
-                        <div class="summary-label">总交易次数</div>
-                        <div class="summary-value" id="finalTradeCount">4</div>
+            <!-- 等级勋章英雄区 -->
+            <div class="result-hero">
+                <div class="result-hero__left">
+                    <!-- 勋章 -->
+                    <div class="grade-medal" id="gradeMedal">
+                        <div class="grade-medal__letter" id="gradeLetter">S</div>
+                        <div class="grade-medal__ring"></div>
                     </div>
-                    <div class="summary-item">
-                        <div class="summary-label">持仓天数</div>
-                        <div class="summary-value" id="holdingDays">12</div>
-                    </div>
-                    <div class="summary-item">
-                        <div class="summary-label">最大单笔收益</div>
-                        <div class="summary-value" id="maxGain">+5.23%</div>
-                    </div>
+                    <div class="grade-title" id="gradeTitle">交易之神</div>
+                    <div class="grade-verdict" id="gradeVerdict">完美操作，教科书级别的走势把握。</div>
                 </div>
-
-                <button class="play-again-btn" onclick="resetGame()">再来一局</button>
-
-                <div class="bs-report" id="bsReport"></div>
+                <div class="result-hero__right">
+                    <!-- 核心指标 -->
+                    <div class="result-stock-info">
+                        <div class="result-stock-name" id="stockReveal">贵州茅台 (600519)</div>
+                        <div class="result-date-range" id="dateRange">2024-01-02 ~ 2024-01-29</div>
+                    </div>
+                    <div class="final-return positive" id="finalReturn">+12.34%</div>
+                    <div class="result-stats-grid">
+                        <div class="result-stat">
+                            <div class="result-stat__label">总交易次数</div>
+                            <div class="result-stat__value" id="finalTradeCount">4</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-stat__label">持仓天数</div>
+                            <div class="result-stat__value" id="holdingDays">12</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-stat__label">最大单笔收益</div>
+                            <div class="result-stat__value" id="maxGain">+5.23%</div>
+                        </div>
+                        <div class="result-stat">
+                            <div class="result-stat__label">操作评分</div>
+                            <div class="result-stat__value" id="bsScoreDisplay">--</div>
+                        </div>
+                    </div>
+                    <button class="play-again-btn" onclick="resetGame()">再来一局</button>
+                </div>
             </div>
 
+            <!-- BS 报告 -->
+            <div class="bs-report" id="bsReport"></div>
+
+            <!-- 完整 K 线回顾 -->
             <div class="chart-container">
                 <div class="chart-header">
                     <span class="chart-title">完整 K 线回顾</span>
@@ -397,7 +481,9 @@
                 <div id="pointNavigator"></div>
             </div>
 
+            <!-- 波段分析 -->
             <div class="analysis-container" id="klineAnalysis"></div>
+
         </section>
 
         <!-- ═══════════════════════════════════════════════
@@ -658,7 +744,7 @@
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
-        import { startGame, handleAction } from './js/game.js';
+        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js';
         import { resetGame } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
@@ -669,6 +755,7 @@
         window.toggleTheme = toggleTheme;
         window.startGame = startGame;
         window.handleAction = handleAction;
+        window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
         window.showAcademy = showAcademy;
         window.hideAcademy = hideAcademy;
