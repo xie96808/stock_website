@@ -1,278 +1,616 @@
-        /* Game Screen */
-        .game-screen {
-            display: none;
-            animation: fadeIn 0.5s ease-out;
-        }
+/* ========== GAME SCREEN — Trading Dashboard ========== */
 
-        .game-screen.active {
-            display: flex;
-            flex-direction: column;
-            height: calc(100vh - 40px);
-            min-height: 600px;
-        }
+/* ---------- 颜色语义变量 (A股: 红涨绿跌) ---------- */
+:root {
+    --gain-color: #e05252;
+    --gain-glow:  rgba(224, 82, 82, 0.35);
+    --loss-color: #3db86a;
+    --loss-glow:  rgba(61, 184, 106, 0.35);
+}
 
-        /* Status Bar - compact single row */
-        .status-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-            flex-shrink: 0;
-        }
+/* ---------- 屏幕容器 ---------- */
+.game-screen {
+    display: none;
+    animation: fadeIn 0.4s ease-out;
+}
 
-        .status-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 8px 14px;
-            backdrop-filter: blur(12px);
-            flex: 1;
-            min-width: 0;
-        }
+.game-screen.active {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 28px;
+}
 
-        .status-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 2px;
-        }
+/* ---------- 顶部进度条 ---------- */
+.game-progress-shell {
+    flex-shrink: 0;
+    padding: 12px 18px 10px;
+    background: linear-gradient(135deg, rgba(13,17,23,0.96), rgba(17,24,39,0.92));
+    border: 1px solid rgba(88,166,255,0.12);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+}
 
-        .status-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
+.game-progress-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+}
 
-        .status-value.gain {
-            color: var(--gain-color);
-            text-shadow: 0 0 20px var(--gain-glow);
-        }
+.game-progress-label {
+    color: #e6edf3;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
 
-        .status-value.loss {
-            color: var(--loss-color);
-            text-shadow: 0 0 20px var(--loss-glow);
-        }
+.game-progress-mood {
+    color: #8b949e;
+    font-size: 0.76rem;
+}
 
-        .status-value.neutral {
-            color: var(--text-primary);
-        }
+.game-progress-bar {
+    position: relative;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(88,166,255,0.1);
+    overflow: hidden;
+}
 
-        .status-value.locked {
-            color: var(--warning-color);
-        }
+.game-progress-bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #58a6ff, #2bd576, #f2cc60);
+    box-shadow: 0 0 14px rgba(43,213,118,0.5);
+    transition: width 0.5s ease;
+    position: relative;
+}
 
-        /* Chart Container */
-        .chart-container {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 12px 16px;
-            margin-bottom: 10px;
-            backdrop-filter: blur(12px);
-        }
+.game-progress-bar span::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+    animation: progressSweep 2s linear infinite;
+}
 
-        .game-screen .chart-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
+@keyframes progressSweep {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(200%);  }
+}
 
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-color);
-            flex-shrink: 0;
-        }
+/* ---------- 主仪表盘双栏 ---------- */
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 30%) minmax(0, 70%);
+    gap: 14px;
+    align-items: stretch;
+}
 
-        .chart-title {
-            font-family: 'Noto Sans SC', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--accent-cyan);
-            letter-spacing: 0.12em;
-        }
+/* ---------- 左栏：资产看板 ---------- */
+.asset-board {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    background: linear-gradient(180deg, rgba(13,17,23,0.98), rgba(17,24,39,0.92));
+    border: 1px solid rgba(88,166,255,0.12);
+    border-radius: 22px;
+    backdrop-filter: blur(18px);
+}
 
-        .chart-subtitle {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+.board-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: #58a6ff;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
 
-        #kline-chart {
-            width: 100%;
-            flex: 1;
-            min-height: 280px;
-        }
+.board-heading h3 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f0f6fc;
+    margin: 4px 0 6px;
+    letter-spacing: 0.02em;
+}
 
-        /* Game Top Bar */
-        .game-top-bar {
-            flex-shrink: 0;
-            margin-bottom: 8px;
-        }
+.board-heading p {
+    font-size: 0.82rem;
+    color: #8b949e;
+    line-height: 1.6;
+}
 
-        .action-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 8px;
-        }
+/* 指标卡片 */
+.metric-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
-        .action-row .action-hint {
-            margin: 0;
-            flex: 1;
-            text-align: right;
-        }
+.metric-card {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(22,27,34,0.92);
+    border: 1px solid rgba(139,148,158,0.12);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+}
 
-        .action-btn {
-            font-family: 'Noto Sans SC', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 600;
-            padding: 8px 28px;
-            border: 1.5px solid;
-            border-radius: 3px;
-            cursor: pointer;
-            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
+.metric-card.primary {
+    background: radial-gradient(circle at top left, rgba(88,166,255,0.14) 0%, transparent 55%),
+                rgba(22,27,34,0.94);
+    border-color: rgba(88,166,255,0.2);
+}
 
-        .action-btn.buy {
-            background: transparent;
-            border-color: var(--gain-color);
-            color: var(--gain-color);
-        }
+.metric-card.pnl-card { transition: background 0.4s ease; }
+.metric-card.pnl-card.positive { background: linear-gradient(135deg, rgba(224,82,82,0.16), rgba(22,27,34,0.92)); border-color: rgba(224,82,82,0.25); }
+.metric-card.pnl-card.negative { background: linear-gradient(135deg, rgba(61,184,106,0.16), rgba(22,27,34,0.92)); border-color: rgba(61,184,106,0.25); }
+.metric-card.pnl-card.neutral  { background: rgba(22,27,34,0.92); }
 
-        .action-btn.buy:hover:not(:disabled) {
-            background: var(--gain-color);
-            color: white;
-            box-shadow: 0 4px 20px var(--gain-glow);
-        }
+.metric-card.asset-surge { animation: assetPulse 0.55s ease; }
 
-        .action-btn.sell {
-            background: transparent;
-            border-color: var(--loss-color);
-            color: var(--loss-color);
-        }
+@keyframes assetPulse {
+    0%   { box-shadow: 0 0 0 rgba(88,166,255,0); }
+    40%  { box-shadow: 0 0 28px rgba(88,166,255,0.35); }
+    100% { box-shadow: 0 0 0 rgba(88,166,255,0); }
+}
 
-        .action-btn.sell:hover:not(:disabled) {
-            background: var(--loss-color);
-            color: white;
-            box-shadow: 0 4px 20px var(--loss-glow);
-        }
+.metric-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 6px;
+}
 
-        .action-btn.hold {
-            background: transparent;
-            border-color: var(--text-muted);
-            color: var(--text-muted);
-        }
+.metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f0f6fc;
+    line-height: 1.1;
+}
 
-        .action-btn.hold:hover:not(:disabled) {
-            background: var(--bg-tertiary);
-            border-color: var(--text-secondary);
-            color: var(--text-secondary);
-        }
+.metric-value.total-asset {
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    letter-spacing: -0.03em;
+}
 
-        .action-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
+.metric-foot {
+    font-size: 0.78rem;
+    color: #8b949e;
+    margin-top: 5px;
+    line-height: 1.5;
+}
 
-        .action-hint {
-            text-align: center;
-            margin-top: 8px;
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
+.metric-value.positive { color: var(--gain-color); text-shadow: 0 0 18px var(--gain-glow); }
+.metric-value.negative { color: var(--loss-color); text-shadow: 0 0 18px var(--loss-glow); }
+.metric-value.neutral  { color: #f0f6fc; }
 
-        .action-hint.warning {
-            color: var(--warning-color);
-        }
+/* 小格子元数据网格 */
+.board-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
 
-        /* Trade History */
-        .trade-history {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            padding: 10px 16px;
-            backdrop-filter: blur(12px);
-            flex-shrink: 0;
-        }
+.meta-card {
+    padding: 10px 12px;
+    border-radius: 13px;
+    background: rgba(15,23,31,0.88);
+    border: 1px solid rgba(139,148,158,0.1);
+}
 
-        .history-title {
-            font-family: 'Noto Sans SC', sans-serif;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--accent-cyan);
-            margin-bottom: 6px;
-            letter-spacing: 0.1em;
-        }
+.meta-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+}
 
-        .history-list {
-            max-height: 80px;
-            overflow-y: auto;
-        }
+.meta-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #e6edf3;
+}
 
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px solid var(--border-color);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.78rem;
-        }
+.meta-value.positive { color: var(--gain-color); }
+.meta-value.negative { color: var(--loss-color); }
+.meta-value.neutral  { color: #e6edf3; }
 
-        .history-item:last-child {
-            border-bottom: none;
-        }
+.board-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+.board-chip.positive { background: rgba(224,82,82,0.12); color: var(--gain-color); border: 1px solid rgba(224,82,82,0.25); }
+.board-chip.negative { background: rgba(61,184,106,0.12); color: var(--loss-color); border: 1px solid rgba(61,184,106,0.25); }
+.board-chip.neutral  { background: rgba(88,166,255,0.08); color: #8b949e; border: 1px solid rgba(88,166,255,0.15); }
+.board-chip.locked   { background: rgba(255,184,0,0.1);   color: #f2cc60;  border: 1px solid rgba(242,204,96,0.25); }
 
-        .history-action {
-            font-weight: 500;
-        }
+/* OHLC 面板 */
+.ohlc-card {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(15,23,31,0.88);
+    border: 1px solid rgba(139,148,158,0.1);
+}
 
-        .history-action.buy {
-            color: var(--gain-color);
-        }
+.ohlc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
 
-        .history-action.sell {
-            color: var(--loss-color);
-        }
+.ohlc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: #58a6ff;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 8px;
-            }
+.ohlc-label {
+    font-size: 0.66rem;
+    color: #8b949e;
+    font-family: 'JetBrains Mono', monospace;
+}
 
-            .header {
-                padding: 15px 0;
-            }
+.ohlc-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    color: #c9d1d9;
+    margin-bottom: 8px;
+}
 
-            .status-bar {
-                flex-wrap: wrap;
-            }
+.ohlc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
 
-            .status-item {
-                flex: 1 1 30%;
-            }
+.ohlc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: rgba(13,17,23,0.7);
+    border: 1px solid rgba(88,166,255,0.06);
+}
 
-            #kline-chart {
-                min-height: 220px;
-            }
+.ohlc-item.wide { grid-column: 1 / -1; }
 
-            .action-row {
-                flex-wrap: wrap;
-            }
+.ohlc-key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: #8b949e;
+    letter-spacing: 0.06em;
+}
 
-            .action-btn {
-                flex: 1;
-                padding: 8px 12px;
-                font-size: 0.8rem;
-            }
+.ohlc-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e6edf3;
+}
+.ohlc-value.positive { color: var(--gain-color); }
+.ohlc-value.negative { color: var(--loss-color); }
 
-            .action-row .action-hint {
-                width: 100%;
-                text-align: center;
-            }
-        }
+/* 操作区 */
+.action-zone {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: 1.5px solid transparent;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.action-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+.action-btn.buy {
+    background: linear-gradient(135deg, rgba(224,82,82,0.18), rgba(224,82,82,0.08));
+    border-color: rgba(224,82,82,0.5);
+    color: #ff8585;
+    box-shadow: 0 8px 24px rgba(224,82,82,0.1);
+}
+.action-btn.buy:hover:not(:disabled) { box-shadow: 0 12px 32px rgba(224,82,82,0.28); border-color: #e05252; }
+
+.action-btn.sell {
+    background: linear-gradient(135deg, rgba(61,184,106,0.18), rgba(61,184,106,0.08));
+    border-color: rgba(61,184,106,0.5);
+    color: #5ee08a;
+    box-shadow: 0 8px 24px rgba(61,184,106,0.1);
+}
+.action-btn.sell:hover:not(:disabled) { box-shadow: 0 12px 32px rgba(61,184,106,0.28); border-color: #3db86a; }
+
+.action-btn.hold {
+    background: rgba(88,166,255,0.06);
+    border-color: rgba(88,166,255,0.18);
+    color: #8b949e;
+}
+.action-btn.hold:hover:not(:disabled) { background: rgba(88,166,255,0.12); color: #c9d1d9; }
+
+.action-hint {
+    font-size: 0.8rem;
+    color: #8b949e;
+    line-height: 1.6;
+    padding: 0 4px;
+}
+.action-hint.warning { color: #f2cc60; }
+
+/* ---------- 右栏：主视图 ---------- */
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+}
+
+/* K线图舞台 */
+.market-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 18px 14px;
+    background: linear-gradient(180deg, rgba(13,17,23,0.98), rgba(17,24,39,0.92));
+    border: 1px solid rgba(88,166,255,0.12);
+    border-radius: 22px;
+    backdrop-filter: blur(18px);
+    min-height: 400px;
+}
+
+.market-stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+}
+
+.stage-kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: #58a6ff;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+}
+
+.stage-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #f0f6fc;
+    margin: 0 0 3px;
+}
+
+.stage-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: #8b949e;
+}
+
+.stage-tools { position: relative; }
+
+.indicator-toggle {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(88,166,255,0.2);
+    background: rgba(88,166,255,0.08);
+    color: #c9d1d9;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+.indicator-toggle:hover { background: rgba(88,166,255,0.14); border-color: rgba(88,166,255,0.35); }
+
+.indicator-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 170px;
+    background: rgba(13,17,23,0.98);
+    border: 1px solid rgba(88,166,255,0.2);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 20;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+}
+.indicator-panel.open { display: flex; }
+
+.indicator-panel label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #c9d1d9;
+    cursor: pointer;
+}
+.indicator-panel input[type="checkbox"] { accent-color: #58a6ff; }
+
+/* ECharts K线图容器 */
+.chart-stage {
+    flex: 1;
+    min-height: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(10,14,20,0.6);
+    border: 1px solid rgba(88,166,255,0.07);
+}
+
+#kline-chart {
+    width: 100%;
+    height: 100%;
+    min-height: 340px;
+}
+
+/* ---------- 下方情报区 ---------- */
+.intel-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.intel-card {
+    background: linear-gradient(180deg, rgba(13,17,23,0.98), rgba(17,24,39,0.92));
+    border: 1px solid rgba(88,166,255,0.1);
+    border-radius: 18px;
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+}
+
+.intel-card summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer;
+    list-style: none;
+    color: #f0f6fc;
+    font-weight: 700;
+    font-size: 0.92rem;
+    user-select: none;
+}
+.intel-card summary::-webkit-details-marker { display: none; }
+
+.intel-card summary::after {
+    content: '›';
+    color: #8b949e;
+    font-size: 1.1rem;
+    transition: transform 0.25s;
+    flex-shrink: 0;
+}
+.intel-card[open] summary::after { transform: rotate(90deg); }
+
+.intel-card summary span:last-of-type {
+    color: #8b949e;
+    font-weight: 400;
+    font-size: 0.8rem;
+}
+
+.intel-body {
+    padding: 4px 18px 16px;
+}
+
+/* 波段分析 tags */
+.wave-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 10px;
+}
+
+.wave-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    border: 1px solid rgba(139,148,158,0.14);
+    background: rgba(13,17,23,0.7);
+    color: #c9d1d9;
+}
+.wave-tag.positive { color: var(--gain-color); border-color: rgba(224,82,82,0.25); background: rgba(224,82,82,0.08); }
+.wave-tag.negative { color: var(--loss-color); border-color: rgba(61,184,106,0.25); background: rgba(61,184,106,0.08); }
+.wave-tag.neutral  { color: #c9d1d9; }
+.wave-tag.warning  { color: #f2cc60; border-color: rgba(242,204,96,0.25); background: rgba(242,204,96,0.07); }
+.wave-tag.accent   { color: #58a6ff; border-color: rgba(88,166,255,0.25); background: rgba(88,166,255,0.07); }
+
+.wave-analysis-text {
+    font-size: 0.86rem;
+    color: #c9d1d9;
+    line-height: 1.78;
+}
+.wave-analysis-text p + p { margin-top: 8px; }
+
+/* 交易日志 */
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.log-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(13,17,23,0.7);
+    border: 1px solid rgba(88,166,255,0.07);
+    font-size: 0.82rem;
+}
+.log-item.empty { grid-template-columns: 1fr; color: #8b949e; }
+
+.log-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: #58a6ff;
+    padding-top: 1px;
+}
+.log-message { color: #c9d1d9; line-height: 1.6; }
+
+.log-item.buy  .log-day, .log-item.buy  .log-message { color: var(--gain-color); }
+.log-item.sell .log-day, .log-item.sell .log-message { color: var(--loss-color); }
+.log-item.hold .log-day { color: #8b949e; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+    .dashboard-layout { grid-template-columns: 1fr; }
+    .asset-board { order: 2; }
+    .dashboard-main { order: 1; }
+}
+
+@media (max-width: 600px) {
+    .market-stage { min-height: 300px; }
+    #kline-chart { min-height: 260px; }
+    .action-btn { padding: 12px; font-size: 0.9rem; }
+    .metric-value { font-size: 1.2rem; }
+    .board-meta-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------- 旧 .status-value 兼容（updateUI 还在用） ---------- */
+.status-value.gain    { color: var(--gain-color); text-shadow: 0 0 16px var(--gain-glow); }
+.status-value.loss    { color: var(--loss-color); text-shadow: 0 0 16px var(--loss-glow); }
+.status-value.neutral { color: #e6edf3; }
+.status-value.locked  { color: #f2cc60; }

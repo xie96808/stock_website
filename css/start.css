@@ -256,6 +256,24 @@
     letter-spacing: 0.05em;
 }
 
+/* 主角插图 */
+.arena-mascot {
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    line-height: 0;
+}
+
+.arena-mascot-img {
+    width: 100%;
+    height: auto;
+    max-height: 180px;
+    object-fit: cover;
+    object-position: center 33%;
+    display: block;
+    border-radius: 12px;
+}
+
 /* 5-step timeline */
 .arena-steps {
     list-style: none;

@@ -11,7 +11,9 @@ export const gameState = {
     tradeHistory: [],
     pendingAction: null,
     holdingDays: 0,
-    tradeGains: []
+    tradeGains: [],
+    bsScore: null,
+    bestPoints: null
 };
 
 export const chartRefs = {

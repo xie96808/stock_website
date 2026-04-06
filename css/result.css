@@ -535,3 +535,180 @@
         [data-theme="light"] .best-point-card { background: rgba(245, 242, 236, 0.6); }
         [data-theme="light"] .point-nav-detail { background: rgba(245, 242, 236, 0.6); }
         [data-theme="light"] .kb-popup-illust { background: rgba(245, 242, 236, 0.8); }
+
+        /* Result K-line chart section */
+        .chart-container {
+            background: linear-gradient(180deg, rgba(13,17,23,0.98), rgba(17,24,39,0.92));
+            border: 1px solid rgba(88,166,255,0.12);
+            border-radius: 22px;
+            padding: 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(18px);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 16px;
+        }
+
+        .chart-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: #58a6ff;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .chart-subtitle {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: #8b949e;
+        }
+
+        /* ── Result Hero (grade medal + core stats) ── */
+        .result-hero {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 32px;
+            align-items: center;
+            background: linear-gradient(135deg, rgba(13,17,23,0.98), rgba(17,24,39,0.92));
+            border: 1px solid rgba(88,166,255,0.12);
+            border-radius: 22px;
+            padding: 36px 40px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(18px);
+        }
+
+        .result-hero__left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Grade Medal */
+        .grade-medal {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grade-medal__ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            animation: medalSpin 6s linear infinite;
+        }
+
+        @keyframes medalSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .grade-medal__letter {
+            font-family: 'Space Mono', monospace;
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Grade colour sets */
+        .grade-medal.grade-S .grade-medal__letter  { color: #fbbf24; text-shadow: 0 0 40px rgba(251,191,36,0.6); }
+        .grade-medal.grade-S .grade-medal__ring     { border-color: rgba(251,191,36,0.5); box-shadow: 0 0 28px rgba(251,191,36,0.2), inset 0 0 28px rgba(251,191,36,0.08); }
+
+        .grade-medal.grade-A .grade-medal__letter  { color: #34d399; text-shadow: 0 0 40px rgba(52,211,153,0.6); }
+        .grade-medal.grade-A .grade-medal__ring     { border-color: rgba(52,211,153,0.5); box-shadow: 0 0 28px rgba(52,211,153,0.2), inset 0 0 28px rgba(52,211,153,0.08); }
+
+        .grade-medal.grade-B .grade-medal__letter  { color: #60a5fa; text-shadow: 0 0 40px rgba(96,165,250,0.6); }
+        .grade-medal.grade-B .grade-medal__ring     { border-color: rgba(96,165,250,0.5); box-shadow: 0 0 28px rgba(96,165,250,0.2), inset 0 0 28px rgba(96,165,250,0.08); }
+
+        .grade-medal.grade-C .grade-medal__letter  { color: #f59e0b; text-shadow: 0 0 40px rgba(245,158,11,0.5); }
+        .grade-medal.grade-C .grade-medal__ring     { border-color: rgba(245,158,11,0.4); }
+
+        .grade-medal.grade-D .grade-medal__letter  { color: #f87171; text-shadow: 0 0 40px rgba(248,113,113,0.5); }
+        .grade-medal.grade-D .grade-medal__ring     { border-color: rgba(248,113,113,0.4); }
+
+        .grade-title {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #f0f6fc;
+            letter-spacing: 0.08em;
+            text-align: center;
+        }
+
+        .grade-verdict {
+            font-size: 0.82rem;
+            color: #8b949e;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Right side of hero */
+        .result-hero__right {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .result-stock-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .result-stock-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #58a6ff;
+            letter-spacing: 0.04em;
+        }
+
+        .result-date-range {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            color: #8b949e;
+        }
+
+        .result-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .result-stat {
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(15,23,31,0.88);
+            border: 1px solid rgba(139,148,158,0.1);
+        }
+
+        .result-stat__label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.62rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .result-stat__value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e6edf3;
+        }
+
+        @media (max-width: 900px) {
+            .result-hero { grid-template-columns: 1fr; text-align: center; }
+            .result-hero__left { margin: 0 auto; }
+            .result-stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
