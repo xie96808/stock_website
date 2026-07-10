@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20260711">
     <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
 </head>
 <body>
@@ -464,7 +464,7 @@
                             <div class="result-stat__value" id="bsScoreDisplay">--</div>
                         </div>
                     </div>
-                    <button class="play-again-btn" onclick="resetGame()">再来一局</button>
+                    <button class="play-again-btn" onclick="startGame()">再来一局</button>
                 </div>
             </div>
 
@@ -743,13 +743,13 @@
 
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
-        import { toggleTheme } from './js/theme.js';
-        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js';
-        import { resetGame } from './js/result.js';
-        import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
-        import { selectAnswer, quizNext } from './js/quiz.js';
-        import { showKBPopup, hideKBPopup } from './js/patterns.js';
-        import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
+        import { toggleTheme } from './js/theme.js?v=20260711';
+        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js?v=20260711';
+        import { resetGame } from './js/result.js?v=20260711';
+        import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js?v=20260711';
+        import { selectAnswer, quizNext } from './js/quiz.js?v=20260711';
+        import { showKBPopup, hideKBPopup } from './js/patterns.js?v=20260711';
+        import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js?v=20260711';
 
         // Bridge functions to window for onclick attributes
         window.toggleTheme = toggleTheme;

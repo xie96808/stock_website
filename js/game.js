@@ -1,7 +1,7 @@
 // ========== GAME FUNCTIONS ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
-import { endGame } from './result.js';
+import { calculateMA, applyChartTheme, createChart } from './utils.js?v=20260711';
+import { endGame } from './result.js?v=20260711';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -17,6 +17,14 @@ const MOODS = [
 ];
 
 export function startGame() {
+    const playableStocks = gameState.stocksData.filter(stock =>
+        stock && Array.isArray(stock.kline) && stock.kline.length >= 31
+    );
+    if (playableStocks.length === 0) {
+        alert('暂无可用股票数据，请先运行 python fetch_stock_data.py 生成数据');
+        return;
+    }
+
     // Reset state
     gameState.currentDay = 1;
     gameState.position = 'empty';
@@ -31,8 +39,8 @@ export function startGame() {
     gameState.bestPoints = null;
 
     // Pick random stock and random start position
-    const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
-    gameState.currentStock = gameState.stocksData[stockIndex];
+    const stockIndex = Math.floor(Math.random() * playableStocks.length);
+    gameState.currentStock = playableStocks[stockIndex];
 
     // 取最多30天历史 + 31天游戏数据
     const gameDays = 31;
@@ -40,7 +48,8 @@ export function startGame() {
     const historyDays = Math.min(30, klineLen - gameDays);
     const minStart = historyDays;
     const maxStart = klineLen - gameDays;
-    const gameStartIndex = minStart + Math.floor(Math.random() * Math.max(1, maxStart - minStart));
+    const startRange = maxStart - minStart + 1;
+    const gameStartIndex = minStart + Math.floor(Math.random() * startRange);
     gameState.historyLength = historyDays;
     gameState.gameKline = gameState.currentStock.kline.slice(gameStartIndex - historyDays, gameStartIndex + gameDays);
 
@@ -63,7 +72,8 @@ export function initChart() {
     if (chartRefs.klineChart) {
         chartRefs.klineChart.dispose();
     }
-    chartRefs.klineChart = echarts.init(chartDom);
+    chartRefs.klineChart = createChart(chartDom);
+    if (!chartRefs.klineChart) return;
 
     // Sync crosshair to OHLC panel
     chartRefs.klineChart.on('mousemove', function(params) {
@@ -104,6 +114,8 @@ function resetOHLCToToday() {
 }
 
 export function updateChart() {
+    if (!chartRefs.klineChart) return;
+
     const histLen = gameState.historyLength;
     const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
 
@@ -119,6 +131,7 @@ export function updateChart() {
 
     // Buy/sell markers on game chart
     const markPoints = gameState.tradeHistory.map(trade => ({
+        name: trade.type === 'buy' ? '买' : '卖',
         coord: [histLen + trade.day - 1, trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {

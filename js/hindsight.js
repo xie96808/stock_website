@@ -1,6 +1,6 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
 import { gameState } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
+import { createChart } from './utils.js?v=20260711';
 
 // ── Module-level refs ──
 let hindsightChart = null;
@@ -400,7 +400,8 @@ function _animateEarned(targetAmt) {
 function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
     const chartDom = document.getElementById('hindsightChart');
     if (hindsightChart && !hindsightChart.isDisposed()) hindsightChart.dispose();
-    hindsightChart = echarts.init(chartDom);
+    hindsightChart = createChart(chartDom);
+    if (!hindsightChart) return;
 
     const isDark   = document.documentElement.getAttribute('data-theme') === 'dark';
     const axisClr  = isDark ? 'rgba(180,160,120,0.18)' : 'rgba(0,0,0,0.1)';

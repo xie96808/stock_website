@@ -1,5 +1,7 @@
 // ========== UTILITY FUNCTIONS ==========
 
+let chartLoadAlertShown = false;
+
 export function calculateMA(data, period) {
     const result = [];
     for (let i = 0; i < data.length; i++) {
@@ -14,6 +16,19 @@ export function calculateMA(data, period) {
         }
     }
     return result;
+}
+
+export function createChart(dom) {
+    if (!dom) return null;
+    if (!globalThis.echarts || typeof globalThis.echarts.init !== 'function') {
+        console.error('ECharts 未加载，无法初始化图表');
+        if (!chartLoadAlertShown) {
+            chartLoadAlertShown = true;
+            alert('图表库加载失败，请检查网络后刷新页面');
+        }
+        return null;
+    }
+    return globalThis.echarts.init(dom);
 }
 
 export function shuffleArray(arr) {

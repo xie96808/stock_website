@@ -1,5 +1,5 @@
 // ========== ACADEMY ==========
-import { disposeQuizCharts, startQuiz } from './quiz.js';
+import { disposeQuizCharts, startQuiz } from './quiz.js?v=20260711';
 import { QUIZ_PATTERNS } from './patterns.js';
 
 let patternsRendered = false;

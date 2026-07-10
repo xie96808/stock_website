@@ -1,6 +1,6 @@
 // ========== QUIZ ENGINE ==========
 import { gameState, quizState } from './state.js';
-import { shuffleArray, applyChartTheme } from './utils.js';
+import { shuffleArray, applyChartTheme, createChart } from './utils.js?v=20260711';
 import { QUIZ_PATTERNS } from './patterns.js';
 
 export function disposeQuizCharts() {
@@ -25,7 +25,14 @@ function genWhichPatternQuestion(pattern, allPatterns) {
     const q = '以下哪个形态是' + signalText + '信号？';
     const wrongPatterns = allPatterns.filter(p => p.signal !== signalText && p.name !== pattern.name);
     if (wrongPatterns.length < 3) return null;
-    return { type: 'theory_text', question: q, correct: pattern.name, wrongChoices: shuffleArray(wrongPatterns).slice(0, 3).map(p => p.name), explanation: '"' + pattern.name + '"是' + signalText + '信号。' + pattern.desc };
+    return {
+        type: 'theory_pattern_choice',
+        question: q,
+        correct: pattern.name,
+        correctPattern: pattern,
+        wrongChoices: shuffleArray(wrongPatterns).slice(0, 3),
+        explanation: '"' + pattern.name + '"是' + signalText + '信号。' + pattern.desc
+    };
 }
 
 function genDescQuestion(pattern, allPatterns) {
@@ -227,13 +234,23 @@ export function startQuiz() {
     const shuffledP = shuffleArray([...allP]);
     const theoryCount = 5 + Math.floor(Math.random() * 2);
     const practicalCount = 10 - theoryCount;
+    let hasPatternChoice = false;
 
     for (let i = 0; i < theoryCount && i < shuffledP.length; i++) {
         const p = shuffledP[i];
-        if (Math.random() < 0.8) {
+        if (!hasPatternChoice) {
+            const q = genWhichPatternQuestion(p, allP);
+            if (q) {
+                quizState.questions.push(q);
+                hasPatternChoice = true;
+            } else {
+                quizState.questions.push(genVisualQuestion(p, allP));
+            }
+        } else if (Math.random() < 0.75) {
             quizState.questions.push(genVisualQuestion(p, allP));
         } else {
             const q = genWhichPatternQuestion(p, allP);
+            if (q) hasPatternChoice = true;
             quizState.questions.push(q || genVisualQuestion(p, allP));
         }
     }
@@ -312,7 +329,9 @@ export function renderQuestion() {
     const container = document.getElementById('quizQuestionContainer');
     const labels = ['A', 'B', 'C', 'D'];
 
-    if (q.type !== 'practical') {
+    if (q.type === 'theory_pattern_choice') {
+        q._options = shuffleArray([q.correctPattern, ...q.wrongChoices.slice(0, 3)]);
+    } else if (q.type !== 'practical') {
         const all = [q.correct, ...q.wrongChoices.slice(0, 3)];
         q._options = shuffleArray(all);
     }
@@ -325,6 +344,15 @@ export function renderQuestion() {
                 '<div class="quiz-option" data-index="' + i + '" onclick="selectAnswer(' + i + ')">' +
                 '<div class="quiz-option-label">' + labels[i] + '</div>' +
                 '<div class="quiz-option-text">' + opt + '</div></div>'
+            ).join('') + '</div>';
+    } else if (q.type === 'theory_pattern_choice') {
+        html = '<span class="quiz-question-type theory">理论题 · 图形判断</span>' +
+            '<div class="quiz-question-text">第 ' + (idx+1) + ' 题：' + q.question + '</div>' +
+            '<div class="quiz-options quiz-pattern-options">' + q._options.map((opt, i) =>
+                '<div class="quiz-option quiz-pattern-option" data-index="' + i + '" onclick="selectAnswer(' + i + ')">' +
+                '<div class="quiz-option-label">' + labels[i] + '</div>' +
+                '<div class="quiz-option-illust">' + opt.illust + '</div>' +
+                '<div class="quiz-option-text">' + opt.name + '</div></div>'
             ).join('') + '</div>';
     } else if (q.type === 'theory_visual') {
         html = '<span class="quiz-question-type theory">理论题 · 看图识形</span>' +
@@ -357,18 +385,22 @@ export function renderQuestion() {
         setTimeout(() => {
             const mainDom = document.getElementById('quizMainChart');
             if (mainDom) {
-                const mc = echarts.init(mainDom);
-                quizState.charts.push(mc);
-                renderMiniKline(mc, q.shownData, false);
-                applyChartTheme(mc);
+                const mc = createChart(mainDom);
+                if (mc) {
+                    quizState.charts.push(mc);
+                    renderMiniKline(mc, q.shownData, false);
+                    applyChartTheme(mc);
+                }
             }
             q.options.forEach((opt, i) => {
                 const dom = document.getElementById('quizOptChart' + i);
                 if (dom) {
-                    const c = echarts.init(dom);
-                    quizState.charts.push(c);
-                    renderMiniKline(c, opt.data, true);
-                    applyChartTheme(c);
+                    const c = createChart(dom);
+                    if (c) {
+                        quizState.charts.push(c);
+                        renderMiniKline(c, opt.data, true);
+                        applyChartTheme(c);
+                    }
                 }
             });
         }, 50);
@@ -385,6 +417,8 @@ export function selectAnswer(optionIndex) {
 
     if (q.type === 'practical') {
         isCorrect = optionIndex === q.correctIndex;
+    } else if (q.type === 'theory_pattern_choice') {
+        isCorrect = q._options[optionIndex].name === q.correct;
     } else {
         isCorrect = q._options[optionIndex] === q.correct;
     }
@@ -394,6 +428,9 @@ export function selectAnswer(optionIndex) {
         el.style.pointerEvents = 'none';
         if (q.type === 'practical') {
             if (i === q.correctIndex) el.classList.add('correct');
+            if (i === optionIndex && !isCorrect) el.classList.add('wrong');
+        } else if (q.type === 'theory_pattern_choice') {
+            if (q._options[i].name === q.correct) el.classList.add('correct');
             if (i === optionIndex && !isCorrect) el.classList.add('wrong');
         } else {
             if (q._options[i] === q.correct) el.classList.add('correct');
@@ -440,6 +477,10 @@ export function showQuizResults() {
             isCorrect = userAns === q.correctIndex;
             userText = userAns !== undefined ? labels[userAns] : '未作答';
             correctText = labels[q.correctIndex];
+        } else if (q.type === 'theory_pattern_choice') {
+            isCorrect = q._options && userAns !== undefined && q._options[userAns].name === q.correct;
+            userText = userAns !== undefined && q._options ? q._options[userAns].name : '未作答';
+            correctText = q.correct;
         } else {
             isCorrect = q._options && q._options[userAns] === q.correct;
             userText = userAns !== undefined && q._options ? q._options[userAns] : '未作答';

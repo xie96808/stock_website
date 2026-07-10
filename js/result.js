@@ -1,6 +1,6 @@
 // ========== RESULT SCREEN ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
+import { calculateMA, applyChartTheme, createChart } from './utils.js?v=20260711';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 
 function calcGrade(finalReturnPercent, bsScore) {
@@ -80,7 +80,8 @@ export function drawResultChart() {
     if (chartRefs.resultChart) {
         chartRefs.resultChart.dispose();
     }
-    chartRefs.resultChart = echarts.init(chartDom);
+    chartRefs.resultChart = createChart(chartDom);
+    if (!chartRefs.resultChart) return;
 
     const histLen = gameState.historyLength;
     const fullData = gameState.gameKline.slice(0, histLen + 30);
@@ -96,6 +97,7 @@ export function drawResultChart() {
 
     // Mark buy/sell points (offset by histLen)
     const markPoints = gameState.tradeHistory.map(trade => ({
+        name: trade.type === 'buy' ? '买' : '卖',
         coord: [histLen + trade.day - 1, trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {
@@ -108,6 +110,7 @@ export function drawResultChart() {
     const bestMarkPoints = [];
     bp.buys.forEach((p, idx) => {
         bestMarkPoints.push({
+            name: 'B' + (idx + 1),
             coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
             value: 'B' + (idx + 1),
             symbolOffset: [0, 20],
@@ -119,6 +122,7 @@ export function drawResultChart() {
     });
     bp.sells.forEach((p, idx) => {
         bestMarkPoints.push({
+            name: 'S' + (idx + 1),
             coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
             value: 'S' + (idx + 1),
             symbol: 'diamond',
@@ -288,6 +292,7 @@ export function drawResultChart() {
 
 export function buildPointNavigator(chart, histLen, fullData) {
     const nav = document.getElementById('pointNavigator');
+    if (!nav) return;
     nav.innerHTML = '';
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
