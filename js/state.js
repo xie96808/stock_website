@@ -12,6 +12,7 @@ export const gameState = {
     pendingAction: null,
     holdingDays: 0,
     tradeGains: [],
+    lastClosedPnl: null,
     bsScore: null,
     bestPoints: null
 };

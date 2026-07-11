@@ -164,24 +164,25 @@
 
 .metric-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.66rem;
+    font-size: 0.74rem;
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
 .metric-value {
     font-family: 'Space Mono', monospace;
-    font-size: 1.5rem;
+    font-size: clamp(1.65rem, 2.5vw, 2.15rem);
     font-weight: 700;
     color: #f0f6fc;
-    line-height: 1.1;
+    line-height: 1.08;
+    overflow-wrap: anywhere;
 }
 
 .metric-value.total-asset {
-    font-size: clamp(1.5rem, 2.4vw, 2rem);
-    letter-spacing: -0.03em;
+    font-size: clamp(1.75rem, 2.8vw, 2.35rem);
+    letter-spacing: 0;
 }
 
 .metric-foot {
@@ -211,18 +212,19 @@
 
 .meta-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     color: #8b949e;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .meta-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #e6edf3;
+    overflow-wrap: anywhere;
 }
 
 .meta-value.positive { color: var(--gain-color); }
@@ -605,7 +607,9 @@
     .market-stage { min-height: 300px; }
     #kline-chart { min-height: 260px; }
     .action-btn { padding: 12px; font-size: 0.9rem; }
-    .metric-value { font-size: 1.2rem; }
+    .metric-value { font-size: 1.55rem; }
+    .metric-value.total-asset { font-size: 1.65rem; }
+    .meta-value { font-size: 1rem; }
     .board-meta-grid { grid-template-columns: 1fr 1fr; }
 }
 

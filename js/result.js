@@ -17,11 +17,15 @@ export function endGame() {
     // Calculate final return if still holding
     if (gameState.position === 'holding' || gameState.position === 'locked') {
         const histLen = gameState.historyLength;
-        const finalPrice = gameState.gameKline[histLen + 30].open; // Day 31 open price
+        const finalDay = 30;
+        const finalPrice = gameState.gameKline[histLen + finalDay - 1].close;
         const tradeReturn = finalPrice / gameState.costBasis;
         gameState.totalReturn *= tradeReturn;
+        gameState.lastClosedPnl = (gameState.totalReturn - 1) * 100;
         gameState.tradeGains.push((tradeReturn - 1) * 100);
-        gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
+        gameState.tradeHistory.push({ type: 'sell', day: finalDay, price: finalPrice, return: tradeReturn });
+        gameState.position = 'empty';
+        gameState.costBasis = 0;
     }
 
     // Switch to result screen

@@ -1,7 +1,7 @@
 // ========== GAME FUNCTIONS ==========
 import { gameState, chartRefs } from './state.js';
 import { calculateMA, applyChartTheme, createChart } from './utils.js?v=20260711';
-import { endGame } from './result.js?v=20260711';
+import { endGame } from './result.js?v=20260711-cumulative-pnl';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -34,6 +34,7 @@ export function startGame() {
     gameState.pendingAction = null;
     gameState.holdingDays = 0;
     gameState.tradeGains = [];
+    gameState.lastClosedPnl = null;
     gameState.historyLength = 0;
     gameState.bsScore = null;
     gameState.bestPoints = null;
@@ -259,8 +260,39 @@ export function handleAction(action) {
     if (action === 'buy' && gameState.position !== 'empty') return;
     if (action === 'sell' && gameState.position !== 'holding') return;
 
+    if (gameState.currentDay >= 30) {
+        settleFinalDayAction(action);
+        return;
+    }
+
+    if (action === 'sell' && gameState.costBasis > 0) {
+        const histLen = gameState.historyLength;
+        const todayData = gameState.gameKline[histLen + gameState.currentDay - 1];
+        if (todayData) {
+            gameState.lastClosedPnl = (gameState.totalReturn * (todayData.close / gameState.costBasis) - 1) * 100;
+        }
+    }
+
     gameState.pendingAction = action;
     nextDay();
+}
+
+function settleFinalDayAction(action) {
+    const histLen = gameState.historyLength;
+    const todayData = gameState.gameKline[histLen + gameState.currentDay - 1];
+
+    if (action === 'sell' && gameState.position === 'holding' && gameState.costBasis > 0 && todayData) {
+        const tradeReturn = todayData.close / gameState.costBasis;
+        gameState.totalReturn *= tradeReturn;
+        gameState.lastClosedPnl = (gameState.totalReturn - 1) * 100;
+        gameState.tradeGains.push((tradeReturn - 1) * 100);
+        addTradeHistory('sell', gameState.currentDay, todayData.close, tradeReturn);
+        gameState.position = 'empty';
+        gameState.costBasis = 0;
+    }
+
+    gameState.pendingAction = null;
+    endGame();
 }
 
 export function nextDay() {
@@ -271,12 +303,16 @@ export function nextDay() {
 
     // Execute pending action at next day's open price
     if (action === 'buy' && gameState.position === 'empty') {
+        gameState.lastClosedPnl = null;
         gameState.costBasis = nextDayData.open;
         gameState.position = 'locked'; // T+1: Can't sell today
         addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
     } else if (action === 'sell' && gameState.position === 'holding') {
         const sellPrice = nextDayData.open;
         const tradeReturn = sellPrice / gameState.costBasis;
+        if (gameState.lastClosedPnl === null) {
+            gameState.lastClosedPnl = (gameState.totalReturn * tradeReturn - 1) * 100;
+        }
         gameState.totalReturn *= tradeReturn;
         gameState.tradeGains.push((tradeReturn - 1) * 100);
         addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
@@ -364,12 +400,25 @@ export function updateUI() {
     const pnlEl = document.getElementById('holdingPnl');
     if (pnlEl && pnlCard) {
         if (gameState.position !== 'empty' && gameState.costBasis > 0) {
-            const unrealPct = (todayData.close / gameState.costBasis - 1) * 100;
-            pnlEl.textContent = (unrealPct >= 0 ? '+' : '') + unrealPct.toFixed(2) + '%';
-            if (unrealPct > 0) {
+            const cumulativePct = displayReturn;
+            pnlEl.textContent = (cumulativePct >= 0 ? '+' : '') + cumulativePct.toFixed(2) + '%';
+            if (cumulativePct > 0) {
                 pnlEl.className = 'metric-value positive';
                 pnlCard.className = 'metric-card pnl-card positive';
-            } else if (unrealPct < 0) {
+            } else if (cumulativePct < 0) {
+                pnlEl.className = 'metric-value negative';
+                pnlCard.className = 'metric-card pnl-card negative';
+            } else {
+                pnlEl.className = 'metric-value neutral';
+                pnlCard.className = 'metric-card pnl-card neutral';
+            }
+        } else if (gameState.lastClosedPnl !== null) {
+            const closedPct = gameState.lastClosedPnl;
+            pnlEl.textContent = (closedPct >= 0 ? '+' : '') + closedPct.toFixed(2) + '%';
+            if (closedPct > 0) {
+                pnlEl.className = 'metric-value positive';
+                pnlCard.className = 'metric-card pnl-card positive';
+            } else if (closedPct < 0) {
                 pnlEl.className = 'metric-value negative';
                 pnlCard.className = 'metric-card pnl-card negative';
             } else {

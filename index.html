@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>早知道当初不炒了</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="data/stocks_data.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=20260711">
+    <link rel="stylesheet" href="css/style.css?v=20260711-readable-metrics">
     <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
 </head>
 <body>
@@ -301,9 +304,9 @@
                             <div class="metric-value total-asset" id="totalAsset">¥100,000.00</div>
                         </div>
 
-                        <!-- 持仓盈亏卡片 -->
+                        <!-- 累计盈亏卡片 -->
                         <div class="metric-card pnl-card neutral" id="holdingPnlCard">
-                            <div class="metric-label">持仓盈亏</div>
+                            <div class="metric-label">累计盈亏</div>
                             <div class="metric-value neutral" id="holdingPnl">--</div>
                         </div>
 
@@ -744,8 +747,8 @@
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js?v=20260711';
-        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js?v=20260711';
-        import { resetGame } from './js/result.js?v=20260711';
+        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js?v=20260711-cumulative-pnl';
+        import { resetGame } from './js/result.js?v=20260711-cumulative-pnl';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js?v=20260711';
         import { selectAnswer, quizNext } from './js/quiz.js?v=20260711';
         import { showKBPopup, hideKBPopup } from './js/patterns.js?v=20260711';
