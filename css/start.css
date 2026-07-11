@@ -147,6 +147,7 @@
     display: grid;
     /* 60/40 split: arena gets more width */
     grid-template-columns: 1.1fr 0.9fr;
+    align-items: stretch;
     gap: 20px;
     margin-top: 28px;
 }
@@ -155,6 +156,11 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
+    align-self: stretch;
+}
+
+.bento-right .bento-card {
+    flex: 1;
 }
 
 /* ── 4. Shared card base ── */
@@ -256,7 +262,7 @@
     letter-spacing: 0.05em;
 }
 
-/* 主角插图 */
+/* 主角插图 (arena) */
 .arena-mascot {
     margin-bottom: 20px;
     border-radius: 12px;
@@ -267,9 +273,24 @@
 .arena-mascot-img {
     width: 100%;
     height: auto;
-    max-height: 180px;
+    display: block;
+    border-radius: 12px;
+}
+
+/* 卡片插图 (academy / oracle) */
+.card-mascot {
+    flex: 1;
+    min-height: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.card-mascot-img {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    object-position: center 33%;
+    object-position: center top;
     display: block;
     border-radius: 12px;
 }
