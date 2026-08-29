@@ -15,12 +15,9 @@ function calcMA(data, period) {
 }
 
 function calcSlope(arr, start, end) {
-    const seg = arr.slice(start, end).map(v => {
-        if (v == null) return null;
-        if (typeof v === 'number' && Number.isFinite(v)) return v;
-        if (typeof v === 'object' && typeof v.close === 'number') return v.close;
-        return null;
-    }).filter(v => v !== null);
+    const seg = arr.slice(start, end)
+        .map(v => (v != null && typeof v === 'object') ? v.close : v)
+        .filter(v => v != null && typeof v === 'number');
     if (seg.length < 2) return 0;
     const n = seg.length;
     const mean = seg.reduce((a, b) => a + b, 0) / n;
@@ -52,6 +49,7 @@ export function generateKlineAnalysis() {
     const gma10 = ma10.slice(histLen);
     const gma20 = ma20.slice(histLen);
 
+    // === Trend analysis ===
     const firstClose = closes[0];
     const lastClose = closes[gameDays - 1];
     const periodReturn = (lastClose - firstClose) / firstClose * 100;
@@ -62,12 +60,14 @@ export function generateKlineAnalysis() {
     else if (slope < -0.002) { trend = '下行趋势'; trendCls = 'down'; }
     else { trend = '横盘震荡'; trendCls = 'neutral'; }
 
+    // === Volatility ===
     const avgRange = gameData.reduce((s, d) => s + (d.high - d.low) / d.close, 0) / gameDays;
     let volatility, volCls;
     if (avgRange > 0.04) { volatility = '高波动'; volCls = 'up'; }
     else if (avgRange > 0.02) { volatility = '中等波动'; volCls = 'info'; }
     else { volatility = '低波动'; volCls = 'neutral'; }
 
+    // === MA alignment ===
     const endMa5 = gma5[gameDays - 1];
     const endMa10 = gma10[gameDays - 1];
     const endMa20 = gma20[gameDays - 1];
@@ -78,6 +78,7 @@ export function generateKlineAnalysis() {
         else { maAlignment = '均线缠绕'; maCls = 'neutral'; }
     } else { maAlignment = '数据不足'; maCls = 'neutral'; }
 
+    // === Volume trend ===
     const vol1 = volumes.slice(0, Math.floor(gameDays / 2));
     const vol2 = volumes.slice(Math.floor(gameDays / 2));
     const avgVol1 = vol1.reduce((a, b) => a + b, 0) / vol1.length;
@@ -87,6 +88,7 @@ export function generateKlineAnalysis() {
     else if (avgVol2 < avgVol1 * 0.7) volTrend = '后半段缩量';
     else volTrend = '成交量平稳';
 
+    // === T+0 suitability ===
     const dailySwings = gameData.map(d => (d.high - d.low) / d.close * 100);
     const avgSwing = dailySwings.reduce((a, b) => a + b, 0) / gameDays;
     let tSuitability;
@@ -94,9 +96,11 @@ export function generateKlineAnalysis() {
     else if (avgSwing > 3) tSuitability = '可尝试做T';
     else tSuitability = '不太适合做T';
 
+    // === Support / Resistance ===
     const minPrice = Math.min(...lows);
     const maxPrice = Math.max(...highs);
 
+    // === Generate text ===
     const tags = [
         { text: trend, cls: trendCls },
         { text: volatility, cls: volCls },
@@ -106,6 +110,7 @@ export function generateKlineAnalysis() {
 
     let analysis = '';
 
+    // Trend paragraph
     if (trendCls === 'up') {
         analysis += `<p>该波段整体呈<strong>上行趋势</strong>，区间涨幅 ${periodReturn.toFixed(2)}%。`;
         if (maCls === 'up') analysis += `均线呈多头排列（MA5 > MA10 > MA20），趋势信号明确，适合顺势持股。`;
@@ -122,6 +127,7 @@ export function generateKlineAnalysis() {
         analysis += `</p>`;
     }
 
+    // Volume & T
     analysis += `<p>成交量方面，${volTrend}。`;
     if (volTrend === '后半段放量' && trendCls === 'up') analysis += `放量上涨是健康的量价配合，说明资金认可当前趋势。`;
     else if (volTrend === '后半段放量' && trendCls === 'down') analysis += `放量下跌说明抛压较重，需警惕进一步调整。`;
@@ -135,6 +141,7 @@ export function generateKlineAnalysis() {
     else analysis += `振幅较小，日内差价空间有限，频繁操作反而容易增加摩擦成本。`;
     analysis += `</p>`;
 
+    // Entry/exit suggestion
     if (trendCls === 'up' && maCls === 'up') {
         analysis += `<p><strong>操作建议：</strong>趋势向上且均线多头排列，适合在回踩均线支撑时买入持有，不宜频繁做空。</p>`;
     } else if (trendCls === 'down' && maCls === 'down') {
@@ -181,6 +188,7 @@ export function generateBestPoints() {
         const pm10 = i > 0 ? ma10[gi - 1] : null;
         const pm20 = i > 0 ? ma20[gi - 1] : null;
 
+        // 1. Price near support (near recent lows)
         const localMin = Math.min(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.low));
         const localMax = Math.max(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.high));
 
@@ -193,6 +201,7 @@ export function generateBestPoints() {
             sellReasons.push({ tag: '压力', text: `触及近期高点压力位 ${localMax.toFixed(2)}` });
         }
 
+        // 2. MA golden cross / death cross
         if (m5 && m10 && pm5 && pm10) {
             if (pm5 <= pm10 && m5 > m10) {
                 buyScore += 4;
@@ -215,6 +224,7 @@ export function generateBestPoints() {
             }
         }
 
+        // 3. Price bouncing off MA support / hitting MA resistance
         if (m20 && d.low <= m20 * 1.01 && d.close > m20 && d.close > d.open) {
             buyScore += 3;
             buyReasons.push({ tag: '均线支撑', text: `回踩 MA20（${m20.toFixed(2)}）后收阳，获得均线支撑` });
@@ -228,6 +238,7 @@ export function generateBestPoints() {
             sellReasons.push({ tag: '均线压力', text: `上冲 MA20（${m20.toFixed(2)}）后受阻回落` });
         }
 
+        // 4. Volume breakout
         if (volumes[i] > avgVol * 1.8 && d.close > d.open) {
             buyScore += 2;
             buyReasons.push({ tag: '放量', text: `成交量达均量 ${(volumes[i] / avgVol).toFixed(1)} 倍，放量阳线突破` });
@@ -237,6 +248,7 @@ export function generateBestPoints() {
             sellReasons.push({ tag: '放量', text: `放量阴线（${(volumes[i] / avgVol).toFixed(1)} 倍均量），抛压涌出` });
         }
 
+        // 5. Candlestick patterns
         const bodyRatio = Math.abs(d.close - d.open) / (d.high - d.low || 0.01);
         const lowerShadow = Math.min(d.open, d.close) - d.low;
         const upperShadow = d.high - Math.max(d.open, d.close);
@@ -323,7 +335,11 @@ export function generateBestPoints() {
 
     buyScores.sort((a, b) => b.score - a.score);
     sellScores.sort((a, b) => b.score - a.score);
-    gameState.bestPoints = { buys: buyScores.slice(0, 3), sells: sellScores.slice(0, 3) };
+
+    const topBuys = buyScores.slice(0, 3);
+    const topSells = sellScores.slice(0, 3);
+
+    gameState.bestPoints = { buys: topBuys, sells: topSells };
 }
 
 export function generateBSReport() {
@@ -368,8 +384,11 @@ export function generateBSReport() {
             note: `最优单次收益 ${(bestProfit * 100).toFixed(2)}%`
         });
     } else {
-        if (Math.abs(userReturn) < 2) score += 8;
-        else if (userReturn < -2) score -= 5;
+        if (Math.abs(userReturn) < 2) {
+            score += 8;
+        } else if (userReturn < -2) {
+            score -= 5;
+        }
         details.push({
             label: '收益率表现',
             value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
@@ -442,24 +461,27 @@ export function generateBSReport() {
 
     if (gameState.tradeGains.length > 0) {
         const maxLoss = Math.min(...gameState.tradeGains);
-        if (maxLoss >= -2) score += 4;
-        else if (maxLoss >= -5) score += 1;
-        else if (maxLoss < -10) score -= 4;
-        else score -= 2;
-        const stopLabel = maxLoss >= -2 ? '优秀' : maxLoss >= -5 ? '良好' : maxLoss >= -10 ? '较弱' : '缺失';
-        details.push({
-            label: '止损意识',
-            value: stopLabel,
-            cls: maxLoss >= -5 ? 'positive' : 'negative',
-            note: `最大单笔亏损 ${maxLoss.toFixed(2)}%`
-        });
+        let stopLabel, stopCls, stopNote;
+        if (maxLoss >= -2) {
+            score += 4;
+            stopLabel = '优秀'; stopCls = 'positive';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else if (maxLoss >= -5) {
+            score += 1;
+            stopLabel = '良好'; stopCls = 'positive';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else if (maxLoss < -10) {
+            score -= 4;
+            stopLabel = '较弱'; stopCls = 'negative';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else {
+            score -= 2;
+            stopLabel = '一般'; stopCls = 'neutral';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        }
+        details.push({ label: '止损意识', value: stopLabel, cls: stopCls, note: stopNote });
     } else {
-        details.push({
-            label: '止损意识',
-            value: '无已实现交易',
-            cls: 'neutral',
-            note: '未产生已实现盈亏'
-        });
+        details.push({ label: '止损意识', value: '无记录', cls: 'neutral', note: '未产生已实现盈亏' });
     }
 
     score = Math.max(0, Math.min(100, Math.round(score)));
