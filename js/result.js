@@ -4,7 +4,6 @@ import { calculateMA, applyChartTheme } from './utils.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 
 function calcGrade(finalReturnPercent, bsScore) {
-    // Grade: S/A/B/C/D based on return + bs score
     const score = finalReturnPercent * 0.6 + (bsScore || 50) * 0.1;
     if (score >= 15)  return { letter: 'S', title: '交易之神', verdict: '完美操作，教科书级别的走势把握。每一笔都入木三分。', cls: 'grade-S' };
     if (score >= 8)   return { letter: 'A', title: '技术流玩家', verdict: '买卖时机精准，收益远超大盘，是真正的趋势猎手。', cls: 'grade-A' };
@@ -14,21 +13,19 @@ function calcGrade(finalReturnPercent, bsScore) {
 }
 
 export function endGame() {
-    // Calculate final return if still holding
-    if (gameState.position === 'holding' || gameState.position === 'locked') {
+    // Liquidate a real holding at next session open. Do NOT liquidate T+1 lock (same-bar round-trip).
+    if (gameState.position === 'holding') {
         const histLen = gameState.historyLength;
-        const finalPrice = gameState.gameKline[histLen + 30].open; // Day 31 open price
+        const finalPrice = gameState.gameKline[histLen + 30].open;
         const tradeReturn = finalPrice / gameState.costBasis;
         gameState.totalReturn *= tradeReturn;
         gameState.tradeGains.push((tradeReturn - 1) * 100);
         gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
     }
 
-    // Switch to result screen
     document.getElementById('gameScreen').classList.remove('active');
     document.getElementById('resultScreen').classList.add('active');
 
-    // Display results
     document.getElementById('stockReveal').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
@@ -52,13 +49,11 @@ export function endGame() {
     document.getElementById('resultChartSubtitle').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
-    // Draw full chart and reports (BS score needed for grade)
     generateBSReport();
     generateBestPoints();
     drawResultChart();
     generateKlineAnalysis();
 
-    // Grade medal — populate after bsScore is set
     const grade = calcGrade(finalReturnPercent, gameState.bsScore);
     const medalEl = document.getElementById('gradeMedal');
     if (medalEl) {
@@ -70,7 +65,6 @@ export function endGame() {
     const verdictEl = document.getElementById('gradeVerdict');
     if (verdictEl) verdictEl.textContent = grade.verdict;
 
-    // BS score display
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
     if (bsDisplayEl) bsDisplayEl.textContent = gameState.bsScore != null ? gameState.bsScore : '--';
 }
@@ -94,23 +88,21 @@ export function drawResultChart() {
     const ma20 = calculateMA(fullData, 20);
     const ma30 = calculateMA(fullData, 30);
 
-    // Mark buy/sell points (offset by histLen)
     const markPoints = gameState.tradeHistory.map(trade => ({
-        coord: [histLen + trade.day - 1, trade.price],
         name: trade.type === 'buy' ? '买' : '卖',
+        coord: [histLen + trade.day - 1, trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
     })).filter(p => p.coord[0] < histLen + 30);
 
-    // Mark best buy/sell points (from analysis)
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
     bp.buys.forEach((p, idx) => {
         bestMarkPoints.push({
-            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
             name: 'B' + (idx + 1),
+            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
             value: 'B' + (idx + 1),
             symbolOffset: [0, 20],
             symbol: 'diamond',
@@ -121,8 +113,8 @@ export function drawResultChart() {
     });
     bp.sells.forEach((p, idx) => {
         bestMarkPoints.push({
-            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
             name: 'S' + (idx + 1),
+            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
             value: 'S' + (idx + 1),
             symbol: 'diamond',
             symbolSize: 14,
@@ -138,154 +130,57 @@ export function drawResultChart() {
             axisPointer: { type: 'cross' },
             backgroundColor: 'rgba(22, 22, 29, 0.95)',
             borderColor: 'rgba(200, 164, 78, 0.2)',
-            textStyle: {
-                color: '#e8e4dd',
-                fontFamily: 'JetBrains Mono'
-            }
+            textStyle: { color: '#e8e4dd', fontFamily: 'JetBrains Mono' }
         },
-        axisPointer: {
-            link: [{ xAxisIndex: 'all' }]
-        },
+        axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: [
-            {
-                left: '10%',
-                right: '2%',
-                top: '5%',
-                bottom: '35%'
-            },
-            {
-                left: '10%',
-                right: '2%',
-                top: '72%',
-                bottom: '8%'
-            }
+            { left: '10%', right: '2%', top: '5%', bottom: '35%' },
+            { left: '10%', right: '2%', top: '72%', bottom: '8%' }
         ],
         xAxis: [
             {
-                type: 'category',
-                data: dates,
-                gridIndex: 0,
+                type: 'category', data: dates, gridIndex: 0,
                 axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
-                axisLabel: { show: false },
-                axisTick: { show: false },
-                splitLine: { show: false }
+                axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
             },
             {
-                type: 'category',
-                data: dates,
-                gridIndex: 1,
+                type: 'category', data: dates, gridIndex: 1,
                 axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
-                axisLabel: {
-                    color: '#6b6660',
-                    fontFamily: 'JetBrains Mono',
-                    fontSize: 10,
-                    rotate: 45
-                }
+                axisLabel: { color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 45 }
             }
         ],
         yAxis: [
             {
-                type: 'value',
-                scale: true,
-                gridIndex: 0,
-                axisLabel: {
-                    color: '#6b6660',
-                    fontFamily: 'JetBrains Mono',
-                    fontSize: 10
-                },
+                type: 'value', scale: true, gridIndex: 0,
+                axisLabel: { color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10 },
                 axisLine: { show: false },
                 splitLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.06)' } }
             },
-            {
-                type: 'value',
-                scale: true,
-                gridIndex: 1,
-                show: false
-            }
+            { type: 'value', scale: true, gridIndex: 1, show: false }
         ],
         series: [
             {
-                name: 'K线',
-                type: 'candlestick',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
-                data: ohlc,
-                itemStyle: {
-                    color: '#e05252',
-                    color0: '#3db86a',
-                    borderColor: '#e05252',
-                    borderColor0: '#3db86a'
-                },
+                name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
+                itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
                 markPoint: {
                     data: [...markPoints, ...bestMarkPoints],
-                    symbol: 'pin',
-                    symbolSize: 40,
-                    label: {
-                        formatter: '{b}',
-                        color: '#fff',
-                        fontWeight: 'bold'
-                    }
+                    symbol: 'pin', symbolSize: 40,
+                    label: { formatter: '{b}', color: '#fff', fontWeight: 'bold' }
                 }
             },
             {
-                name: '成交量',
-                type: 'bar',
-                xAxisIndex: 1,
-                yAxisIndex: 1,
-                data: volumes,
-                itemStyle: {
-                    color: function(params) {
-                        return volumeColors[params.dataIndex];
-                    }
-                }
+                name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes,
+                itemStyle: { color: function(params) { return volumeColors[params.dataIndex]; } }
             },
-            {
-                name: 'MA5',
-                type: 'line',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
-                data: ma5,
-                smooth: true,
-                symbol: 'none',
-                lineStyle: { width: 1, color: '#f5c542' }
-            },
-            {
-                name: 'MA10',
-                type: 'line',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
-                data: ma10,
-                smooth: true,
-                symbol: 'none',
-                lineStyle: { width: 1, color: '#42a5f5' }
-            },
-            {
-                name: 'MA20',
-                type: 'line',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
-                data: ma20,
-                smooth: true,
-                symbol: 'none',
-                lineStyle: { width: 1, color: '#ab47bc' }
-            },
-            {
-                name: 'MA30',
-                type: 'line',
-                xAxisIndex: 0,
-                yAxisIndex: 0,
-                data: ma30,
-                smooth: true,
-                symbol: 'none',
-                lineStyle: { width: 1, color: '#26a69a' }
-            }
+            { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' } },
+            { name: 'MA10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' } },
+            { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' } },
+            { name: 'MA30', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' } }
         ]
     };
 
     chartRefs.resultChart.setOption(option);
     applyChartTheme(chartRefs.resultChart);
-
-    // Build interactive point navigator
     buildPointNavigator(chartRefs.resultChart, histLen, fullData);
 }
 
@@ -295,31 +190,14 @@ export function buildPointNavigator(chart, histLen, fullData) {
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const trades = gameState.tradeHistory || [];
-
     const allPoints = [];
 
     bp.buys.forEach((p, idx) => {
-        allPoints.push({
-            day: p.day,
-            label: '荐买' + (idx + 1),
-            type: 'best-buy',
-            date: p.date,
-            price: p.price,
-            reasons: p.reasons
-        });
+        allPoints.push({ day: p.day, label: '荐买' + (idx + 1), type: 'best-buy', date: p.date, price: p.price, reasons: p.reasons });
     });
-
     bp.sells.forEach((p, idx) => {
-        allPoints.push({
-            day: p.day,
-            label: '荐卖' + (idx + 1),
-            type: 'best-sell',
-            date: p.date,
-            price: p.price,
-            reasons: p.reasons
-        });
+        allPoints.push({ day: p.day, label: '荐卖' + (idx + 1), type: 'best-sell', date: p.date, price: p.price, reasons: p.reasons });
     });
-
     trades.forEach((t, idx) => {
         if (t.day > 30) return;
         const dayData = fullData[histLen + t.day - 1];
@@ -333,17 +211,13 @@ export function buildPointNavigator(chart, histLen, fullData) {
             tradeReturn: t.return
         });
     });
-
     allPoints.sort((a, b) => a.day - b.day);
-
     if (allPoints.length === 0) return;
 
     const strip = document.createElement('div');
     strip.className = 'point-nav-strip';
-
     const detail = document.createElement('div');
     detail.className = 'point-nav-detail';
-
     let activeIdx = -1;
 
     allPoints.forEach((pt, i) => {
@@ -351,7 +225,6 @@ export function buildPointNavigator(chart, histLen, fullData) {
         badge.className = 'point-nav-badge ' + pt.type;
         badge.textContent = pt.label;
         badge.setAttribute('data-idx', i);
-
         badge.addEventListener('click', () => {
             if (activeIdx === i) {
                 detail.classList.remove('open');
@@ -360,24 +233,18 @@ export function buildPointNavigator(chart, histLen, fullData) {
                 chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
                 return;
             }
-
             const prev = strip.querySelector('.point-nav-badge.active');
             if (prev) prev.classList.remove('active');
-
             badge.classList.add('active');
             activeIdx = i;
-
             let html = '<div class="detail-header">';
             html += `<span class="point-badge ${pt.type.includes('buy') ? 'buy' : 'sell'}">${pt.label}</span>`;
             html += `<span class="detail-day">第 ${pt.day} 天（${pt.date}）</span>`;
             html += `<span class="detail-price">价格 ${pt.price.toFixed(2)}</span>`;
             html += '</div>';
-
             if (pt.reasons) {
                 html += '<div class="detail-reasons">';
-                html += pt.reasons.map(r =>
-                    `<span class="point-reason-tag">${r.tag}</span>${r.text}`
-                ).join('<br>');
+                html += pt.reasons.map(r => `<span class="point-reason-tag">${r.tag}</span>${r.text}`).join('<br>');
                 html += '</div>';
             } else {
                 html += '<div class="detail-user-info">';
@@ -393,17 +260,12 @@ export function buildPointNavigator(chart, histLen, fullData) {
                 }
                 html += '</div>';
             }
-
             detail.innerHTML = html;
             detail.classList.add('open');
-
-            const dataIndex = histLen + pt.day - 1;
-            chart.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: dataIndex });
+            chart.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: histLen + pt.day - 1 });
         });
-
         strip.appendChild(badge);
     });
-
     nav.appendChild(strip);
     nav.appendChild(detail);
 }
@@ -414,4 +276,8 @@ export function resetGame() {
     hdr.style.display = 'none';
     document.getElementById('resultScreen').classList.remove('active');
     document.getElementById('startScreen').style.display = 'flex';
+    const tagsEl = document.getElementById('waveAnalysisTags');
+    if (tagsEl) tagsEl.innerHTML = '';
+    const textEl = document.getElementById('waveAnalysisText');
+    if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
 }
