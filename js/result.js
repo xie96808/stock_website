@@ -8,7 +8,392 @@ function calcGrade(finalReturnPercent, bsScore) {
     const score = finalReturnPercent * 0.6 + (bsScore || 50) * 0.1;
     if (score >= 15)  return { letter: 'S', title: '交易之神', verdict: '完美操作，教科书级别的走势把握。每一笔都入木三分。', cls: 'grade-S' };
     if (score >= 8)   return { letter: 'A', title: '技术流玩家', verdict: '买卖时机精准，收益远超大盘，是真正的趋势猎手。', cls: 'grade-A' };
-    if (score >= 2)   return { letter: 'B', title: '稳健操盘手', verdict: '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨炼！', cls: 'grade-B' };
+    if (score >= 2)   return { letter: 'B', title: '稳健操盘手', verdict: '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨练！', cls: 'grade-B' };
     if (score >= -5)  return { letter: 'C', title: '青菜培育中', verdict: '不亏不赚，或许下次运气更好一些？', cls: 'grade-C' };
     return              { letter: 'D', title: '慈善青菜', verdict: '亏损严重……别担心，这只是模拟，现实里要三思啊。', cls: 'grade-D' };
+}
+
+export function endGame() {
+    // Liquidate a real holding at the next session open.
+    // Do NOT liquidate a same-bar T+1 lock (last-day buy at this open) — that would be a fake round-trip.
+    if (gameState.position === 'holding') {
+        const histLen = gameState.historyLength;
+        const finalPrice = gameState.gameKline[histLen + 30].open; // Day 31 open price
+        const tradeReturn = finalPrice / gameState.costBasis;
+        gameState.totalReturn *= tradeReturn;
+        gameState.tradeGains.push((tradeReturn - 1) * 100);
+        gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
+    }
+
+    document.getElementById('gameScreen').classList.remove('active');
+    document.getElementById('resultScreen').classList.add('active');
+
+    document.getElementById('stockReveal').textContent =
+        `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+
+    document.getElementById('dateRange').textContent =
+        `${gameState.gameKline[gameState.historyLength].date} ~ ${gameState.gameKline[gameState.historyLength + 29].date}`;
+
+    const finalReturnPercent = (gameState.totalReturn - 1) * 100;
+    const finalReturnEl = document.getElementById('finalReturn');
+    finalReturnEl.textContent = (finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2) + '%';
+    finalReturnEl.className = 'final-return ' +
+        (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
+
+    document.getElementById('finalTradeCount').textContent = gameState.tradeHistory.length;
+    document.getElementById('holdingDays').textContent = gameState.holdingDays;
+
+    const maxGain = gameState.tradeGains.length > 0 ?
+        Math.max(...gameState.tradeGains) : 0;
+    document.getElementById('maxGain').textContent =
+        (maxGain >= 0 ? '+' : '') + maxGain.toFixed(2) + '%';
+
+    document.getElementById('resultChartSubtitle').textContent =
+        `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+
+    generateBSReport();
+    generateBestPoints();
+    drawResultChart();
+    generateKlineAnalysis();
+
+    const grade = calcGrade(finalReturnPercent, gameState.bsScore);
+    const medalEl = document.getElementById('gradeMedal');
+    if (medalEl) {
+        medalEl.className = 'grade-medal ' + grade.cls;
+        document.getElementById('gradeLetter').textContent = grade.letter;
+    }
+    const titleEl = document.getElementById('gradeTitle');
+    if (titleEl) titleEl.textContent = `${grade.letter}级 · ${grade.title}`;
+    const verdictEl = document.getElementById('gradeVerdict');
+    if (verdictEl) verdictEl.textContent = grade.verdict;
+
+    const bsDisplayEl = document.getElementById('bsScoreDisplay');
+    if (bsDisplayEl) bsDisplayEl.textContent = gameState.bsScore != null ? gameState.bsScore : '--';
+}
+
+export function drawResultChart() {
+    const chartDom = document.getElementById('result-kline-chart');
+    if (chartRefs.resultChart) {
+        chartRefs.resultChart.dispose();
+    }
+    chartRefs.resultChart = echarts.init(chartDom);
+
+    const histLen = gameState.historyLength;
+    const fullData = gameState.gameKline.slice(0, histLen + 30);
+    const dates = fullData.map(d => d.date);
+    const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
+    const volumes = fullData.map(d => d.volume);
+    const volumeColors = fullData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
+
+    const ma5 = calculateMA(fullData, 5);
+    const ma10 = calculateMA(fullData, 10);
+    const ma20 = calculateMA(fullData, 20);
+    const ma30 = calculateMA(fullData, 30);
+
+    const markPoints = gameState.tradeHistory.map(trade => ({
+        name: trade.type === 'buy' ? '买' : '卖',
+        coord: [histLen + trade.day - 1, trade.price],
+        value: trade.type === 'buy' ? '买' : '卖',
+        itemStyle: {
+            color: trade.type === 'buy' ? '#e05252' : '#3db86a'
+        }
+    })).filter(p => p.coord[0] < histLen + 30);
+
+    const bp = gameState.bestPoints || { buys: [], sells: [] };
+    const bestMarkPoints = [];
+    bp.buys.forEach((p, idx) => {
+        bestMarkPoints.push({
+            name: 'B' + (idx + 1),
+            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
+            value: 'B' + (idx + 1),
+            symbolOffset: [0, 20],
+            symbol: 'diamond',
+            symbolSize: 14,
+            itemStyle: { color: '#fbbf24' },
+            label: { color: '#fbbf24', fontSize: 10, fontWeight: 'bold', position: 'bottom' }
+        });
+    });
+    bp.sells.forEach((p, idx) => {
+        bestMarkPoints.push({
+            name: 'S' + (idx + 1),
+            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
+            value: 'S' + (idx + 1),
+            symbol: 'diamond',
+            symbolSize: 14,
+            itemStyle: { color: '#a78bfa' },
+            label: { color: '#a78bfa', fontSize: 10, fontWeight: 'bold', position: 'top' }
+        });
+    });
+
+    const option = {
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'cross' },
+            backgroundColor: 'rgba(22, 22, 29, 0.95)',
+            borderColor: 'rgba(200, 164, 78, 0.2)',
+            textStyle: {
+                color: '#e8e4dd',
+                fontFamily: 'JetBrains Mono'
+            }
+        },
+        axisPointer: {
+            link: [{ xAxisIndex: 'all' }]
+        },
+        grid: [
+            { left: '10%', right: '2%', top: '5%', bottom: '35%' },
+            { left: '10%', right: '2%', top: '72%', bottom: '8%' }
+        ],
+        xAxis: [
+            {
+                type: 'category',
+                data: dates,
+                gridIndex: 0,
+                axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
+                axisLabel: { show: false },
+                axisTick: { show: false },
+                splitLine: { show: false }
+            },
+            {
+                type: 'category',
+                data: dates,
+                gridIndex: 1,
+                axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
+                axisLabel: {
+                    color: '#6b6660',
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 10,
+                    rotate: 45
+                }
+            }
+        ],
+        yAxis: [
+            {
+                type: 'value',
+                scale: true,
+                gridIndex: 0,
+                axisLabel: {
+                    color: '#6b6660',
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 10
+                },
+                axisLine: { show: false },
+                splitLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.06)' } }
+            },
+            {
+                type: 'value',
+                scale: true,
+                gridIndex: 1,
+                show: false
+            }
+        ],
+        series: [
+            {
+                name: 'K线',
+                type: 'candlestick',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: ohlc,
+                itemStyle: {
+                    color: '#e05252',
+                    color0: '#3db86a',
+                    borderColor: '#e05252',
+                    borderColor0: '#3db86a'
+                },
+                markPoint: {
+                    data: [...markPoints, ...bestMarkPoints],
+                    symbol: 'pin',
+                    symbolSize: 40,
+                    label: {
+                        formatter: '{b}',
+                        color: '#fff',
+                        fontWeight: 'bold'
+                    }
+                }
+            },
+            {
+                name: '成交量',
+                type: 'bar',
+                xAxisIndex: 1,
+                yAxisIndex: 1,
+                data: volumes,
+                itemStyle: {
+                    color: function(params) {
+                        return volumeColors[params.dataIndex];
+                    }
+                }
+            },
+            {
+                name: 'MA5',
+                type: 'line',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: ma5,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 1, color: '#f5c542' }
+            },
+            {
+                name: 'MA10',
+                type: 'line',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: ma10,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 1, color: '#42a5f5' }
+            },
+            {
+                name: 'MA20',
+                type: 'line',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: ma20,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 1, color: '#ab47bc' }
+            },
+            {
+                name: 'MA30',
+                type: 'line',
+                xAxisIndex: 0,
+                yAxisIndex: 0,
+                data: ma30,
+                smooth: true,
+                symbol: 'none',
+                lineStyle: { width: 1, color: '#26a69a' }
+            }
+        ]
+    };
+
+    chartRefs.resultChart.setOption(option);
+    applyChartTheme(chartRefs.resultChart);
+    buildPointNavigator(chartRefs.resultChart, histLen, fullData);
+}
+
+export function buildPointNavigator(chart, histLen, fullData) {
+    const nav = document.getElementById('pointNavigator');
+    nav.innerHTML = '';
+
+    const bp = gameState.bestPoints || { buys: [], sells: [] };
+    const trades = gameState.tradeHistory || [];
+    const allPoints = [];
+
+    bp.buys.forEach((p, idx) => {
+        allPoints.push({
+            day: p.day,
+            label: '荐买' + (idx + 1),
+            type: 'best-buy',
+            date: p.date,
+            price: p.price,
+            reasons: p.reasons
+        });
+    });
+
+    bp.sells.forEach((p, idx) => {
+        allPoints.push({
+            day: p.day,
+            label: '荐卖' + (idx + 1),
+            type: 'best-sell',
+            date: p.date,
+            price: p.price,
+            reasons: p.reasons
+        });
+    });
+
+    trades.forEach((t, idx) => {
+        if (t.day > 30) return;
+        const dayData = fullData[histLen + t.day - 1];
+        allPoints.push({
+            day: t.day,
+            label: t.type === 'buy' ? '买入' + (idx + 1) : '卖出' + (idx + 1),
+            type: t.type === 'buy' ? 'user-buy' : 'user-sell',
+            date: dayData ? dayData.date : '',
+            price: t.price,
+            reasons: null,
+            tradeReturn: t.return
+        });
+    });
+
+    allPoints.sort((a, b) => a.day - b.day);
+    if (allPoints.length === 0) return;
+
+    const strip = document.createElement('div');
+    strip.className = 'point-nav-strip';
+    const detail = document.createElement('div');
+    detail.className = 'point-nav-detail';
+    let activeIdx = -1;
+
+    allPoints.forEach((pt, i) => {
+        const badge = document.createElement('span');
+        badge.className = 'point-nav-badge ' + pt.type;
+        badge.textContent = pt.label;
+        badge.setAttribute('data-idx', i);
+
+        badge.addEventListener('click', () => {
+            if (activeIdx === i) {
+                detail.classList.remove('open');
+                badge.classList.remove('active');
+                activeIdx = -1;
+                chart.dispatchAction({ type: 'downplay', seriesIndex: 0 });
+                return;
+            }
+
+            const prev = strip.querySelector('.point-nav-badge.active');
+            if (prev) prev.classList.remove('active');
+
+            badge.classList.add('active');
+            activeIdx = i;
+
+            let html = '<div class="detail-header">';
+            html += `<span class="point-badge ${pt.type.includes('buy') ? 'buy' : 'sell'}">${pt.label}</span>`;
+            html += `<span class="detail-day">第 ${pt.day} 天（${pt.date}）</span>`;
+            html += `<span class="detail-price">价格 ${pt.price.toFixed(2)}</span>`;
+            html += '</div>';
+
+            if (pt.reasons) {
+                html += '<div class="detail-reasons">';
+                html += pt.reasons.map(r =>
+                    `<span class="point-reason-tag">${r.tag}</span>${r.text}`
+                ).join('<br>');
+                html += '</div>';
+            } else {
+                html += '<div class="detail-user-info">';
+                if (pt.type === 'user-buy') {
+                    html += `你在第 ${pt.day} 天以 ${pt.price.toFixed(2)} 买入`;
+                } else {
+                    const retPct = pt.tradeReturn ? ((pt.tradeReturn - 1) * 100).toFixed(2) : null;
+                    html += `你在第 ${pt.day} 天以 ${pt.price.toFixed(2)} 卖出`;
+                    if (retPct !== null) {
+                        const cls = parseFloat(retPct) >= 0 ? 'gain-color' : 'loss-color';
+                        html += `，本次收益 <span style="color:var(--${cls});font-weight:700">${parseFloat(retPct) >= 0 ? '+' : ''}${retPct}%</span>`;
+                    }
+                }
+                html += '</div>';
+            }
+
+            detail.innerHTML = html;
+            detail.classList.add('open');
+
+            const dataIndex = histLen + pt.day - 1;
+            chart.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex: dataIndex });
+        });
+
+        strip.appendChild(badge);
+    });
+
+    nav.appendChild(strip);
+    nav.appendChild(detail);
+}
+
+export function resetGame() {
+    const hdr = document.querySelector('.header');
+    hdr.classList.remove('compact');
+    hdr.style.display = 'none';
+    document.getElementById('resultScreen').classList.remove('active');
+    document.getElementById('startScreen').style.display = 'flex';
+    const tagsEl = document.getElementById('waveAnalysisTags');
+    if (tagsEl) tagsEl.innerHTML = '';
+    const textEl = document.getElementById('waveAnalysisText');
+    if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
 }
