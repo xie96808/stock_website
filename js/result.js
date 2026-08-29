@@ -9,14 +9,13 @@ function calcGrade(finalReturnPercent, bsScore) {
     if (score >= 15)  return { letter: 'S', title: '交易之神', verdict: '完美操作，教科书级别的走势把握。每一笔都入木三分。', cls: 'grade-S' };
     if (score >= 8)   return { letter: 'A', title: '技术流玩家', verdict: '买卖时机精准，收益远超大盘，是真正的趋势猎手。', cls: 'grade-A' };
     if (score >= 2)   return { letter: 'B', title: '稳健操盘手', verdict: '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨练！', cls: 'grade-B' };
-    if (score >= -5)  return { letter: 'C', title: '青菜培育中', verdict: '不亏不赚，或许下次运气更好一些？', cls: 'grade-C' };
-    return              { letter: 'D', title: '慈善青菜', verdict: '亏损严重……别担心，这只是模拟，现实里要三思啊。', cls: 'grade-D' };
+    if (score >= -5)  return { letter: 'C', title: '韭菜培育中', verdict: '不亏不赚，或许下次运气更好一些？', cls: 'grade-C' };
+    return              { letter: 'D', title: '慈善韭菜', verdict: '亏损严重……别担心，这只是模拟，现实里要三思啊。', cls: 'grade-D' };
 }
 
 export function endGame() {
-    // Liquidate a real holding at the next session open.
-    // Do NOT liquidate a same-bar T+1 lock (last-day buy at this open) — that would be a fake round-trip.
-    if (gameState.position === 'holding') {
+    // Calculate final return if still holding
+    if (gameState.position === 'holding' || gameState.position === 'locked') {
         const histLen = gameState.historyLength;
         const finalPrice = gameState.gameKline[histLen + 30].open; // Day 31 open price
         const tradeReturn = finalPrice / gameState.costBasis;
@@ -25,9 +24,11 @@ export function endGame() {
         gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
     }
 
+    // Switch to result screen
     document.getElementById('gameScreen').classList.remove('active');
     document.getElementById('resultScreen').classList.add('active');
 
+    // Display results
     document.getElementById('stockReveal').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
@@ -51,11 +52,13 @@ export function endGame() {
     document.getElementById('resultChartSubtitle').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
+    // Draw full chart and reports (BS score needed for grade)
     generateBSReport();
     generateBestPoints();
     drawResultChart();
     generateKlineAnalysis();
 
+    // Grade medal — populate after bsScore is set
     const grade = calcGrade(finalReturnPercent, gameState.bsScore);
     const medalEl = document.getElementById('gradeMedal');
     if (medalEl) {
@@ -67,6 +70,7 @@ export function endGame() {
     const verdictEl = document.getElementById('gradeVerdict');
     if (verdictEl) verdictEl.textContent = grade.verdict;
 
+    // BS score display
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
     if (bsDisplayEl) bsDisplayEl.textContent = gameState.bsScore != null ? gameState.bsScore : '--';
 }
@@ -90,6 +94,7 @@ export function drawResultChart() {
     const ma20 = calculateMA(fullData, 20);
     const ma30 = calculateMA(fullData, 30);
 
+    // Mark buy/sell points (offset by histLen)
     const markPoints = gameState.tradeHistory.map(trade => ({
         name: trade.type === 'buy' ? '买' : '卖',
         coord: [histLen + trade.day - 1, trade.price],
@@ -99,6 +104,7 @@ export function drawResultChart() {
         }
     })).filter(p => p.coord[0] < histLen + 30);
 
+    // Mark best buy/sell points (from analysis)
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
     bp.buys.forEach((p, idx) => {
@@ -141,8 +147,18 @@ export function drawResultChart() {
             link: [{ xAxisIndex: 'all' }]
         },
         grid: [
-            { left: '10%', right: '2%', top: '5%', bottom: '35%' },
-            { left: '10%', right: '2%', top: '72%', bottom: '8%' }
+            {
+                left: '10%',
+                right: '2%',
+                top: '5%',
+                bottom: '35%'
+            },
+            {
+                left: '10%',
+                right: '2%',
+                top: '72%',
+                bottom: '8%'
+            }
         ],
         xAxis: [
             {
@@ -205,7 +221,7 @@ export function drawResultChart() {
                     symbol: 'pin',
                     symbolSize: 40,
                     label: {
-                        formatter: '{b}',
+                        formatter: '{c}',
                         color: '#fff',
                         fontWeight: 'bold'
                     }
@@ -268,6 +284,8 @@ export function drawResultChart() {
 
     chartRefs.resultChart.setOption(option);
     applyChartTheme(chartRefs.resultChart);
+
+    // Build interactive point navigator
     buildPointNavigator(chartRefs.resultChart, histLen, fullData);
 }
 
@@ -277,6 +295,7 @@ export function buildPointNavigator(chart, histLen, fullData) {
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const trades = gameState.tradeHistory || [];
+
     const allPoints = [];
 
     bp.buys.forEach((p, idx) => {
@@ -316,12 +335,15 @@ export function buildPointNavigator(chart, histLen, fullData) {
     });
 
     allPoints.sort((a, b) => a.day - b.day);
+
     if (allPoints.length === 0) return;
 
     const strip = document.createElement('div');
     strip.className = 'point-nav-strip';
+
     const detail = document.createElement('div');
     detail.className = 'point-nav-detail';
+
     let activeIdx = -1;
 
     allPoints.forEach((pt, i) => {
@@ -392,8 +414,4 @@ export function resetGame() {
     hdr.style.display = 'none';
     document.getElementById('resultScreen').classList.remove('active');
     document.getElementById('startScreen').style.display = 'flex';
-    const tagsEl = document.getElementById('waveAnalysisTags');
-    if (tagsEl) tagsEl.innerHTML = '';
-    const textEl = document.getElementById('waveAnalysisText');
-    if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
 }
