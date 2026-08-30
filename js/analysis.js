@@ -15,7 +15,9 @@ function calcMA(data, period) {
 }
 
 function calcSlope(arr, start, end) {
-    const seg = arr.slice(start, end).filter(v => v !== null);
+    const seg = arr.slice(start, end)
+        .map(v => (v != null && typeof v === 'object') ? v.close : v)
+        .filter(v => v != null && typeof v === 'number');
     if (seg.length < 2) return 0;
     const n = seg.length;
     const mean = seg.reduce((a, b) => a + b, 0) / n;
@@ -52,7 +54,7 @@ export function generateKlineAnalysis() {
     const lastClose = closes[gameDays - 1];
     const periodReturn = (lastClose - firstClose) / firstClose * 100;
 
-    const slope = calcSlope(gameData, 0, gameDays);
+    const slope = calcSlope(closes, 0, gameDays);
     let trend, trendCls;
     if (slope > 0.002) { trend = '上行趋势'; trendCls = 'up'; }
     else if (slope < -0.002) { trend = '下行趋势'; trendCls = 'down'; }
@@ -459,13 +461,30 @@ export function generateBSReport() {
 
     if (gameState.tradeGains.length > 0) {
         const maxLoss = Math.min(...gameState.tradeGains);
-        if (maxLoss >= -2) score += 4;
-        else if (maxLoss >= -5) score += 1;
-        else if (maxLoss < -10) score -= 4;
-        else score -= 2;
+        let stopLabel, stopCls, stopNote;
+        if (maxLoss >= -2) {
+            score += 4;
+            stopLabel = '优秀'; stopCls = 'positive';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else if (maxLoss >= -5) {
+            score += 1;
+            stopLabel = '良好'; stopCls = 'positive';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else if (maxLoss < -10) {
+            score -= 4;
+            stopLabel = '较弱'; stopCls = 'negative';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        } else {
+            score -= 2;
+            stopLabel = '一般'; stopCls = 'neutral';
+            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+        }
+        details.push({ label: '止损意识', value: stopLabel, cls: stopCls, note: stopNote });
+    } else {
+        details.push({ label: '止损意识', value: '无记录', cls: 'neutral', note: '未产生已实现盈亏' });
     }
 
-    score = Math.max(59, Math.min(100, Math.round(score)));
+    score = Math.max(0, Math.min(100, Math.round(score)));
     gameState.bsScore = score;
 
     let grade, gradeCls;

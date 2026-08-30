@@ -52,6 +52,12 @@ export function startGame() {
     document.getElementById('gameScreen').classList.add('active');
     document.getElementById('resultScreen').classList.remove('active');
 
+    // Clear leftover 波段分析 from a previous run
+    const tagsEl = document.getElementById('waveAnalysisTags');
+    if (tagsEl) tagsEl.innerHTML = '';
+    const textEl = document.getElementById('waveAnalysisText');
+    if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
+
     // Initialize chart
     initChart();
     updateUI();
@@ -78,16 +84,32 @@ export function initChart() {
         document.getElementById('hoverHigh').textContent = d.high.toFixed(2);
         document.getElementById('hoverLow').textContent = d.low.toFixed(2);
         document.getElementById('hoverClose').textContent = d.close.toFixed(2);
-        document.getElementById('hoverVolume').textContent = (d.volume / 10000).toFixed(0) + ' 万';
+        document.getElementById('hoverVolume').textContent = (d.volume / 10000).toFixed(0) + ' 万手';
     });
 
     chartRefs.klineChart.on('mouseout', function() {
         resetOHLCToToday();
     });
 
+    bindMAToggles();
     updateChart();
     // Resize after flex layout settles
     setTimeout(() => chartRefs.klineChart.resize(), 50);
+}
+
+let maTogglesBound = false;
+function bindMAToggles() {
+    if (maTogglesBound) return;
+    maTogglesBound = true;
+    ['indicatorMA5', 'indicatorMA10', 'indicatorMA20', 'indicatorMA30'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => updateChart());
+    });
+}
+
+function maChecked(id) {
+    const el = document.getElementById(id);
+    return el ? el.checked : true;
 }
 
 function resetOHLCToToday() {
@@ -100,7 +122,7 @@ function resetOHLCToToday() {
     document.getElementById('hoverHigh').textContent = todayData.high.toFixed(2);
     document.getElementById('hoverLow').textContent = todayData.low.toFixed(2);
     document.getElementById('hoverClose').textContent = todayData.close.toFixed(2);
-    document.getElementById('hoverVolume').textContent = (todayData.volume / 10000).toFixed(0) + ' 万';
+    document.getElementById('hoverVolume').textContent = (todayData.volume / 10000).toFixed(0) + ' 万手';
 }
 
 export function updateChart() {
@@ -119,6 +141,7 @@ export function updateChart() {
 
     // Buy/sell markers on game chart
     const markPoints = gameState.tradeHistory.map(trade => ({
+        name: trade.type === 'buy' ? '买' : '卖',
         coord: [histLen + trade.day - 1, trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {
@@ -126,12 +149,21 @@ export function updateChart() {
         }
     })).filter(p => p.coord[0] < visibleData.length);
 
+    const maSelected = {
+        MA5: maChecked('indicatorMA5'),
+        MA10: maChecked('indicatorMA10'),
+        MA20: maChecked('indicatorMA20'),
+        MA30: maChecked('indicatorMA30'),
+    };
+
     const option = {
         backgroundColor: 'transparent',
         animation: true,
         animationDuration: 300,
         legend: {
             data: ['MA5', 'MA10', 'MA20', 'MA30'],
+            selected: maSelected,
+            selectedMode: false,
             top: 5,
             left: 10,
             textStyle: { color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 11 },
@@ -161,7 +193,7 @@ export function updateChart() {
                     document.getElementById('hoverHigh').textContent = kd.high.toFixed(2);
                     document.getElementById('hoverLow').textContent = kd.low.toFixed(2);
                     document.getElementById('hoverClose').textContent = kd.close.toFixed(2);
-                    document.getElementById('hoverVolume').textContent = (kd.volume / 10000).toFixed(0) + ' 万';
+                    document.getElementById('hoverVolume').textContent = (kd.volume / 10000).toFixed(0) + ' 万手';
                 }
                 const isUp = d[1] >= d[0];
                 const clr = isUp ? '#e05252' : '#3db86a';
@@ -169,7 +201,7 @@ export function updateChart() {
                     <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${cs.axisValue}</div>
                     <div style="color:${clr}">开 ${d[0].toFixed(2)}&nbsp;&nbsp;收 ${d[1].toFixed(2)}</div>
                     <div>低 ${d[2].toFixed(2)}&nbsp;&nbsp;高 ${d[3].toFixed(2)}</div>`;
-                if (vol) html += `<div style="color:#8b949e">量 ${(vol.data / 10000).toFixed(0)}万</div>`;
+                if (vol) html += `<div style="color:#8b949e">量 ${(vol.data / 10000).toFixed(0)}万手</div>`;
                 const maMap = { MA5: '#f5c542', MA10: '#42a5f5', MA20: '#ab47bc', MA30: '#26a69a' };
                 params.forEach(p => {
                     if (maMap[p.seriesName] && p.data != null)
@@ -212,7 +244,7 @@ export function updateChart() {
                 itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
                 markPoint: {
                     data: markPoints, symbol: 'pin', symbolSize: 35,
-                    label: { formatter: '{b}', color: '#fff', fontWeight: 'bold', fontSize: 11 }
+                    label: { formatter: '{c}', color: '#fff', fontWeight: 'bold', fontSize: 11 }
                 }
             },
             {
@@ -243,7 +275,8 @@ export function updateChart() {
 }
 
 export function handleAction(action) {
-    if (action === 'buy' && gameState.position !== 'empty') return;
+    const lastDecisionDay = gameState.currentDay >= 30;
+    if (action === 'buy' && (gameState.position !== 'empty' || lastDecisionDay)) return;
     if (action === 'sell' && gameState.position !== 'holding') return;
 
     gameState.pendingAction = action;
@@ -256,10 +289,16 @@ export function nextDay() {
     const nextDayIndex = histLen + gameState.currentDay;
     const nextDayData = gameState.gameKline[nextDayIndex];
 
+    // Overnight: yesterday's fill becomes sellable today (T+1).
+    // Must run BEFORE executing today's order so a same-call buy stays locked.
+    if (gameState.position === 'locked') {
+        gameState.position = 'holding';
+    }
+
     // Execute pending action at next day's open price
     if (action === 'buy' && gameState.position === 'empty') {
         gameState.costBasis = nextDayData.open;
-        gameState.position = 'locked'; // T+1: Can't sell today
+        gameState.position = 'locked'; // T+1: can't sell on fill day
         addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
     } else if (action === 'sell' && gameState.position === 'holding') {
         const sellPrice = nextDayData.open;
@@ -269,11 +308,6 @@ export function nextDay() {
         addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
         gameState.position = 'empty';
         gameState.costBasis = 0;
-    }
-
-    // Update position status
-    if (gameState.position === 'locked') {
-        gameState.position = 'holding';
     }
 
     // Track holding days
@@ -314,11 +348,11 @@ export function updateUI() {
         moodEl.textContent = MOODS[moodIdx];
     }
 
-    // Chart subtitle
+    // Chart subtitle — mask identity until endGame
     const subtitle = document.getElementById('chartSubtitle');
-    if (subtitle) subtitle.textContent = `${gameState.currentStock.name} (${gameState.currentStock.code}) · 隐藏中`;
+    if (subtitle) subtitle.textContent = '股票代码: ******';
     const subtitleInner = document.getElementById('chartSubtitleInner');
-    if (subtitleInner) subtitleInner.textContent = `${gameState.currentStock.name} (${gameState.currentStock.code}) · 隐藏中`;
+    if (subtitleInner) subtitleInner.textContent = '身份隐藏中';
 
     // ── Total return & unrealized PnL ──
     let displayReturn;
@@ -412,17 +446,29 @@ export function updateUI() {
     // OHLC panel — show today by default
     resetOHLCToToday();
 
-    // Buttons
+    // Buttons — no buy on last shown decision day; no sell on T+1 fill day
+    const lastDecisionDay = gameState.currentDay >= 30;
     const buyBtn = document.getElementById('buyBtn');
     const sellBtn = document.getElementById('sellBtn');
     const holdBtn = document.getElementById('holdBtn');
-    if (buyBtn) buyBtn.disabled = gameState.position !== 'empty';
+    if (buyBtn) buyBtn.disabled = gameState.position !== 'empty' || lastDecisionDay;
     if (sellBtn) sellBtn.disabled = gameState.position !== 'holding';
     if (holdBtn) holdBtn.disabled = false;
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
-        if (gameState.position === 'locked') {
+        if (lastDecisionDay) {
+            if (gameState.position === 'locked') {
+                hintEl.textContent = '最后交易日 · T+1 锁定，持仓将于次日开盘结算';
+                hintEl.className = 'action-hint warning';
+            } else if (gameState.position === 'empty') {
+                hintEl.textContent = '最后交易日，不可再买入；空仓将直接结束';
+                hintEl.className = 'action-hint';
+            } else {
+                hintEl.textContent = '最后交易日，可卖出或持有至次日开盘结算';
+                hintEl.className = 'action-hint';
+            }
+        } else if (gameState.position === 'locked') {
             hintEl.textContent = 'T+1 锁定中，今日只能持仓观望';
             hintEl.className = 'action-hint warning';
         } else if (gameState.position === 'empty') {

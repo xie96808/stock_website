@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 股票数据抓取脚本
-抓取A股各行业龙头股票的2024年日K线数据
+抓取A股（沪深300 + 中证500）日K线数据。
+
+日期窗口：自 2024-01-01 起至 Asia/Shanghai 的“今天”。
+不再硬编码单一日历年，重跑即可覆盖到最新交易日。
 """
 
 import akshare as ak
@@ -9,11 +12,16 @@ import pandas as pd
 import json
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 # 配置
 TARGET_STOCK_COUNT = 200  # 目标股票数量
-DATA_YEAR = "2024"  # 数据年份
+# 起始锚定 2024-01-01：覆盖原游戏全年数据，并满足 hindsight 所需的 2024→最新区间。
+# 结束日期取 Asia/Shanghai 的“今天”，不硬编码年份；非交易日由数据源自然剔除。
+# 多一年历史只需一次 API 调用/股，但整包 JS 会被前端一次性加载，故不向前无限拉长。
+START_DATE = "20240101"
+SHANGHAI = timezone(timedelta(hours=8))
+END_DATE = datetime.now(SHANGHAI).strftime("%Y%m%d")
 OUTPUT_DIR = "data"  # 输出目录
 OUTPUT_FILE = "stocks_data.json"  # 输出文件名
 
@@ -145,47 +153,92 @@ def get_top_stocks_by_market_cap(count=200):
         return [{'code': code, 'name': name} for code, name in FALLBACK_STOCKS[:count]]
 
 
-def fetch_stock_kline(stock_code, stock_name, start_date, end_date):
-    """获取单只股票的K线数据"""
-    try:
-        # 使用东方财富接口获取日K线
-        df = ak.stock_zh_a_hist(
-            symbol=stock_code,
-            period="daily",
-            start_date=start_date,
-            end_date=end_date,
-            adjust="qfq"  # 前复权
-        )
+def to_sina_symbol(stock_code):
+    """将 6 位代码转为新浪行情代码。"""
+    code = str(stock_code).zfill(6)
+    if code.startswith(("6", "9")):
+        return f"sh{code}"
+    if code.startswith(("0", "2", "3")):
+        return f"sz{code}"
+    if code.startswith(("4", "8")):
+        return f"bj{code}"
+    return f"sz{code}"
 
-        if df is None or len(df) == 0:
-            print(f"  {stock_code} {stock_name}: 无数据")
-            return None
 
-        # 转换为需要的格式
-        kline_data = []
-        for _, row in df.iterrows():
-            # 确保日期是字符串格式
-            date_val = row['日期']
-            if hasattr(date_val, 'strftime'):
-                date_str = date_val.strftime('%Y-%m-%d')
-            else:
-                date_str = str(date_val)
+def _row_date_str(date_val):
+    if hasattr(date_val, "strftime"):
+        return date_val.strftime("%Y-%m-%d")
+    return str(date_val)[:10]
 
-            kline_data.append({
-                'date': date_str,
-                'open': float(row['开盘']),
-                'close': float(row['收盘']),
-                'high': float(row['最高']),
-                'low': float(row['最低']),
-                'volume': float(row['成交量'])
-            })
 
-        print(f"  {stock_code} {stock_name}: {len(kline_data)} 条数据")
-        return kline_data
+def fetch_stock_kline(stock_code, stock_name, start_date, end_date, retries=3):
+    """获取单只股票的K线数据。
 
-    except Exception as e:
-        print(f"  {stock_code} {stock_name}: 获取失败 - {e}")
+    本环境访问东方财富 push2his 会被远端断开，因此主路径改用新浪
+    ak.stock_zh_a_daily（前复权）。成交量除以 100，与原东方财富“手”口径一致。
+    """
+    last_err = None
+    df = None
+    for attempt in range(1, retries + 1):
+        try:
+            df = ak.stock_zh_a_daily(
+                symbol=to_sina_symbol(stock_code),
+                start_date=start_date,
+                end_date=end_date,
+                adjust="qfq",
+            )
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+            time.sleep(0.8 * attempt)
+
+    if last_err is not None:
+        # 东方财富作兜底（多数机房 IP 会被断开，成功则更好）
+        try:
+            df = ak.stock_zh_a_hist(
+                symbol=stock_code,
+                period="daily",
+                start_date=start_date,
+                end_date=end_date,
+                adjust="qfq",
+            )
+            if df is not None and len(df) > 0:
+                kline_data = []
+                for _, row in df.iterrows():
+                    kline_data.append({
+                        "date": _row_date_str(row["日期"]),
+                        "open": float(row["开盘"]),
+                        "close": float(row["收盘"]),
+                        "high": float(row["最高"]),
+                        "low": float(row["最低"]),
+                        "volume": float(row["成交量"]),
+                    })
+                print(f"  {stock_code} {stock_name}: {len(kline_data)} 条数据 (em)")
+                return kline_data
+        except Exception as e:
+            last_err = e
+        print(f"  {stock_code} {stock_name}: 获取失败 - {last_err}")
         return None
+
+    if df is None or len(df) == 0:
+        print(f"  {stock_code} {stock_name}: 无数据")
+        return None
+
+    kline_data = []
+    for _, row in df.iterrows():
+        kline_data.append({
+            "date": _row_date_str(row["date"]),
+            "open": float(row["open"]),
+            "close": float(row["close"]),
+            "high": float(row["high"]),
+            "low": float(row["low"]),
+            # 新浪 volume 为股；除以 100 得到“手”，与原脚本东方财富口径一致
+            "volume": float(row["volume"]) / 100.0,
+        })
+
+    print(f"  {stock_code} {stock_name}: {len(kline_data)} 条数据")
+    return kline_data
 
 
 def main():
@@ -203,10 +256,10 @@ def main():
         print("获取股票列表失败，退出")
         return
 
-    # 设置日期范围
-    start_date = f"{DATA_YEAR}0101"
-    end_date = f"{DATA_YEAR}1231"
-    print(f"\n数据时间范围: {start_date} - {end_date}")
+    # 设置日期范围：2024-01-01 → 今天（Asia/Shanghai）
+    start_date = START_DATE
+    end_date = END_DATE
+    print(f"\n数据时间范围: {start_date} - {end_date} (end = today Asia/Shanghai)")
 
     # 抓取K线数据
     print("\n开始抓取K线数据...")
