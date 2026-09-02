@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 APP_ROOT=/srv/stock-website
 INCOMING_ROOT=/home/stockdeploy/incoming
-DOMAIN=xietest.cc.cd
+DOMAIN=stockgame.xieyw.top
 KEEP_RELEASES=8
 
 die() { printf 'deploy: %s\n' "$*" >&2; exit 1; }

@@ -5,8 +5,8 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ROOT=/srv/stock-website
-NGINX_SITE=/etc/nginx/sites-available/xietest.cc.cd
-NGINX_LINK=/etc/nginx/sites-enabled/xietest.cc.cd
+NGINX_SITE=/etc/nginx/sites-available/stockgame.xieyw.top
+NGINX_LINK=/etc/nginx/sites-enabled/stockgame.xieyw.top
 
 id stockdeploy >/dev/null 2>&1 || { echo "stockdeploy user missing; bootstrap yanpan first" >&2; exit 1; }
 
@@ -18,7 +18,7 @@ install -o root -g root -m 0755 "$SCRIPT_DIR/rollback-release.sh" /usr/local/sbi
 install -o root -g root -m 0440 "$SCRIPT_DIR/stockdeploy-stock-website.sudoers" /etc/sudoers.d/stockdeploy-stock-website
 visudo -cf /etc/sudoers.d/stockdeploy-stock-website
 
-install -o root -g root -m 0644 "$SCRIPT_DIR/nginx-xietest.cc.cd.conf" "$NGINX_SITE"
+install -o root -g root -m 0644 "$SCRIPT_DIR/nginx-stockgame.xieyw.top.conf" "$NGINX_SITE"
 ln -sfn "$NGINX_SITE" "$NGINX_LINK"
 
 if [[ ! -e "$APP_ROOT/current" ]]; then
