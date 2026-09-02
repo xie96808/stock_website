@@ -102,7 +102,7 @@
         }
 
         body {
-            font-family: 'Noto Sans SC', sans-serif;
+            font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -186,7 +186,7 @@
         }
 
         .logo {
-            font-family: 'Bodoni Moda', 'Noto Sans SC', serif;
+            font-family: "Songti SC", "STSong", SimSun, serif;
             font-size: clamp(1.4rem, 3.5vw, 2.8rem);
             font-weight: 900;
             letter-spacing: 0.15em;
@@ -203,7 +203,7 @@
             color: var(--text-muted);
             letter-spacing: 0.4em;
             text-transform: uppercase;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
             font-weight: 400;
         }
 
