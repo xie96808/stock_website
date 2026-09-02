@@ -18,6 +18,11 @@ for path in index.html css js data images; do
 done
 find "$STAGING/release" -name .DS_Store -delete
 
+# Precompress text assets for nginx gzip_static (11MB JS -> ~2.5MB).
+while IFS= read -r -d '' f; do
+  gzip -9 -n -c "$f" > "$f.gz"
+done < <(find "$STAGING/release" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svg' \) ! -name '*.gz' -print0)
+
 cat > "$STAGING/release/version.json" <<EOF
 {"revision":"$REVISION","builtAt":"$BUILD_TIME"}
 EOF
@@ -25,6 +30,8 @@ cat > "$STAGING/release/release.env" <<EOF
 APP_GIT_SHA=$REVISION
 APP_BUILD_TIME=$BUILD_TIME
 EOF
+# version.json was written after the gzip pass
+gzip -9 -n -c "$STAGING/release/version.json" > "$STAGING/release/version.json.gz"
 
 ARCHIVE="$OUTPUT_DIR/stock-website-$REVISION.tar.gz"
 COPYFILE_DISABLE=1 tar -C "$STAGING/release" -czf "$ARCHIVE" .
