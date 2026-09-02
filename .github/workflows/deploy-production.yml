@@ -1,0 +1,50 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: stock-website-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  package-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require deploy vars
+        run: |
+          test -n "${{ vars.PROD_HOST }}" || { echo "Set Actions variable PROD_HOST" >&2; exit 1; }
+          test -n "${{ vars.PROD_USER }}" || { echo "Set Actions variable PROD_USER" >&2; exit 1; }
+      - name: Build release archive
+        run: |
+          OUTPUT_DIR="$RUNNER_TEMP/release" bash deploy/package-production.sh "$GITHUB_SHA"
+          echo "ARCHIVE=$RUNNER_TEMP/release/stock-website-$GITHUB_SHA.tar.gz" >> "$GITHUB_ENV"
+      - name: Configure deploy transport
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
+        run: |
+          test -n "$PROD_SSH_KEY" || { echo "Set Actions secret PROD_SSH_KEY" >&2; exit 1; }
+          test -n "$PROD_KNOWN_HOSTS" || { echo "Set Actions secret PROD_KNOWN_HOSTS" >&2; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$PROD_SSH_KEY" > ~/.ssh/stock_website_deploy
+          chmod 600 ~/.ssh/stock_website_deploy
+          printf '%s\n' "$PROD_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Upload and deploy atomically
+        env:
+          PROD_HOST: ${{ vars.PROD_HOST }}
+          PROD_USER: ${{ vars.PROD_USER }}
+        run: |
+          CHECKSUM="$(cat "$ARCHIVE.sha256")"
+          REMOTE="/home/$PROD_USER/incoming/stock-website-$GITHUB_SHA.tar.gz"
+          scp -i ~/.ssh/stock_website_deploy -o BatchMode=yes "$ARCHIVE" "$PROD_USER@$PROD_HOST:$REMOTE"
+          ssh -i ~/.ssh/stock_website_deploy -o BatchMode=yes "$PROD_USER@$PROD_HOST" \
+            "sudo /usr/local/sbin/deploy-stock-website-release '$REMOTE' '$GITHUB_SHA' '$CHECKSUM'"
