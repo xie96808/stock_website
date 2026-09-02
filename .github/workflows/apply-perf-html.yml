@@ -1,0 +1,21 @@
+name: apply-perf-html
+on:
+  push:
+    paths:
+      - tools/apply_perf_html.py
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch homepage
+        run: python3 tools/apply_perf_html.py
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Defer stocks_data.js until start; drop Google Fonts; use bootcdn echarts."
+          git push
