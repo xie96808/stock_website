@@ -39,7 +39,7 @@
     white-space: nowrap;
     animation: ticker-scroll 40s linear infinite;
     padding: 5px 0;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.7rem;
     color: rgba(200, 164, 78, 0.45);
     letter-spacing: 0.06em;
@@ -70,7 +70,7 @@
 }
 
 .hero-badge {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.65rem;
     letter-spacing: 0.35em;
     color: var(--text-muted);
@@ -83,7 +83,7 @@
 
 /* Main title with glitch effect */
 .hero-title {
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: clamp(2rem, 5vw, 3.6rem);
     font-weight: 900;
     color: var(--text-primary);
@@ -134,7 +134,7 @@
 }
 
 .hero-sub {
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: 0.95rem;
     color: var(--text-secondary);
     letter-spacing: 0.05em;
@@ -199,7 +199,7 @@
 }
 
 .eyebrow-tag {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.6rem;
     font-weight: 700;
     letter-spacing: 0.2em;
@@ -213,7 +213,7 @@
 .eyebrow-tag.red    { background: rgba(224, 82, 82, 0.1);   color: #f87171; border: 1px solid rgba(224,82,82,0.2); }
 
 .eyebrow-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.68rem;
     color: var(--text-muted);
     letter-spacing: 0.1em;
@@ -221,7 +221,7 @@
 
 /* ── 6. Card title ── */
 .bento-title {
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--text-primary);
@@ -248,7 +248,7 @@
 }
 
 .chart-thumb-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.62rem;
     color: var(--text-muted);
     text-align: right;
@@ -306,7 +306,7 @@
     background: rgba(200, 164, 78, 0.12);
     border: 1px solid rgba(200, 164, 78, 0.25);
     color: #d4b86a;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.7rem;
     font-weight: 700;
     display: flex;
@@ -335,7 +335,7 @@
 /* Arena CTA button — glowing gold with pulse */
 .arena-btn {
     position: relative;
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: 1rem;
     font-weight: 700;
     letter-spacing: 0.22em;
@@ -412,7 +412,7 @@
 }
 
 .academy-enter-btn {
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: 0.92rem;
     font-weight: 600;
     letter-spacing: 0.15em;
@@ -464,7 +464,7 @@
 
 .oracle-badge {
     margin-left: auto;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.58rem;
     letter-spacing: 0.15em;
     padding: 2px 7px;
@@ -485,7 +485,7 @@
 
 .oracle-label {
     display: block;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.62rem;
     letter-spacing: 0.12em;
     color: rgba(224, 82, 82, 0.5);
@@ -501,7 +501,7 @@
     border: 1px solid rgba(224, 82, 82, 0.12);
     border-radius: 3px;
     padding: 9px 12px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.78rem;
     color: rgba(224, 82, 82, 0.3);
     letter-spacing: 0.04em;
@@ -537,7 +537,7 @@
 }
 
 .oracle-out-tag {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.6rem;
     padding: 1px 5px;
     border-radius: 2px;
@@ -551,7 +551,7 @@
 
 /* Disabled lock button */
 .oracle-btn {
-    font-family: 'Noto Sans SC', sans-serif;
+    font-family: system-ui, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
     font-size: 0.88rem;
     font-weight: 600;
     letter-spacing: 0.15em;
