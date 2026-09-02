@@ -4,11 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>早知道当初不炒了</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-    <script src="data/stocks_data.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,700;0,6..96,900;1,6..96,400&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
 </head>
@@ -745,6 +741,7 @@
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
         import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js';
+        import { attachDeferredStart } from "./js/load-stocks.js";
         import { resetGame } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
@@ -753,7 +750,7 @@
 
         // Bridge functions to window for onclick attributes
         window.toggleTheme = toggleTheme;
-        window.startGame = startGame;
+        attachDeferredStart(startGame, gameState);
         window.handleAction = handleAction;
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
@@ -776,14 +773,6 @@
         window.onHindsightBlur  = onHindsightBlur;
         window.submitHindsight  = submitHindsight;
 
-        // Initialize: load stock data
-        if (typeof STOCKS_DATA !== 'undefined' && STOCKS_DATA.length > 0) {
-            gameState.stocksData = STOCKS_DATA;
-            console.log(`Loaded ${gameState.stocksData.length} stocks`);
-        } else {
-            console.error('股票数据加载失败');
-            alert('股票数据加载失败，请先运行 python fetch_stock_data.py 生成数据');
-        }
 
         // Resize handler
         window.addEventListener('resize', () => {
