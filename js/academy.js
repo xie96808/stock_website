@@ -1,6 +1,8 @@
 // ========== ACADEMY ==========
 import { disposeQuizCharts, startQuiz } from './quiz.js';
 import { QUIZ_PATTERNS } from './patterns.js';
+import { gameState } from './state.js';
+import { ensureStocksLoaded } from './load-stocks.js';
 
 let patternsRendered = false;
 
@@ -66,7 +68,12 @@ export function enterTrainingZone() {
     document.getElementById('academyLanding').style.display = 'none';
     document.getElementById('trainingResults').style.display = 'none';
     document.getElementById('trainingZone').style.display = 'block';
-    startQuiz();
+    ensureStocksLoaded(gameState)
+        .then(function () { startQuiz(); })
+        .catch(function (err) {
+            console.error(err);
+            window.alert('股票数据加载失败，请刷新后重试');
+        });
 }
 
 export function backToAcademyLanding() {
