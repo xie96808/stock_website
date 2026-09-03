@@ -2,26 +2,13 @@ export function attachDeferredStart(startGame, gameState) {
   let packPromise = null;
   let locked = false;
 
-  function readPack() {
-    return window.STOCKS_DATA;
-  }
-
   function ready() {
-    const pack = readPack();
-    return Array.isArray(pack) && pack.length > 0;
+    return Array.isArray(window.STOCKS_DATA) && window.STOCKS_DATA.length > 0;
   }
 
   function apply() {
-    gameState.stocksData = readPack();
+    gameState.stocksData = window.STOCKS_DATA;
     console.log('Loaded ' + gameState.stocksData.length + ' stocks');
-  }
-
-  function exposePack() {
-    const tag = 'scr' + 'ipt';
-    const bridge = document.createElement(tag);
-    bridge.text = 'window.STOCKS_DATA = STOCKS_DATA';
-    document.head.appendChild(bridge);
-    bridge.remove();
   }
 
   function loadPack() {
@@ -30,25 +17,23 @@ export function attachDeferredStart(startGame, gameState) {
       return Promise.resolve();
     }
     if (packPromise) return packPromise;
-    const tag = 'scr' + 'ipt';
-    packPromise = new Promise(function (resolve, reject) {
-      const el = document.createElement(tag);
-      el.src = 'data/stocks_data.js';
-      el.async = true;
-      el.onload = function () {
-        try { exposePack(); } catch (err) {}
-        if (ready()) {
-          apply();
-          resolve();
-        } else {
-          reject(new Error('empty pack'));
+    packPromise = fetch('data/stocks_data.js')
+      .then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        return res.text();
+      })
+      .then(function (text) {
+        const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+        if (!Array.isArray(pack) || pack.length === 0) {
+          throw new Error('empty pack');
         }
-      };
-      el.onerror = function () {
-        reject(new Error('network'));
-      };
-      document.head.appendChild(el);
-    });
+        window.STOCKS_DATA = pack;
+        apply();
+      })
+      .catch(function (err) {
+        packPromise = null;
+        throw err;
+      });
     return packPromise;
   }
 
