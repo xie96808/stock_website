@@ -5,7 +5,7 @@ export const gameState = {
     gameKline: [],        // history + 31 days of kline data
     historyLength: 0,     // number of history days before game starts
     currentDay: 1,        // 1-30
-    position: 'empty',    // 'empty' | 'holding' | 'locked'
+    position: 'empty',    // 'empty' | 'holding' | 'locked' (locked = fill day, sell can be queued)
     costBasis: 0,
     totalReturn: 1,       // Multiplicative return
     tradeHistory: [],
