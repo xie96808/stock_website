@@ -1,117 +1,107 @@
-# 股海沉浮 — 模拟炒股训练
+# 早知道当初不炒了
 
-基于真实 A 股历史数据的 K 线交易模拟游戏。随机抽取一只股票的 30 个交易日，隐去名称代码，让你在未知中做出买卖决策，锻炼盘感与交易纪律。
+> 用真实 A 股数据，重走每一次错过的行情
+
+基于 HTML/CSS/JavaScript + ECharts 构建的 A 股模拟炒股训练。随机三十日 K 线，隐去名称代码，练盘感与交易纪律。
+
+在线体验：https://xietest.cc.cd
+
+## 页面预览
+
+### 首页
+![首页](images/homepage.png)
+
+### 当初买了该多好
+![当初买了该多好](images/regret_col.png)
+
+## 功能概览
+
+### 模拟盘
+- **真实数据** — 198 只 A 股（沪深 300 + 中证 500），2024 全年日 K
+- **T+1 规则** — 当日买入，次日方可卖出；收盘后定次日，可多次买卖
+- **隐去身份** — 名称代码揭晓前，只看 K 线做判断
+- **均线系统** — MA5 / MA10 / MA20 / MA30
+- **结算评分** — 收益率、买卖点位、交易频率、止损意识等 6 维评分，终局揭晓标的
+
+### 韭菜修炼基地
+- **知识区** — K 线 / 成交量 / 走势形态卡片（约 33 种），含示意图与信号说明
+- **训练区** — 每次 10 道题：看图识形 + 真 K 线续接实操，答错给解析
+
+### 当初买了该多好
+- **历史回溯** — 输入股票与区间、买入数量，回看理论最佳卖点与收益
+- **一键分享** — 生成分享图、复制文案，再来一只继续悔棋
+
+### 其他
+- **纸 / 墨主题** — 手绘笔记本风，浅色 / 深色一键切换
+- **响应式** — 桌面与移动端
+- **零构建** — 纯前端，无需打包
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 前端 | HTML5 + CSS3 + JavaScript ES6+ Modules |
+| 图表 | [ECharts 5.4](https://echarts.apache.org/) |
+| 字体 | Orbitron · JetBrains Mono · Noto Sans SC（Google Fonts） |
+| 数据 | [AKShare](https://github.com/akfamily/akshare)（东方财富接口） |
+| 部署 | GitHub Pages（https://xietest.cc.cd） |
 
 ## 快速开始
 
-项目使用 ES Modules，需通过 HTTP 服务器访问：
-
 ```bash
+# 1. 克隆项目
+git clone https://github.com/xie96808/stock_website.git
+cd stock_website
+
+# 2. 启动（项目为 ES Modules，需通过 HTTP 访问）
 python -m http.server 8000
 # 然后打开 http://localhost:8000
 ```
-
-## 功能一览
-
-### 交易模拟
-
-- **真实数据** — 198 只 A 股（沪深 300 + 中证 500），2024 全年日 K 线
-- **T+1 规则** — 当日买入次日方可卖出
-- **均线系统** — MA5 / MA10 / MA20 / MA30 四条均线
-- **实时收益** — 持仓收益率随行情实时更新，K 线图标注买卖点位
-
-### 结算分析
-
-- **多维评分** — 收益率、买卖点位、交易频率、止损意识等 6 维度综合评分
-- **波段分析** — 趋势方向、均线排列、量价关系、波动率等
-- **最佳买卖点** — 7 维度评分模型筛选 TOP 3 买卖时机，支持形态知识卡片悬浮查看
-- **结果页改造** — 「档案馆」风格结果卡：大字收益、巅峰/买卖点标注、物换星移换算、名人名言
-
-### 时光档案馆（Hindsight 回溯）
-
-- **当初买了该多好** — 输入股票 + 历史区间 + 买入数量，回溯区间内“理论最佳卖点/收益（或亏损）”
-- **一键分享** — 生成分享图、复制文案、「再来一只」快速重置继续回溯
-
-### 韭菜修炼基地
-
-分为 **训练区** 和 **知识区** 两个板块。
-
-**知识区** — K 线技术分析教学，三大分类共 33 种经典形态：
-
-| K 线形态（18） | 成交量形态（8） | 走势形态（7） |
-|---------------|---------------|-------------|
-| 大阳线 / 大阴线 | 放量上涨 / 放量下跌 | 金叉 / 死叉 |
-| 锤子线 / 射击之星 | 缩量回调 / 温和放量 | 多头排列 / 空头排列 |
-| 十字星 / 螺旋桨 | 地量见底 / 天量见顶 | W 底 / M 顶 |
-| 看涨吞没 / 看跌吞没 | 量价背离（看涨/看跌） | 上升三角形 |
-| 早晨之星 / 黄昏之星 | | |
-| 红三兵 / 三只乌鸦 | | |
-| 乌云盖顶 / 刺透形态 | | |
-| 看涨孕线 / 看跌孕线 | | |
-| T 字线 / 倒 T 字线 | | |
-
-每张卡片包含 CSS/SVG 形态示意图 + 信号标签 + 说明。
-
-**训练区** — 每次随机生成 10 道题，理论与实操混合：
-
-- **看图识形题** — 展示形态插图，四选一识别名称
-- **实操题** — 展示一段真实 K 线（含 MA5/MA10/MA20 均线），从 4 段续接走势中选出真实后续；优先选取趋势明显的片段出题
-- 答错时显示解析；实操题答错附带详细技术面分析（均线排列、成交量变化、K 线形态识别、实际走势结果）
-- 完成后展示得分与逐题解析
-
-### 其他
-
-- **浅色 / 深色主题** — 一键切换，偏好自动保存
-- **响应式布局** — 适配桌面与移动端
-- **零依赖部署** — 纯前端，无需构建工具，仅依赖 CDN 加载的 ECharts
-
-## 项目结构
-
-```
-stock_website/
-├── index.html              # HTML 结构 + 模块入口
-├── css/
-│   ├── base.css            # 全局变量/基础样式
-│   ├── start.css           # 开始页样式
-│   ├── game.css            # 交易页样式
-│   ├── result.css          # 结算页样式（档案馆风格）
-│   ├── academy.css         # 修炼基地样式
-│   ├── hindsight.css       # 时光档案馆样式
-│   └── style.css           # 通用补充/主题相关
-├── js/
-│   ├── state.js            # 游戏状态（gameState, chartRefs, quizState）
-│   ├── utils.js            # 工具函数（MA 计算、图表主题等）
-│   ├── theme.js            # 主题切换
-│   ├── patterns.js         # K 线形态知识库（31 种形态）
-│   ├── game.js             # 游戏核心（开局、K 线图、买卖、UI 更新）
-│   ├── analysis.js         # 技术分析（波段分析、最佳买卖点、评分报告）
-│   ├── result.js           # 结算页（结果图表、导航条）
-│   ├── academy.js          # 修炼基地导航
-│   ├── hindsight.js         # 时光档案馆（回溯/分享/复制）
-│   └── quiz.js             # 测验引擎（出题、答题、评分）
-├── fetch_stock_data.py     # 股票数据抓取脚本
-├── data/
-│   ├── stocks_data.js      # 前端加载的数据文件（~4 MB）
-│   └── stocks_data.json    # JSON 格式备份（~8 MB）
-└── README.md
-```
-
-## 数据更新
 
 项目已内置 2024 年数据。如需更新：
 
 ```bash
 pip install akshare pandas
-python fetch_stock_data.py   # 约 3-5 分钟
+python fetch_stock_data.py   # 约 3–5 分钟
 ```
 
-## 技术栈
+## 项目结构
 
-- **前端**：原生 HTML / CSS / JavaScript（ES Modules，无框架无构建）
-- **图表**：[ECharts 5.4](https://echarts.apache.org/)（CDN）
-- **字体**：Orbitron / JetBrains Mono / Noto Sans SC（Google Fonts）
-- **数据源**：[AKShare](https://github.com/akfamily/akshare)（东方财富接口）
+```
+stock_website/
+├── index.html              # 页面结构 + 模块入口
+├── css/
+│   ├── base.css            # 全局变量 / 基础样式
+│   ├── start.css           # 开始页
+│   ├── game.css            # 交易页
+│   ├── result.css          # 结算页
+│   ├── academy.css         # 修炼基地
+│   ├── hindsight.css       # 时光档案馆
+│   └── style.css           # 主题与通用补充
+├── js/
+│   ├── state.js            # 游戏状态
+│   ├── utils.js            # 工具函数
+│   ├── theme.js            # 主题切换
+│   ├── patterns.js         # K 线形态知识库
+│   ├── game.js             # 模拟盘核心
+│   ├── analysis.js         # 波段分析与评分
+│   ├── result.js           # 结算页
+│   ├── academy.js          # 修炼基地
+│   ├── hindsight.js        # 当初买了该多好
+│   ├── quiz.js             # 测验引擎
+│   └── load-stocks.js      # 行情数据加载
+├── images/                 # 吉祥物与 README 截图
+├── data/
+│   ├── stocks_data.js      # 前端加载的行情数据
+│   └── stocks_data.json    # JSON 备份
+├── fetch_stock_data.py     # 行情抓取脚本
+└── deploy/                 # 生产部署脚本
+```
 
-## 许可
+## License
 
 MIT
+
+## Special
+
+* 我的开源项目已链接认可[LINUX DO社区](https://linux.do)
