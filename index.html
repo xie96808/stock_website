@@ -6,16 +6,16 @@
     <title>早知道当初不炒了</title>
     <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
-    <script>(function(){var t=localStorage.getItem('theme');if(t)document.documentElement.setAttribute('data-theme',t);})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
 </head>
 <body>
     <div class="bg-grid"></div>
     <div class="bg-gradient"></div>
 
-    <button class="theme-toggle" onclick="toggleTheme()" title="切换主题">
-        <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    </button>
+    <div class="theme-toggle" title="切换主题" role="group" aria-label="切换主题">
+        <button type="button" class="pill" data-mode="light" onclick="toggleTheme('light')">纸</button>
+        <button type="button" class="pill" data-mode="dark" onclick="toggleTheme('dark')">墨</button>
+    </div>
 
     <div class="container">
         <!-- Compact header shown during game/result/academy (hidden on start screen) -->
@@ -23,184 +23,61 @@
             <h1 class="logo">早知道当初不炒了</h1>
         </header>
 
-        <!-- Start Screen — "Deep Night Financial Forge" hero + bento layout -->
+        <!-- Start Screen — 手绘 notebook split -->
         <section class="start-screen" id="startScreen">
 
-            <!-- ── Hero ── -->
-            <div class="hero">
-                <!-- Scrolling ticker tape background -->
-                <div class="ticker-wrap" aria-hidden="true">
-                    <div class="ticker-track">
-                        <span>贵州茅台 +2.34%</span><span>宁德时代 -1.12%</span><span>比亚迪 +4.07%</span>
-                        <span>招商银行 +0.88%</span><span>中国平安 -0.56%</span><span>阿里巴巴 +1.95%</span>
-                        <span>腾讯控股 +3.21%</span><span>中芯国际 -2.44%</span><span>隆基绿能 +5.60%</span>
-                        <span>东方财富 -0.73%</span><span>迈瑞医疗 +1.38%</span><span>海天味业 +0.29%</span>
-                        <!-- duplicate for seamless loop -->
-                        <span>贵州茅台 +2.34%</span><span>宁德时代 -1.12%</span><span>比亚迪 +4.07%</span>
-                        <span>招商银行 +0.88%</span><span>中国平安 -0.56%</span><span>阿里巴巴 +1.95%</span>
-                        <span>腾讯控股 +3.21%</span><span>中芯国际 -2.44%</span><span>隆基绿能 +5.60%</span>
-                        <span>东方财富 -0.73%</span><span>迈瑞医疗 +1.38%</span><span>海天味业 +0.29%</span>
+            <div class="page">
+                <aside class="art">
+                    <div class="frame">
+                        <img class="day" src="images/mascot-day-sketch.jpg" alt="白天书桌前的后悔猫">
+                        <img class="night" src="images/mascot-night-sketch.jpg" alt="夜间书桌前的后悔猫">
+                        <svg class="scribble" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="M4.2,9.5 C2.8,3.2 9.1,2.4 14,2.8 L86,3.6 C93.5,2.9 97.4,7.2 96.8,14 L96.2,86 C97.2,93.8 91.4,97.6 84,96.8 L14.5,96.1 C6.2,97.4 2.6,91.5 3.4,84 Z"/>
+                        </svg>
                     </div>
-                </div>
-
-                <!-- Ghost K-line SVG backdrop -->
-                <svg class="hero-kline-bg" viewBox="0 0 900 120" preserveAspectRatio="none" aria-hidden="true">
-                    <polyline points="0,90 60,75 120,80 180,55 240,65 300,40 360,50 420,30 480,45 540,25 600,38 660,20 720,35 780,15 840,28 900,10"
-                        fill="none" stroke="rgba(200,164,78,0.12)" stroke-width="2"/>
-                    <polyline points="0,100 60,88 120,92 180,70 240,78 300,55 360,65 420,48 480,60 540,42 600,52 660,38 720,50 780,32 840,44 900,28"
-                        fill="none" stroke="rgba(200,164,78,0.06)" stroke-width="1.5"/>
-                </svg>
-
-                <div class="hero-content">
-                    <div class="hero-badge">STOCK TRADING SIMULATOR · A-SHARE EDITION</div>
-                    <h1 class="hero-title">
-                        <span class="hero-title-glitch" data-text="早知道当初不炒了">早知道当初不炒了</span>
-                    </h1>
-                    <p class="hero-sub">用真实 A 股数据，重走每一次错过的行情</p>
-                </div>
-            </div>
-
-            <!-- ── Bento grid ── -->
-            <div class="bento">
-
-                <!-- ── Block 1 · THE ARENA · 开始游戏 (tall left card) ── -->
-                <div class="bento-card arena-card">
-                    <div class="bento-card-eyebrow">
-                        <span class="eyebrow-tag gold">THE ARENA</span>
-                        <span class="eyebrow-label">模拟交易</span>
-                    </div>
-                    <h2 class="bento-title">开始游戏</h2>
-
-                    <!-- 主角插图 -->
-                    <div class="arena-mascot">
-                        <img src="images/regret_col.png" alt="炒股后悔猫" class="arena-mascot-img">
-                    </div>
-
-                    <!-- 5-step timeline -->
-                    <ol class="arena-steps">
-                        <li class="arena-step">
-                            <div class="step-num">1</div>
-                            <div class="step-body">
-                                <!-- dice icon -->
-                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/><circle cx="6.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="13.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="13.5" r="1.2" fill="currentColor"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/></svg>
-                                <span>系统随机抽取一只股票的 30 日 K 线数据</span>
-                            </div>
-                        </li>
-                        <li class="arena-step">
-                            <div class="step-num">2</div>
-                            <div class="step-body">
-                                <!-- eye icon -->
-                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M1 10s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7z" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
-                                <span>每天观察收盘价后，决定次日操作</span>
-                            </div>
-                        </li>
-                        <li class="arena-step">
-                            <div class="step-num">3</div>
-                            <div class="step-body">
-                                <!-- repeat icon -->
-                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 0 1 6-6h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M16 6l-2-2 2-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 10a6 6 0 0 1-6 6H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 14l2 2-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                <span>可多次买卖，收益率累计计算</span>
-                            </div>
-                        </li>
-                        <li class="arena-step">
-                            <div class="step-num">4</div>
-                            <div class="step-body">
-                                <!-- reveal / flag icon -->
-                                <svg class="step-icon" viewBox="0 0 20 20" fill="none"><path d="M4 3v14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 3h9l-3 4 3 4H4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
-                                <span>游戏结束后揭晓股票真实身份</span>
-                            </div>
-                        </li>
-                    </ol>
-
-                    <button class="arena-btn" onclick="startGame()">
-                        <span class="arena-btn-pulse"></span>
-                        立即开始
-                    </button>
-                </div>
-
-                <!-- ── Right column (Academy + Oracle stacked) ── -->
-                <div class="bento-right">
-
-                    <!-- ── Block 2 · THE ACADEMY · 韭菜修炼基地 ── -->
-                    <div class="bento-card academy-card">
-                        <div class="bento-card-eyebrow">
-                            <span class="eyebrow-tag purple">THE ACADEMY</span>
-                            <span class="eyebrow-label">知识修炼</span>
+                </aside>
+                <div class="right">
+                    <div class="head">
+                        <div>
+                            <div class="kicker">A股模拟 · 笔记本</div>
+                            <h1>早知道当初不炒了</h1>
+                            <svg class="title-swoosh" viewBox="0 0 168 10" aria-hidden="true">
+                                <path d="M2 7 C28 3, 54 8, 82 5 S138 2, 166 6" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".55"/>
+                            </svg>
+                            <p class="sub">用真实 A 股数据，重走每一次错过的行情</p>
                         </div>
-                        <h2 class="bento-title">韭菜修炼基地</h2>
-
-                        <!-- Four knowledge mini-cards -->
-                        <div class="academy-mini-grid">
-                            <div class="academy-mini-card">
-                                <!-- kline icon -->
-                                <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="5" y1="3" x2="5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="18" x2="5" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="10" y="9" width="4" height="8" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="6" x2="12" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="17" y="4" width="4" height="14" rx="1" stroke="currentColor" stroke-width="1.5"/><line x1="19" y1="2" x2="19" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="19" y1="18" x2="19" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                                <span>K 线、成交量、走势三大形态</span>
-                            </div>
-                            <div class="academy-mini-card">
-                                <!-- book icon -->
-                                <svg viewBox="0 0 24 24" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="9" y1="11" x2="13" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                                <span>图文并茂知识卡片，一看就懂</span>
-                            </div>
-                            <div class="academy-mini-card">
-                                <!-- question mark icon -->
-                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2.5-2.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="18" r="0.8" fill="currentColor"/></svg>
-                                <span>10 道理论与实操混合题</span>
-                            </div>
-                            <div class="academy-mini-card">
-                                <!-- steering wheel icon -->
-                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.5"/><line x1="12" y1="3" x2="12" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3.8" y1="16.5" x2="9.4" y2="13.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="20.2" y1="16.5" x2="14.6" y2="13.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                                <span>答题即时解析，从韭菜到老司机</span>
-                            </div>
-                        </div>
-
-                        <button class="academy-enter-btn" onclick="showAcademy()">进入基地</button>
                     </div>
-
-                    <!-- ── Block 3 · THE ORACLE · 当初买了该多好 ── -->
-                    <div class="bento-card oracle-card">
-                        <!-- CRT scanline overlay -->
-                        <div class="crt-overlay" aria-hidden="true"></div>
-
-                        <div class="bento-card-eyebrow">
-                            <span class="eyebrow-tag red">THE ORACLE</span>
-                            <span class="eyebrow-label">历史回溯</span>
-                            </div>
-                        <h2 class="bento-title oracle-title">当初买了该多好</h2>
-
-                        <!-- Mock input form -->
-                        <div class="oracle-form">
-                            <div class="oracle-field">
-                                <label class="oracle-label">股票名称 / 代码</label>
-                                <div class="oracle-input-mock">
-                                    <svg viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.3"/><line x1="9.5" y1="9.5" x2="13" y2="13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-                                    <span>例：贵州茅台 · 600519</span>
-                                </div>
-                            </div>
-                            <div class="oracle-field">
-                                <label class="oracle-label">历史区间</label>
-                                <div class="oracle-input-mock">
-                                    <svg viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="6" x2="15" y2="6" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="1" x2="5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="11" y1="1" x2="11" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-                                    <span>2024-01-01 → 2024-06-01</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Potential outputs (teaser) -->
-                        <ul class="oracle-outputs">
-                            <li><span class="oracle-out-tag">回溯</span>系统回溯该区间的真实行情走势</li>
-                            <li><span class="oracle-out-tag">计算</span>最优买卖点与理论最大收益</li>
-                            <li><span class="oracle-out-tag">对比</span>你"应该"赚到的钱 vs 实际结果</li>
-                            <li><span class="oracle-out-tag">治愈</span>每一个错过大牛股的遗憾灵魂</li>
-                        </ul>
-
-                        <button class="oracle-btn" onclick="showHindsight()" style="cursor:pointer;color:#f87171;border-color:rgba(224,82,82,0.45);">
-                            <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            立即回溯
+                    <div class="lanes">
+                        <button type="button" class="lane" onclick="startGame()">
+                            <span class="mark">一</span>
+                            <span class="copy">
+                                <small>模拟盘</small>
+                                <strong>开始游戏</strong>
+                                <p>随机三十日 K 线，收盘后定次日，可多次买卖，终局揭晓身份。</p>
+                            </span>
+                            <span class="cta cta-fill">立即开始</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showAcademy()">
+                            <span class="mark">二</span>
+                            <span class="copy">
+                                <small>知识馆</small>
+                                <strong>韭菜修炼基地</strong>
+                                <p>K 线形态、知识卡片、理论与实操题，答题即时解析。</p>
+                            </span>
+                            <span class="cta cta-wash">进入基地</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showHindsight()">
+                            <span class="mark">三</span>
+                            <span class="copy">
+                                <small>悔棋局</small>
+                                <strong>当初买了该多好</strong>
+                                <p>输入股票与区间，回溯最优买卖点，对照错过的那笔收益。</p>
+                            </span>
+                            <span class="cta cta-wash">立即回溯</span>
                         </button>
                     </div>
-
-                </div><!-- /bento-right -->
-            </div><!-- /bento -->
+                </div>
+            </div>
 
         </section>
 
@@ -799,5 +676,6 @@
         <div class="kb-popup-illust"></div>
         <div class="kb-popup-desc"></div>
     </div>
+
 </body>
 </html>
