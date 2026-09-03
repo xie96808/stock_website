@@ -2,13 +2,22 @@ export function attachDeferredStart(startGame, gameState) {
   let packPromise = null;
   let locked = false;
 
+  function readPack() {
+    try {
+      if (typeof STOCKS_DATA !== 'undefined') return STOCKS_DATA;
+    } catch (err) {}
+    return window.STOCKS_DATA;
+  }
+
   function ready() {
-    const pack = window.STOCKS_DATA;
+    const pack = readPack();
     return Array.isArray(pack) && pack.length > 0;
   }
 
   function apply() {
-    gameState.stocksData = window.STOCKS_DATA;
+    const pack = readPack();
+    gameState.stocksData = pack;
+    window.STOCKS_DATA = pack;
     console.log('Loaded ' + gameState.stocksData.length + ' stocks');
   }
 
