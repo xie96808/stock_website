@@ -2,7 +2,6 @@
 import { chartRefs, quizState } from './state.js';
 import { applyChartTheme } from './utils.js';
 
-// html2canvas for 「生成分享图」 (CDN; index.html rewrite is too large for this pass)
 if (typeof document !== 'undefined' && !document.querySelector('script[data-html2canvas]')) {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
@@ -26,11 +25,14 @@ if (typeof document !== 'undefined') {
     }
 }
 
-export function toggleTheme() {
+export function toggleTheme(forced) {
     const html = document.documentElement;
-    const next = (html.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    const cur = html.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    const next = (forced === 'light' || forced === 'dark') ? forced : (cur === 'light' ? 'dark' : 'light');
+    if (next !== cur) {
+        html.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+    }
     applyChartTheme(chartRefs.klineChart);
     applyChartTheme(chartRefs.resultChart);
     quizState.charts.forEach(c => applyChartTheme(c));
