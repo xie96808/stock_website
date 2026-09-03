@@ -1,6 +1,7 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
 import { gameState } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
+import { ensureStocksLoaded } from './load-stocks.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
@@ -10,6 +11,17 @@ export function showHindsight() {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('hindsightScreen').classList.add('active');
     _resetToFormState();
+    if (!gameState.stocksData || gameState.stocksData.length === 0) {
+        _setHint('hindsightStockHint', '行情数据加载中…', 'info');
+        ensureStocksLoaded(gameState)
+            .then(function () { _setHint('hindsightStockHint', '', ''); })
+            .catch(function (err) {
+                console.error(err);
+                _setHint('hindsightStockHint', '数据加载失败，请刷新', 'error');
+            });
+    } else {
+        ensureStocksLoaded(gameState).catch(function (err) { console.error(err); });
+    }
 }
 
 export function hideHindsight() {
@@ -47,16 +59,58 @@ function _resetToFormState() {
     btn.disabled = false;
 }
 
-export function onHindsightInput(e) {
-    const raw = e.target.value.trim();
-    if (raw.length < 1) { _closeSuggestions(); selectedStock = null; return; }
-    const q = raw.toLowerCase();
-    const matches = gameState.stocksData
-        .filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))
-        .slice(0, 8);
-    if (matches.length === 0) { _closeSuggestions(); selectedStock = null; return; }
+const CHAR_PY = {"万":"wan","三":"san","上":"shang","世":"shi","业":"ye","东":"dong","中":"zhong","丰":"feng","九":"jiu","云":"yun","井":"jing","产":"chan","京":"jing","人":"ren","亿":"yi","今":"jin","仑":"lun","仔":"zai","代":"dai","件":"jian","份":"fen","众":"zhong","传":"chuan","伦":"lun","保":"bao","信":"xin","储":"chu","兆":"zhao","先":"xian","光":"guang","克":"ke","兖":"yan","全":"quan","公":"gong","六":"liu","兰":"lan","农":"nong","分":"fen","创":"chuang","利":"li","券":"quan","力":"li","办":"ban","动":"dong","勤":"qin","化":"hua","北":"bei","医":"yi","升":"sheng","华":"hua","南":"nan","卫":"wei","压":"ya","原":"yuan","厦":"sha","友":"you","变":"bian","口":"kou","古":"gu","号":"hao","司":"si","合":"he","同":"tong","君":"jun","启":"qi","味":"wei","和":"he","品":"pin","商":"shang","啤":"pi","器":"qi","四":"si","团":"tuan","国":"guo","圆":"yuan","圣":"sheng","场":"chang","城":"cheng","基":"ji","士":"shi","大":"da","天":"tian","奥":"ao","威":"wei","媒":"mei","子":"zi","孚":"fu","学":"xue","宁":"ning","宇":"yu","安":"an","宏":"hong","宝":"bao","客":"ke","密":"mi","富":"fu","寒":"han","导":"dao","小":"xiao","尔":"er","山":"shan","岛":"dao","峡":"xia","川":"chuan","州":"zhou","工":"gong","巨":"ju","广":"guang","康":"kang","建":"jian","影":"ying","微":"wei","德":"de","思":"si","恒":"heng","息":"xi","成":"cheng","技":"ji","投":"tou","拓":"tuo","招":"zhao","指":"zhi","捷":"jie","控":"kong","料":"liao","新":"xin","方":"fang","旭":"xu","时":"shi","昆":"kun","明":"ming","易":"yi","星":"xing","春":"chun","普":"pu","晶":"jing","智":"zhi","曙":"shu","有":"you","本":"ben","术":"shu","机":"ji","材":"cai","杭":"hang","杰":"jie","果":"guo","核":"he","格":"ge","桥":"qiao","正":"zheng","武":"wu","氏":"shi","民":"min","气":"qi","水":"shui","汇":"hui","江":"jiang","汽":"qi","汾":"fen","沈":"shen","沪":"hu","河":"he","油":"you","波":"bo","泰":"tai","泽":"ze","洋":"yang","浙":"zhe","浪":"lang","海":"hai","润":"run","液":"ye","深":"shen","渝":"yu","温":"wen","港":"gang","湖":"hu","源":"yuan","潮":"chao","澜":"lan","煤":"mei","爱":"ai","片":"pian","牧":"mu","物":"wu","特":"te","环":"huan","瑞":"rui","生":"sheng","申":"shen","电":"dian","疗":"liao","癀":"huang","百":"bai","益":"yi","盐":"yan","盛":"sheng","眼":"yan","石":"shi","矿":"kuang","硅":"gui","秋":"qiu","科":"ke","移":"yi","空":"kong","立":"li","精":"jing","紫":"zi","纪":"ji","纬":"wei","线":"xian","络":"luo","维":"wei","缘":"yuan","网":"wang","美":"mei","联":"lian","股":"gu","胎":"tai","胜":"sheng","能":"neng","航":"hang","舶":"bo","船":"chuan","色":"se","芒":"mang","芯":"xin","花":"hua","苏":"su","英":"ying","荆":"jing","荣":"rong","药":"yao","蓝":"lan","藏":"cang","虹":"hong","蛇":"she","行":"xing","西":"xi","证":"zheng","贡":"gong","财":"cai","货":"huo","资":"zi","赐":"ci","赛":"sai","赣":"gan","起":"qi","超":"chao","路":"lu","车":"che","轩":"xuan","轮":"lun","软":"ruan","载":"zai","达":"da","迈":"mai","远":"yuan","递":"di","通":"tong","速":"su","造":"zao","邦":"bang","邮":"you","都":"dou","酒":"jiu","金":"jin","针":"zhen","钢":"gang","钨":"wu","钴":"gu","铀":"you","铁":"tie","铜":"tong","铝":"lv","银":"yin","锂":"li","锋":"feng","锐":"rui","长":"zhang","门":"men","际":"ji","陵":"ling","隆":"long","集":"ji","零":"ling","青":"qing","韦":"wei","音":"yin","顺":"shun","领":"ling","风":"feng","飞":"fei","饮":"yin","首":"shou","高":"gao","鱼":"yu","鲁":"lu","鹏":"peng","黄":"huang","鼎":"ding","齐":"qi","龙":"long"};
+
+function _pinyinOf(name) {
+    let full = '';
+    let initials = '';
+    const s = String(name || '');
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        const py = CHAR_PY[ch];
+        if (py) {
+            full += py;
+            initials += py.charAt(0);
+        } else {
+            const low = ch.toLowerCase();
+            if (/[a-z0-9]/.test(low)) {
+                full += low;
+                initials += low;
+            }
+        }
+    }
+    return { full: full, initials: initials };
+}
+
+function _normCode(s) {
+    return String(s || '').toLowerCase().replace(/^(sh|sz)/, '').replace(/^0+/, '');
+}
+
+function _stockMatches(stock, qRaw) {
+    const q = String(qRaw || '').toLowerCase().replace(/\s+/g, '');
+    if (!q) return false;
+    const name = String(stock.name || '').toLowerCase();
+    const code = String(stock.code || '').toLowerCase();
+    if (name.includes(q) || code.includes(q)) return true;
+    const qCode = _normCode(q);
+    const codeBare = _normCode(code);
+    if (qCode && (codeBare.includes(qCode) || code.includes(qCode))) return true;
+    const py = _pinyinOf(stock.name);
+    return py.full.includes(q) || py.initials.includes(q);
+}
+
+function _fillSuggestions(raw) {
+    const stocks = gameState.stocksData || [];
+    const matches = stocks.filter(s => _stockMatches(s, raw)).slice(0, 8);
     const list = document.getElementById('hindsightSuggestions');
+    if (!list) return;
     list.innerHTML = '';
+    if (matches.length === 0) {
+        _closeSuggestions();
+        _setHint('hindsightStockHint', '未找到匹配股票', 'error');
+        return;
+    }
+    _setHint('hindsightStockHint', '', '');
     matches.forEach(s => {
         const item = document.createElement('div');
         item.className = 'hindsight-suggestion-item';
@@ -67,6 +121,32 @@ export function onHindsightInput(e) {
         list.appendChild(item);
     });
     list.classList.add('open');
+}
+
+export function onHindsightInput(e) {
+    const raw = e.target.value.trim();
+    selectedStock = null;
+    if (raw.length < 1) {
+        _closeSuggestions();
+        _setHint('hindsightStockHint', '', '');
+        return;
+    }
+    if (!gameState.stocksData || gameState.stocksData.length === 0) {
+        _setHint('hindsightStockHint', '行情数据加载中…', 'info');
+        const typed = raw;
+        ensureStocksLoaded(gameState)
+            .then(function () {
+                const now = document.getElementById('hindsightStockInput');
+                if (now && now.value.trim() === typed) _fillSuggestions(typed);
+            })
+            .catch(function (err) {
+                console.error(err);
+                _setHint('hindsightStockHint', '数据加载失败，请刷新', 'error');
+                _closeSuggestions();
+            });
+        return;
+    }
+    _fillSuggestions(raw);
 }
 
 export function onHindsightBlur() {
@@ -100,7 +180,8 @@ export function submitHindsight() {
         const match = gameState.stocksData.find(s =>
             s.name.toLowerCase() === raw ||
             s.code.toLowerCase() === raw ||
-            `${s.name} · ${s.code}`.toLowerCase() === raw
+            `${s.name} · ${s.code}`.toLowerCase() === raw ||
+            _stockMatches(s, raw)
         );
         if (match) {
             _selectStock(match);

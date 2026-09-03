@@ -1,53 +1,17 @@
 export function attachDeferredStart(startGame, gameState) {
-  let packPromise = null;
   let locked = false;
-
-  function ready() {
-    return Array.isArray(window.STOCKS_DATA) && window.STOCKS_DATA.length > 0;
-  }
-
-  function apply() {
-    gameState.stocksData = window.STOCKS_DATA;
-    console.log('Loaded ' + gameState.stocksData.length + ' stocks');
-  }
-
-  function loadPack() {
-    if (ready()) {
-      apply();
-      return Promise.resolve();
-    }
-    if (packPromise) return packPromise;
-    packPromise = fetch('data/stocks_data.js')
-      .then(function (res) {
-        if (!res.ok) throw new Error('http ' + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        const pack = new Function(text + '\nreturn STOCKS_DATA;')();
-        if (!Array.isArray(pack) || pack.length === 0) {
-          throw new Error('empty pack');
-        }
-        window.STOCKS_DATA = pack;
-        apply();
-      })
-      .catch(function (err) {
-        packPromise = null;
-        throw err;
-      });
-    return packPromise;
-  }
 
   window.startGame = function () {
     if (locked) return;
     if (ready()) {
-      apply();
+      apply(gameState);
       startGame();
       return;
     }
     locked = true;
     const btn = document.querySelector('.arena-btn');
     if (btn) btn.disabled = true;
-    loadPack()
+    ensureStocksLoaded(gameState)
       .then(function () {
         locked = false;
         if (btn) btn.disabled = false;
@@ -61,7 +25,50 @@ export function attachDeferredStart(startGame, gameState) {
       });
   };
 
-  loadPack().catch(function (err) {
+  ensureStocksLoaded(gameState).catch(function (err) {
     console.error(err);
+  });
+}
+
+let packPromise = null;
+
+function ready() {
+  return Array.isArray(window.STOCKS_DATA) && window.STOCKS_DATA.length > 0;
+}
+
+function apply(gameState) {
+  if (!gameState) return;
+  gameState.stocksData = window.STOCKS_DATA;
+}
+
+function loadPack() {
+  if (ready()) return Promise.resolve();
+  if (packPromise) return packPromise;
+  packPromise = fetch('data/stocks_data.js')
+    .then(function (res) {
+      if (!res.ok) throw new Error('http ' + res.status);
+      return res.text();
+    })
+    .then(function (text) {
+      const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+      if (!Array.isArray(pack) || pack.length === 0) {
+        throw new Error('empty pack');
+      }
+      window.STOCKS_DATA = pack;
+      return pack;
+    })
+    .catch(function (err) {
+      packPromise = null;
+      throw err;
+    });
+  return packPromise;
+}
+
+export function ensureStocksLoaded(gameState) {
+  return loadPack().then(function () {
+    apply(gameState);
+    if (gameState && Array.isArray(gameState.stocksData)) {
+      console.log('Loaded ' + gameState.stocksData.length + ' stocks');
+    }
   });
 }
