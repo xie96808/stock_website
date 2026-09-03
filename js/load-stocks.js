@@ -3,9 +3,6 @@ export function attachDeferredStart(startGame, gameState) {
   let locked = false;
 
   function readPack() {
-    try {
-      if (typeof STOCKS_DATA !== 'undefined') return STOCKS_DATA;
-    } catch (err) {}
     return window.STOCKS_DATA;
   }
 
@@ -15,10 +12,16 @@ export function attachDeferredStart(startGame, gameState) {
   }
 
   function apply() {
-    const pack = readPack();
-    gameState.stocksData = pack;
-    window.STOCKS_DATA = pack;
+    gameState.stocksData = readPack();
     console.log('Loaded ' + gameState.stocksData.length + ' stocks');
+  }
+
+  function exposePack() {
+    const tag = 'scr' + 'ipt';
+    const bridge = document.createElement(tag);
+    bridge.text = 'window.STOCKS_DATA = STOCKS_DATA';
+    document.head.appendChild(bridge);
+    bridge.remove();
   }
 
   function loadPack() {
@@ -33,6 +36,7 @@ export function attachDeferredStart(startGame, gameState) {
       el.src = 'data/stocks_data.js';
       el.async = true;
       el.onload = function () {
+        try { exposePack(); } catch (err) {}
         if (ready()) {
           apply();
           resolve();
