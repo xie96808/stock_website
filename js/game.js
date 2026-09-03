@@ -277,7 +277,7 @@ export function updateChart() {
 export function handleAction(action) {
     const lastDecisionDay = gameState.currentDay >= 30;
     if (action === 'buy' && (gameState.position !== 'empty' || lastDecisionDay)) return;
-    if (action === 'sell' && gameState.position !== 'holding') return;
+    if (action === 'sell' && gameState.position === 'empty') return;
 
     gameState.pendingAction = action;
     nextDay();
@@ -298,7 +298,7 @@ export function nextDay() {
     // Execute pending action at next day's open price
     if (action === 'buy' && gameState.position === 'empty') {
         gameState.costBasis = nextDayData.open;
-        gameState.position = 'locked'; // T+1: can't sell on fill day
+        gameState.position = 'locked'; // T+1: filled today; sell may be queued for next open
         addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
     } else if (action === 'sell' && gameState.position === 'holding') {
         const sellPrice = nextDayData.open;
@@ -432,6 +432,25 @@ export function updateUI() {
     // Meta grid values
     document.getElementById('currentPrice').textContent = todayData.close.toFixed(2);
 
+    const prevIdx = histLen + gameState.currentDay - 2;
+    const prevData = prevIdx >= 0 ? gameState.gameKline[prevIdx] : null;
+    let dailyPct = null;
+    if (prevData && prevData.close > 0) {
+        dailyPct = (todayData.close / prevData.close - 1) * 100;
+    } else if (todayData.open > 0) {
+        dailyPct = (todayData.close / todayData.open - 1) * 100;
+    }
+    const dailyEl = document.getElementById('dailyReturn');
+    if (dailyEl) {
+        if (dailyPct == null) {
+            dailyEl.textContent = '--';
+            dailyEl.className = 'meta-value neutral';
+        } else {
+            dailyEl.textContent = (dailyPct >= 0 ? '+' : '') + dailyPct.toFixed(2) + '%';
+            dailyEl.className = 'meta-value ' + (dailyPct > 0 ? 'positive' : dailyPct < 0 ? 'negative' : 'neutral');
+        }
+    }
+
     const returnEl = document.getElementById('totalReturn');
     if (returnEl) {
         returnEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
@@ -446,20 +465,20 @@ export function updateUI() {
     // OHLC panel — show today by default
     resetOHLCToToday();
 
-    // Buttons — no buy on last shown decision day; no sell on T+1 fill day
+    // Buttons — no buy on last shown decision day; sell allowed while locked (queue for next open)
     const lastDecisionDay = gameState.currentDay >= 30;
     const buyBtn = document.getElementById('buyBtn');
     const sellBtn = document.getElementById('sellBtn');
     const holdBtn = document.getElementById('holdBtn');
     if (buyBtn) buyBtn.disabled = gameState.position !== 'empty' || lastDecisionDay;
-    if (sellBtn) sellBtn.disabled = gameState.position !== 'holding';
+    if (sellBtn) sellBtn.disabled = gameState.position === 'empty';
     if (holdBtn) holdBtn.disabled = false;
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
         if (lastDecisionDay) {
             if (gameState.position === 'locked') {
-                hintEl.textContent = '最后交易日 · T+1 锁定，持仓将于次日开盘结算';
+                hintEl.textContent = '最后交易日 · 可挂卖单，次日开盘成交；或持有至次日开盘结算';
                 hintEl.className = 'action-hint warning';
             } else if (gameState.position === 'empty') {
                 hintEl.textContent = '最后交易日，不可再买入；空仓将直接结束';
@@ -469,7 +488,7 @@ export function updateUI() {
                 hintEl.className = 'action-hint';
             }
         } else if (gameState.position === 'locked') {
-            hintEl.textContent = 'T+1 锁定中，今日只能持仓观望';
+            hintEl.textContent = 'T+1 锁定中，今日可挂卖单，将于次日开盘成交';
             hintEl.className = 'action-hint warning';
         } else if (gameState.position === 'empty') {
             hintEl.textContent = '当前空仓，可以选择买入或继续观望';

@@ -318,6 +318,10 @@
                             <div class="meta-value neutral" id="currentPrice">--</div>
                         </div>
                         <div class="meta-card">
+                            <div class="meta-label">当日涨跌</div>
+                            <div class="meta-value neutral" id="dailyReturn">--</div>
+                        </div>
+                        <div class="meta-card">
                             <div class="meta-label">累计收益</div>
                             <div class="meta-value neutral" id="totalReturn">0.00%</div>
                         </div>
@@ -460,7 +464,10 @@
                             <div class="result-stat__value" id="bsScoreDisplay">--</div>
                         </div>
                     </div>
-                    <button class="play-again-btn" onclick="resetGame()">再来一局</button>
+                    <div class="result-actions">
+                        <button class="play-again-btn" onclick="playAgain()">再来一局</button>
+                        <button class="play-again-btn play-again-btn--ghost" onclick="resetGame()">返回首页</button>
+                    </div>
                 </div>
             </div>
 
@@ -742,7 +749,7 @@
         import { toggleTheme } from './js/theme.js';
         import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js';
         import { attachDeferredStart } from "./js/load-stocks.js";
-        import { resetGame } from './js/result.js';
+        import { resetGame, playAgain } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
@@ -754,6 +761,7 @@
         window.handleAction = handleAction;
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
+        window.playAgain = playAgain;
         window.showAcademy = showAcademy;
         window.hideAcademy = hideAcademy;
         window.switchTab = switchTab;

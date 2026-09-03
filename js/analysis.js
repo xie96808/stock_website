@@ -155,6 +155,32 @@ export function generateKlineAnalysis() {
         <div class="trend-tags">${tags.map(t => `<span class="trend-tag ${t.cls}">${t.text}</span>`).join('')}</div>
         <div class="analysis-text">${analysis}</div>
     `;
+
+    const bp = gameState.bestPoints || { buys: [], sells: [] };
+    const analysisEl = document.getElementById('klineAnalysis');
+    if (analysisEl) {
+        const renderPt = (p, kind) => {
+            const tags = (p.reasons || []).map(r => `<span class="point-reason-tag">${r.tag}</span>`).join('');
+            const why = (p.reasons || []).map(r => r.text).join('；');
+            return `<div class="best-point-card">
+                <div class="point-header">
+                    <span class="point-badge ${kind}">${kind === 'buy' ? '信号买' : '信号卖'}</span>
+                    <span class="point-day">第 ${p.day} 天（${p.date}）</span>
+                    <span class="point-price">${p.price.toFixed(2)}</span>
+                </div>
+                <div class="point-reason">${tags} ${why}</div>
+            </div>`;
+        };
+        let extra = '<div class="analysis-title">当时信号</div>';
+        extra += '<div class="analysis-text"><p>只用当日及以前的均线、量价、形态，不偷看后续行情。分数达到阈值后按强度选取，同类信号至少间隔 3 个交易日，最多各 3 个。</p></div>';
+        if (bp.buys.length === 0 && bp.sells.length === 0) {
+            extra += '<div class="analysis-text"><p>本局没有足够强的当时信号。</p></div>';
+        } else {
+            extra += bp.buys.map(p => renderPt(p, 'buy')).join('');
+            extra += bp.sells.map(p => renderPt(p, 'sell')).join('');
+        }
+        analysisEl.insertAdjacentHTML('beforeend', extra);
+    }
 }
 
 export function generateBestPoints() {
@@ -170,7 +196,6 @@ export function generateBestPoints() {
     const gameData = kline.slice(histLen, histLen + gameDays);
     const closes = gameData.map(d => d.close);
     const volumes = gameData.map(d => d.volume);
-    const avgVol = volumes.reduce((a, b) => a + b, 0) / gameDays;
 
     const buyScores = [];
     const sellScores = [];
@@ -238,12 +263,14 @@ export function generateBestPoints() {
             sellReasons.push({ tag: '均线压力', text: `上冲 MA20（${m20.toFixed(2)}）后受阻回落` });
         }
 
-        // 4. Volume breakout
-        if (volumes[i] > avgVol * 1.8 && d.close > d.open) {
+        // 4. Volume breakout vs trailing 10-day average (no future peek)
+        const volTrail = volumes.slice(Math.max(0, i - 10), i);
+        const avgVol = volTrail.length ? volTrail.reduce((a, b) => a + b, 0) / volTrail.length : 0;
+        if (avgVol > 0 && volumes[i] > avgVol * 1.8 && d.close > d.open) {
             buyScore += 2;
             buyReasons.push({ tag: '放量', text: `成交量达均量 ${(volumes[i] / avgVol).toFixed(1)} 倍，放量阳线突破` });
         }
-        if (volumes[i] > avgVol * 1.8 && d.close < d.open) {
+        if (avgVol > 0 && volumes[i] > avgVol * 1.8 && d.close < d.open) {
             sellScore += 2;
             sellReasons.push({ tag: '放量', text: `放量阴线（${(volumes[i] / avgVol).toFixed(1)} 倍均量），抛压涌出` });
         }
@@ -333,13 +360,20 @@ export function generateBestPoints() {
         if (sellReasons.length > 0) sellScores.push({ day: i + 1, score: sellScore, reasons: sellReasons, price: d.close, date: d.date });
     }
 
-    buyScores.sort((a, b) => b.score - a.score);
-    sellScores.sort((a, b) => b.score - a.score);
+    function pickSignals(items) {
+        const qualified = items.filter(x => x.score >= 4)
+            .sort((a, b) => b.score - a.score || a.day - b.day);
+        const picked = [];
+        for (const it of qualified) {
+            if (picked.some(p => Math.abs(p.day - it.day) < 3)) continue;
+            picked.push(it);
+            if (picked.length >= 3) break;
+        }
+        picked.sort((a, b) => a.day - b.day);
+        return picked;
+    }
 
-    const topBuys = buyScores.slice(0, 3);
-    const topSells = sellScores.slice(0, 3);
-
-    gameState.bestPoints = { buys: topBuys, sells: topSells };
+    gameState.bestPoints = { buys: pickSignals(buyScores), sells: pickSignals(sellScores) };
 }
 
 export function generateBSReport() {
@@ -350,7 +384,7 @@ export function generateBSReport() {
 
     let bestBuyDay = 0, bestSellDay = 0, bestProfit = 0;
     for (let i = 0; i < gameDays - 1; i++) {
-        for (let j = i + 2; j < gameDays; j++) {
+        for (let j = i + 1; j < gameDays; j++) {
             const buyPrice = kline[histLen + i + 1].open;
             const sellPrice = kline[histLen + j + 1] ? kline[histLen + j + 1].open : kline[histLen + j].close;
             const profit = (sellPrice - buyPrice) / buyPrice;

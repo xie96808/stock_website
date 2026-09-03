@@ -712,3 +712,27 @@
             .result-hero__left { margin: 0 auto; }
             .result-stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
+
+
+.result-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.result-actions .play-again-btn {
+    margin-top: 12px;
+}
+
+.play-again-btn--ghost {
+    background: transparent;
+    color: #c8a44e;
+    border: 1px solid rgba(200, 164, 78, 0.55);
+    box-shadow: none;
+}
+
+.play-again-btn--ghost:hover {
+    background: rgba(200, 164, 78, 0.12);
+    box-shadow: 0 8px 32px rgba(200, 164, 78, 0.15);
+}

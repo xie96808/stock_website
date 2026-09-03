@@ -193,10 +193,10 @@ export function buildPointNavigator(chart, histLen, fullData) {
     const allPoints = [];
 
     bp.buys.forEach((p, idx) => {
-        allPoints.push({ day: p.day, label: '荐买' + (idx + 1), type: 'best-buy', date: p.date, price: p.price, reasons: p.reasons });
+        allPoints.push({ day: p.day, label: '信号买' + (idx + 1), type: 'best-buy', date: p.date, price: p.price, reasons: p.reasons });
     });
     bp.sells.forEach((p, idx) => {
-        allPoints.push({ day: p.day, label: '荐卖' + (idx + 1), type: 'best-sell', date: p.date, price: p.price, reasons: p.reasons });
+        allPoints.push({ day: p.day, label: '信号卖' + (idx + 1), type: 'best-sell', date: p.date, price: p.price, reasons: p.reasons });
     });
     trades.forEach((t, idx) => {
         if (t.day > 30) return;
@@ -275,9 +275,18 @@ export function resetGame() {
     hdr.classList.remove('compact');
     hdr.style.display = 'none';
     document.getElementById('resultScreen').classList.remove('active');
+    document.getElementById('gameScreen').classList.remove('active');
     document.getElementById('startScreen').style.display = 'flex';
     const tagsEl = document.getElementById('waveAnalysisTags');
     if (tagsEl) tagsEl.innerHTML = '';
     const textEl = document.getElementById('waveAnalysisText');
     if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
+}
+
+export function playAgain() {
+    if (typeof window.startGame === "function") {
+        window.startGame();
+        return;
+    }
+    resetGame();
 }
