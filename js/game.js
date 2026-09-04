@@ -463,10 +463,8 @@ export function updateUI() {
 
     const returnEl = document.getElementById('totalReturn');
     if (returnEl) {
-        if (returnEl) {
-            returnEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
-            returnEl.className = 'meta-value ' + (displayReturn > 0 ? 'positive' : displayReturn < 0 ? 'negative' : 'neutral');
-        }
+        returnEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
+        returnEl.className = 'meta-value ' + (displayReturn > 0 ? 'positive' : displayReturn < 0 ? 'negative' : 'neutral');
     }
 
     const costEl = document.getElementById('costBasis');
