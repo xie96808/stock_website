@@ -58,14 +58,23 @@ export function startGame() {
     const textEl = document.getElementById('waveAnalysisText');
     if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
 
-    // Initialize chart
-    initChart();
+    if (!initChart()) {
+        document.getElementById('gameScreen').classList.remove('active');
+        document.getElementById('startScreen').style.display = 'flex';
+        hdr.style.display = 'none';
+        hdr.classList.remove('compact');
+        return;
+    }
     updateUI();
     renderWaveAnalysis();
 }
 
 export function initChart() {
     const chartDom = document.getElementById('kline-chart');
+    if (!window.echarts || !chartDom) {
+        console.error('ECharts unavailable; cannot init K-line chart');
+        return false;
+    }
     if (chartRefs.klineChart) {
         chartRefs.klineChart.dispose();
     }
@@ -95,6 +104,7 @@ export function initChart() {
     updateChart();
     // Resize after flex layout settles
     setTimeout(() => chartRefs.klineChart.resize(), 50);
+    return true;
 }
 
 let maTogglesBound = false;

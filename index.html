@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>早知道当初不炒了</title>
-    <script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
 </head>
@@ -634,7 +634,29 @@
 
         // Bridge functions to window for onclick attributes
         window.toggleTheme = toggleTheme;
-        attachDeferredStart(startGame, gameState);
+        function waitForEcharts(timeoutMs = 4000) {
+            return new Promise((resolve) => {
+                if (window.echarts) { resolve(true); return; }
+                const start = Date.now();
+                const timer = setInterval(() => {
+                    if (window.echarts) {
+                        clearInterval(timer);
+                        resolve(true);
+                    } else if (Date.now() - start >= timeoutMs) {
+                        clearInterval(timer);
+                        resolve(false);
+                    }
+                }, 50);
+            });
+        }
+        attachDeferredStart(async (...args) => {
+            const ready = await waitForEcharts(4000);
+            if (!ready) {
+                alert('K 线图加载失败，请检查网络后刷新重试');
+                return;
+            }
+            return startGame(...args);
+        }, gameState);
         window.handleAction = handleAction;
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
