@@ -95,13 +95,17 @@ function _stockMatches(stock, qRaw) {
     const qCode = _normCode(q);
     const codeBare = _normCode(code);
     if (qCode && (codeBare.includes(qCode) || code.includes(qCode))) return true;
+    // Prefer pack-baked py/jp (covers 1000-stock universe); fallback to CHAR_PY map.
+    const packPy = String(stock.py || '').toLowerCase();
+    const packJp = String(stock.jp || '').toLowerCase();
+    if ((packPy && packPy.includes(q)) || (packJp && packJp.includes(q))) return true;
     const py = _pinyinOf(stock.name);
     return py.full.includes(q) || py.initials.includes(q);
 }
 
 function _fillSuggestions(raw) {
     const stocks = gameState.stocksData || [];
-    const matches = stocks.filter(s => _stockMatches(s, raw)).slice(0, 8);
+    const matches = stocks.filter(s => _stockMatches(s, raw)).slice(0, 12);
     const list = document.getElementById('hindsightSuggestions');
     if (!list) return;
     list.innerHTML = '';
