@@ -190,8 +190,6 @@ export function updateChart() {
             formatter: function(params) {
                 const cs = params.find(p => p.seriesName === 'K线');
                 if (!cs) return '';
-                const d = cs.data;
-                const vol = params.find(p => p.seriesName === '成交量');
                 // sync OHLC panel
                 const histLen2 = gameState.historyLength;
                 const idx = cs.dataIndex;
@@ -205,13 +203,34 @@ export function updateChart() {
                     document.getElementById('hoverClose').textContent = kd.close.toFixed(2);
                     document.getElementById('hoverVolume').textContent = (kd.volume / 10000).toFixed(0) + ' 万手';
                 }
-                const isUp = d[1] >= d[0];
+                // Prefer kd for tooltip OHLC. ECharts candlestick with category axis
+                // may pass params.data as [dataIndex, open, close, low, high].
+                let open, close, low, high, volume;
+                if (kd) {
+                    open = kd.open;
+                    close = kd.close;
+                    low = kd.low;
+                    high = kd.high;
+                    volume = kd.volume;
+                } else {
+                    const d = cs.data;
+                    if (Array.isArray(d) && d.length >= 5) {
+                        open = d[1]; close = d[2]; low = d[3]; high = d[4];
+                    } else if (Array.isArray(d) && d.length >= 4) {
+                        open = d[0]; close = d[1]; low = d[2]; high = d[3];
+                    } else {
+                        return '';
+                    }
+                    const vol = params.find(p => p.seriesName === '成交量');
+                    volume = vol ? vol.data : 0;
+                }
+                const isUp = close >= open;
                 const clr = isUp ? '#e05252' : '#3db86a';
                 let html = `<div style="padding:4px 2px">
                     <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${cs.axisValue}</div>
-                    <div style="color:${clr}">开 ${d[0].toFixed(2)}&nbsp;&nbsp;收 ${d[1].toFixed(2)}</div>
-                    <div>低 ${d[2].toFixed(2)}&nbsp;&nbsp;高 ${d[3].toFixed(2)}</div>`;
-                if (vol) html += `<div style="color:#8b949e">量 ${(vol.data / 10000).toFixed(0)}万手</div>`;
+                    <div style="color:${clr}">开 ${open.toFixed(2)}&nbsp;&nbsp;收 ${close.toFixed(2)}</div>
+                    <div>低 ${low.toFixed(2)}&nbsp;&nbsp;高 ${high.toFixed(2)}</div>`;
+                html += `<div style="color:#8b949e">量 ${(volume / 10000).toFixed(0)}万手</div>`;
                 const maMap = { MA5: '#f5c542', MA10: '#42a5f5', MA20: '#ab47bc', MA30: '#26a69a' };
                 params.forEach(p => {
                     if (maMap[p.seriesName] && p.data != null)
