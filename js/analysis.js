@@ -494,24 +494,33 @@ export function generateBSReport() {
     }
 
     if (gameState.tradeGains.length > 0) {
-        const maxLoss = Math.min(...gameState.tradeGains);
+        const losses = gameState.tradeGains.filter(g => g < 0);
         let stopLabel, stopCls, stopNote;
-        if (maxLoss >= -2) {
+        if (losses.length === 0) {
             score += 4;
-            stopLabel = '优秀'; stopCls = 'positive';
-            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
-        } else if (maxLoss >= -5) {
-            score += 1;
-            stopLabel = '良好'; stopCls = 'positive';
-            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
-        } else if (maxLoss < -10) {
-            score -= 4;
-            stopLabel = '较弱'; stopCls = 'negative';
-            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+            stopLabel = '优秀';
+            stopCls = 'positive';
+            const maxGain = Math.max(...gameState.tradeGains);
+            stopNote = `本局无亏损单，最大单笔收益 +${maxGain.toFixed(2)}%`;
         } else {
-            score -= 2;
-            stopLabel = '一般'; stopCls = 'neutral';
-            stopNote = `最大单笔亏损 ${maxLoss.toFixed(2)}%`;
+            const maxLoss = Math.min(...losses);
+            if (maxLoss >= -2) {
+                score += 4;
+                stopLabel = '优秀'; stopCls = 'positive';
+                stopNote = `最大单笔亏损 ${Math.abs(maxLoss).toFixed(2)}%`;
+            } else if (maxLoss >= -5) {
+                score += 1;
+                stopLabel = '良好'; stopCls = 'positive';
+                stopNote = `最大单笔亏损 ${Math.abs(maxLoss).toFixed(2)}%`;
+            } else if (maxLoss < -10) {
+                score -= 4;
+                stopLabel = '较弱'; stopCls = 'negative';
+                stopNote = `最大单笔亏损 ${Math.abs(maxLoss).toFixed(2)}%`;
+            } else {
+                score -= 2;
+                stopLabel = '一般'; stopCls = 'neutral';
+                stopNote = `最大单笔亏损 ${Math.abs(maxLoss).toFixed(2)}%`;
+            }
         }
         details.push({ label: '止损意识', value: stopLabel, cls: stopCls, note: stopNote });
     } else {
