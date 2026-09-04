@@ -4,7 +4,7 @@
 
 基于 HTML/CSS/JavaScript + ECharts 构建的 A 股模拟炒股训练。随机三十日 K 线，隐去名称代码，练盘感与交易纪律。
 
-在线体验：https://xietest.cc.cd
+在线体验：https://stockgame.xieyw.top
 
 ## 页面预览
 
@@ -42,9 +42,9 @@
 |------|------|
 | 前端 | HTML5 + CSS3 + JavaScript ES6+ Modules |
 | 图表 | [ECharts 5.4](https://echarts.apache.org/) |
-| 字体 | Orbitron · JetBrains Mono · Noto Sans SC（Google Fonts） |
+| 字体 | 系统字体栈（已去掉 Google Fonts） |
 | 数据 | [AKShare](https://github.com/akfamily/akshare)（东方财富接口） |
-| 部署 | GitHub Pages（https://xietest.cc.cd） |
+| 部署 | 生产：阿里云 + GitHub Actions（https://stockgame.xieyw.top） |
 
 ## 快速开始
 
