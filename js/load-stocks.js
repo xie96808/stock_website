@@ -5,28 +5,64 @@ export function attachDeferredStart(startGame, gameState) {
     return document.getElementById('fillModeModal');
   }
 
-  function statusEl() {
-    return document.getElementById('fillModeStatus');
+  function choosePane() {
+    return document.getElementById('fillModeChoosePane');
   }
 
-  function setStatus(text) {
-    const el = statusEl();
-    if (el) el.textContent = text || '';
+  function loadingPane() {
+    return document.getElementById('fillModeLoadingPane');
+  }
+
+  function titleEl() {
+    return document.getElementById('fillModeDialogTitle');
+  }
+
+  function setProgress(pct, tip) {
+    const p = Math.max(0, Math.min(100, Math.round(pct)));
+    const fill = document.getElementById('fillLoadFill');
+    const bar = document.getElementById('fillLoadBar');
+    const pctEl = document.getElementById('fillLoadPct');
+    const tipEl = document.getElementById('fillLoadTip');
+    if (fill) fill.style.width = p + '%';
+    if (bar) bar.setAttribute('aria-valuenow', String(p));
+    if (pctEl) pctEl.textContent = p + '%';
+    if (tipEl && tip) tipEl.textContent = tip;
+  }
+
+  function showChooseView() {
+    const choose = choosePane();
+    const loading = loadingPane();
+    const title = titleEl();
+    if (choose) choose.hidden = false;
+    if (loading) loading.hidden = true;
+    if (title) title.textContent = '选择成交方式';
+    setProgress(0, '股票资源加载中…');
+    const modal = modalEl();
+    if (modal) modal.classList.remove('is-loading');
+  }
+
+  function showLoadingView() {
+    const choose = choosePane();
+    const loading = loadingPane();
+    const title = titleEl();
+    if (choose) choose.hidden = true;
+    if (loading) loading.hidden = false;
+    if (title) title.textContent = '正在开局';
+    const modal = modalEl();
+    if (modal) modal.classList.add('is-loading');
+    setProgress(4, '股票资源加载中…');
   }
 
   function openModal() {
     const modal = modalEl();
     if (!modal) return;
+    showChooseView();
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
-    setStatus(ready() ? '数据已就绪' : '正在准备行情数据…');
-    // Keep warming the pack while the user picks a mode.
-    ensureStocksLoaded(gameState)
-      .then(function () { setStatus('数据已就绪'); })
-      .catch(function (err) {
-        console.error(err);
-        setStatus('数据加载失败，仍可重试开始');
-      });
+    // Warm pack while user picks a mode (no progress UI yet).
+    ensureStocksLoaded(gameState).catch(function (err) {
+      console.error(err);
+    });
     const first = modal.querySelector('input[name="fillMode"]:checked');
     if (first) first.focus();
   }
@@ -36,7 +72,29 @@ export function attachDeferredStart(startGame, gameState) {
     if (!modal) return;
     modal.hidden = true;
     modal.setAttribute('aria-hidden', 'true');
-    setStatus('');
+    showChooseView();
+  }
+
+  function delay(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function animateTo(targetPct, tip, ms) {
+    return new Promise(function (resolve) {
+      const fill = document.getElementById('fillLoadFill');
+      const startPct = fill ? (parseFloat(fill.style.width) || 0) : 0;
+      const from = Number.isFinite(startPct) ? startPct : 0;
+      const to = Math.max(from, targetPct);
+      const t0 = performance.now();
+      function frame(now) {
+        const t = Math.min(1, (now - t0) / Math.max(1, ms));
+        const eased = 1 - Math.pow(1 - t, 2);
+        setProgress(from + (to - from) * eased, tip);
+        if (t < 1) requestAnimationFrame(frame);
+        else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
   }
 
   window.startGame = function () {
@@ -52,36 +110,42 @@ export function attachDeferredStart(startGame, gameState) {
   window.confirmFillModeAndStart = function () {
     if (locked) return;
     locked = true;
-    const confirmBtn = document.getElementById('fillModeConfirmBtn');
-    const prevLabel = confirmBtn ? confirmBtn.textContent : '';
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.textContent = '准备中…';
-    }
-    setStatus(ready() ? '正在开局…' : '正在加载行情数据…');
+    showLoadingView();
 
-    Promise.resolve()
-      .then(function () { return ensureStocksLoaded(gameState); })
-      .then(function () { return startGame(); })
-      .then(function () {
-        const game = document.getElementById('gameScreen');
-        if (game && game.classList.contains('active')) {
-          closeModal();
-        } else {
-          setStatus('开局未完成，请重试');
-        }
-      })
+    const run = async function () {
+      setProgress(6, '股票资源加载中…');
+      if (ready()) {
+        await animateTo(62, '股票资源加载中…', 480);
+      } else {
+        await ensureStocksLoaded(gameState, function (ratio) {
+          setProgress(6 + Math.max(0, Math.min(1, ratio)) * 56, '股票资源加载中…');
+        });
+        await animateTo(66, '股票资源加载中…', 160);
+      }
+
+      await animateTo(80, '标的筛选中…', 560);
+      await animateTo(88, '标的筛选中…', 240);
+
+      await animateTo(94, '初始化模拟盘…', 280);
+      await startGame();
+
+      const game = document.getElementById('gameScreen');
+      if (!(game && game.classList.contains('active'))) {
+        throw new Error('game screen inactive');
+      }
+      setProgress(100, '即将进入…');
+      await delay(220);
+      closeModal();
+    };
+
+    run()
       .catch(function (err) {
         console.error(err);
-        setStatus('开局失败，请重试或刷新页面');
-        window.alert('\u80a1\u7968\u6570\u636e\u52a0\u8f7d\u5931\u8d25\uff0c\u8bf7\u5237\u65b0\u540e\u91cd\u8bd5');
+        showChooseView();
+        window.alert('股票数据加载失败，请刷新后重试');
       })
       .finally(function () {
         locked = false;
-        if (confirmBtn) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = prevLabel || '\u5f00\u59cb\u6a21\u62df';
-        }
       });
   };
 
@@ -91,7 +155,7 @@ export function attachDeferredStart(startGame, gameState) {
     if (modal && !modal.hidden) window.cancelFillModeModal();
   });
 
-  // Prefetch pack on page load so the modal rarely waits.
+  // Prefetch pack on page load so confirm rarely waits on network.
   ensureStocksLoaded(gameState).catch(function (err) {
     console.error(err);
   });
@@ -108,13 +172,56 @@ function apply(gameState) {
   gameState.stocksData = window.STOCKS_DATA;
 }
 
-function loadPack() {
-  if (ready()) return Promise.resolve();
-  if (packPromise) return packPromise;
+function decodeChunks(chunks) {
+  let total = 0;
+  for (let i = 0; i < chunks.length; i++) total += chunks[i].length;
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    merged.set(chunks[i], offset);
+    offset += chunks[i].length;
+  }
+  return new TextDecoder('utf-8').decode(merged);
+}
+
+function loadPack(onProgress) {
+  if (ready()) {
+    if (onProgress) onProgress(1);
+    return Promise.resolve();
+  }
+  if (packPromise) {
+    // Another caller already fetching — still emit progress when done.
+    return packPromise.then(function () {
+      if (onProgress) onProgress(1);
+    });
+  }
+
   packPromise = fetch('data/stocks_data.js')
     .then(function (res) {
       if (!res.ok) throw new Error('http ' + res.status);
-      return res.text();
+      const total = Number(res.headers.get('content-length')) || 0;
+      if (!res.body || !total || !res.body.getReader) {
+        return res.text().then(function (text) {
+          if (onProgress) onProgress(1);
+          return text;
+        });
+      }
+      const reader = res.body.getReader();
+      const chunks = [];
+      let received = 0;
+      function pump() {
+        return reader.read().then(function (result) {
+          if (result.done) {
+            if (onProgress) onProgress(1);
+            return decodeChunks(chunks);
+          }
+          chunks.push(result.value);
+          received += result.value.length;
+          if (onProgress) onProgress(Math.min(0.98, received / total));
+          return pump();
+        });
+      }
+      return pump();
     })
     .then(function (text) {
       const pack = new Function(text + '\nreturn STOCKS_DATA;')();
@@ -128,14 +235,16 @@ function loadPack() {
       packPromise = null;
       throw err;
     });
+
   return packPromise;
 }
 
-export function ensureStocksLoaded(gameState) {
-  return loadPack().then(function () {
+export function ensureStocksLoaded(gameState, onProgress) {
+  return loadPack(onProgress).then(function () {
     apply(gameState);
     if (gameState && Array.isArray(gameState.stocksData)) {
       console.log('Loaded ' + gameState.stocksData.length + ' stocks');
     }
+    if (onProgress) onProgress(1);
   });
 }
