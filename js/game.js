@@ -16,6 +16,12 @@ const MOODS = [
     '最后冲刺阶段，决策至关重要'
 ];
 
+export function readFillModeFromUi() {
+    const checked = document.querySelector('input[name="fillMode"]:checked');
+    const v = checked && checked.value;
+    return v === 'same_close' ? 'same_close' : 'next_open';
+}
+
 export function startGame() {
     // Reset state
     gameState.currentDay = 1;
@@ -29,6 +35,7 @@ export function startGame() {
     gameState.historyLength = 0;
     gameState.bsScore = null;
     gameState.bestPoints = null;
+    gameState.fillMode = readFillModeFromUi();
 
     // Pick random stock and random start position
     const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
@@ -315,6 +322,7 @@ export function handleAction(action) {
 export function nextDay() {
     const action = gameState.pendingAction;
     const histLen = gameState.historyLength;
+    const sameClose = gameState.fillMode === 'same_close';
 
     // Last decision day: settle within the 30-day window at day-30 close (no day-31 bar).
     if (gameState.currentDay >= 30) {
@@ -341,28 +349,50 @@ export function nextDay() {
         return;
     }
 
-    const nextDayIndex = histLen + gameState.currentDay;
-    const nextDayData = gameState.gameKline[nextDayIndex];
+    if (sameClose) {
+        // Same-close: fill at today's close, then advance. Unlock prior T+1 lock first
+        // so a buy yesterday can be sold today (not same-day as the buy fill).
+        if (gameState.position === 'locked') {
+            gameState.position = 'holding';
+        }
+        const todayBar = gameState.gameKline[histLen + gameState.currentDay - 1];
+        if (action === 'buy' && gameState.position === 'empty' && todayBar) {
+            gameState.costBasis = todayBar.close;
+            gameState.position = 'locked';
+            addTradeHistory('buy', gameState.currentDay, todayBar.close);
+        } else if (action === 'sell' && gameState.position === 'holding' && todayBar) {
+            const sellPrice = todayBar.close;
+            const tradeReturn = sellPrice / gameState.costBasis;
+            gameState.totalReturn *= tradeReturn;
+            gameState.tradeGains.push((tradeReturn - 1) * 100);
+            addTradeHistory('sell', gameState.currentDay, sellPrice, tradeReturn);
+            gameState.position = 'empty';
+            gameState.costBasis = 0;
+        }
+    } else {
+        const nextDayIndex = histLen + gameState.currentDay;
+        const nextDayData = gameState.gameKline[nextDayIndex];
 
-    // Overnight: yesterday's fill becomes sellable today (T+1).
-    // Must run BEFORE executing today's order so a same-call buy stays locked.
-    if (gameState.position === 'locked') {
-        gameState.position = 'holding';
-    }
+        // Overnight: yesterday's fill becomes sellable today (T+1).
+        // Must run BEFORE executing today's order so a same-call buy stays locked.
+        if (gameState.position === 'locked') {
+            gameState.position = 'holding';
+        }
 
-    // Execute pending action at next day's open price
-    if (action === 'buy' && gameState.position === 'empty') {
-        gameState.costBasis = nextDayData.open;
-        gameState.position = 'locked'; // T+1: filled today; sell may be queued for next open
-        addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
-    } else if (action === 'sell' && gameState.position === 'holding') {
-        const sellPrice = nextDayData.open;
-        const tradeReturn = sellPrice / gameState.costBasis;
-        gameState.totalReturn *= tradeReturn;
-        gameState.tradeGains.push((tradeReturn - 1) * 100);
-        addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
-        gameState.position = 'empty';
-        gameState.costBasis = 0;
+        // Execute pending action at next day's open price
+        if (action === 'buy' && gameState.position === 'empty') {
+            gameState.costBasis = nextDayData.open;
+            gameState.position = 'locked'; // T+1: filled today; sell may be queued for next open
+            addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
+        } else if (action === 'sell' && gameState.position === 'holding') {
+            const sellPrice = nextDayData.open;
+            const tradeReturn = sellPrice / gameState.costBasis;
+            gameState.totalReturn *= tradeReturn;
+            gameState.tradeGains.push((tradeReturn - 1) * 100);
+            addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
+            gameState.position = 'empty';
+            gameState.costBasis = 0;
+        }
     }
 
     // Track holding days
@@ -520,6 +550,7 @@ export function updateUI() {
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
+        const sameClose = gameState.fillMode === 'same_close';
         if (lastDecisionDay) {
             if (gameState.position === 'locked') {
                 hintEl.textContent = '最后交易日 · 卖出将按今日收盘价成交；或持有至今日收盘结算';
@@ -532,13 +563,19 @@ export function updateUI() {
                 hintEl.className = 'action-hint';
             }
         } else if (gameState.position === 'locked') {
-            hintEl.textContent = 'T+1 锁定中，今日可挂卖单，将于次日开盘成交';
+            hintEl.textContent = sameClose
+                ? 'T+1 锁定中，明日可卖出（按明日收盘价成交）'
+                : 'T+1 锁定中，今日可挂卖单，将于次日开盘成交';
             hintEl.className = 'action-hint warning';
         } else if (gameState.position === 'empty') {
-            hintEl.textContent = '当前空仓，可以选择买入或继续观望';
+            hintEl.textContent = sameClose
+                ? '当前空仓 · 买入将按今日收盘价成交'
+                : '当前空仓，可以选择买入或继续观望';
             hintEl.className = 'action-hint';
         } else {
-            hintEl.textContent = '当前持仓，可以选择卖出或继续持有';
+            hintEl.textContent = sameClose
+                ? '当前持仓 · 卖出将按今日收盘价成交'
+                : '当前持仓，可以选择卖出或继续持有';
             hintEl.className = 'action-hint';
         }
     }

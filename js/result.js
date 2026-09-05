@@ -68,6 +68,13 @@ export function endGame() {
     document.getElementById('dateRange').textContent =
         `${startBar.date} ~ ${endBar.date}`;
 
+    const fillModeEl = document.getElementById('fillModeLabel');
+    if (fillModeEl) {
+        fillModeEl.textContent = gameState.fillMode === 'same_close'
+            ? '成交：当日收盘'
+            : '成交：次日开盘';
+    }
+
     const finalReturnPercent = (gameState.totalReturn - 1) * 100;
     const finalReturnEl = document.getElementById('finalReturn');
     finalReturnEl.textContent = (finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2) + '%';

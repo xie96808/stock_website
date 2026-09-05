@@ -1,0 +1,45 @@
+
+/* Fill mode picker (start screen) */
+.fill-mode-picker {
+    margin: 0 0 0.85rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px dashed rgba(140, 120, 80, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 253, 248, 0.55);
+}
+[data-theme="dark"] .fill-mode-picker {
+    background: rgba(30, 28, 24, 0.45);
+    border-color: rgba(200, 164, 78, 0.28);
+}
+.fill-mode-title {
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    opacity: 0.75;
+    margin-bottom: 0.45rem;
+}
+.fill-mode-option {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    margin: 0.35rem 0;
+    cursor: pointer;
+    font-size: 0.88rem;
+    line-height: 1.35;
+}
+.fill-mode-option input {
+    margin-top: 0.2rem;
+}
+.fill-mode-option strong {
+    display: block;
+    font-weight: 650;
+}
+.fill-mode-option small {
+    display: block;
+    opacity: 0.72;
+    font-size: 0.78rem;
+}
+.result-fill-mode {
+    margin-top: 0.25rem;
+    font-size: 0.85rem;
+    opacity: 0.8;
+}
