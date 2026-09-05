@@ -162,19 +162,39 @@ function _closeSuggestions() {
     if (list) list.classList.remove('open');
 }
 
-function _selectStock(stock) {
+function _selectStock(stock, { dates = 'fill' } = {}) {
     selectedStock = stock;
     document.getElementById('hindsightStockInput').value = `${stock.name} · ${stock.code}`;
     _closeSuggestions();
     const kline = stock.kline;
     if (kline && kline.length >= 2) {
-        document.getElementById('hindsightDateFrom').value = kline[0].date;
-        document.getElementById('hindsightDateTo').value   = kline[kline.length - 1].date;
+        const fromEl = document.getElementById('hindsightDateFrom');
+        const toEl = document.getElementById('hindsightDateTo');
+        // 'fill' = list pick (overwrite); 'ifEmpty' = submit resolve (preserve user dates).
+        if (dates === 'fill' || (dates === 'ifEmpty' && !fromEl.value)) {
+            fromEl.value = kline[0].date;
+        }
+        if (dates === 'fill' || (dates === 'ifEmpty' && !toEl.value)) {
+            toEl.value = kline[kline.length - 1].date;
+        }
         _setHint('hindsightStockHint',
             `共 ${kline.length} 个交易日  (${kline[0].date} ~ ${kline[kline.length - 1].date})`,
             'info'
         );
     }
+}
+
+
+/** Strict positive integer hands — rejects 0, 1e2, decimals, blanks. */
+function _parseHands(raw) {
+    const s = String(raw ?? '').trim();
+    if (!s) return { ok: false, err: '请输入买入数量（正整数手数）' };
+    if (!/^\d+$/.test(s)) {
+        return { ok: false, err: '买入数量须为正整数手数（不支持科学计数法或小数）' };
+    }
+    const n = parseInt(s, 10);
+    if (n < 1) return { ok: false, err: '买入数量至少为 1 手' };
+    return { ok: true, value: n };
 }
 
 export function submitHindsight() {
@@ -188,7 +208,8 @@ export function submitHindsight() {
             _stockMatches(s, raw)
         );
         if (match) {
-            _selectStock(match);
+            // Preserve user-picked dates; only fill if still blank.
+            _selectStock(match, { dates: 'ifEmpty' });
         } else {
             _setHint('hindsightStockHint', '请从列表中选择一只股票', 'error');
             document.getElementById('hindsightStockInput').focus();
@@ -205,8 +226,13 @@ export function submitHindsight() {
         _setHint('hindsightDateHint', '结束日期必须晚于开始日期', 'error');
         return;
     }
-    const qtyRaw = parseInt(document.getElementById('hindsightQtyInput')?.value ?? '10', 10);
-    const qtyHands = (isNaN(qtyRaw) || qtyRaw < 1) ? 10 : qtyRaw;
+    const qtyParsed = _parseHands(document.getElementById('hindsightQtyInput')?.value);
+    if (!qtyParsed.ok) {
+        _setHint('hindsightDateHint', qtyParsed.err, 'error');
+        document.getElementById('hindsightQtyInput')?.focus();
+        return;
+    }
+    const qtyHands = qtyParsed.value;
     const kline = selectedStock.kline;
     filteredKline = kline.filter(d => d.date >= fromVal && d.date <= toVal);
     if (filteredKline.length < 5) {
@@ -234,14 +260,30 @@ export function submitHindsight() {
 
 function _findBestSellAfterBuy(kline) {
     const buyIdx = 0;
-    let peakIdx = 1;
+    // Best executable sell: highest high AFTER the buy day (cannot sell buy-day high as exit).
+    let sellIdx = 1;
     for (let i = 2; i < kline.length; i++) {
-        if (kline[i].high > kline[peakIdx].high) peakIdx = i;
+        if (kline[i].high > kline[sellIdx].high) sellIdx = i;
+    }
+    // Range high across the whole selected window (for the "区间最高价" label).
+    let rangeHighIdx = 0;
+    for (let i = 1; i < kline.length; i++) {
+        if (kline[i].high > kline[rangeHighIdx].high) rangeHighIdx = i;
     }
     const buy = kline[buyIdx].close;
-    const bestSell = kline[peakIdx].high;
+    const bestSell = kline[sellIdx].high;
+    const rangeHigh = kline[rangeHighIdx].high;
     const bestReturn = buy ? (bestSell - buy) / buy : 0;
-    return { buyIdx, sellIdx: peakIdx, peakIdx, buy, bestSell, bestReturn };
+    return {
+        buyIdx,
+        sellIdx,
+        peakIdx: sellIdx,
+        rangeHighIdx,
+        buy,
+        bestSell,
+        rangeHigh,
+        bestReturn,
+    };
 }
 
 let _lastResultCache = null;
@@ -249,7 +291,7 @@ let _lastResultCache = null;
 function _renderResults(qtyHands = 10) {
     const stock  = selectedStock;
     const kline  = filteredKline;
-    const { buyIdx, sellIdx, peakIdx, buy, bestSell, bestReturn } = _findBestSellAfterBuy(kline);
+    const { buyIdx, sellIdx, peakIdx, buy, bestSell, bestReturn, rangeHigh } = _findBestSellAfterBuy(kline);
     const buyDay  = kline[buyIdx];
     const sellDay = kline[sellIdx];
     const buyShares = qtyHands * 100;
@@ -274,7 +316,7 @@ function _renderResults(qtyHands = 10) {
     document.getElementById('hindsightResultDateRange').textContent =
         `${kline[0].date}  →  ${kline[kline.length - 1].date}`;
     document.getElementById('hindsightBuyPrice').textContent  = `¥ ${buy.toFixed(2)}`;
-    document.getElementById('hindsightPeakPrice').textContent = `¥ ${bestSell.toFixed(2)}`;
+    document.getElementById('hindsightPeakPrice').textContent = `¥ ${rangeHigh.toFixed(2)}`;
     document.getElementById('hindsightSellPrice').textContent = `¥ ${bestSell.toFixed(2)}`;
     document.getElementById('hindsightBuyDate').textContent   = buyDay.date;
     document.getElementById('hindsightSellDate').textContent  = sellDay.date;
@@ -289,7 +331,8 @@ function _renderResults(qtyHands = 10) {
         const isPos = earnedAmt >= 0;
         earnedEl.textContent = '¥ --';
         earnedEl.className   = 'ar-return-earned ' + (isPos ? 'earned-pos' : 'earned-neg');
-        if (earnedLabel) earnedLabel.textContent = isPos ? '理论最多赚' : '理论最多亏';
+        // Optimal path: "最多赚" when green; when red it is the *least* loss, not the worst.
+        if (earnedLabel) earnedLabel.textContent = isPos ? '理论最多赚' : '理论最少亏';
     }
     const counterEl = document.getElementById('hindsightReturnCounter');
     if (counterEl) {
@@ -504,7 +547,7 @@ function _renderCommodities(earnedAmt) {
     const el = document.getElementById('hindsightCommodityList');
     if (!el) return;
     const rows = items.map(it => {
-        const n = Math.floor(gained / it.price);
+        const n = Math.floor(gained / it.price + 1e-9);
         if (n < 1) return '';
         const verb = it.name.includes('首付') ? '多出' : '多买';
         return `<div class="archive-commodity-row">` +
@@ -584,7 +627,7 @@ export async function hindsightShare() {
                         await navigator.share({
                             files: [file],
                             title: `${c.stockName} 回溯`,
-                            text: `${c.stockName} 理论${c.earnedAmt >= 0 ? '最多赚' : '最多亏'}`,
+                            text: `${c.stockName} 理论${c.earnedAmt >= 0 ? '最多赚' : '最少亏'}`,
                         });
                         return;
                     } catch (err) {
@@ -599,7 +642,7 @@ export async function hindsightShare() {
         }
     }
     const absAmt = Math.abs(c.earnedAmt).toLocaleString('zh-CN', { maximumFractionDigits: 0 });
-    const verb = c.earnedAmt >= 0 ? '最多赚' : '最多亏';
+    const verb = c.earnedAmt >= 0 ? '最多赚' : '最少亏';
     const text =
         `在平行宇宙里，我在 ${c.buyDate} 以 ¥${c.buyPrice} 买入了 ${c.stockName}（${c.buyShares.toLocaleString()} 股），` +
         `若在 ${c.peakDate} 以最高价 ¥${c.peakPrice} 卖出，理论${verb} ¥${absAmt}。\n\n` +
@@ -613,7 +656,7 @@ export function hindsightCopy() {
     if (!_lastResultCache) return;
     const c = _lastResultCache;
     const absAmt = Math.abs(c.earnedAmt).toLocaleString('zh-CN', { maximumFractionDigits: 0 });
-    const verb = c.earnedAmt >= 0 ? '最多赚' : '最多亏';
+    const verb = c.earnedAmt >= 0 ? '最多赚' : '最少亏';
     const retSign = c.bestReturn >= 0 ? '+' : '';
     const text =
         `在平行宇宙里，我在 ${c.buyDate} 以 ¥${c.buyPrice} 买入了 ${c.stockName}（${c.buyShares.toLocaleString()} 股），\n` +

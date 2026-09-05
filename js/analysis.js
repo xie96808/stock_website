@@ -213,9 +213,11 @@ export function generateBestPoints() {
         const pm10 = i > 0 ? ma10[gi - 1] : null;
         const pm20 = i > 0 ? ma20[gi - 1] : null;
 
-        // 1. Price near support (near recent lows)
-        const localMin = Math.min(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.low));
-        const localMax = Math.max(...gameData.slice(Math.max(0, i - 10), i + 1).map(x => x.high));
+        // 1. Price near support/resistance — look back into pre-game history too
+        const lookFrom = Math.max(0, gi - 10);
+        const lookBars = allData.slice(lookFrom, gi + 1);
+        const localMin = Math.min(...lookBars.map(x => x.low));
+        const localMax = Math.max(...lookBars.map(x => x.high));
 
         if (d.low <= localMin * 1.005) {
             buyScore += 3;
@@ -384,9 +386,18 @@ export function generateBSReport() {
 
     let bestBuyDay = 0, bestSellDay = 0, bestProfit = 0;
     for (let i = 0; i < gameDays - 1; i++) {
+        const buyBar = kline[histLen + i + 1];
+        if (!buyBar) continue;
+        const buyPrice = buyBar.open;
         for (let j = i + 1; j < gameDays; j++) {
-            const buyPrice = kline[histLen + i + 1].open;
-            const sellPrice = kline[histLen + j + 1] ? kline[histLen + j + 1].open : kline[histLen + j].close;
+            // Sell fill: next open for decisions before day 30; day-30 settle uses close.
+            let sellPrice;
+            if (j >= gameDays - 1) {
+                sellPrice = kline[histLen + 29].close;
+            } else {
+                const sellBar = kline[histLen + j + 1];
+                sellPrice = sellBar ? sellBar.open : kline[histLen + j].close;
+            }
             const profit = (sellPrice - buyPrice) / buyPrice;
             if (profit > bestProfit) {
                 bestProfit = profit;
@@ -396,12 +407,12 @@ export function generateBSReport() {
         }
     }
 
-    // Buy-and-hold over the same open→open path the player can trade:
-    // first fillable open (day-2 bar / histLen+1) → settlement open (day-31 / histLen+30).
+    // Buy-and-hold over the executable 30-day window:
+    // first fillable open (day-2 / histLen+1) → day-30 close (histLen+29).
     const bhBuy = kline[histLen + 1];
-    const bhSell = kline[histLen + 30] || kline[histLen + gameDays - 1];
+    const bhSell = kline[histLen + 29];
     const periodReturn = (bhBuy && bhSell && bhBuy.open)
-        ? (bhSell.open / bhBuy.open - 1) * 100
+        ? (bhSell.close / bhBuy.open - 1) * 100
         : 0;
 
     const userReturn = (gameState.totalReturn - 1) * 100;
@@ -410,10 +421,12 @@ export function generateBSReport() {
 
     // Tradeable open range for position scoring (matches fill prices).
     const tradeableOpens = [];
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= 29; i++) {
         const bar = kline[histLen + i];
         if (bar) tradeableOpens.push(bar.open);
     }
+    // Day-30 close is also an executable settle price for open lots.
+    if (kline[histLen + 29]) tradeableOpens.push(kline[histLen + 29].close);
     const openMin = tradeableOpens.length ? Math.min(...tradeableOpens) : 0;
     const openMax = tradeableOpens.length ? Math.max(...tradeableOpens) : 1;
     const openRange = openMax - openMin || 1;
@@ -454,7 +467,7 @@ export function generateBSReport() {
         label: '相对区间涨跌',
         value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`,
         cls: alpha > 0 ? 'positive' : alpha < 0 ? 'negative' : 'neutral',
-        note: `持有至结算开盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→开盘）`
+        note: `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→收盘）`
     });
 
     if (buyTrades.length > 0 && tradeableOpens.length) {

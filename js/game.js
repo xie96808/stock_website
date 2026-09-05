@@ -315,6 +315,32 @@ export function handleAction(action) {
 export function nextDay() {
     const action = gameState.pendingAction;
     const histLen = gameState.historyLength;
+
+    // Last decision day: settle within the 30-day window at day-30 close (no day-31 bar).
+    if (gameState.currentDay >= 30) {
+        const day30 = gameState.gameKline[histLen + 29];
+        if (gameState.position === 'locked') {
+            gameState.position = 'holding';
+        }
+        const wasHolding = gameState.position === 'holding' || gameState.position === 'locked';
+        if (action === 'sell' && gameState.position === 'holding' && day30 && gameState.costBasis > 0) {
+            const sellPrice = day30.close;
+            const tradeReturn = sellPrice / gameState.costBasis;
+            gameState.totalReturn *= tradeReturn;
+            gameState.tradeGains.push((tradeReturn - 1) * 100);
+            addTradeHistory('sell', 30, sellPrice, tradeReturn);
+            gameState.position = 'empty';
+            gameState.costBasis = 0;
+        }
+        // Count day 30 once for both manual sell-at-close and hold-to-force-settle.
+        if (wasHolding) {
+            gameState.holdingDays++;
+        }
+        gameState.pendingAction = null;
+        endGame();
+        return;
+    }
+
     const nextDayIndex = histLen + gameState.currentDay;
     const nextDayData = gameState.gameKline[nextDayIndex];
 
@@ -347,13 +373,9 @@ export function nextDay() {
     gameState.pendingAction = null;
     gameState.currentDay++;
 
-    if (gameState.currentDay > 30) {
-        endGame();
-    } else {
-        updateUI();
-        updateChart();
-        renderWaveAnalysis();
-    }
+    updateUI();
+    updateChart();
+    renderWaveAnalysis();
 }
 
 export function addTradeHistory(type, day, price, returnVal = null) {
@@ -409,25 +431,18 @@ export function updateUI() {
         }
     }
 
-    // Holding PnL card
+    // Cumulative P&L card (matches totalReturn with unrealized when holding)
     const pnlCard = document.getElementById('holdingPnlCard');
     const pnlEl = document.getElementById('holdingPnl');
     if (pnlEl && pnlCard) {
-        if (gameState.position !== 'empty' && gameState.costBasis > 0) {
-            const unrealPct = (todayData.close / gameState.costBasis - 1) * 100;
-            pnlEl.textContent = (unrealPct >= 0 ? '+' : '') + unrealPct.toFixed(2) + '%';
-            if (unrealPct > 0) {
-                pnlEl.className = 'metric-value positive';
-                pnlCard.className = 'metric-card pnl-card positive';
-            } else if (unrealPct < 0) {
-                pnlEl.className = 'metric-value negative';
-                pnlCard.className = 'metric-card pnl-card negative';
-            } else {
-                pnlEl.className = 'metric-value neutral';
-                pnlCard.className = 'metric-card pnl-card neutral';
-            }
+        pnlEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
+        if (displayReturn > 0) {
+            pnlEl.className = 'metric-value positive';
+            pnlCard.className = 'metric-card pnl-card positive';
+        } else if (displayReturn < 0) {
+            pnlEl.className = 'metric-value negative';
+            pnlCard.className = 'metric-card pnl-card negative';
         } else {
-            pnlEl.textContent = '--';
             pnlEl.className = 'metric-value neutral';
             pnlCard.className = 'metric-card pnl-card neutral';
         }
@@ -507,13 +522,13 @@ export function updateUI() {
     if (hintEl) {
         if (lastDecisionDay) {
             if (gameState.position === 'locked') {
-                hintEl.textContent = '最后交易日 · 可挂卖单，次日开盘成交；或持有至次日开盘结算';
+                hintEl.textContent = '最后交易日 · 卖出将按今日收盘价成交；或持有至今日收盘结算';
                 hintEl.className = 'action-hint warning';
             } else if (gameState.position === 'empty') {
                 hintEl.textContent = '最后交易日，不可再买入；空仓将直接结束';
                 hintEl.className = 'action-hint';
             } else {
-                hintEl.textContent = '最后交易日，可卖出或持有至次日开盘结算';
+                hintEl.textContent = '最后交易日，可卖出或持有至今日收盘结算';
                 hintEl.className = 'action-hint';
             }
         } else if (gameState.position === 'locked') {
