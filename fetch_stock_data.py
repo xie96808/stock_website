@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 股票数据抓取脚本
-抓取A股（沪深300 + 中证500）日K线数据。
+抓取A股（沪深300 + 中证500 + 中证1000）日K线数据。
 
 日期窗口：自 2024-01-01 起至 Asia/Shanghai 的“今天”。
 不再硬编码单一日历年，重跑即可覆盖到最新交易日。
+
+每只股票写入 py（全拼）/ jp（简拼），供悔棋局联想。
 """
 
 import akshare as ak
@@ -14,11 +16,17 @@ import time
 import os
 from datetime import datetime, timezone, timedelta
 
+try:
+    from pypinyin import lazy_pinyin, Style
+except ImportError:  # pragma: no cover
+    lazy_pinyin = None
+    Style = None
+
 # 配置
-TARGET_STOCK_COUNT = 200  # 目标股票数量
+TARGET_STOCK_COUNT = 1000  # 目标股票数量（悔棋局联想需要更大覆盖）
 # 起始锚定 2024-01-01：覆盖原游戏全年数据，并满足 hindsight 所需的 2024→最新区间。
 # 结束日期取 Asia/Shanghai 的“今天”，不硬编码年份；非交易日由数据源自然剔除。
-# 多一年历史只需一次 API 调用/股，但整包 JS 会被前端一次性加载，故不向前无限拉长。
+# 整包 JS 会被前端一次性加载；1000 只约 ~55–60MB / gzip ~12MB。
 START_DATE = "20240101"
 SHANGHAI = timezone(timedelta(hours=8))
 END_DATE = datetime.now(SHANGHAI).strftime("%Y%m%d")
@@ -117,26 +125,39 @@ FALLBACK_STOCKS = [
 ]
 
 
-def get_top_stocks_by_market_cap(count=200):
-    """按市值获取前N只股票"""
-    print(f"正在获取市值前 {count} 的股票...")
+def name_to_pinyin(name):
+    """全拼 + 简拼（小写、无音调）。无 pypinyin 时退回空串。"""
+    if not name:
+        return '', ''
+    if lazy_pinyin is None:
+        return '', ''
+    parts = lazy_pinyin(str(name), style=Style.NORMAL, errors='ignore')
+    parts = [p.lower() for p in parts if p]
+    full = ''.join(parts)
+    initials = ''.join(p[0] for p in parts if p)
+    return full, initials
+
+
+def get_top_stocks_by_market_cap(count=1000):
+    """按指数成分覆盖选取前 N 只：沪深300 → 中证500 → 中证1000。"""
+    print(f"正在获取最多 {count} 只指数成分股...")
 
     try:
-        # 获取沪深300成分股
-        hs300 = ak.index_stock_cons(symbol="000300")
-        print(f"获取到沪深300成分股 {len(hs300)} 只")
+        frames = []
+        for sym, label in [
+            ("000300", "沪深300"),
+            ("000905", "中证500"),
+            ("000852", "中证1000"),
+        ]:
+            df = ak.index_stock_cons(symbol=sym)
+            print(f"获取到{label}成分股 {len(df)} 只")
+            frames.append(df)
 
-        # 获取中证500成分股
-        zz500 = ak.index_stock_cons(symbol="000905")
-        print(f"获取到中证500成分股 {len(zz500)} 只")
-
-        # 合并并去重
         result = []
         seen_codes = set()
-
-        for df in [hs300, zz500]:
+        for df in frames:
             for _, row in df.iterrows():
-                code = row['品种代码']
+                code = str(row['品种代码']).zfill(6)
                 if code not in seen_codes and len(result) < count:
                     seen_codes.add(code)
                     result.append({
@@ -256,7 +277,7 @@ def main():
         print("获取股票列表失败，退出")
         return
 
-    # 设置日期范围：2024-01-01 → 今天（Asia/Shanghai）
+    # 设置日期范围：2024-01-01 → 今天（Asia/Shanghai）；股票池约 1000 只
     start_date = START_DATE
     end_date = END_DATE
     print(f"\n数据时间范围: {start_date} - {end_date} (end = today Asia/Shanghai)")
@@ -277,9 +298,12 @@ def main():
         )
 
         if kline and len(kline) >= 31:  # 至少需要31个交易日
+            py, jp = name_to_pinyin(stock['name'])
             all_data.append({
                 'code': stock['code'],
                 'name': stock['name'],
+                'py': py,
+                'jp': jp,
                 'kline': kline
             })
             success_count += 1
