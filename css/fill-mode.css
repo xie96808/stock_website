@@ -103,6 +103,8 @@
     cursor: pointer;
     border: 1px solid rgba(140, 120, 80, 0.35);
     background: transparent;
+    color: inherit;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease, opacity 0.15s ease;
 }
 .fill-mode-btn.primary {
     background: rgba(200, 164, 78, 0.22);
@@ -111,6 +113,34 @@
 }
 .fill-mode-btn.ghost {
     opacity: 0.85;
+}
+.fill-mode-btn:hover:not(:disabled) {
+    background: rgba(200, 164, 78, 0.18);
+    border-color: rgba(200, 164, 78, 0.65);
+    box-shadow: 2px 2px 0 rgba(140, 120, 80, 0.22);
+    transform: translateY(-1px);
+    opacity: 1;
+}
+.fill-mode-btn.primary:hover:not(:disabled) {
+    background: rgba(200, 164, 78, 0.38);
+    border-color: rgba(200, 164, 78, 0.8);
+    box-shadow: 2px 2px 0 rgba(140, 120, 80, 0.28);
+}
+.fill-mode-btn:focus-visible {
+    outline: 2px solid rgba(200, 164, 78, 0.7);
+    outline-offset: 2px;
+}
+.fill-mode-btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 1px 1px 0 rgba(140, 120, 80, 0.2);
+}
+[data-theme="dark"] .fill-mode-btn:hover:not(:disabled) {
+    background: rgba(200, 164, 78, 0.2);
+    border-color: rgba(200, 164, 78, 0.7);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .fill-mode-btn.primary:hover:not(:disabled) {
+    background: rgba(200, 164, 78, 0.42);
 }
 .fill-mode-btn:disabled {
     opacity: 0.55;
