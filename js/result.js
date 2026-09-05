@@ -40,17 +40,17 @@ function calcGrade(finalReturnPercent, bsScore) {
 }
 
 export function endGame() {
-    // Liquidate open lot at next session open (day-31 bar). Include locked so a latent
+    // 30-day rule: liquidate open lot at day-30 close. Include locked so a latent
     // end-of-game T+1 fill cannot leave an unsettled buy in history.
     const histLen = gameState.historyLength;
     if ((gameState.position === 'holding' || gameState.position === 'locked') && gameState.costBasis > 0) {
-        const settleBar = gameState.gameKline[histLen + 30];
+        const settleBar = gameState.gameKline[histLen + 29];
         if (settleBar) {
-            const finalPrice = settleBar.open;
+            const finalPrice = settleBar.close;
             const tradeReturn = finalPrice / gameState.costBasis;
             gameState.totalReturn *= tradeReturn;
             gameState.tradeGains.push((tradeReturn - 1) * 100);
-            gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
+            gameState.tradeHistory.push({ type: 'sell', day: 30, price: finalPrice, return: tradeReturn });
             gameState.position = 'empty';
             gameState.costBasis = 0;
         }
@@ -62,9 +62,9 @@ export function endGame() {
     document.getElementById('stockReveal').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
-    // Date range includes settlement session when day-31 bar exists (matches force-sell).
+    // Date range covers the 30 game days only (day-1 … day-30).
     const startBar = gameState.gameKline[histLen];
-    const endBar = gameState.gameKline[histLen + 30] || gameState.gameKline[histLen + 29];
+    const endBar = gameState.gameKline[histLen + 29];
     document.getElementById('dateRange').textContent =
         `${startBar.date} ~ ${endBar.date}`;
 
@@ -113,7 +113,7 @@ export function drawResultChart() {
     chartRefs.resultChart = echarts.init(chartDom);
 
     const histLen = gameState.historyLength;
-    const fullData = gameState.gameKline.slice(0, histLen + 31); // include day-31 settlement bar
+    const fullData = gameState.gameKline.slice(0, histLen + 30); // history + day-1…day-30
     const dates = fullData.map(d => d.date);
     const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = fullData.map(d => d.volume);
@@ -131,7 +131,7 @@ export function drawResultChart() {
         itemStyle: {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
-    })).filter(p => p.coord[0] < histLen + 31);
+    })).filter(p => p.coord[0] < histLen + 30);
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
