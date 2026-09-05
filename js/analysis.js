@@ -384,51 +384,88 @@ export function generateBSReport() {
     const trades = gameState.tradeHistory;
     const gameDays = 30;
 
+    const sameClose = gameState.fillMode === 'same_close';
     let bestBuyDay = 0, bestSellDay = 0, bestProfit = 0;
-    for (let i = 0; i < gameDays - 1; i++) {
-        const buyBar = kline[histLen + i + 1];
-        if (!buyBar) continue;
-        const buyPrice = buyBar.open;
-        for (let j = i + 1; j < gameDays; j++) {
-            // Sell fill: next open for decisions before day 30; day-30 settle uses close.
-            let sellPrice;
-            if (j >= gameDays - 1) {
-                sellPrice = kline[histLen + 29].close;
-            } else {
-                const sellBar = kline[histLen + j + 1];
-                sellPrice = sellBar ? sellBar.open : kline[histLen + j].close;
+    if (sameClose) {
+        // Same-close: buy day i close, sell day j>i close (T+1 ⇒ j >= i+1).
+        for (let i = 0; i < gameDays - 1; i++) {
+            const buyBar = kline[histLen + i];
+            if (!buyBar) continue;
+            const buyPrice = buyBar.close;
+            for (let j = i + 1; j < gameDays; j++) {
+                const sellBar = kline[histLen + j];
+                if (!sellBar) continue;
+                const profit = (sellBar.close - buyPrice) / buyPrice;
+                if (profit > bestProfit) {
+                    bestProfit = profit;
+                    bestBuyDay = i + 1;
+                    bestSellDay = j + 1;
+                }
             }
-            const profit = (sellPrice - buyPrice) / buyPrice;
-            if (profit > bestProfit) {
-                bestProfit = profit;
-                bestBuyDay = i + 1;
-                bestSellDay = j + 1;
+        }
+    } else {
+        for (let i = 0; i < gameDays - 1; i++) {
+            const buyBar = kline[histLen + i + 1];
+            if (!buyBar) continue;
+            const buyPrice = buyBar.open;
+            for (let j = i + 1; j < gameDays; j++) {
+                // Sell fill: next open for decisions before day 30; day-30 settle uses close.
+                let sellPrice;
+                if (j >= gameDays - 1) {
+                    sellPrice = kline[histLen + 29].close;
+                } else {
+                    const sellBar = kline[histLen + j + 1];
+                    sellPrice = sellBar ? sellBar.open : kline[histLen + j].close;
+                }
+                const profit = (sellPrice - buyPrice) / buyPrice;
+                if (profit > bestProfit) {
+                    bestProfit = profit;
+                    bestBuyDay = i + 1;
+                    bestSellDay = j + 1;
+                }
             }
         }
     }
 
-    // Buy-and-hold over the executable 30-day window:
-    // first fillable open (day-2 / histLen+1) → day-30 close (histLen+29).
-    const bhBuy = kline[histLen + 1];
-    const bhSell = kline[histLen + 29];
-    const periodReturn = (bhBuy && bhSell && bhBuy.open)
-        ? (bhSell.close / bhBuy.open - 1) * 100
-        : 0;
+    // Buy-and-hold over the executable window for this fill mode.
+    let periodReturn = 0;
+    let bhNote = '';
+    if (sameClose) {
+        const bhBuy = kline[histLen];
+        const bhSell = kline[histLen + 29];
+        periodReturn = (bhBuy && bhSell && bhBuy.close)
+            ? (bhSell.close / bhBuy.close - 1) * 100
+            : 0;
+        bhNote = `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（收盘→收盘）`;
+    } else {
+        const bhBuy = kline[histLen + 1];
+        const bhSell = kline[histLen + 29];
+        periodReturn = (bhBuy && bhSell && bhBuy.open)
+            ? (bhSell.close / bhBuy.open - 1) * 100
+            : 0;
+        bhNote = `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→收盘）`;
+    }
 
     const userReturn = (gameState.totalReturn - 1) * 100;
     const buyTrades = trades.filter(t => t.type === 'buy');
     const sellTrades = trades.filter(t => t.type === 'sell');
 
-    // Tradeable open range for position scoring (matches fill prices).
-    const tradeableOpens = [];
-    for (let i = 1; i <= 29; i++) {
-        const bar = kline[histLen + i];
-        if (bar) tradeableOpens.push(bar.open);
+    // Tradeable price range for position scoring (matches fill prices).
+    const tradeablePrices = [];
+    if (sameClose) {
+        for (let i = 0; i < 30; i++) {
+            const bar = kline[histLen + i];
+            if (bar) tradeablePrices.push(bar.close);
+        }
+    } else {
+        for (let i = 1; i <= 29; i++) {
+            const bar = kline[histLen + i];
+            if (bar) tradeablePrices.push(bar.open);
+        }
+        if (kline[histLen + 29]) tradeablePrices.push(kline[histLen + 29].close);
     }
-    // Day-30 close is also an executable settle price for open lots.
-    if (kline[histLen + 29]) tradeableOpens.push(kline[histLen + 29].close);
-    const openMin = tradeableOpens.length ? Math.min(...tradeableOpens) : 0;
-    const openMax = tradeableOpens.length ? Math.max(...tradeableOpens) : 1;
+    const openMin = tradeablePrices.length ? Math.min(...tradeablePrices) : 0;
+    const openMax = tradeablePrices.length ? Math.max(...tradeablePrices) : 1;
     const openRange = openMax - openMin || 1;
     const clamp01 = (x) => Math.max(0, Math.min(1, x));
     const posLabel = (pos, kind) => {
@@ -467,10 +504,10 @@ export function generateBSReport() {
         label: '相对区间涨跌',
         value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`,
         cls: alpha > 0 ? 'positive' : alpha < 0 ? 'negative' : 'neutral',
-        note: `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→收盘）`
+        note: bhNote
     });
 
-    if (buyTrades.length > 0 && tradeableOpens.length) {
+    if (buyTrades.length > 0 && tradeablePrices.length) {
         const avgBuyPos = clamp01(
             buyTrades.reduce((s, t) => s + (t.price - openMin) / openRange, 0) / buyTrades.length
         );
@@ -482,11 +519,11 @@ export function generateBSReport() {
             label: '买点位置',
             value: posLabel(avgBuyPos, 'buy'),
             cls: avgBuyPos < 0.5 ? 'positive' : 'negative',
-            note: `开盘区间位置 ${(avgBuyPos * 100).toFixed(0)}%`
+            note: `成交价区间位置 ${(avgBuyPos * 100).toFixed(0)}%`
         });
     }
 
-    if (sellTrades.length > 0 && tradeableOpens.length) {
+    if (sellTrades.length > 0 && tradeablePrices.length) {
         const avgSellPos = clamp01(
             sellTrades.reduce((s, t) => s + (t.price - openMin) / openRange, 0) / sellTrades.length
         );
@@ -498,7 +535,7 @@ export function generateBSReport() {
             label: '卖点位置',
             value: posLabel(avgSellPos, 'sell'),
             cls: avgSellPos > 0.5 ? 'positive' : 'negative',
-            note: `开盘区间位置 ${(avgSellPos * 100).toFixed(0)}%`
+            note: `成交价区间位置 ${(avgSellPos * 100).toFixed(0)}%`
         });
     }
 
