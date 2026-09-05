@@ -4,23 +4,56 @@ import { calculateMA, applyChartTheme } from './utils.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 
 function calcGrade(finalReturnPercent, bsScore) {
-    const score = finalReturnPercent * 0.6 + (bsScore || 50) * 0.1;
-    if (score >= 15)  return { letter: 'S', title: '交易之神', verdict: '完美操作，教科书级别的走势把握。每一笔都入木三分。', cls: 'grade-S' };
-    if (score >= 8)   return { letter: 'A', title: '技术流玩家', verdict: '买卖时机精准，收益远超大盘，是真正的趋势猎手。', cls: 'grade-A' };
-    if (score >= 2)   return { letter: 'B', title: '稳健操盘手', verdict: '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨练！', cls: 'grade-B' };
-    if (score >= -5)  return { letter: 'C', title: '韭菜培育中', verdict: '不亏不赚，或许下次运气更好一些？', cls: 'grade-C' };
-    return              { letter: 'D', title: '慈善韭菜', verdict: '亏损严重……别担心，这只是模拟，现实里要三思啊。', cls: 'grade-D' };
+    // Emphasize realized return; BS is a light tie-breaker only.
+    const score = finalReturnPercent * 0.85 + ((bsScore || 50) - 70) * 0.08;
+    let letter, title, cls;
+    if (score >= 18 && finalReturnPercent >= 12) {
+        letter = 'S'; title = '交易之神'; cls = 'grade-S';
+    } else if (score >= 10 && finalReturnPercent >= 5) {
+        letter = 'A'; title = '技术流玩家'; cls = 'grade-A';
+    } else if (score >= 2 || finalReturnPercent >= 1) {
+        letter = 'B'; title = '稳健操盘手'; cls = 'grade-B';
+    } else if (finalReturnPercent >= -5) {
+        letter = 'C'; title = '韭菜培育中'; cls = 'grade-C';
+    } else {
+        letter = 'D'; title = '慈善韭菜'; cls = 'grade-D';
+    }
+    let verdict;
+    if (letter === 'S') {
+        verdict = '完美操作，教科书级别的走势把握。每一笔都入木三分。';
+    } else if (letter === 'A') {
+        verdict = finalReturnPercent >= 10
+            ? '买卖时机较准，本局收益明显跑赢可交易区间，继续保持纪律。'
+            : '操作质量不错，本局取得了扎实正收益。';
+    } else if (letter === 'B') {
+        verdict = finalReturnPercent >= 0
+            ? '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨练！'
+            : '有一定判断，但收益仍偏弱，进出场可以再打磨。';
+    } else if (letter === 'C') {
+        verdict = Math.abs(finalReturnPercent) < 1
+            ? '几乎打平，这局更像观望课。下次试着更果断地执行计划。'
+            : '小幅回撤，别灰心——复盘买卖点比纠结单局更重要。';
+    } else {
+        verdict = '亏损偏大……别担心，这只是模拟，现实里要三思啊。';
+    }
+    return { letter, title, verdict, cls };
 }
 
 export function endGame() {
-    // Liquidate a real holding at next session open. Do NOT liquidate T+1 lock (same-bar round-trip).
-    if (gameState.position === 'holding') {
-        const histLen = gameState.historyLength;
-        const finalPrice = gameState.gameKline[histLen + 30].open;
-        const tradeReturn = finalPrice / gameState.costBasis;
-        gameState.totalReturn *= tradeReturn;
-        gameState.tradeGains.push((tradeReturn - 1) * 100);
-        gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
+    // Liquidate open lot at next session open (day-31 bar). Include locked so a latent
+    // end-of-game T+1 fill cannot leave an unsettled buy in history.
+    const histLen = gameState.historyLength;
+    if ((gameState.position === 'holding' || gameState.position === 'locked') && gameState.costBasis > 0) {
+        const settleBar = gameState.gameKline[histLen + 30];
+        if (settleBar) {
+            const finalPrice = settleBar.open;
+            const tradeReturn = finalPrice / gameState.costBasis;
+            gameState.totalReturn *= tradeReturn;
+            gameState.tradeGains.push((tradeReturn - 1) * 100);
+            gameState.tradeHistory.push({ type: 'sell', day: 31, price: finalPrice, return: tradeReturn });
+            gameState.position = 'empty';
+            gameState.costBasis = 0;
+        }
     }
 
     document.getElementById('gameScreen').classList.remove('active');
@@ -29,8 +62,11 @@ export function endGame() {
     document.getElementById('stockReveal').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
+    // Date range includes settlement session when day-31 bar exists (matches force-sell).
+    const startBar = gameState.gameKline[histLen];
+    const endBar = gameState.gameKline[histLen + 30] || gameState.gameKline[histLen + 29];
     document.getElementById('dateRange').textContent =
-        `${gameState.gameKline[gameState.historyLength].date} ~ ${gameState.gameKline[gameState.historyLength + 29].date}`;
+        `${startBar.date} ~ ${endBar.date}`;
 
     const finalReturnPercent = (gameState.totalReturn - 1) * 100;
     const finalReturnEl = document.getElementById('finalReturn');
@@ -77,7 +113,7 @@ export function drawResultChart() {
     chartRefs.resultChart = echarts.init(chartDom);
 
     const histLen = gameState.historyLength;
-    const fullData = gameState.gameKline.slice(0, histLen + 30);
+    const fullData = gameState.gameKline.slice(0, histLen + 31); // include day-31 settlement bar
     const dates = fullData.map(d => d.date);
     const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = fullData.map(d => d.volume);
@@ -95,7 +131,7 @@ export function drawResultChart() {
         itemStyle: {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
-    })).filter(p => p.coord[0] < histLen + 30);
+    })).filter(p => p.coord[0] < histLen + 31);
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
@@ -199,8 +235,8 @@ export function buildPointNavigator(chart, histLen, fullData) {
         allPoints.push({ day: p.day, label: '信号卖' + (idx + 1), type: 'best-sell', date: p.date, price: p.price, reasons: p.reasons });
     });
     trades.forEach((t, idx) => {
-        if (t.day > 30) return;
         const dayData = fullData[histLen + t.day - 1];
+        if (!dayData) return;
         allPoints.push({
             day: t.day,
             label: t.type === 'buy' ? '买入' + (idx + 1) : '卖出' + (idx + 1),

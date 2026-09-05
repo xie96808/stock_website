@@ -396,88 +396,96 @@ export function generateBSReport() {
         }
     }
 
-    const periodOpen = kline[histLen].open;
-    const periodClose = kline[histLen + gameDays - 1].close;
-    const periodReturn = (periodClose - periodOpen) / periodOpen * 100;
+    // Buy-and-hold over the same open→open path the player can trade:
+    // first fillable open (day-2 bar / histLen+1) → settlement open (day-31 / histLen+30).
+    const bhBuy = kline[histLen + 1];
+    const bhSell = kline[histLen + 30] || kline[histLen + gameDays - 1];
+    const periodReturn = (bhBuy && bhSell && bhBuy.open)
+        ? (bhSell.open / bhBuy.open - 1) * 100
+        : 0;
 
     const userReturn = (gameState.totalReturn - 1) * 100;
     const buyTrades = trades.filter(t => t.type === 'buy');
     const sellTrades = trades.filter(t => t.type === 'sell');
 
+    // Tradeable open range for position scoring (matches fill prices).
+    const tradeableOpens = [];
+    for (let i = 1; i <= 30; i++) {
+        const bar = kline[histLen + i];
+        if (bar) tradeableOpens.push(bar.open);
+    }
+    const openMin = tradeableOpens.length ? Math.min(...tradeableOpens) : 0;
+    const openMax = tradeableOpens.length ? Math.max(...tradeableOpens) : 1;
+    const openRange = openMax - openMin || 1;
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+    const posLabel = (pos, kind) => {
+        if (kind === 'buy') {
+            return pos < 0.3 ? '低位' : pos < 0.5 ? '中低位' : pos < 0.7 ? '中高位' : '高位';
+        }
+        return pos > 0.7 ? '高位' : pos > 0.5 ? '中高位' : pos > 0.3 ? '中低位' : '低位';
+    };
+
     let score = 70;
     const details = [];
 
-    if (bestProfit > 0.001) {
-        const returnRatio = userReturn / (bestProfit * 100);
-        const returnScore = Math.max(-15, Math.min(15, returnRatio * 15));
-        score += returnScore;
-        details.push({
-            label: '收益率表现',
-            value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
-            cls: userReturn > 0 ? 'positive' : userReturn < 0 ? 'negative' : 'neutral',
-            note: `最优单次收益 ${(bestProfit * 100).toFixed(2)}%`
-        });
-    } else {
-        if (Math.abs(userReturn) < 2) {
-            score += 8;
-        } else if (userReturn < -2) {
-            score -= 5;
-        }
-        details.push({
-            label: '收益率表现',
-            value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
-            cls: userReturn > 0 ? 'positive' : userReturn < 0 ? 'negative' : 'neutral',
-            note: '区间机会有限'
-        });
-    }
-
+    // Score return vs buy-and-hold on the same executable window (not vs single best trade).
     const alpha = userReturn - periodReturn;
-    if (alpha > 3) score += 8;
-    else if (alpha > 0) score += 4;
+    if (alpha > 3) score += 10;
+    else if (alpha > 0) score += 5;
     else if (alpha > -3) score -= 2;
     else score -= 8;
+
+    if (userReturn > 5) score += 4;
+    else if (userReturn > 0) score += 2;
+    else if (userReturn < -5) score -= 4;
+    else if (userReturn < 0) score -= 2;
+
+    const bestNote = bestProfit > 0.001
+        ? `可交易区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%；最优单次 ${(bestProfit * 100).toFixed(2)}%`
+        : `可交易区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（机会有限）`;
+    details.push({
+        label: '收益率表现',
+        value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
+        cls: userReturn > 0 ? 'positive' : userReturn < 0 ? 'negative' : 'neutral',
+        note: bestNote
+    });
+
     details.push({
         label: '相对区间涨跌',
         value: `${alpha >= 0 ? '+' : ''}${alpha.toFixed(2)}%`,
         cls: alpha > 0 ? 'positive' : alpha < 0 ? 'negative' : 'neutral',
-        note: `区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%`
+        note: `持有至结算开盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→开盘）`
     });
 
-    if (buyTrades.length > 0) {
-        const prices = [];
-        for (let i = 0; i < gameDays; i++) prices.push(kline[histLen + i].close);
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        const range = maxPrice - minPrice || 1;
-        const avgBuyPos = buyTrades.reduce((s, t) => s + (t.price - minPrice) / range, 0) / buyTrades.length;
+    if (buyTrades.length > 0 && tradeableOpens.length) {
+        const avgBuyPos = clamp01(
+            buyTrades.reduce((s, t) => s + (t.price - openMin) / openRange, 0) / buyTrades.length
+        );
         if (avgBuyPos < 0.3) score += 5;
         else if (avgBuyPos < 0.5) score += 2;
         else if (avgBuyPos > 0.7) score -= 5;
         else score -= 2;
         details.push({
             label: '买点位置',
-            value: avgBuyPos < 0.3 ? '低位' : avgBuyPos < 0.5 ? '中低位' : avgBuyPos < 0.7 ? '中高位' : '高位',
+            value: posLabel(avgBuyPos, 'buy'),
             cls: avgBuyPos < 0.5 ? 'positive' : 'negative',
-            note: `区间位置 ${(avgBuyPos * 100).toFixed(0)}%`
+            note: `开盘区间位置 ${(avgBuyPos * 100).toFixed(0)}%`
         });
     }
 
-    if (sellTrades.length > 0) {
-        const prices = [];
-        for (let i = 0; i < gameDays; i++) prices.push(kline[histLen + i].close);
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        const range = maxPrice - minPrice || 1;
-        const avgSellPos = sellTrades.reduce((s, t) => s + (t.price - minPrice) / range, 0) / sellTrades.length;
+    if (sellTrades.length > 0 && tradeableOpens.length) {
+        const avgSellPos = clamp01(
+            sellTrades.reduce((s, t) => s + (t.price - openMin) / openRange, 0) / sellTrades.length
+        );
         if (avgSellPos > 0.7) score += 5;
         else if (avgSellPos > 0.5) score += 2;
         else if (avgSellPos < 0.3) score -= 5;
         else score -= 2;
         details.push({
             label: '卖点位置',
-            value: avgSellPos > 0.7 ? '高位' : avgSellPos > 0.5 ? '中高位' : avgSellPos > 0.3 ? '中低位' : '低位',
+            value: posLabel(avgSellPos, 'sell'),
             cls: avgSellPos > 0.5 ? 'positive' : 'negative',
-            note: `区间位置 ${(avgSellPos * 100).toFixed(0)}%`
+            note: `开盘区间位置 ${(avgSellPos * 100).toFixed(0)}%`
         });
     }
 
