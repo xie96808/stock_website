@@ -13,7 +13,9 @@ export const gameState = {
     holdingDays: 0,
     tradeGains: [],
     bsScore: null,
-    bestPoints: null
+    bestPoints: null,
+    // 'next_open' = decide today, fill next open (default); 'same_close' = fill today close
+    fillMode: 'next_open'
 };
 
 export const chartRefs = {
