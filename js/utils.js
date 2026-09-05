@@ -1,17 +1,21 @@
 // ========== UTILITY FUNCTIONS ==========
 
+/** Half-up round to `digits` decimal places (avoids 5.425 → 5.42 via banker's toFixed). */
+export function roundHalfUp(value, digits = 2) {
+    const f = 10 ** digits;
+    return Math.round((Number(value) + Number.EPSILON) * f) / f;
+}
+
 export function calculateMA(data, period) {
     const result = [];
     for (let i = 0; i < data.length; i++) {
-        if (i < period - 1) {
-            result.push(null);
-        } else {
-            let sum = 0;
-            for (let j = 0; j < period; j++) {
-                sum += data[i - j].close;
-            }
-            result.push(parseFloat((sum / period).toFixed(2)));
+        // Cold start: expanding average of available bars until full period.
+        const window = Math.min(period, i + 1);
+        let sum = 0;
+        for (let j = 0; j < window; j++) {
+            sum += data[i - j].close;
         }
+        result.push(roundHalfUp(sum / window, 2));
     }
     return result;
 }
