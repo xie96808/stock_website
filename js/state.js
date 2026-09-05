@@ -15,7 +15,9 @@ export const gameState = {
     bsScore: null,
     bestPoints: null,
     // 'next_open' = decide today, fill next open (default); 'same_close' = fill today close
-    fillMode: 'next_open'
+    fillMode: 'next_open',
+    // next_open: fill calendar day already counted on buy; skip re-count that day
+    lastBuyFillDay: null
 };
 
 export const chartRefs = {
