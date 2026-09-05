@@ -47,30 +47,13 @@
                             <p class="sub">用真实 A 股数据，重走每一次错过的行情</p>
                         </div>
                     </div>
-                    <div class="fill-mode-picker" role="radiogroup" aria-label="成交方式">
-                        <div class="fill-mode-title">成交方式</div>
-                        <label class="fill-mode-option">
-                            <input type="radio" name="fillMode" value="next_open" checked>
-                            <span>
-                                <strong>次日开盘成交（默认）</strong>
-                                <small>今晚点单，次日开盘价成交，T+1</small>
-                            </span>
-                        </label>
-                        <label class="fill-mode-option">
-                            <input type="radio" name="fillMode" value="same_close">
-                            <span>
-                                <strong>当日收盘成交</strong>
-                                <small>看完今 K 再点，按今收成交，T+1（今买明才能卖）</small>
-                            </span>
-                        </label>
-                    </div>
                     <div class="lanes">
                         <button type="button" class="lane" onclick="startGame()">
                             <span class="mark">一</span>
                             <span class="copy">
                                 <small>模拟盘</small>
                                 <strong>开始游戏</strong>
-                                <p>随机三十日 K 线，按所选成交方式买卖，终局揭晓身份。</p>
+                                <p>随机三十日 K 线，点开始后选择成交方式，终局揭晓身份。</p>
                             </span>
                             <span class="cta cta-fill">立即开始</span>
                         </button>
@@ -639,6 +622,37 @@
         </section>
     </div>
 
+
+    <!-- Fill mode modal (shown after 开始游戏) -->
+    <div id="fillModeModal" class="fill-mode-modal" hidden aria-hidden="true">
+        <div class="fill-mode-backdrop" onclick="cancelFillModeModal()"></div>
+        <div class="fill-mode-dialog" role="dialog" aria-modal="true" aria-labelledby="fillModeDialogTitle">
+            <h2 id="fillModeDialogTitle" class="fill-mode-dialog-title">选择成交方式</h2>
+            <p class="fill-mode-dialog-sub">后台正在准备行情数据，选定后即可开局</p>
+            <div class="fill-mode-picker" role="radiogroup" aria-label="成交方式">
+                <label class="fill-mode-option">
+                    <input type="radio" name="fillMode" value="next_open" checked>
+                    <span>
+                        <strong>次日开盘成交（默认）</strong>
+                        <small>今晚点单，次日开盘价成交，T+1</small>
+                    </span>
+                </label>
+                <label class="fill-mode-option">
+                    <input type="radio" name="fillMode" value="same_close">
+                    <span>
+                        <strong>当日收盘成交</strong>
+                        <small>看完今 K 再点，按今收成交，T+1（今买明才能卖）</small>
+                    </span>
+                </label>
+            </div>
+            <div class="fill-mode-actions">
+                <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
+                <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始模拟</button>
+            </div>
+            <p class="fill-mode-status" id="fillModeStatus" aria-live="polite"></p>
+        </div>
+    </div>
+
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
@@ -671,7 +685,7 @@
             const ready = await waitForEcharts(4000);
             if (!ready) {
                 alert('K 线图加载失败，请检查网络后刷新重试');
-                return;
+                throw new Error('echarts unavailable');
             }
             return startGame(...args);
         }, gameState);
