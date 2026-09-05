@@ -1,5 +1,5 @@
 
-/* Fill mode picker (start screen) */
+/* Fill mode picker (shared: modal) */
 .fill-mode-picker {
     margin: 0 0 0.85rem;
     padding: 0.7rem 0.85rem;
@@ -42,4 +42,83 @@
     margin-top: 0.25rem;
     font-size: 0.85rem;
     opacity: 0.8;
+}
+
+/* Fill mode modal (after 开始游戏) */
+.fill-mode-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+}
+.fill-mode-modal[hidden] {
+    display: none !important;
+}
+.fill-mode-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(18, 16, 12, 0.45);
+    backdrop-filter: blur(2px);
+}
+.fill-mode-dialog {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    padding: 1.15rem 1.2rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgba(140, 120, 80, 0.35);
+    background: rgba(255, 253, 248, 0.97);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+}
+[data-theme="dark"] .fill-mode-dialog {
+    background: rgba(28, 26, 22, 0.96);
+    border-color: rgba(200, 164, 78, 0.3);
+}
+.fill-mode-dialog-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+}
+.fill-mode-dialog-sub {
+    margin: 0 0 0.85rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    line-height: 1.4;
+}
+.fill-mode-modal .fill-mode-picker {
+    margin: 0 0 0.95rem;
+}
+.fill-mode-actions {
+    display: flex;
+    gap: 0.55rem;
+    justify-content: flex-end;
+}
+.fill-mode-btn {
+    border-radius: 999px;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.86rem;
+    cursor: pointer;
+    border: 1px solid rgba(140, 120, 80, 0.35);
+    background: transparent;
+}
+.fill-mode-btn.primary {
+    background: rgba(200, 164, 78, 0.22);
+    border-color: rgba(200, 164, 78, 0.55);
+    font-weight: 650;
+}
+.fill-mode-btn.ghost {
+    opacity: 0.85;
+}
+.fill-mode-btn:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+.fill-mode-status {
+    min-height: 1.1em;
+    margin: 0.55rem 0 0;
+    font-size: 0.75rem;
+    opacity: 0.65;
 }
