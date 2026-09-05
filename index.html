@@ -628,28 +628,43 @@
         <div class="fill-mode-backdrop" onclick="cancelFillModeModal()"></div>
         <div class="fill-mode-dialog" role="dialog" aria-modal="true" aria-labelledby="fillModeDialogTitle">
             <h2 id="fillModeDialogTitle" class="fill-mode-dialog-title">选择成交方式</h2>
-            <p class="fill-mode-dialog-sub">后台正在准备行情数据，选定后即可开局</p>
-            <div class="fill-mode-picker" role="radiogroup" aria-label="成交方式">
-                <label class="fill-mode-option">
-                    <input type="radio" name="fillMode" value="next_open" checked>
-                    <span>
-                        <strong>次日开盘成交（默认）</strong>
-                        <small>今晚点单，次日开盘价成交，T+1</small>
-                    </span>
-                </label>
-                <label class="fill-mode-option">
-                    <input type="radio" name="fillMode" value="same_close">
-                    <span>
-                        <strong>当日收盘成交</strong>
-                        <small>看完今 K 再点，按今收成交，T+1（今买明才能卖）</small>
-                    </span>
-                </label>
+
+            <div id="fillModeChoosePane">
+                <p class="fill-mode-dialog-sub">选定成交方式后开始加载；默认仍是次日开盘</p>
+                <div class="fill-mode-picker" role="radiogroup" aria-label="成交方式">
+                    <label class="fill-mode-option">
+                        <input type="radio" name="fillMode" value="next_open" checked>
+                        <span>
+                            <strong>次日开盘成交（默认）</strong>
+                            <small>今晚点单，次日开盘价成交，T+1</small>
+                        </span>
+                    </label>
+                    <label class="fill-mode-option">
+                        <input type="radio" name="fillMode" value="same_close">
+                        <span>
+                            <strong>当日收盘成交</strong>
+                            <small>看完今 K 再点，按今收成交，T+1（今买明才能卖）</small>
+                        </span>
+                    </label>
+                </div>
+                <div class="fill-mode-actions">
+                    <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
+                    <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始游戏</button>
+                </div>
             </div>
-            <div class="fill-mode-actions">
-                <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
-                <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始模拟</button>
+
+            <div id="fillModeLoadingPane" class="fill-mode-loading" hidden>
+                <div class="fill-load-shell">
+                    <div class="fill-load-meta">
+                        <span class="fill-load-label">开局准备</span>
+                        <span class="fill-load-pct" id="fillLoadPct">0%</span>
+                    </div>
+                    <div class="fill-load-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="fillLoadBar">
+                        <span id="fillLoadFill"></span>
+                    </div>
+                    <p class="fill-load-tip" id="fillLoadTip" aria-live="polite">股票资源加载中…</p>
+                </div>
             </div>
-            <p class="fill-mode-status" id="fillModeStatus" aria-live="polite"></p>
         </div>
     </div>
 

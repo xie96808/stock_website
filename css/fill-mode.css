@@ -122,3 +122,63 @@
     font-size: 0.75rem;
     opacity: 0.65;
 }
+
+/* Loading progress (same sketch language as in-game progress) */
+.fill-mode-modal.is-loading .fill-mode-backdrop {
+    pointer-events: none;
+}
+.fill-mode-loading {
+    margin-top: 0.15rem;
+}
+.fill-load-shell {
+    padding: 0.85rem 0.9rem 0.95rem;
+    border: 1.6px solid rgba(140, 120, 80, 0.35);
+    border-radius: 18px 24px 16px 22px;
+    background: rgba(255, 252, 245, 0.72);
+    box-shadow: 2px 2px 0 rgba(140, 120, 80, 0.18);
+}
+[data-theme="dark"] .fill-load-shell {
+    background: rgba(34, 30, 24, 0.72);
+    border-color: rgba(200, 164, 78, 0.3);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+}
+.fill-load-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 0.55rem;
+    font-size: 0.78rem;
+}
+.fill-load-label {
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    opacity: 0.9;
+}
+.fill-load-pct {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+}
+.fill-load-bar {
+    position: relative;
+    height: 6px;
+    border-radius: 999px 8px 999px 6px;
+    background: rgba(140, 120, 80, 0.12);
+    overflow: hidden;
+    border: 1px solid rgba(140, 120, 80, 0.28);
+}
+.fill-load-bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(196, 120, 78, 0.85), rgba(200, 164, 78, 0.95));
+    transition: width 0.18s ease;
+}
+.fill-load-tip {
+    margin: 0.7rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+    opacity: 0.78;
+    letter-spacing: 0.04em;
+}
