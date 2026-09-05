@@ -36,6 +36,7 @@ export function startGame() {
     gameState.bsScore = null;
     gameState.bestPoints = null;
     gameState.fillMode = readFillModeFromUi();
+    gameState.lastBuyFillDay = null;
 
     // Pick random stock and random start position
     const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
@@ -73,6 +74,7 @@ export function startGame() {
         return;
     }
     updateUI();
+    resetOHLCToToday();
     renderWaveAnalysis();
 }
 
@@ -339,10 +341,17 @@ export function nextDay() {
             addTradeHistory('sell', 30, sellPrice, tradeReturn);
             gameState.position = 'empty';
             gameState.costBasis = 0;
+            gameState.lastBuyFillDay = null;
         }
         // Count day 30 once for both manual sell-at-close and hold-to-force-settle.
+        // next_open buy on day 29 already counted fill day 30 on the buy transition.
         if (wasHolding) {
-            gameState.holdingDays++;
+            const skipFillDayRecount = !sameClose
+                && gameState.lastBuyFillDay != null
+                && gameState.currentDay === gameState.lastBuyFillDay;
+            if (!skipFillDayRecount) {
+                gameState.holdingDays++;
+            }
         }
         gameState.pendingAction = null;
         endGame();
@@ -368,6 +377,7 @@ export function nextDay() {
             addTradeHistory('sell', gameState.currentDay, sellPrice, tradeReturn);
             gameState.position = 'empty';
             gameState.costBasis = 0;
+            gameState.lastBuyFillDay = null;
         }
     } else {
         const nextDayIndex = histLen + gameState.currentDay;
@@ -383,6 +393,7 @@ export function nextDay() {
         if (action === 'buy' && gameState.position === 'empty') {
             gameState.costBasis = nextDayData.open;
             gameState.position = 'locked'; // T+1: filled today; sell may be queued for next open
+            gameState.lastBuyFillDay = gameState.currentDay + 1;
             addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
         } else if (action === 'sell' && gameState.position === 'holding') {
             const sellPrice = nextDayData.open;
@@ -392,12 +403,18 @@ export function nextDay() {
             addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
             gameState.position = 'empty';
             gameState.costBasis = 0;
+            gameState.lastBuyFillDay = null;
         }
     }
 
-    // Track holding days
+    // Track holding days (next_open: fill day already counted on buy — skip re-count)
     if (gameState.position === 'holding' || gameState.position === 'locked') {
-        gameState.holdingDays++;
+        const skipFillDayRecount = !sameClose
+            && gameState.lastBuyFillDay != null
+            && gameState.currentDay === gameState.lastBuyFillDay;
+        if (!skipFillDayRecount) {
+            gameState.holdingDays++;
+        }
     }
 
     gameState.pendingAction = null;
@@ -564,7 +581,7 @@ export function updateUI() {
             }
         } else if (gameState.position === 'locked') {
             hintEl.textContent = sameClose
-                ? 'T+1 锁定中，明日可卖出（按明日收盘价成交）'
+                ? 'T+1 锁定中，今日可卖出（按今日收盘价成交）'
                 : 'T+1 锁定中，今日可挂卖单，将于次日开盘成交';
             hintEl.className = 'action-hint warning';
         } else if (gameState.position === 'empty') {
