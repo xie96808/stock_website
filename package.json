@@ -3,6 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/engine/engine.test.js"
+    "test": "node --test tests/engine/engine.test.js",
+    "server:install": "npm --prefix server install",
+    "server:migrate": "npm --prefix server run migrate",
+    "server:start": "npm --prefix server start",
+    "server:dev": "npm --prefix server run dev"
   }
 }

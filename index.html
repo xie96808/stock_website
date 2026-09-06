@@ -6,6 +6,7 @@
     <title>早知道当初不炒了</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
 </head>
 <body>
@@ -678,6 +679,7 @@
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
+        import { initAuth, openAuthModal } from './js/auth.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -724,6 +726,8 @@
         window.hindsightCopy  = hindsightCopy;
         window.hindsightReset = hindsightReset;
         window.showHindsight    = showHindsight;
+        window.openAuthModal = openAuthModal;
+        initAuth().catch((e) => console.warn('auth init', e));
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
         window.onHindsightBlur  = onHindsightBlur;
