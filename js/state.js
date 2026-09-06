@@ -2,22 +2,25 @@
 export const gameState = {
     stocksData: [],
     currentStock: null,
-    gameKline: [],        // history + 31 days of kline data
-    historyLength: 0,     // number of history days before game starts
-    currentDay: 1,        // 1-30
-    position: 'empty',    // 'empty' | 'holding' | 'locked' (locked = fill day, sell can be queued)
+    gameKline: [],
+    historyLength: 0,
+    currentDay: 1,
+    position: "empty",
     costBasis: 0,
-    totalReturn: 1,       // Multiplicative return
+    totalReturn: 1,
     tradeHistory: [],
+    valuation: null,
+    actions: [],
     pendingAction: null,
     holdingDays: 0,
     tradeGains: [],
     bsScore: null,
     bestPoints: null,
-    // 'next_open' = decide today, fill next open (default); 'same_close' = fill today close
-    fillMode: 'next_open',
-    // next_open: fill calendar day already counted on buy; skip re-count that day
-    lastBuyFillDay: null
+    fillMode: "next_open",
+    lastBuyFillDay: null,
+    ruleVersion: "sim30-mtm-v1",
+    returnPpm: null,
+    returnPct: null
 };
 
 export const chartRefs = {

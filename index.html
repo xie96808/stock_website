@@ -248,6 +248,7 @@
                         <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
                         <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
                         <button class="action-btn hold" id="holdBtn" onclick="handleAction('hold')">观望</button>
+                        <button class="action-btn hold" id="finishBtn" onclick="finishSettle()" hidden>结束并结算</button>
                         <span class="action-hint" id="actionHint">选择你的操作，将在明日开盘时执行</span>
                     </div>
                 </aside>
@@ -671,7 +672,7 @@
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
-        import { startGame, handleAction, toggleIndicatorPanel } from './js/game.js';
+        import { startGame, handleAction, finishSettle, toggleIndicatorPanel } from './js/game.js';
         import { attachDeferredStart } from "./js/load-stocks.js";
         import { resetGame, playAgain } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
@@ -705,6 +706,7 @@
             return startGame(...args);
         }, gameState);
         window.handleAction = handleAction;
+        window.finishSettle = finishSettle;
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
         window.playAgain = playAgain;

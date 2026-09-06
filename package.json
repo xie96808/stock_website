@@ -1,0 +1,8 @@
+{
+  "name": "stock-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/engine/engine.test.js"
+  }
+}

@@ -40,21 +40,8 @@ function calcGrade(finalReturnPercent, bsScore) {
 }
 
 export function endGame() {
-    // 30-day rule: liquidate open lot at day-30 close. Include locked so a latent
-    // end-of-game T+1 fill cannot leave an unsettled buy in history.
-    const histLen = gameState.historyLength;
-    if ((gameState.position === 'holding' || gameState.position === 'locked') && gameState.costBasis > 0) {
-        const settleBar = gameState.gameKline[histLen + 29];
-        if (settleBar) {
-            const finalPrice = settleBar.close;
-            const tradeReturn = finalPrice / gameState.costBasis;
-            gameState.totalReturn *= tradeReturn;
-            gameState.tradeGains.push((tradeReturn - 1) * 100);
-            gameState.tradeHistory.push({ type: 'sell', day: 30, price: finalPrice, return: tradeReturn });
-            gameState.position = 'empty';
-            gameState.costBasis = 0;
-        }
-    }
+    // Settlement P&L / valuation already applied by finishSettle() via shared engine.
+    // Do not invent a day-30 sell fill here.
 
     document.getElementById('gameScreen').classList.remove('active');
     document.getElementById('resultScreen').classList.add('active');
@@ -63,6 +50,7 @@ export function endGame() {
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
     // Date range covers the 30 game days only (day-1 … day-30).
+    const histLen = gameState.historyLength;
     const startBar = gameState.gameKline[histLen];
     const endBar = gameState.gameKline[histLen + 29];
     document.getElementById('dateRange').textContent =
@@ -75,9 +63,14 @@ export function endGame() {
             : '成交：次日开盘';
     }
 
-    const finalReturnPercent = (gameState.totalReturn - 1) * 100;
+    const finalReturnPercent = gameState.returnPct != null
+        ? parseFloat(gameState.returnPct)
+        : (gameState.totalReturn - 1) * 100;
     const finalReturnEl = document.getElementById('finalReturn');
-    finalReturnEl.textContent = (finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2) + '%';
+    const pctStr = gameState.returnPct != null
+        ? ((parseFloat(gameState.returnPct) >= 0 ? '+' : '') + gameState.returnPct)
+        : ((finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2));
+    finalReturnEl.textContent = pctStr + '%';
     finalReturnEl.className = 'final-return ' +
         (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
 
@@ -139,6 +132,19 @@ export function drawResultChart() {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
     })).filter(p => p.coord[0] < histLen + 30);
+
+    if (gameState.valuation) {
+        const v = gameState.valuation;
+        markPoints.push({
+            name: '估值',
+            coord: [histLen + v.day - 1, v.price],
+            value: '估值',
+            symbol: 'diamond',
+            symbolSize: 14,
+            itemStyle: { color: '#f5c542' },
+            label: { color: '#f5c542', fontSize: 10, fontWeight: 'bold' }
+        });
+    }
 
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
@@ -254,6 +260,19 @@ export function buildPointNavigator(chart, histLen, fullData) {
             tradeReturn: t.return
         });
     });
+    if (gameState.valuation) {
+        const v = gameState.valuation;
+        const dayData = fullData[histLen + v.day - 1];
+        allPoints.push({
+            day: v.day,
+            label: '期末估值',
+            type: 'user-valuation',
+            date: dayData ? dayData.date : '',
+            price: v.price,
+            reasons: null,
+            tradeReturn: v.multiple
+        });
+    }
     allPoints.sort((a, b) => a.day - b.day);
     if (allPoints.length === 0) return;
 
@@ -281,7 +300,7 @@ export function buildPointNavigator(chart, histLen, fullData) {
             badge.classList.add('active');
             activeIdx = i;
             let html = '<div class="detail-header">';
-            html += `<span class="point-badge ${pt.type.includes('buy') ? 'buy' : 'sell'}">${pt.label}</span>`;
+            html += `<span class="point-badge ${pt.type.includes('buy') ? 'buy' : (pt.type.includes('valuation') ? 'valuation' : 'sell')}">${pt.label}</span>`;
             html += `<span class="detail-day">第 ${pt.day} 天（${pt.date}）</span>`;
             html += `<span class="detail-price">价格 ${pt.price.toFixed(2)}</span>`;
             html += '</div>';
@@ -291,7 +310,16 @@ export function buildPointNavigator(chart, histLen, fullData) {
                 html += '</div>';
             } else {
                 html += '<div class="detail-user-info">';
-                if (pt.type === 'user-buy') {
+                if (pt.type === 'user-valuation') {
+                html += `<div class="point-detail">未平仓按第 30 日收盘做<em>期末估值</em>（不计卖出成交）`;
+                if (pt.tradeReturn) {
+                    const retPct = ((pt.tradeReturn - 1) * 100).toFixed(2);
+                    const cls = parseFloat(retPct) >= 0 ? 'positive' : 'negative';
+                    html += `，浮动 <span style="color:var(--${cls});font-weight:700">${parseFloat(retPct) >= 0 ? '+' : ''}${retPct}%</span>`;
+                }
+                html += `</div>`;
+            } else if (pt.type === 'user-buy') {
+
                     html += `你在第 ${pt.day} 天以 ${pt.price.toFixed(2)} 买入`;
                 } else {
                     const retPct = pt.tradeReturn ? ((pt.tradeReturn - 1) * 100).toFixed(2) : null;
