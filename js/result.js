@@ -50,6 +50,7 @@ export function endGame() {
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
 
     // Date range covers the 30 game days only (day-1 … day-30).
+    const histLen = gameState.historyLength;
     const startBar = gameState.gameKline[histLen];
     const endBar = gameState.gameKline[histLen + 29];
     document.getElementById('dateRange').textContent =
