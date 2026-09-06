@@ -2,6 +2,7 @@
 import { gameState, chartRefs } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
 import { endGame } from './result.js';
+import { replayGame, settleGame } from '../shared/engine.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -37,6 +38,11 @@ export function startGame() {
     gameState.bestPoints = null;
     gameState.fillMode = readFillModeFromUi();
     gameState.lastBuyFillDay = null;
+    gameState.actions = [];
+    gameState.valuation = null;
+    gameState.returnPpm = null;
+    gameState.returnPct = null;
+    gameState.ruleVersion = 'sim30-mtm-v1';
 
     // Pick random stock and random start position
     const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
@@ -312,117 +318,96 @@ export function updateChart() {
     applyChartTheme(chartRefs.klineChart);
 }
 
-export function handleAction(action) {
-    const lastDecisionDay = gameState.currentDay >= 30;
-    if (action === 'buy' && (gameState.position !== 'empty' || lastDecisionDay)) return;
-    if (action === 'sell' && gameState.position === 'empty') return;
-
-    gameState.pendingAction = action;
-    nextDay();
+export function getGameBars() {
+    const histLen = gameState.historyLength;
+    return gameState.gameKline.slice(histLen, histLen + 30);
 }
 
-export function nextDay() {
-    const action = gameState.pendingAction;
-    const histLen = gameState.historyLength;
-    const sameClose = gameState.fillMode === 'same_close';
+function syncFromEngine(r, { finished = false, bars = null } = {}) {
+    gameState.tradeHistory = r.trades.map((t) => ({
+        type: t.type,
+        day: t.day,
+        price: t.price,
+        return: t.return != null ? t.return : null
+    }));
+    gameState.valuation = r.valuation;
+    gameState.tradeGains = r.tradeGains.slice();
+    gameState.holdingDays = r.holdingDays;
+    gameState.ruleVersion = r.ruleVersion;
 
-    // Last decision day: settle within the 30-day window at day-30 close (no day-31 bar).
-    if (gameState.currentDay >= 30) {
-        const day30 = gameState.gameKline[histLen + 29];
-        if (gameState.position === 'locked') {
-            gameState.position = 'holding';
-        }
-        const wasHolding = gameState.position === 'holding' || gameState.position === 'locked';
-        if (action === 'sell' && gameState.position === 'holding' && day30 && gameState.costBasis > 0) {
-            const sellPrice = day30.close;
-            const tradeReturn = sellPrice / gameState.costBasis;
-            gameState.totalReturn *= tradeReturn;
-            gameState.tradeGains.push((tradeReturn - 1) * 100);
-            addTradeHistory('sell', 30, sellPrice, tradeReturn);
-            gameState.position = 'empty';
-            gameState.costBasis = 0;
-            gameState.lastBuyFillDay = null;
-        }
-        // Count day 30 once for both manual sell-at-close and hold-to-force-settle.
-        // next_open buy on day 29 already counted fill day 30 on the buy transition.
-        if (wasHolding) {
-            const skipFillDayRecount = !sameClose
-                && gameState.lastBuyFillDay != null
-                && gameState.currentDay === gameState.lastBuyFillDay;
-            if (!skipFillDayRecount) {
-                gameState.holdingDays++;
-            }
-        }
-        gameState.pendingAction = null;
-        endGame();
+    if (finished) {
+        gameState.totalReturn = r.equityMultiple;
+        gameState.position = 'empty';
+        gameState.costBasis = 0;
+        gameState.lastBuyFillDay = null;
+        gameState.returnPpm = r.returnPpm;
+        gameState.returnPct = r.returnPct;
         return;
     }
 
-    if (sameClose) {
-        // Same-close: fill at today's close, then advance. Unlock prior T+1 lock first
-        // so a buy yesterday can be sold today (not same-day as the buy fill).
-        if (gameState.position === 'locked') {
-            gameState.position = 'holding';
-        }
-        const todayBar = gameState.gameKline[histLen + gameState.currentDay - 1];
-        if (action === 'buy' && gameState.position === 'empty' && todayBar) {
-            gameState.costBasis = todayBar.close;
-            gameState.position = 'locked';
-            addTradeHistory('buy', gameState.currentDay, todayBar.close);
-        } else if (action === 'sell' && gameState.position === 'holding' && todayBar) {
-            const sellPrice = todayBar.close;
-            const tradeReturn = sellPrice / gameState.costBasis;
-            gameState.totalReturn *= tradeReturn;
-            gameState.tradeGains.push((tradeReturn - 1) * 100);
-            addTradeHistory('sell', gameState.currentDay, sellPrice, tradeReturn);
-            gameState.position = 'empty';
-            gameState.costBasis = 0;
-            gameState.lastBuyFillDay = null;
-        }
-    } else {
-        const nextDayIndex = histLen + gameState.currentDay;
-        const nextDayData = gameState.gameKline[nextDayIndex];
+    gameState.position = r.rawPosition;
+    gameState.costBasis = r.costBasis || 0;
+    gameState.lastBuyFillDay = r.buyFillDay;
+    gameState.returnPpm = null;
+    gameState.returnPct = null;
 
-        // Overnight: yesterday's fill becomes sellable today (T+1).
-        // Must run BEFORE executing today's order so a same-call buy stays locked.
-        if (gameState.position === 'locked') {
-            gameState.position = 'holding';
-        }
-
-        // Execute pending action at next day's open price
-        if (action === 'buy' && gameState.position === 'empty') {
-            gameState.costBasis = nextDayData.open;
-            gameState.position = 'locked'; // T+1: filled today; sell may be queued for next open
-            gameState.lastBuyFillDay = gameState.currentDay + 1;
-            addTradeHistory('buy', gameState.currentDay + 1, nextDayData.open);
-        } else if (action === 'sell' && gameState.position === 'holding') {
-            const sellPrice = nextDayData.open;
-            const tradeReturn = sellPrice / gameState.costBasis;
-            gameState.totalReturn *= tradeReturn;
-            gameState.tradeGains.push((tradeReturn - 1) * 100);
-            addTradeHistory('sell', gameState.currentDay + 1, sellPrice, tradeReturn);
-            gameState.position = 'empty';
-            gameState.costBasis = 0;
-            gameState.lastBuyFillDay = null;
-        }
+    // After N decisions, UI shows day N+1 (capped at 30). MTM at that close.
+    let equity = r.closedMultiple;
+    if (r.rawPosition !== 'empty' && r.buyPrice > 0 && bars) {
+        const asOfDay = Math.min(gameState.actions.length + 1, 30);
+        const mark = bars[asOfDay - 1];
+        if (mark) equity = r.closedMultiple * (mark.close / r.buyPrice);
     }
+    gameState.totalReturn = equity;
+}
 
-    // Track holding days (next_open: fill day already counted on buy — skip re-count)
-    if (gameState.position === 'holding' || gameState.position === 'locked') {
-        const skipFillDayRecount = !sameClose
-            && gameState.lastBuyFillDay != null
-            && gameState.currentDay === gameState.lastBuyFillDay;
-        if (!skipFillDayRecount) {
-            gameState.holdingDays++;
-        }
-    }
+export function handleAction(action) {
+    if (gameState.currentDay >= 30) return;
+    if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
 
+    const bars = getGameBars();
+    if (bars.length < 30) return;
+
+    const nextActions = gameState.actions.concat(action);
+    const r = replayGame({
+        fillMode: gameState.fillMode,
+        bars,
+        actions: nextActions,
+        finish: false
+    });
+    if (!r.ok) return;
+
+    gameState.actions = nextActions;
     gameState.pendingAction = null;
-    gameState.currentDay++;
+    syncFromEngine(r, { finished: false, bars });
+    gameState.currentDay = nextActions.length + 1;
 
     updateUI();
     updateChart();
     renderWaveAnalysis();
+}
+
+/** Day-30 only: settle with valuation (not a fake sell). */
+export function finishSettle() {
+    if (gameState.currentDay < 30 || gameState.actions.length !== 29) return;
+    const bars = getGameBars();
+    const r = settleGame({
+        fillMode: gameState.fillMode,
+        bars,
+        actions: gameState.actions
+    });
+    if (!r.ok) {
+        console.error('settle failed', r);
+        return;
+    }
+    syncFromEngine(r, { finished: true, bars });
+    endGame();
+}
+
+// Kept for compatibility; engine now owns fill/replay.
+export function nextDay() {
+    const action = gameState.pendingAction || 'hold';
+    handleAction(action);
 }
 
 export function addTradeHistory(type, day, price, returnVal = null) {
@@ -452,20 +437,12 @@ export function updateUI() {
     const subtitleInner = document.getElementById('chartSubtitleInner');
     if (subtitleInner) subtitleInner.textContent = '身份隐藏中';
 
-    // ── Total return & unrealized PnL ──
-    let displayReturn;
-    if ((gameState.position === 'holding' || gameState.position === 'locked') && gameState.costBasis > 0) {
-        const unrealizedReturn = todayData.close / gameState.costBasis;
-        displayReturn = (gameState.totalReturn * unrealizedReturn - 1) * 100;
-    } else {
-        displayReturn = (gameState.totalReturn - 1) * 100;
-    }
+    // ── Total return (engine already marks open lots to as-of close) ──
+    const displayReturn = (gameState.totalReturn - 1) * 100;
 
     // Total asset card (assumes 100,000 starting capital concept)
     const totalAssetEl = document.getElementById('totalAsset');
-    const retMult = gameState.position !== 'empty' && gameState.costBasis > 0
-        ? gameState.totalReturn * (todayData.close / gameState.costBasis)
-        : gameState.totalReturn;
+    const retMult = gameState.totalReturn;
     const assetValue = 100000 * retMult;
     if (totalAssetEl) {
         totalAssetEl.textContent = '¥' + assetValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -556,33 +533,56 @@ export function updateUI() {
     // OHLC panel — show today by default
     resetOHLCToToday();
 
-    // Buttons — no buy on last shown decision day; sell allowed while locked (queue for next open)
-    const lastDecisionDay = gameState.currentDay >= 30;
+    // Day 30: only「结束并结算」— no buy/sell pretending to liquidate.
+    const settleDay = gameState.currentDay >= 30;
     const buyBtn = document.getElementById('buyBtn');
     const sellBtn = document.getElementById('sellBtn');
     const holdBtn = document.getElementById('holdBtn');
-    if (buyBtn) buyBtn.disabled = gameState.position !== 'empty' || lastDecisionDay;
-    if (sellBtn) sellBtn.disabled = gameState.position === 'empty';
-    if (holdBtn) holdBtn.disabled = false;
+    const finishBtn = document.getElementById('finishBtn');
+
+    if (settleDay) {
+        if (buyBtn) { buyBtn.disabled = true; buyBtn.hidden = true; }
+        if (sellBtn) { sellBtn.disabled = true; sellBtn.hidden = true; }
+        if (holdBtn) { holdBtn.disabled = true; holdBtn.hidden = true; }
+        if (finishBtn) {
+            finishBtn.hidden = false;
+            finishBtn.disabled = false;
+        }
+    } else {
+        if (buyBtn) {
+            buyBtn.hidden = false;
+            buyBtn.disabled = gameState.position !== 'empty';
+        }
+        if (sellBtn) {
+            sellBtn.hidden = false;
+            // locked: may queue sell for next open (T+1)
+            sellBtn.disabled = gameState.position === 'empty';
+        }
+        if (holdBtn) {
+            holdBtn.hidden = false;
+            holdBtn.disabled = false;
+        }
+        if (finishBtn) {
+            finishBtn.hidden = true;
+            finishBtn.disabled = true;
+        }
+    }
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
         const sameClose = gameState.fillMode === 'same_close';
-        if (lastDecisionDay) {
-            if (gameState.position === 'locked') {
-                hintEl.textContent = '最后交易日 · 卖出将按今日收盘价成交；或持有至今日收盘结算';
-                hintEl.className = 'action-hint warning';
-            } else if (gameState.position === 'empty') {
-                hintEl.textContent = '最后交易日，不可再买入；空仓将直接结束';
+        if (settleDay) {
+            if (gameState.position === 'empty') {
+                hintEl.textContent = '第 30 日 · 空仓可直接结束并结算';
                 hintEl.className = 'action-hint';
             } else {
-                hintEl.textContent = '最后交易日，可卖出或持有至今日收盘结算';
-                hintEl.className = 'action-hint';
+                hintEl.textContent = '第 30 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）';
+                hintEl.className = 'action-hint warning';
             }
         } else if (gameState.position === 'locked') {
             hintEl.textContent = sameClose
                 ? 'T+1 锁定中，今日可卖出（按今日收盘价成交）'
-                : 'T+1 锁定中，今日可挂卖单，将于次日开盘成交';
+                : 'T+1 锁定中，今日可挂卖单（按次日开盘成交）';
             hintEl.className = 'action-hint warning';
         } else if (gameState.position === 'empty') {
             hintEl.textContent = sameClose
@@ -597,34 +597,50 @@ export function updateUI() {
         }
     }
 
-    // Trade log
     updateTradeLog();
 }
+
 
 export function updateTradeLog() {
     const listEl = document.getElementById('historyList');
     const countEl = document.getElementById('tradeLogCount');
     if (!listEl) return;
 
-    if (gameState.tradeHistory.length === 0) {
+    const rows = gameState.tradeHistory.map((trade) => {
+        const retStr = trade.return
+            ? ` · 收益 <strong>${((trade.return - 1) * 100 >= 0 ? '+' : '') + ((trade.return - 1) * 100).toFixed(2)}%</strong>`
+            : '';
+        return {
+            day: trade.day,
+            cls: trade.type,
+            message: `${trade.type === 'buy' ? '买入' : '卖出'} @ ${trade.price.toFixed(2)}${retStr}`
+        };
+    });
+    if (gameState.valuation) {
+        const v = gameState.valuation;
+        const mult = v.multiple != null ? v.multiple : (v.price / v.buyPrice);
+        const pct = (mult - 1) * 100;
+        rows.push({
+            day: v.day,
+            cls: 'valuation',
+            message: `期末估值 @ ${v.price.toFixed(2)} · 浮动 <strong>${(pct >= 0 ? '+' : '') + pct.toFixed(2)}%</strong>`
+        });
+    }
+
+    if (rows.length === 0) {
         listEl.innerHTML = '<div class="log-item empty">暂无交易记录</div>';
         if (countEl) countEl.textContent = '暂无记录';
         return;
     }
 
-    if (countEl) countEl.textContent = `${gameState.tradeHistory.length} 笔`;
+    if (countEl) countEl.textContent = `${gameState.tradeHistory.length} 笔成交`;
 
-    listEl.innerHTML = [...gameState.tradeHistory].reverse().map(trade => {
-        const retStr = trade.return
-            ? ` · 收益 <strong>${((trade.return - 1) * 100 >= 0 ? '+' : '') + ((trade.return - 1) * 100).toFixed(2)}%</strong>`
-            : '';
-        return `
-            <div class="log-item ${trade.type}">
-                <span class="log-day">D${trade.day}</span>
-                <span class="log-message">${trade.type === 'buy' ? '买入' : '卖出'} @ ${trade.price.toFixed(2)}${retStr}</span>
+    listEl.innerHTML = [...rows].reverse().map((row) => `
+            <div class="log-item ${row.cls}">
+                <span class="log-day">D${row.day}</span>
+                <span class="log-message">${row.message}</span>
             </div>
-        `;
-    }).join('');
+        `).join('');
 }
 
 // Keep old name for backwards compat

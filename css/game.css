@@ -569,6 +569,7 @@
 .log-item.buy  .log-day, .log-item.buy  .log-message { color: var(--gain-color); }
 .log-item.sell .log-day, .log-item.sell .log-message { color: var(--loss-color); }
 .log-item.hold .log-day { color: var(--mute); }
+.log-item.valuation .log-day, .log-item.valuation .log-message { color: #b8860b; }
 
 @media (max-width: 900px) {
     .dashboard-layout { grid-template-columns: 1fr; }
