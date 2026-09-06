@@ -12,7 +12,7 @@ function avatarUrl(id) {
   return `images/avatars/${n}.svg`;
 }
 
-async function api(path, { method = "GET", body, csrf } = {}) {
+export async function api(path, { method = "GET", body, csrf } = {}) {
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (csrf || authState.csrfToken) headers["X-CSRF-Token"] = csrf || authState.csrfToken;

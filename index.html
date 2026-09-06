@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/my-games.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
 </head>
 <body>
@@ -75,6 +76,15 @@
                                 <p>输入股票与区间，回溯最优买卖点，对照错过的那笔收益。</p>
                             </span>
                             <span class="cta cta-wash">立即回溯</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showMyGames()">
+                            <span class="mark">四</span>
+                            <span class="copy">
+                                <small>云端战绩</small>
+                                <strong>我的战绩</strong>
+                                <p>登录后查看已保存对局与基础统计；游客仅可本地练习。</p>
+                            </span>
+                            <span class="cta cta-wash">查看战绩</span>
                         </button>
                     </div>
                 </div>
@@ -317,6 +327,7 @@
                     </div>
                     <div class="grade-title" id="gradeTitle">交易之神</div>
                     <div class="grade-verdict" id="gradeVerdict">完美操作，教科书级别的走势把握。</div>
+                    <p class="cloud-save-status" id="cloudSaveStatus" hidden></p>
                 </div>
                 <div class="result-hero__right">
                     <!-- 核心指标 -->
@@ -649,6 +660,23 @@
                         </span>
                     </label>
                 </div>
+                <div class="fill-mode-picker play-mode-picker" role="radiogroup" aria-label="对局类型" id="playModePicker">
+                    <label class="fill-mode-option">
+                        <input type="radio" name="playMode" value="cloud" checked>
+                        <span>
+                            <strong>云端战绩局</strong>
+                            <small>登录后服务端签发题目并保存结算；游客将自动改为本地练习</small>
+                        </span>
+                    </label>
+                    <label class="fill-mode-option">
+                        <input type="radio" name="playMode" value="local">
+                        <span>
+                            <strong>本地练习</strong>
+                            <small>不创建云端对局、不保存成绩；登录不会追认本局游客练习</small>
+                        </span>
+                    </label>
+                </div>
+                <p class="fill-mode-dialog-note" id="playModeGuestNote">游客仅可本地练习；登录后可开云端战绩局。登录不会把当前游客局改存为云端成绩。</p>
                 <div class="fill-mode-actions">
                     <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
                     <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始游戏</button>
@@ -680,6 +708,7 @@
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
+        import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -727,6 +756,8 @@
         window.hindsightReset = hindsightReset;
         window.showHindsight    = showHindsight;
         window.openAuthModal = openAuthModal;
+        window.showMyGames = showMyGames;
+        window.hideMyGames = hideMyGames;
         initAuth().catch((e) => console.warn('auth init', e));
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;

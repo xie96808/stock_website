@@ -23,7 +23,7 @@ export function readFillModeFromUi() {
     return v === 'same_close' ? 'same_close' : 'next_open';
 }
 
-export function startGame() {
+export function startGame(options = {}) {
     // Reset state
     gameState.currentDay = 1;
     gameState.position = 'empty';
@@ -43,20 +43,51 @@ export function startGame() {
     gameState.returnPpm = null;
     gameState.returnPct = null;
     gameState.ruleVersion = 'sim30-mtm-v1';
+    gameState.cloudMode = false;
+    gameState.cloudGameId = null;
+    gameState.datasetVersion = null;
+    gameState.saveStatus = null;
+    gameState.saveError = null;
+    gameState.practiceOnly = !!options.practiceOnly;
 
-    // Pick random stock and random start position
-    const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
-    gameState.currentStock = gameState.stocksData[stockIndex];
+    const cloud = options.cloud || null;
+    const gameDays = 30;
 
-    // 取最多30天历史 + 31天游戏数据
-    const gameDays = 31;
-    const klineLen = gameState.currentStock.kline.length;
-    const historyDays = Math.min(30, klineLen - gameDays);
-    const minStart = historyDays;
-    const maxStart = klineLen - gameDays;
-    const gameStartIndex = minStart + Math.floor(Math.random() * Math.max(1, maxStart - minStart));
-    gameState.historyLength = historyDays;
-    gameState.gameKline = gameState.currentStock.kline.slice(gameStartIndex - historyDays, gameStartIndex + gameDays);
+    if (cloud && Number.isInteger(cloud.stockIndex) && gameState.stocksData[cloud.stockIndex]) {
+        gameState.cloudMode = true;
+        gameState.cloudGameId = cloud.gameId;
+        gameState.datasetVersion = cloud.datasetVersion || null;
+        gameState.ruleVersion = cloud.ruleVersion || gameState.ruleVersion;
+        gameState.fillMode = cloud.fillMode || gameState.fillMode;
+        gameState.currentStock = gameState.stocksData[cloud.stockIndex];
+        const historyDays = Number.isInteger(cloud.historyLength)
+            ? cloud.historyLength
+            : Math.min(30, gameState.currentStock.kline.length - gameDays);
+        const gameStartIndex = Number.isInteger(cloud.windowStartIndex)
+            ? cloud.windowStartIndex
+            : historyDays;
+        gameState.historyLength = historyDays;
+        gameState.gameKline = gameState.currentStock.kline.slice(
+            gameStartIndex - historyDays,
+            gameStartIndex + gameDays
+        );
+    } else {
+        // Local practice: pick random stock and window (30 game days).
+        const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
+        gameState.currentStock = gameState.stocksData[stockIndex];
+        const klineLen = gameState.currentStock.kline.length;
+        const historyDays = Math.min(30, klineLen - gameDays);
+        const minStart = historyDays;
+        const maxStart = klineLen - gameDays; // inclusive
+        const span = Math.max(1, maxStart - minStart + 1);
+        const gameStartIndex = minStart + Math.floor(Math.random() * span);
+        gameState.historyLength = historyDays;
+        gameState.gameKline = gameState.currentStock.kline.slice(
+            gameStartIndex - historyDays,
+            gameStartIndex + gameDays
+        );
+        gameState.practiceOnly = true;
+    }
 
     // Switch screens
     const hdr = document.querySelector('.header');

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { openDb, dbPath } from "./connection.js";
+import { openDb, getDbPath } from "./connection.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.resolve(__dirname, "../../migrations");
@@ -28,7 +28,7 @@ export function migrate(db = openDb()) {
     tx();
     console.log("applied", file);
   }
-  console.log("db", dbPath);
+  console.log("db", getDbPath());
   return db;
 }
 
