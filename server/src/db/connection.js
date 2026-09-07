@@ -29,7 +29,7 @@ export function openDb() {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.pragma("busy_timeout = 5000");
-  db.pragma("synchronous = FULL");
+  db.pragma("synchronous = NORMAL"); // WAL + NORMAL: avoid FULL fsync latency on auth writes
   _db = db;
   return db;
 }

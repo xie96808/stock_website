@@ -1,6 +1,20 @@
 import { getAuthState } from './auth.js';
 import { createCloudGame } from './game-sync.js';
 
+function perfEnabled() {
+  try {
+    return localStorage.getItem('STOCKGAME_PERF') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function perfLog(label, ms, extra) {
+  if (!perfEnabled()) return;
+  const bit = extra ? ' ' + JSON.stringify(extra) : '';
+  console.log('[perf]', label, Math.round(ms) + 'ms' + bit);
+}
+
 export function attachDeferredStart(startGame, gameState) {
   let locked = false;
 
@@ -188,10 +202,9 @@ export function attachDeferredStart(startGame, gameState) {
     if (modal && !modal.hidden) window.cancelFillModeModal();
   });
 
-  // Prefetch pack on page load so confirm rarely waits on network.
-  ensureStocksLoaded(gameState).catch(function (err) {
-    console.error(err);
-  });
+  // Defer pack prefetch until after first paint + idle so login/register/avatar
+  // clicks are not competing with a ~55MB download + ~1s parse on the main thread.
+  scheduleDeferredPrefetch(gameState);
 }
 
 let packPromise = null;
@@ -217,6 +230,65 @@ function decodeChunks(chunks) {
   return new TextDecoder('utf-8').decode(merged);
 }
 
+function parsePackText(text) {
+  const t0 = performance.now();
+  if (typeof Worker !== 'undefined') {
+    return new Promise(function (resolve, reject) {
+      let settled = false;
+      let worker;
+      try {
+        worker = new Worker(new URL('./stocks-pack-worker.js', import.meta.url));
+      } catch (err) {
+        try {
+          const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+          perfLog('pack.parse.main', performance.now() - t0, { stocks: pack && pack.length });
+          resolve(pack);
+        } catch (e2) {
+          reject(e2);
+        }
+        return;
+      }
+      const timer = setTimeout(function () {
+        if (settled) return;
+        settled = true;
+        try { worker.terminate(); } catch (_) { /* ignore */ }
+        reject(new Error('pack worker timeout'));
+      }, 60000);
+      worker.onmessage = function (ev) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { worker.terminate(); } catch (_) { /* ignore */ }
+        const msg = ev.data || {};
+        if (!msg.ok) {
+          reject(new Error(msg.error || 'pack parse failed'));
+          return;
+        }
+        perfLog('pack.parse.worker', performance.now() - t0, { stocks: msg.pack.length });
+        resolve(msg.pack);
+      };
+      worker.onerror = function (err) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { worker.terminate(); } catch (_) { /* ignore */ }
+        // Fallback: parse on main thread if worker fails to load.
+        try {
+          const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+          perfLog('pack.parse.main_fallback', performance.now() - t0, { stocks: pack && pack.length });
+          resolve(pack);
+        } catch (e2) {
+          reject(err.error || e2 || err);
+        }
+      };
+      worker.postMessage({ text: text });
+    });
+  }
+  const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+  perfLog('pack.parse.main', performance.now() - t0, { stocks: pack && pack.length });
+  return Promise.resolve(pack);
+}
+
 function loadPack(onProgress) {
   if (ready()) {
     if (onProgress) onProgress(1);
@@ -229,13 +301,14 @@ function loadPack(onProgress) {
     });
   }
 
+  const fetchStart = performance.now();
   packPromise = fetch('data/stocks_data.js')
     .then(function (res) {
       if (!res.ok) throw new Error('http ' + res.status);
       const total = Number(res.headers.get('content-length')) || 0;
       if (!res.body || !total || !res.body.getReader) {
         return res.text().then(function (text) {
-          if (onProgress) onProgress(1);
+          if (onProgress) onProgress(0.85);
           return text;
         });
       }
@@ -245,24 +318,30 @@ function loadPack(onProgress) {
       function pump() {
         return reader.read().then(function (result) {
           if (result.done) {
-            if (onProgress) onProgress(1);
+            if (onProgress) onProgress(0.85);
             return decodeChunks(chunks);
           }
           chunks.push(result.value);
           received += result.value.length;
-          if (onProgress) onProgress(Math.min(0.98, received / total));
+          // Reserve last 15% of progress bar for off-main-thread parse.
+          if (onProgress) onProgress(Math.min(0.85, (received / total) * 0.85));
           return pump();
         });
       }
       return pump();
     })
     .then(function (text) {
-      const pack = new Function(text + '\nreturn STOCKS_DATA;')();
-      if (!Array.isArray(pack) || pack.length === 0) {
-        throw new Error('empty pack');
-      }
-      window.STOCKS_DATA = pack;
-      return pack;
+      perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length });
+      return parsePackText(text).then(function (pack) {
+        // Drop giant source string ASAP for GC.
+        text = null;
+        if (!Array.isArray(pack) || pack.length === 0) {
+          throw new Error('empty pack');
+        }
+        window.STOCKS_DATA = pack;
+        if (onProgress) onProgress(1);
+        return pack;
+      });
     })
     .catch(function (err) {
       packPromise = null;
@@ -270,6 +349,22 @@ function loadPack(onProgress) {
     });
 
   return packPromise;
+}
+
+function scheduleDeferredPrefetch(gameState) {
+  const start = function () {
+    ensureStocksLoaded(gameState).catch(function (err) {
+      console.error(err);
+    });
+  };
+  const delayMs = 2500;
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    window.setTimeout(function () {
+      window.requestIdleCallback(start, { timeout: 4000 });
+    }, delayMs);
+  } else {
+    window.setTimeout(start, delayMs);
+  }
 }
 
 export function ensureStocksLoaded(gameState, onProgress) {

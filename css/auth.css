@@ -54,3 +54,23 @@
 .auth-toast.show{opacity:1;transform:translateY(0)}
 .auth-toast--success{background:#3db86a;color:#0f2a18;border-color:#1f6b3a}
 .auth-toast--error{background:#e05252;color:#fff8f6;border-color:#8a2a2a}
+
+/* Busy / disabled feedback for auth actions */
+.auth-primary.is-busy,
+.auth-danger.is-busy,
+.auth-primary:disabled,
+.auth-danger:disabled {
+  opacity: 0.72;
+  cursor: wait;
+  box-shadow: none;
+}
+.auth-form:has(.is-busy) {
+  pointer-events: none;
+}
+#authSettingsPanel:has(.is-busy) {
+  pointer-events: none;
+}
+#authSettingsPanel:has(.is-busy) .auth-primary.is-busy,
+#authSettingsPanel:has(.is-busy) .auth-danger.is-busy {
+  pointer-events: auto;
+}
