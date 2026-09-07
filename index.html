@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/my-games.css">
+    <link rel="stylesheet" href="css/leaderboard.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
 </head>
 <body>
@@ -85,6 +86,15 @@
                                 <p>登录后查看已保存对局与基础统计；游客仅可本地练习。</p>
                             </span>
                             <span class="cta cta-wash">查看战绩</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showLeaderboard()">
+                            <span class="mark">五</span>
+                            <span class="copy">
+                                <small>排行榜</small>
+                                <strong>双模式练习榜</strong>
+                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
+                            </span>
+                            <span class="cta cta-wash">查看榜单</span>
                         </button>
                     </div>
                 </div>
@@ -709,6 +719,7 @@
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
+        import { showLeaderboard, hideLeaderboard, initLeaderboardRouting } from './js/leaderboard.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -758,7 +769,10 @@
         window.openAuthModal = openAuthModal;
         window.showMyGames = showMyGames;
         window.hideMyGames = hideMyGames;
+        window.showLeaderboard = showLeaderboard;
+        window.hideLeaderboard = hideLeaderboard;
         initAuth().catch((e) => console.warn('auth init', e));
+        initLeaderboardRouting();
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
         window.onHindsightBlur  = onHindsightBlur;
