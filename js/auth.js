@@ -220,11 +220,6 @@ function ensureAuthDom() {
           <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜（默认关闭）</label>
           <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
           <hr>
-          <form id="authChangePwForm" class="auth-form">
-            <label>当前密码<input name="currentPassword" type="password" required></label>
-            <label>新密码（${PASSWORD_HINT}）<input name="newPassword" type="password" required minlength="4"></label>
-            <button type="submit">修改密码</button>
-          </form>
           <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
         </div>
       </div>
@@ -272,7 +267,6 @@ function ensureAuthDom() {
   };
   document.getElementById("registerAvatarFile").onchange = onRegisterFile;
   document.getElementById("settingsAvatarFile").onchange = onSettingsFile;
-  document.getElementById("authChangePwForm").onsubmit = onChangePw;
   document.getElementById("authLogoutBtn").onclick = onLogout;
 }
 
@@ -414,13 +408,21 @@ export function closeAuthModal() {
 function renderAuthChrome() {
   ensureAuthDom();
   const logged = !!authState.user;
-  document.getElementById("authLoginBtn").hidden = logged;
-  document.getElementById("authUserBtn").hidden = !logged;
+  const loginBtn = document.getElementById("authLoginBtn");
+  const userBtn = document.getElementById("authUserBtn");
+  loginBtn.hidden = logged;
+  userBtn.hidden = !logged;
+  const nickEl = document.getElementById("authNickname");
+  const img = document.getElementById("authAvatarImg");
   if (logged) {
-    document.getElementById("authNickname").textContent = authState.user.nickname;
-    const img = document.getElementById("authAvatarImg");
+    nickEl.textContent = authState.user.nickname;
     img.src = displayAvatarUrl(authState.user);
     img.alt = AVATAR_LABELS[authState.user.avatarId] || "avatar";
+  } else {
+    // Fully reset chrome so logout never leaves stale nickname/avatar visible
+    nickEl.textContent = "";
+    img.removeAttribute("src");
+    img.alt = "";
   }
 }
 
@@ -532,33 +534,6 @@ async function onSaveSettings() {
   } catch (e) {
     setError(e.message);
     showToast(e.message || "保存失败", "error");
-  }
-}
-
-async function onChangePw(ev) {
-  ev.preventDefault();
-  setError("");
-  const fd = new FormData(ev.target);
-  const pwErr = clientValidatePassword(fd.get("newPassword"));
-  if (pwErr) {
-    setError(pwErr);
-    showToast(pwErr, "error");
-    return;
-  }
-  try {
-    await api("/me/password", {
-      method: "POST",
-      body: { currentPassword: fd.get("currentPassword"), newPassword: fd.get("newPassword") },
-    });
-    authState.user = null;
-    authState.csrfToken = null;
-    renderAuthChrome();
-    openAuthModal("login");
-    setSuccess("密码已修改，请重新登录");
-    showToast("密码已修改，请重新登录", "success");
-  } catch (e) {
-    setError(e.message);
-    showToast(e.message || "修改失败", "error");
   }
 }
 

@@ -6,6 +6,7 @@
   border-radius:999px;padding:6px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.12)
 }
 .auth-user-btn{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 4px}
+.auth-login-btn[hidden],.auth-user-btn[hidden]{display:none!important}
 .auth-avatar{width:28px;height:28px;border-radius:50%;border:1px solid #666;object-fit:cover;background:#111}
 .auth-modal{position:fixed;inset:0;background:rgba(20,16,12,.45);z-index:80;display:flex;align-items:center;justify-content:center;padding:16px}
 .auth-modal[hidden]{display:none!important}
