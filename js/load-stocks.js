@@ -1,3 +1,6 @@
+import { getAuthState } from './auth.js';
+import { createCloudGame } from './game-sync.js';
+
 export function attachDeferredStart(startGame, gameState) {
   let locked = false;
 
@@ -123,11 +126,40 @@ export function attachDeferredStart(startGame, gameState) {
         await animateTo(66, '股票资源加载中…', 160);
       }
 
-      await animateTo(80, '标的筛选中…', 560);
-      await animateTo(88, '标的筛选中…', 240);
+      const fillInput = document.querySelector('input[name="fillMode"]:checked');
+      const fillMode = fillInput && fillInput.value === 'same_close' ? 'same_close' : 'next_open';
+      const playInput = document.querySelector('input[name="playMode"]:checked');
+      const playMode = playInput ? playInput.value : 'auto';
+      const auth = getAuthState();
+      const wantCloud = auth.user && playMode !== 'local';
+
+      let cloud = null;
+      if (wantCloud) {
+        await animateTo(78, '创建云端对局…', 320);
+        try {
+          cloud = await createCloudGame(fillMode);
+        } catch (e) {
+          if (e && e.code === 'ACTIVE_GAME_EXISTS') {
+            const go = window.confirm('已有进行中的云端对局。放弃旧局并开新局？');
+            if (!go) throw e;
+            const { abandonActiveCloudGame } = await import('./game-sync.js');
+            await abandonActiveCloudGame();
+            cloud = await createCloudGame(fillMode);
+          } else {
+            throw e;
+          }
+        }
+      } else {
+        await animateTo(80, '标的筛选中…', 560);
+        await animateTo(88, '标的筛选中…', 240);
+      }
 
       await animateTo(94, '初始化模拟盘…', 280);
-      await startGame();
+      if (cloud) {
+        await startGame({ cloud: cloud });
+      } else {
+        await startGame({ practiceOnly: true });
+      }
 
       const game = document.getElementById('gameScreen');
       if (!(game && game.classList.contains('active'))) {
@@ -142,7 +174,8 @@ export function attachDeferredStart(startGame, gameState) {
       .catch(function (err) {
         console.error(err);
         showChooseView();
-        window.alert('股票数据加载失败，请刷新后重试');
+        const msg = (err && err.message) ? err.message : '股票数据加载失败，请刷新后重试';
+        window.alert(msg);
       })
       .finally(function () {
         locked = false;

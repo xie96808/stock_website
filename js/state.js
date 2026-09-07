@@ -20,7 +20,14 @@ export const gameState = {
     lastBuyFillDay: null,
     ruleVersion: "sim30-mtm-v1",
     returnPpm: null,
-    returnPct: null
+    returnPct: null,
+    // Stage 3 cloud
+    cloudMode: false,
+    cloudGameId: null,
+    datasetVersion: null,
+    saveStatus: null, // null | saving | saved | retry | fail
+    saveError: null,
+    practiceOnly: false,
 };
 
 export const chartRefs = {
