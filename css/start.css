@@ -329,7 +329,7 @@
 
 
 /* ============================================================
-   Scheme A — 模拟盘 hub back + coming-soon placeholders
+   Scheme A — 模拟盘 hub back
    ============================================================ */
 
 .start-screen .hub-back {
@@ -355,90 +355,4 @@
 
 .start-screen .sim-hub-lanes {
     gap: 10px;
-}
-
-.coming-soon-screen {
-    display: none;
-    width: 100%;
-    max-width: 720px;
-    margin: 48px auto 32px;
-    padding: 0 16px 40px;
-    box-sizing: border-box;
-}
-
-.coming-soon-screen.active {
-    display: block;
-}
-
-.coming-soon-wrap {
-    max-width: 520px;
-    margin: 0 auto;
-}
-
-.coming-soon-back {
-    display: inline-block;
-    margin-bottom: 16px;
-    padding: 4px 2px;
-    border: none;
-    background: transparent;
-    font-family: var(--kaiti);
-    font-size: 0.95rem;
-    letter-spacing: 0.12em;
-    color: var(--mute);
-    cursor: pointer;
-}
-
-.coming-soon-back:hover {
-    color: var(--ink);
-}
-
-.coming-soon-card {
-    border: 1.6px solid var(--line);
-    background: var(--card);
-    border-radius: 18px 24px 16px 22px;
-    box-shadow: 2px 2px 0 var(--line);
-    padding: 28px 24px 32px;
-    text-align: left;
-}
-
-.coming-soon-card small {
-    display: block;
-    font-family: var(--kaiti);
-    font-size: 12px;
-    letter-spacing: 0.28em;
-    color: var(--mute);
-    margin-bottom: 6px;
-}
-
-.coming-soon-card h2 {
-    font-family: var(--kaiti);
-    font-size: 1.55rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    margin: 0 0 10px;
-    color: var(--ink);
-}
-
-.coming-soon-card p {
-    margin: 0 0 18px;
-    font-size: 0.92rem;
-    line-height: 1.55;
-    color: var(--ink-soft);
-}
-
-.coming-soon-badge {
-    display: inline-grid;
-    place-items: center;
-    min-width: 118px;
-    height: 40px;
-    padding: 0 16px;
-    font-family: var(--kaiti);
-    font-size: 0.98rem;
-    font-weight: 700;
-    letter-spacing: 0.28em;
-    color: var(--wash-ink);
-    background: var(--wash);
-    border: 1.6px solid var(--line);
-    border-radius: 18px 24px 16px 22px;
-    box-shadow: 1px 1px 0 var(--line);
 }

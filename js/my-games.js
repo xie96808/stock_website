@@ -10,11 +10,6 @@ function hideOtherScreens() {
   }
   const start = document.getElementById("startScreen");
   if (start) start.style.display = "none";
-  const cs = document.getElementById("comingSoonScreen");
-  if (cs) {
-    cs.classList.remove("active");
-    cs.style.display = "none";
-  }
   document.getElementById("gameScreen")?.classList.remove("active");
   document.getElementById("resultScreen")?.classList.remove("active");
   document.getElementById("academyScreen")?.classList.remove("active");

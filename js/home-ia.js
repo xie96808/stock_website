@@ -1,9 +1,10 @@
-/** Homepage IA Scheme A: root (模拟盘/知识馆/和谐区) + 模拟盘二级 hub + placeholders */
+/** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub */
 
-const HASH_HOME = "";
 const HASH_SIM = "sim";
 const HASH_KNOWLEDGE = "knowledge";
 const HASH_HARMONY = "harmony";
+const HASH_ACADEMY = "academy";
+const HASH_HINDSIGHT = "hindsight";
 
 function startEl() {
   return document.getElementById("startScreen");
@@ -17,12 +18,7 @@ function simHub() {
   return document.getElementById("simHub");
 }
 
-function comingSoon() {
-  return document.getElementById("comingSoonScreen");
-}
-
 function setHash(route) {
-  const next = route ? `#/${route}` : location.pathname + location.search;
   const cur = route ? `#/${route}` : "";
   const now = (location.hash || "").replace(/^#\/?/, "");
   if ((route || "") === now) return;
@@ -32,7 +28,6 @@ function setHash(route) {
   } catch {
     location.hash = cur;
   }
-  void next;
 }
 
 function hideChromeHeader() {
@@ -43,11 +38,15 @@ function hideChromeHeader() {
   }
 }
 
-function hideDynamicScreens() {
+function hidePeerScreens({ keepAcademy = false, keepHindsight = false } = {}) {
   document.getElementById("gameScreen")?.classList.remove("active");
   document.getElementById("resultScreen")?.classList.remove("active");
-  document.getElementById("academyScreen")?.classList.remove("active");
-  document.getElementById("hindsightScreen")?.classList.remove("active");
+  if (!keepAcademy) {
+    document.getElementById("academyScreen")?.classList.remove("active");
+  }
+  if (!keepHindsight) {
+    document.getElementById("hindsightScreen")?.classList.remove("active");
+  }
   const my = document.getElementById("myGamesScreen");
   if (my) {
     my.classList.remove("active");
@@ -61,13 +60,7 @@ function hideDynamicScreens() {
 }
 
 function showStartShell() {
-  hideDynamicScreens();
-  const cs = comingSoon();
-  if (cs) {
-    cs.classList.remove("active");
-    cs.style.display = "none";
-    cs.setAttribute("aria-hidden", "true");
-  }
+  hidePeerScreens();
   const start = startEl();
   if (start) start.style.display = "flex";
   hideChromeHeader();
@@ -102,47 +95,20 @@ export function restoreSimShell() {
   showSimHub({ updateHash: true });
 }
 
-export function showComingSoon(kind) {
-  const route = kind === "harmony" ? HASH_HARMONY : HASH_KNOWLEDGE;
-  const title = kind === "harmony" ? "和谐区" : "知识馆";
-  const blurb =
-    kind === "harmony"
-      ? "社区与交流空间筹备中，敬请期待。"
-      : "K 线形态、知识卡片与训练题筹备中，敬请期待。";
-
-  hideDynamicScreens();
+function openAcademyRoute() {
+  hidePeerScreens({ keepAcademy: true });
   const start = startEl();
   if (start) start.style.display = "none";
-
-  let screen = comingSoon();
-  if (!screen) {
-    screen = document.createElement("section");
-    screen.id = "comingSoonScreen";
-    screen.className = "coming-soon-screen";
-    screen.innerHTML = `
-      <div class="coming-soon-wrap">
-        <button type="button" class="coming-soon-back" id="comingSoonBackBtn">← 返回首页</button>
-        <div class="coming-soon-card">
-          <small id="comingSoonKicker">专区</small>
-          <h2 id="comingSoonTitle">即将开放</h2>
-          <p id="comingSoonBlurb"></p>
-          <span class="coming-soon-badge">即将开放</span>
-        </div>
-      </div>`;
-    document.querySelector(".container")?.appendChild(screen);
-    screen.querySelector("#comingSoonBackBtn").onclick = () => showHome();
-  }
-  const kicker = screen.querySelector("#comingSoonKicker");
-  const titleEl = screen.querySelector("#comingSoonTitle");
-  const blurbEl = screen.querySelector("#comingSoonBlurb");
-  if (kicker) kicker.textContent = title;
-  if (titleEl) titleEl.textContent = title;
-  if (blurbEl) blurbEl.textContent = blurb;
-  screen.classList.add("active");
-  screen.style.display = "block";
-  screen.setAttribute("aria-hidden", "false");
   hideChromeHeader();
-  setHash(route);
+  if (typeof window.showAcademy === "function") window.showAcademy();
+}
+
+function openHindsightRoute() {
+  hidePeerScreens({ keepHindsight: true });
+  const start = startEl();
+  if (start) start.style.display = "none";
+  hideChromeHeader();
+  if (typeof window.showHindsight === "function") window.showHindsight();
 }
 
 function parseHash() {
@@ -156,22 +122,21 @@ export function applyHomeHashRoute() {
     showSimHub({ updateHash: false });
     return;
   }
-  if (h === HASH_KNOWLEDGE) {
-    showComingSoon("knowledge");
+  // Repoint former placeholders (and aliases) to real modules
+  if (h === HASH_KNOWLEDGE || h === HASH_ACADEMY) {
+    openAcademyRoute();
     return;
   }
-  if (h === HASH_HARMONY) {
-    showComingSoon("harmony");
+  if (h === HASH_HARMONY || h === HASH_HINDSIGHT) {
+    openHindsightRoute();
     return;
   }
-  // Empty or unknown (except leaderboard): stay on / restore root home only when on start-related hashes
   if (!h || h === "home") {
     showHome();
   }
 }
 
 export function initHomeIaRouting() {
-  // Initial: if no special hash, ensure root home lanes visible
   const h = parseHash();
   if (!h) {
     const home = homeLanes();
