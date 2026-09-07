@@ -12,7 +12,7 @@ STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 
 mkdir -p "$STAGING/release" "$OUTPUT_DIR"
-for path in index.html css js data images; do
+for path in index.html css js data images shared; do
   [[ -e "$path" ]] || { echo "missing $path" >&2; exit 1; }
   cp -a "$path" "$STAGING/release/"
 done
