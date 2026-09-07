@@ -1,6 +1,6 @@
 
 /* ===== Stage 2 auth chrome ===== */
-.auth-chip{position:fixed;top:14px;right:96px;z-index:40;display:flex;align-items:center;gap:8px}
+.auth-chip{position:fixed;top:14px;right:14px;z-index:40;display:flex;align-items:center;gap:8px}
 .auth-login-btn,.auth-user-btn,.auth-primary,.auth-secondary,.auth-danger,.auth-dice{
   font:inherit;cursor:pointer;border:1.5px solid var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
   border-radius:999px;padding:6px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.12)
@@ -17,6 +17,11 @@
 .auth-tab{border:1px dashed #666;background:transparent;border-radius:999px;padding:4px 10px;cursor:pointer}
 .auth-tab.active{border-style:solid;background:#2a2a2a;color:#f7f1e6}
 .auth-form{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+.auth-form[hidden],
+#authSettingsPanel[hidden],
+.auth-tabs[hidden] {
+  display: none !important;
+}
 .auth-form label{display:flex;flex-direction:column;gap:4px;font-size:13px}
 .auth-form input[type=text],.auth-form input[type=password],.auth-form input:not([type]){
   border:1.5px solid #444;border-radius:8px;padding:8px 10px;background:#fffdf8;font:inherit}
@@ -28,4 +33,4 @@
 .avatar-preview{width:64px;height:64px;border-radius:12px;border:1.5px solid #666;object-fit:cover;background:#111}
 .auth-danger{background:#f6d6d0}
 .auth-secondary{margin-top:6px}
-@media (max-width:640px){.auth-chip{right:12px;top:58px}}
+@media (max-width:640px){.auth-chip{right:12px;top:14px}}

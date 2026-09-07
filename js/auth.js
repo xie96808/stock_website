@@ -22,7 +22,7 @@ let authState = {
 
 function avatarUrl(id) {
   const n = String(id).padStart(2, "0");
-  return `images/avatars/${n}.svg`;
+  return `/images/avatars/${n}.svg`;
 }
 
 function randomInt(min, maxInclusive) {
