@@ -356,3 +356,10 @@
 .start-screen .sim-hub-lanes {
     gap: 10px;
 }
+
+/* HTML hidden must beat .lanes { display:flex } (UA [hidden] loses to author CSS) */
+.start-screen .lanes[hidden],
+.start-screen #simHub[hidden],
+.start-screen #homeLanes[hidden] {
+    display: none !important;
+}
