@@ -7,7 +7,11 @@ import { fail } from "../lib/http.js";
 export function attachRequestId(req, res, next) {
   res.locals.requestId = newRequestId();
   res.setHeader("X-Request-Id", res.locals.requestId);
-  res.setHeader("Cache-Control", "no-store");
+  // Avatar binaries are immutable content-addressed files; allow browser cache.
+  const isAvatarGet = req.method === "GET" && /^\/api\/v1\/avatars\//.test(req.path);
+  if (!isAvatarGet) {
+    res.setHeader("Cache-Control", "no-store");
+  }
   next();
 }
 

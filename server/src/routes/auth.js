@@ -129,11 +129,19 @@ router.get("/avatars/:id", (req, res) => {
   if (!filePath || !fs.existsSync(filePath)) {
     return fail(res, 404, "NOT_FOUND", "头像不存在");
   }
-  const buf = fs.readFileSync(filePath);
-  const mime = detectImageMime(buf) || "application/octet-stream";
+  // Peek magic bytes only (avoid readFileSync of whole image on request path).
+  const fd = fs.openSync(filePath, "r");
+  let mime = "application/octet-stream";
+  try {
+    const head = Buffer.alloc(12);
+    const n = fs.readSync(fd, head, 0, 12, 0);
+    mime = detectImageMime(head.subarray(0, n)) || mime;
+  } finally {
+    fs.closeSync(fd);
+  }
   res.setHeader("Content-Type", mime);
-  res.setHeader("Cache-Control", "public, max-age=86400");
-  return res.status(200).send(buf);
+  res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+  return res.sendFile(filePath);
 });
 
 router.post("/me/password", requireUser, async (req, res) => {

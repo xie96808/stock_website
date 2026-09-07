@@ -1,6 +1,9 @@
 /** Stage 2 account client: session cookie + CSRF + avatar/nickname settings */
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";
+const AVATAR_MAX_EDGE = 256;
+const AVATAR_JPEG_QUALITY = 0.82;
+const AVATAR_TARGET_BYTES = 120 * 1024;
 
 /** Playful stock / 韭菜-themed A的B nickname parts (keep A的B within 2–16 code points). */
 const NICK_A = [
@@ -20,6 +23,20 @@ let authState = {
   csrfToken: null,
   ready: false,
 };
+
+function perfEnabled() {
+  try {
+    return localStorage.getItem("STOCKGAME_PERF") === "1";
+  } catch {
+    return false;
+  }
+}
+
+function perfLog(label, ms, extra) {
+  if (!perfEnabled()) return;
+  const bit = extra ? " " + JSON.stringify(extra) : "";
+  console.log("[perf]", label, Math.round(ms) + "ms" + bit);
+}
 
 function zodiacAvatarUrl(id) {
   const n = String(id || 1).padStart(2, "0");
@@ -67,6 +84,7 @@ function randomNickname(exclude) {
 }
 
 export async function api(path, { method = "GET", body, csrf } = {}) {
+  const t0 = performance.now();
   const headers = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (csrf || authState.csrfToken) headers["X-CSRF-Token"] = csrf || authState.csrfToken;
@@ -76,8 +94,12 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 204) return { ok: true, status: 204, data: null };
+  if (res.status === 204) {
+    perfLog("api " + method + " " + path, performance.now() - t0, { status: 204 });
+    return { ok: true, status: 204, data: null };
+  }
   const json = await res.json().catch(() => ({}));
+  perfLog("api " + method + " " + path, performance.now() - t0, { status: res.status });
   if (!res.ok) {
     const err = new Error(json?.error?.message || `HTTP ${res.status}`);
     err.code = json?.error?.code;
@@ -89,6 +111,7 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
 }
 
 async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
+  const t0 = performance.now();
   const headers = { Accept: "application/json" };
   if (csrf || authState.csrfToken) headers["X-CSRF-Token"] = csrf || authState.csrfToken;
   const res = await fetch(`/api/v1${path}`, {
@@ -98,6 +121,7 @@ async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
     body: formData,
   });
   const json = await res.json().catch(() => ({}));
+  perfLog("api " + method + " " + path, performance.now() - t0, { status: res.status });
   if (!res.ok) {
     const err = new Error(json?.error?.message || `HTTP ${res.status}`);
     err.code = json?.error?.code;
@@ -146,6 +170,42 @@ function showToast(message, kind = "error") {
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 280);
   }, 2600);
+}
+
+/** Mark primary action buttons busy so clicks feel instant under network RTT. */
+function setBusy(button, busy, busyLabel) {
+  if (!button) return;
+  if (busy) {
+    if (button.dataset.busyLabelReady !== "1") {
+      button.dataset.idleLabel = button.textContent;
+      button.dataset.busyLabelReady = "1";
+    }
+    button.disabled = true;
+    button.classList.add("is-busy");
+    button.setAttribute("aria-busy", "true");
+    if (busyLabel) button.textContent = busyLabel;
+  } else {
+    button.disabled = false;
+    button.classList.remove("is-busy");
+    button.removeAttribute("aria-busy");
+    if (button.dataset.idleLabel != null) button.textContent = button.dataset.idleLabel;
+  }
+}
+
+function setFormBusy(form, busy, busyLabel) {
+  if (!form) return;
+  const btn = form.querySelector('button[type="submit"].auth-primary, button.auth-primary');
+  setBusy(btn, busy, busyLabel);
+  form.querySelectorAll("input, button, select, textarea").forEach((node) => {
+    if (node === btn) return;
+    if (busy) {
+      if (!node.dataset.prevDisabled) node.dataset.prevDisabled = node.disabled ? "1" : "0";
+      node.disabled = true;
+    } else if (node.dataset.prevDisabled != null) {
+      node.disabled = node.dataset.prevDisabled === "1";
+      delete node.dataset.prevDisabled;
+    }
+  });
 }
 
 function ensureAuthDom() {
@@ -303,7 +363,76 @@ function validateImageFile(file) {
   return null;
 }
 
-function onRegisterFile(ev) {
+/** Resize/compress avatar on the client to cut upload + nginx body time. */
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("图片读取失败"));
+    };
+    img.src = url;
+  });
+}
+
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), type, quality);
+  });
+}
+
+async function compressAvatarFile(file) {
+  if (!file) return null;
+  // Tiny files: skip canvas work.
+  if (file.size <= 48 * 1024 && file.type === "image/jpeg") return file;
+  const t0 = performance.now();
+  try {
+    const img = await loadImageFromFile(file);
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) return file;
+    const scale = Math.min(1, AVATAR_MAX_EDGE / Math.max(w, h));
+    const cw = Math.max(1, Math.round(w * scale));
+    const ch = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d", { alpha: false });
+    if (!ctx) return file;
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(img, 0, 0, cw, ch);
+    let quality = AVATAR_JPEG_QUALITY;
+    let blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    while (blob && blob.size > AVATAR_TARGET_BYTES && quality > 0.55) {
+      quality -= 0.08;
+      blob = await canvasToBlob(canvas, "image/jpeg", quality);
+    }
+    if (!blob) return file;
+    const out = new File([blob], (file.name || "avatar").replace(/\.\w+$/, "") + ".jpg", {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+    perfLog("avatar.compress", performance.now() - t0, {
+      from: file.size,
+      to: out.size,
+      edge: Math.max(cw, ch),
+    });
+    // Prefer compressed only when smaller or dimensions reduced.
+    if (out.size < file.size || scale < 1) return out;
+    return file;
+  } catch (e) {
+    console.warn("avatar compress skipped", e);
+    return file;
+  }
+}
+
+async function onRegisterFile(ev) {
   const file = ev.target.files && ev.target.files[0];
   const err = validateImageFile(file);
   if (err) {
@@ -313,13 +442,13 @@ function onRegisterFile(ev) {
     return;
   }
   setError("");
-  pendingRegisterFile = file;
+  pendingRegisterFile = await compressAvatarFile(file);
   if (pendingRegisterObjectUrl) URL.revokeObjectURL(pendingRegisterObjectUrl);
-  pendingRegisterObjectUrl = URL.createObjectURL(file);
+  pendingRegisterObjectUrl = URL.createObjectURL(pendingRegisterFile);
   setRegisterAvatar(pendingRegisterAvatarId);
 }
 
-function onSettingsFile(ev) {
+async function onSettingsFile(ev) {
   const file = ev.target.files && ev.target.files[0];
   const err = validateImageFile(file);
   if (err) {
@@ -329,9 +458,9 @@ function onSettingsFile(ev) {
     return;
   }
   setError("");
-  pendingSettingsFile = file;
+  pendingSettingsFile = await compressAvatarFile(file);
   if (pendingSettingsObjectUrl) URL.revokeObjectURL(pendingSettingsObjectUrl);
-  pendingSettingsObjectUrl = URL.createObjectURL(file);
+  pendingSettingsObjectUrl = URL.createObjectURL(pendingSettingsFile);
   setSettingsAvatar(pendingSettingsAvatarId, null);
 }
 
@@ -428,8 +557,9 @@ function renderAuthChrome() {
 
 async function uploadPendingAvatar(file) {
   if (!file) return null;
+  const ready = await compressAvatarFile(file);
   const fd = new FormData();
-  fd.append("avatar", file, file.name || "avatar.jpg");
+  fd.append("avatar", ready, ready.name || "avatar.jpg");
   const { data } = await apiMultipart("/me/avatar", fd);
   return data.user;
 }
@@ -437,7 +567,10 @@ async function uploadPendingAvatar(file) {
 async function onLogin(ev) {
   ev.preventDefault();
   setError("");
-  const fd = new FormData(ev.target);
+  const form = ev.target;
+  const fd = new FormData(form);
+  setFormBusy(form, true, "登录中…");
+  const t0 = performance.now();
   try {
     const { data } = await api("/auth/login", {
       method: "POST",
@@ -448,16 +581,20 @@ async function onLogin(ev) {
     renderAuthChrome();
     closeAuthModal();
     showToast("登录成功", "success");
+    perfLog("auth.login.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);
     showToast(e.message || "登录失败", "error");
+  } finally {
+    setFormBusy(form, false);
   }
 }
 
 async function onRegister(ev) {
   ev.preventDefault();
   setError("");
-  const fd = new FormData(ev.target);
+  const form = ev.target;
+  const fd = new FormData(form);
   if (fd.get("password") !== fd.get("password2")) {
     const msg = "两次密码不一致";
     setError(msg);
@@ -471,6 +608,8 @@ async function onRegister(ev) {
     return;
   }
   const nickname = String(fd.get("nickname") || "").trim();
+  setFormBusy(form, true, "注册中…");
+  const t0 = performance.now();
   try {
     const { data } = await api("/auth/register", {
       method: "POST",
@@ -500,15 +639,29 @@ async function onRegister(ev) {
     renderAuthChrome();
     closeAuthModal();
     showToast("注册成功", "success");
+    perfLog("auth.register.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);
     showToast(e.message || "注册失败", "error");
+  } finally {
+    setFormBusy(form, false);
   }
 }
 
 async function onSaveSettings() {
   setError("");
   setSuccess("");
+  const saveBtn = document.getElementById("settingsSave");
+  const panel = document.getElementById("authSettingsPanel");
+  setBusy(saveBtn, true, "保存中…");
+  if (panel) {
+    panel.querySelectorAll("input, button").forEach((node) => {
+      if (node === saveBtn) return;
+      if (!node.dataset.prevDisabled) node.dataset.prevDisabled = node.disabled ? "1" : "0";
+      node.disabled = true;
+    });
+  }
+  const t0 = performance.now();
   try {
     if (pendingSettingsFile) {
       authState.user = await uploadPendingAvatar(pendingSettingsFile);
@@ -531,25 +684,48 @@ async function onSaveSettings() {
     setSettingsAvatar(authState.user.avatarId || 1, authState.user.avatarUrl);
     setSuccess("已保存");
     showToast("已保存", "success");
+    perfLog("auth.settings.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);
     showToast(e.message || "保存失败", "error");
+  } finally {
+    setBusy(saveBtn, false);
+    if (panel) {
+      panel.querySelectorAll("input, button").forEach((node) => {
+        if (node === saveBtn) return;
+        if (node.dataset.prevDisabled != null) {
+          node.disabled = node.dataset.prevDisabled === "1";
+          delete node.dataset.prevDisabled;
+        }
+      });
+    }
   }
 }
 
 async function onLogout() {
-  try {
-    await api("/auth/logout", { method: "POST" });
-  } catch {}
+  const btn = document.getElementById("authLogoutBtn");
+  setBusy(btn, true, "退出中…");
+  const csrf = authState.csrfToken;
+  // Optimistic chrome clear — do not wait on network for perceived logout.
   authState.user = null;
-  authState.csrfToken = null;
   renderAuthChrome();
   closeAuthModal();
+  showToast("已退出登录", "success");
+  try {
+    await api("/auth/logout", { method: "POST", csrf });
+  } catch {
+    /* ignore — local session already cleared */
+  } finally {
+    authState.csrfToken = null;
+    setBusy(btn, false);
+  }
 }
 
 export async function initAuth() {
   ensureAuthDom();
+  const t0 = performance.now();
   await refreshMe();
+  perfLog("auth.init", performance.now() - t0);
 }
 
 if (typeof window !== "undefined") {
