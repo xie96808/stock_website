@@ -22,6 +22,7 @@ export const config = {
   sessionIdleMs: 7 * 24 * 60 * 60 * 1000,
   sessionAbsoluteMs: 30 * 24 * 60 * 60 * 1000,
   staticRoot: process.env.STATIC_ROOT || "",
+  skipStatic: process.env.SKIP_STATIC === "1" || process.env.SKIP_STATIC === "true",
 };
 
 export function newRequestId() {

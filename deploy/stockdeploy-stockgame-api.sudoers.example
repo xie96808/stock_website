@@ -1,0 +1,3 @@
+# Optional future grant (NOT installed by default). Review before dropping into
+# /etc/sudoers.d/ - only after a root-owned install/restart helper exists.
+# stockdeploy ALL=(root) NOPASSWD: /usr/local/sbin/deploy-stock-website-api, /bin/systemctl restart stockgame-api, /bin/systemctl reload nginx

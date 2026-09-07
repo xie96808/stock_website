@@ -1,0 +1,24 @@
+[Unit]
+Description=Stockgame API (Express /api/v1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=stockapi
+Group=stockapi
+WorkingDirectory=/srv/stock-website/api
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/stockgame/api.env
+ExecStart=/usr/bin/node src/index.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/stockgame
+ReadOnlyPaths=/srv/stock-website/api /etc/stockgame
+
+[Install]
+WantedBy=multi-user.target

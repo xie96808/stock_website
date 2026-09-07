@@ -1,0 +1,34 @@
+# Stockgame production API
+
+See sibling files in deploy/ for nginx, systemd unit, env example, and packaging.
+
+Keep static root at /srv/stock-website/current. Put API at /srv/stock-website/api with shared sibling. Data under /var/lib/stockgame. Env at /etc/stockgame/api.env.
+
+Port 8787 is canonical; on Aliyun host it may conflict with another Node app - use 8790 then.
+
+CI remains static-only; first API rollout is manual. HTTPS nginx is Certbot-managed - merge nginx-api-proxy.snippet.conf into the 443 server only.
+
+## Layout
+
+- current/: static only (existing package-production.sh)
+- api/: server package (WorkingDirectory for stockgame-api.service)
+- shared/: sibling of api/ so ../../../shared imports resolve
+- /var/lib/stockgame: STOCKGAME_DATA_DIR
+- /etc/stockgame/api.env: from api.env.example (do not commit secrets)
+
+## Ops checklist
+
+1. Ensure dedicated runtime account and dirs listed above exist
+2. Install api.env from api.env.example; set CSRF_SECRET, ORIGIN_ALLOWLIST, PORT, STOCKGAME_DATASET_PATH
+3. Unpack API tarball from package-api-production.sh into api/ and shared/
+4. Install production Node deps in api/ and run migrate with env loaded
+5. Install stockgame-api.service and start the unit
+6. Merge nginx-api-proxy.snippet.conf into live HTTPS server before location /; validate config; reload
+
+Runtime user: stockapi preferred. stockdeploy sudo today cannot edit nginx or add accounts.
+
+## Session cookies
+
+Production: __Host-stockgame_session, httpOnly, secure, sameSite=lax, path=/, 30d maxAge; idle 7d server-side. Matches server/src/lib/config.js and sessions.js.
+
+Exact root install helper: deploy/bootstrap-api.sh (pass path to unpacked API bundle).

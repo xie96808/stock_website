@@ -1,3 +1,6 @@
+# Production API is NOT deployed by this workflow yet (static site only).
+# See deploy/README-api.md and deploy/bootstrap-api.sh. Keep static deploy unchanged.
+
 name: Deploy production
 
 on:
