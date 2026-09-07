@@ -75,6 +75,10 @@ export function hideMyGames() {
     screen.classList.remove("active");
     screen.style.display = "none";
   }
+  if (typeof window.restoreSimShell === "function") {
+    window.restoreSimShell();
+    return;
+  }
   const start = document.getElementById("startScreen");
   if (start) start.style.display = "flex";
   const hdr = document.querySelector(".header");

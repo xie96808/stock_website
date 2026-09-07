@@ -26,11 +26,12 @@ export function showHindsight() {
 
 export function hideHindsight() {
     document.getElementById('hindsightScreen').classList.remove('active');
-    document.getElementById('startScreen').style.display = 'flex';
     if (hindsightChart && !hindsightChart.isDisposed()) {
         hindsightChart.dispose();
         hindsightChart = null;
     }
+    if (typeof window.showHome === 'function') window.showHome();
+    else document.getElementById('startScreen').style.display = 'flex';
 }
 
 export function hindsightReset() {

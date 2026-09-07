@@ -105,9 +105,13 @@ export function startGame(options = {}) {
 
     if (!initChart()) {
         document.getElementById('gameScreen').classList.remove('active');
-        document.getElementById('startScreen').style.display = 'flex';
         hdr.style.display = 'none';
         hdr.classList.remove('compact');
+        if (typeof window.restoreSimShell === 'function') {
+            window.restoreSimShell();
+        } else {
+            document.getElementById('startScreen').style.display = 'flex';
+        }
         return;
     }
     updateUI();

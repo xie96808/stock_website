@@ -326,3 +326,33 @@
         grid-column: 1 / -1;
     }
 }
+
+
+/* ============================================================
+   Scheme A — 模拟盘 hub back
+   ============================================================ */
+
+.start-screen .hub-back {
+    align-self: flex-start;
+    margin: 0 0 2px 2px;
+    padding: 4px 2px;
+    border: none;
+    background: transparent;
+    font-family: var(--kaiti);
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+    color: var(--mute);
+    cursor: pointer;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.start-screen .hub-back:hover {
+    color: var(--ink);
+    transform: none;
+    box-shadow: none;
+}
+
+.start-screen .sim-hub-lanes {
+    gap: 10px;
+}

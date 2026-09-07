@@ -47,8 +47,9 @@ export function showAcademy() {
 
 export function hideAcademy() {
     document.getElementById('academyScreen').classList.remove('active');
-    document.getElementById('startScreen').style.display = 'flex';
     disposeQuizCharts();
+    if (typeof window.showHome === 'function') window.showHome();
+    else document.getElementById('startScreen').style.display = 'flex';
 }
 
 export function switchTab(btn, tabId) {

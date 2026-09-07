@@ -364,7 +364,11 @@ export function resetGame() {
     hdr.style.display = 'none';
     document.getElementById('resultScreen').classList.remove('active');
     document.getElementById('gameScreen').classList.remove('active');
-    document.getElementById('startScreen').style.display = 'flex';
+    if (typeof window.showHome === 'function') {
+        window.showHome();
+    } else {
+        document.getElementById('startScreen').style.display = 'flex';
+    }
     const tagsEl = document.getElementById('waveAnalysisTags');
     if (tagsEl) tagsEl.innerHTML = '';
     const textEl = document.getElementById('waveAnalysisText');
