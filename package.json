@@ -9,6 +9,7 @@
     "server:start": "npm --prefix server start",
     "server:dev": "npm --prefix server run dev",
     "test:engine": "node --test tests/engine/engine.test.js",
-    "test:server": "node --test server/tests/**/*.test.js"
+    "test:server": "node --test server/tests/**/*.test.js",
+    "test:stage2-auth": "node server/tests/stage2-auth.integration.mjs"
   }
 }

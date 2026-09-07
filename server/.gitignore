@@ -3,3 +3,5 @@ data/
 .env
 *.sqlite
 *.sqlite-*
+
+tests/stage2_verify_results.json
