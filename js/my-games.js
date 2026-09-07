@@ -14,6 +14,11 @@ function hideOtherScreens() {
   document.getElementById("resultScreen")?.classList.remove("active");
   document.getElementById("academyScreen")?.classList.remove("active");
   document.getElementById("hindsightScreen")?.classList.remove("active");
+  const lb = document.getElementById("leaderboardScreen");
+  if (lb) {
+    lb.classList.remove("active");
+    lb.style.display = "none";
+  }
 }
 
 function fmtPct(ppm) {

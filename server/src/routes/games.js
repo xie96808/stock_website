@@ -104,7 +104,7 @@ export function gamesConfigPayload() {
     fillModes: [...FILL_MODES],
     avatarCount: 12,
     passwordMinLength: 4,
-    features: { cloudGames: true, leaderboard: false, adminPublic: false },
+    features: { cloudGames: true, leaderboard: true, adminPublic: false },
   };
 }
 
