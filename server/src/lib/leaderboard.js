@@ -36,23 +36,43 @@ function ppmToPct(ppm) {
 }
 
 function publicEntry(row) {
+  const custom = row.avatar_custom_path || null;
   return {
     rank: row.rank,
     nickname: row.nickname,
     avatarId: row.avatar_id,
+    avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
     returnPpm: row.return_ppm,
     returnPct: ppmToPct(row.return_ppm),
     finishedAt: row.finished_at,
+    gameCount: row.game_count != null ? Number(row.game_count) : 0,
+    winRate: row.win_rate != null ? Number(row.win_rate) : null,
   };
 }
 
 /**
  * Eligible settled games for a board, one best seat per user.
  * Ranking: return_ppm DESC, finished_at ASC, user_id ASC — deterministic ranks.
+ * Per-user gameCount/winRate match me/stats: settled + validity=valid on board key
+ * (does not require trade_count >= 1).
  */
 function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
   const sql = `
-    WITH eligible AS (
+    WITH user_stats AS (
+      SELECT
+        s.user_id AS user_id,
+        COUNT(*) AS game_count,
+        SUM(CASE WHEN r.return_ppm > 0 THEN 1 ELSE 0 END) AS win_count
+      FROM game_sessions s
+      JOIN game_results r ON r.game_id = s.id
+      WHERE s.status = 'settled'
+        AND s.rule_version = ?
+        AND s.dataset_version = ?
+        AND s.fill_mode = ?
+        AND r.validity = 'valid'
+      GROUP BY s.user_id
+    ),
+    eligible AS (
       SELECT
         s.user_id AS user_id,
         s.id AS game_id,
@@ -60,6 +80,12 @@ function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
         r.return_ppm AS return_ppm,
         u.nickname AS nickname,
         u.avatar_id AS avatar_id,
+        u.avatar_custom_path AS avatar_custom_path,
+        COALESCE(st.game_count, 0) AS game_count,
+        CASE
+          WHEN COALESCE(st.game_count, 0) = 0 THEN NULL
+          ELSE ROUND(100.0 * st.win_count / st.game_count, 2)
+        END AS win_rate,
         ROW_NUMBER() OVER (
           PARTITION BY s.user_id
           ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
@@ -67,6 +93,7 @@ function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
       FROM game_sessions s
       JOIN game_results r ON r.game_id = s.id
       JOIN users u ON u.id = s.user_id
+      LEFT JOIN user_stats st ON st.user_id = s.user_id
       WHERE s.status = 'settled'
         AND s.rule_version = ?
         AND s.dataset_version = ?
@@ -89,6 +116,9 @@ function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
         return_ppm,
         nickname,
         avatar_id,
+        avatar_custom_path,
+        game_count,
+        win_rate,
         ROW_NUMBER() OVER (
           ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
         ) AS rank
@@ -96,7 +126,10 @@ function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
     )
     SELECT * FROM ranked ORDER BY rank ASC
   `;
-  return db.prepare(sql).all(ruleVersion, datasetVersion, fillMode);
+  return db.prepare(sql).all(
+    ruleVersion, datasetVersion, fillMode,
+    ruleVersion, datasetVersion, fillMode
+  );
 }
 
 function userIneligibility(db, user, board) {
@@ -136,6 +169,31 @@ function userIneligibility(db, user, board) {
   return null;
 }
 
+function loadUserBoardStats(db, userId, board) {
+  const row = db
+    .prepare(
+      `SELECT
+         COUNT(*) AS game_count,
+         SUM(CASE WHEN r.return_ppm > 0 THEN 1 ELSE 0 END) AS win_count
+       FROM game_sessions s
+       JOIN game_results r ON r.game_id = s.id
+       WHERE s.user_id = ?
+         AND s.status = 'settled'
+         AND s.rule_version = ?
+         AND s.dataset_version = ?
+         AND s.fill_mode = ?
+         AND r.validity = 'valid'`
+    )
+    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+  const gameCount = Number(row?.game_count || 0);
+  if (!gameCount) return { gameCount: 0, winRate: null };
+  const winCount = Number(row.win_count || 0);
+  return {
+    gameCount,
+    winRate: Number(((winCount / gameCount) * 100).toFixed(2)),
+  };
+}
+
 /**
  * GET /leaderboard payload.
  * @param {{ fillMode, ruleVersion?, datasetVersion? }} query
@@ -151,16 +209,23 @@ export function getLeaderboard(query = {}, viewerUser = null) {
   const top10 = ranked.slice(0, TOP_N).map(publicEntry);
 
   let myRank = null;
+  let myGameCount = null;
+  let myWinRate = null;
   let ineligibilityReason = null;
 
   if (viewerUser) {
     const seat = ranked.find((r) => r.user_id === viewerUser.id);
     if (seat) {
       myRank = seat.rank;
+      myGameCount = Number(seat.game_count || 0);
+      myWinRate = seat.win_rate != null ? Number(seat.win_rate) : null;
       ineligibilityReason = null;
     } else {
       myRank = null;
       ineligibilityReason = userIneligibility(db, viewerUser, board);
+      const stats = loadUserBoardStats(db, viewerUser.id, board);
+      myGameCount = stats.gameCount;
+      myWinRate = stats.winRate;
     }
   }
 
@@ -173,6 +238,8 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       asOf,
       top10,
       myRank,
+      myGameCount,
+      myWinRate,
       ineligibilityReason,
     },
   };

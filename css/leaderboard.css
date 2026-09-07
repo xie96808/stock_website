@@ -84,10 +84,17 @@
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
 }
 .lb-nick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  overflow: hidden;
+  font-weight: 600;
+  min-width: 0;
+}
+.lb-nick > small.lb-stats {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 600;
 }
 .lb-ret { font-variant-numeric: tabular-nums; font-weight: 700; }
 .lb-ret.pos { color: #e05252; }
@@ -109,4 +116,17 @@
     grid-column: 3 / -1;
     grid-row: 2;
   }
+}
+.lb-nick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.lb-stats, .mine-stats {
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+.mine-stats {
+  margin-left: 0.35rem;
 }

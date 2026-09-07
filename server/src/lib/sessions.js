@@ -23,7 +23,7 @@ export function findValidSession(sessionToken) {
   if (!sessionToken) return null;
   const tokenHash = sha256Hex(sessionToken);
   const row = openDb()
-    .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.role, u.status,
+    .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.avatar_custom_path, u.role, u.status,
       u.leaderboard_opt_in, u.created_at, u.updated_at, u.password_hash, u.recovery_code_hash,
       s.token_hash, s.expires_at, s.last_seen_at, s.revoked_at, s.user_id
       FROM sessions s JOIN users u ON u.id = s.user_id

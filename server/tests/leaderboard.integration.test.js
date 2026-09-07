@@ -254,3 +254,41 @@ test("config advertises leaderboard feature", async () => {
   assertOk(cfg.status, cfg.json, 200);
   assert.equal(cfg.json.data.features.leaderboard, true);
 });
+
+
+test("8 gameCount + winRate on board key", async () => {
+  const auth = await register(`lb8${Date.now().toString(36)}`);
+  await optIn(auth.csrfToken);
+  const wins = [];
+  for (let i = 0; i < 3; i++) {
+    const g = await settleBuySell(auth, "next_open", `lb8-w-${Date.now()}-${i}`);
+    forceResultRanking(g.gameId, {
+      returnPpm: 100000 + i,
+      finishedAt: `2026-09-07T0${i}:00:00.000Z`,
+    });
+    wins.push(g.gameId);
+  }
+  const loss = await settleBuySell(auth, "next_open", `lb8-l-${Date.now()}`);
+  forceResultRanking(loss.gameId, {
+    returnPpm: -50000,
+    finishedAt: "2026-09-07T08:00:00.000Z",
+  });
+  // zero-buy settled valid still counts toward stats (me/stats filter), not ranking seat alone
+  const zero = await settleHolds(auth, "next_open", `lb8-z-${Date.now()}`);
+  forceResultRanking(zero.gameId, {
+    returnPpm: 10,
+    tradeCount: 0,
+    finishedAt: "2026-09-07T09:00:00.000Z",
+  });
+
+  const board = await api("/api/v1/leaderboard?fillMode=next_open");
+  assertOk(board.status, board.json, 200);
+  assert.ok(board.json.data.myRank >= 1);
+  // 3 wins + 1 loss + 1 zero-buy with return>0 => 5 valid settled; wins with ppm>0 = 4
+  assert.equal(board.json.data.myGameCount, 5);
+  assert.equal(board.json.data.myWinRate, 80);
+  const seat = board.json.data.top10.find((r) => r.rank === board.json.data.myRank);
+  assert.ok(seat);
+  assert.equal(seat.gameCount, 5);
+  assert.equal(seat.winRate, 80);
+});

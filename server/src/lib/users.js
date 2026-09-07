@@ -2,11 +2,13 @@ import { openDb } from "../db/connection.js";
 
 export function publicUser(row) {
   if (!row) return null;
+  const custom = row.avatar_custom_path || null;
   return {
     id: row.id,
     username: row.username_normalized,
     nickname: row.nickname,
     avatarId: row.avatar_id,
+    avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,
@@ -43,6 +45,13 @@ export function updateUserProfile(id, { nickname, avatarId, leaderboardOptIn }) 
   const opt = leaderboardOptIn != null ? (leaderboardOptIn ? 1 : 0) : row.leaderboard_opt_in;
   openDb().prepare(`UPDATE users SET nickname = ?, avatar_id = ?, leaderboard_opt_in = ?,
     updated_at = datetime('now') WHERE id = ?`).run(nn, av, opt, id);
+  return findUserById(id);
+}
+
+export function updateAvatarCustomPath(id, filename) {
+  openDb()
+    .prepare(`UPDATE users SET avatar_custom_path = ?, updated_at = datetime('now') WHERE id = ?`)
+    .run(filename, id);
   return findUserById(id);
 }
 
