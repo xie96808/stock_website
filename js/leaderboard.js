@@ -16,6 +16,11 @@ function hideOtherScreens() {
   }
   const start = document.getElementById("startScreen");
   if (start) start.style.display = "none";
+  const cs = document.getElementById("comingSoonScreen");
+  if (cs) {
+    cs.classList.remove("active");
+    cs.style.display = "none";
+  }
   document.getElementById("gameScreen")?.classList.remove("active");
   document.getElementById("resultScreen")?.classList.remove("active");
   document.getElementById("academyScreen")?.classList.remove("active");
@@ -123,13 +128,18 @@ export function hideLeaderboard() {
     screen.classList.remove("active");
     screen.style.display = "none";
   }
-  const start = document.getElementById("startScreen");
-  if (start) start.style.display = "flex";
   const hdr = document.querySelector(".header");
   if (hdr) {
     hdr.style.display = "none";
     hdr.classList.remove("compact");
   }
+  // Return to 模拟盘 hub (Scheme A); keep /#/sim deep link
+  if (typeof window.restoreSimShell === "function") {
+    window.restoreSimShell();
+    return;
+  }
+  const start = document.getElementById("startScreen");
+  if (start) start.style.display = "flex";
   if (location.hash === "#/leaderboard") {
     try {
       history.replaceState(null, "", location.pathname + location.search);

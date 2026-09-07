@@ -59,36 +59,51 @@
                             <p class="sub">用真实 A 股数据，重走每一次错过的行情</p>
                         </div>
                     </div>
-                    <div class="lanes">
-                        <button type="button" class="lane" onclick="startGame()">
+                    <!-- Scheme A: root home — three primary entries only -->
+                    <div class="lanes" id="homeLanes">
+                        <button type="button" class="lane" onclick="showSimHub()">
                             <span class="mark">一</span>
                             <span class="copy">
                                 <small>模拟盘</small>
+                                <strong>练习与战绩</strong>
+                                <p>开始游戏、查看战绩与双模式练习榜，均从这里进入。</p>
+                            </span>
+                            <span class="cta cta-fill">进入模拟盘</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showComingSoon('knowledge')">
+                            <span class="mark">二</span>
+                            <span class="copy">
+                                <small>知识馆</small>
+                                <strong>即将开放</strong>
+                                <p>K 线形态、知识卡片与训练题筹备中。</p>
+                            </span>
+                            <span class="cta cta-wash">看看进展</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showComingSoon('harmony')">
+                            <span class="mark">三</span>
+                            <span class="copy">
+                                <small>和谐区</small>
+                                <strong>即将开放</strong>
+                                <p>社区与交流空间筹备中，敬请期待。</p>
+                            </span>
+                            <span class="cta cta-wash">看看进展</span>
+                        </button>
+                    </div>
+
+                    <!-- Scheme A: 模拟盘二级 hub -->
+                    <div class="lanes sim-hub-lanes" id="simHub" hidden>
+                        <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                        <button type="button" class="lane" onclick="startGame()">
+                            <span class="mark">一</span>
+                            <span class="copy">
+                                <small>开始练习</small>
                                 <strong>开始游戏</strong>
                                 <p>随机三十日 K 线，点开始后选择成交方式，终局揭晓身份。</p>
                             </span>
                             <span class="cta cta-fill">立即开始</span>
                         </button>
-                        <button type="button" class="lane" onclick="showAcademy()">
-                            <span class="mark">二</span>
-                            <span class="copy">
-                                <small>知识馆</small>
-                                <strong>韭菜修炼基地</strong>
-                                <p>K 线形态、知识卡片、理论与实操题，答题即时解析。</p>
-                            </span>
-                            <span class="cta cta-wash">进入基地</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showHindsight()">
-                            <span class="mark">三</span>
-                            <span class="copy">
-                                <small>悔棋局</small>
-                                <strong>当初买了该多好</strong>
-                                <p>输入股票与区间，回溯最优买卖点，对照错过的那笔收益。</p>
-                            </span>
-                            <span class="cta cta-wash">立即回溯</span>
-                        </button>
                         <button type="button" class="lane" onclick="showMyGames()">
-                            <span class="mark">四</span>
+                            <span class="mark">二</span>
                             <span class="copy">
                                 <small>云端战绩</small>
                                 <strong>我的战绩</strong>
@@ -97,9 +112,9 @@
                             <span class="cta cta-wash">查看战绩</span>
                         </button>
                         <button type="button" class="lane" onclick="showLeaderboard()">
-                            <span class="mark">五</span>
+                            <span class="mark">三</span>
                             <span class="copy">
-                                <small>排行榜</small>
+                                <small>练习榜</small>
                                 <strong>双模式练习榜</strong>
                                 <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
                             </span>
@@ -655,6 +670,19 @@
     </div>
 
 
+    <!-- Scheme A placeholders: 知识馆 / 和谐区 -->
+    <section class="coming-soon-screen" id="comingSoonScreen" style="display:none;" aria-hidden="true">
+        <div class="coming-soon-wrap">
+            <button type="button" class="coming-soon-back" id="comingSoonBackBtn" onclick="showHome()">← 返回首页</button>
+            <div class="coming-soon-card">
+                <small id="comingSoonKicker">专区</small>
+                <h2 id="comingSoonTitle">即将开放</h2>
+                <p id="comingSoonBlurb">内容筹备中，敬请期待。</p>
+                <span class="coming-soon-badge">即将开放</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Fill mode modal (shown after 开始游戏) -->
     <div id="fillModeModal" class="fill-mode-modal" hidden aria-hidden="true">
         <div class="fill-mode-backdrop" onclick="cancelFillModeModal()"></div>
@@ -729,6 +757,7 @@
         import { initAuth, openAuthModal } from './js/auth.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard, initLeaderboardRouting } from './js/leaderboard.js';
+        import { showHome, showSimHub, showComingSoon, restoreSimShell, initHomeIaRouting } from './js/home-ia.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -780,6 +809,10 @@
         window.hideMyGames = hideMyGames;
         window.showLeaderboard = showLeaderboard;
         window.hideLeaderboard = hideLeaderboard;
+        window.showHome = showHome;
+        window.showSimHub = showSimHub;
+        window.showComingSoon = showComingSoon;
+        window.restoreSimShell = restoreSimShell;
         initAuth().catch((e) => console.warn('auth init', e));
         (function () {
           const start = document.getElementById('startScreen');
@@ -788,6 +821,7 @@
           start.addEventListener('animationend', clear, { once: true });
           setTimeout(clear, 700);
         })();
+        initHomeIaRouting();
         initLeaderboardRouting();
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
