@@ -1,0 +1,132 @@
+import { Router } from "express";
+import { verifyPassword } from "../lib/crypto.js";
+import { findUserById } from "../lib/users.js";
+import {
+  setAdminVerified,
+  isAdminVerified,
+  ADMIN_VERIFY_MS,
+} from "../lib/sessions.js";
+import {
+  searchUsers,
+  getAdminUser,
+  setUserStatus,
+  searchGames,
+  getAdminGame,
+  moderateGame,
+} from "../lib/admin.js";
+import { listAuditLogs } from "../lib/audit.js";
+import { ok, fail } from "../lib/http.js";
+import {
+  requireAdminGate,
+  requireAdmin,
+  requireAdminVerified,
+} from "../middleware/admin.js";
+
+const router = Router();
+
+router.use("/admin", requireAdminGate, requireAdmin);
+
+router.post("/admin/reauth", async (req, res) => {
+  const password = req.body?.password;
+  if (typeof password !== "string") {
+    return fail(res, 400, "INVALID_PASSWORD", "请输入当前密码");
+  }
+  const row = findUserById(req.user.id);
+  if (!row) return fail(res, 401, "UNAUTHORIZED", "未登录或会话已过期");
+  const good = await verifyPassword(row.password_hash, password);
+  if (!good) return fail(res, 401, "INVALID_CREDENTIALS", "密码错误");
+  const verifiedAt = setAdminVerified(req.sessionToken);
+  req.session.admin_verified_at = verifiedAt;
+  return ok(res, {
+    verifiedAt,
+    expiresInMs: ADMIN_VERIFY_MS,
+  });
+});
+
+router.get("/admin/session", (req, res) => {
+  return ok(res, {
+    user: req.user,
+    adminVerified: isAdminVerified(req.session),
+    expiresInMs: ADMIN_VERIFY_MS,
+  });
+});
+
+router.get("/admin/users", (req, res) => {
+  const data = searchUsers({
+    q: req.query.q,
+    status: req.query.status,
+    limit: req.query.limit,
+    cursor: req.query.cursor,
+  });
+  return ok(res, data);
+});
+
+router.get("/admin/users/:id", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const data = getAdminUser(id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "用户不存在");
+  return ok(res, data);
+});
+
+router.patch("/admin/users/:id/status", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const result = setUserStatus({
+    actorId: req.user.id,
+    targetUserId: id,
+    status: req.body?.status,
+    reason: req.body?.reason,
+    expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.get("/admin/games", (req, res) => {
+  const data = searchGames({
+    q: req.query.q,
+    fillMode: req.query.fillMode,
+    limit: req.query.limit,
+    cursor: req.query.cursor,
+  });
+  return ok(res, data);
+});
+
+router.get("/admin/games/:id", (req, res) => {
+  const data = getAdminGame(req.params.id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "战绩不存在");
+  return ok(res, { game: data });
+});
+
+router.patch("/admin/games/:id/moderation", requireAdminVerified, (req, res) => {
+  const result = moderateGame({
+    actorId: req.user.id,
+    gameId: req.params.id,
+    action: req.body?.action,
+    reason: req.body?.reason,
+    expectedModeratedAt: req.body?.expectedModeratedAt,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.get("/admin/audit-logs", (req, res) => {
+  const data = listAuditLogs({
+    actorId: req.query.actorId != null ? Number(req.query.actorId) : undefined,
+    targetType: req.query.targetType,
+    targetId: req.query.targetId,
+    action: req.query.action,
+    limit: req.query.limit,
+    cursor: req.query.cursor,
+  });
+  return ok(res, data);
+});
+
+export default router;

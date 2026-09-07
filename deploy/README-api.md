@@ -32,3 +32,13 @@ Runtime user: stockapi preferred. stockdeploy sudo today cannot edit nginx or ad
 Production: __Host-stockgame_session, httpOnly, secure, sameSite=lax, path=/, 30d maxAge; idle 7d server-side. Matches server/src/lib/config.js and sessions.js.
 
 Exact root install helper: deploy/bootstrap-api.sh (pass path to unpacked API bundle).
+
+
+## Stage 5 minimal admin (non-public)
+
+- Default: admin API is **off** (`ADMIN_ENABLED` unset). Public players never see an admin entry.
+- To enable on VPS: set `ADMIN_ENABLED=1` in `/etc/stockgame/api.env`, optionally `ADMIN_IP_ALLOWLIST`, restart `stockgame-api`.
+- Prefer nginx `allow`/`deny` (or VPN) for `/admin/` and `/api/v1/admin/` before enabling.
+- Static shell ships at `/admin/` (override folder name via `ADMIN_UI_PATH` is documented for future; current package path is `admin/`).
+- Promote an operator: on the API host with env loaded, `cd /srv/stock-website/api && node scripts/admin-promote.mjs <username>`.
+- Writes require password reauth (`POST /api/v1/admin/reauth`, 15 minutes).

@@ -7,7 +7,8 @@
     "migrate": "node src/db/migrate.js",
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test tests/**/*.test.js"
+    "test": "node --test tests/**/*.test.js",
+    "admin:promote": "node scripts/admin-promote.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

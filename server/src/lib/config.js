@@ -23,6 +23,15 @@ export const config = {
   sessionAbsoluteMs: 30 * 24 * 60 * 60 * 1000,
   staticRoot: process.env.STATIC_ROOT || "",
   skipStatic: process.env.SKIP_STATIC === "1" || process.env.SKIP_STATIC === "true",
+  /** Stage 5: admin API off by default; set ADMIN_ENABLED=1 on VPS behind IP/VPN */
+  adminEnabled: process.env.ADMIN_ENABLED === "1" || process.env.ADMIN_ENABLED === "true",
+  /** Optional comma-separated client IPs allowed to hit /api/v1/admin/* (empty = no IP filter) */
+  adminIpAllowlist: (process.env.ADMIN_IP_ALLOWLIST || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+  /** Secret path segment for static admin shell; default "admin" */
+  adminUiPath: (process.env.ADMIN_UI_PATH || "admin").replace(/^\/+|\/+$/g, "") || "admin",
 };
 
 export function newRequestId() {

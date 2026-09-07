@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>治理后台 · 早知道当初不炒了</title>
+  <link rel="stylesheet" href="./admin.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <h1>最小治理后台</h1>
+      <p class="note">非公网运营工具 · 禁用用户 / 下榜与判无效 / 审计。需管理员账号 + 二次验证。</p>
+    </header>
+
+    <section id="loginPanel" class="card">
+      <h2>登录</h2>
+      <label>用户名 <input id="loginUser" autocomplete="username" /></label>
+      <label>密码 <input id="loginPass" type="password" autocomplete="current-password" /></label>
+      <button type="button" id="loginBtn">登录</button>
+      <p id="loginMsg" class="msg"></p>
+    </section>
+
+    <section id="opsPanel" class="card hidden">
+      <div class="row between">
+        <div>
+          <strong id="whoami"></strong>
+          <span id="verifyBadge" class="badge">未二次验证</span>
+        </div>
+        <div class="row">
+          <input id="reauthPass" type="password" placeholder="管理员密码" />
+          <button type="button" id="reauthBtn">二次验证（15 分钟）</button>
+          <button type="button" id="logoutBtn" class="ghost">退出</button>
+        </div>
+      </div>
+      <p id="opsMsg" class="msg"></p>
+
+      <h2>用户 · 禁用 / 解禁</h2>
+      <div class="row">
+        <input id="userQ" placeholder="用户 ID / 登录名 / 昵称" />
+        <select id="userStatus">
+          <option value="">全部状态</option>
+          <option value="active">active</option>
+          <option value="disabled">disabled</option>
+        </select>
+        <button type="button" id="userSearchBtn">搜索</button>
+      </div>
+      <div id="userList" class="list"></div>
+      <div class="row">
+        <input id="banUserId" placeholder="用户 ID" />
+        <select id="banStatus">
+          <option value="disabled">禁用</option>
+          <option value="active">解禁</option>
+        </select>
+        <input id="banReason" class="grow" placeholder="原因（必填）" />
+        <button type="button" id="banBtn">提交</button>
+      </div>
+
+      <h2>战绩 · 下榜 / 判无效</h2>
+      <div class="row">
+        <input id="gameQ" class="grow" placeholder="对局 ID / 用户 ID / 登录名 / 昵称" />
+        <button type="button" id="gameSearchBtn">搜索</button>
+      </div>
+      <div id="gameList" class="list"></div>
+      <div class="row">
+        <input id="modGameId" class="grow" placeholder="对局 ID" />
+        <select id="modAction">
+          <option value="unlist">仅下榜</option>
+          <option value="relist">恢复上榜</option>
+          <option value="invalidate">判无效</option>
+          <option value="restore">恢复有效</option>
+        </select>
+        <input id="modReason" class="grow" placeholder="原因（必填）" />
+        <button type="button" id="modBtn">提交</button>
+      </div>
+
+      <h2>审计日志</h2>
+      <div class="row">
+        <button type="button" id="auditBtn">刷新最近审计</button>
+      </div>
+      <div id="auditList" class="list"></div>
+    </section>
+  </main>
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>
