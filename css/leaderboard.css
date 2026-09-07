@@ -5,8 +5,23 @@
 }
 .leaderboard-screen.active { display: block; }
 .leaderboard-wrap { max-width: 720px; margin: 0 auto; }
-.leaderboard-head h2 { margin: 0.35rem 0; font-size: 1.4rem; }
-.leaderboard-sub { opacity: 0.7; font-size: 0.9rem; margin: 0 0 1rem; line-height: 1.45; }
+.leaderboard-head {
+  position: relative;
+  text-align: center;
+  margin-bottom: 1rem;
+  min-height: 2.2rem;
+}
+.leaderboard-head h2 {
+  margin: 0.35rem 0;
+  font-size: 1.4rem;
+  text-align: center;
+}
+.leaderboard-head .leaderboard-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
 .leaderboard-back, .leaderboard-link {
   border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   background: transparent;

@@ -25,7 +25,7 @@ export function findValidSession(sessionToken) {
   const row = openDb()
     .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.avatar_custom_path, u.role, u.status,
       u.leaderboard_opt_in, u.created_at, u.updated_at, u.password_hash, u.recovery_code_hash,
-      s.token_hash, s.expires_at, s.last_seen_at, s.revoked_at, s.user_id
+      s.token_hash, s.expires_at, s.last_seen_at, s.revoked_at, s.user_id, s.admin_verified_at
       FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = ?`)
     .get(tokenHash);
@@ -75,3 +75,31 @@ export function clearSessionCookie(res) {
     path: "/",
   });
 }
+
+const ADMIN_VERIFY_MS = 15 * 60 * 1000;
+
+export function setAdminVerified(sessionToken) {
+  if (!sessionToken) return null;
+  const tokenHash = sha256Hex(sessionToken);
+  const at = new Date().toISOString();
+  openDb()
+    .prepare("UPDATE sessions SET admin_verified_at = ? WHERE token_hash = ? AND revoked_at IS NULL")
+    .run(at, tokenHash);
+  return at;
+}
+
+export function clearAdminVerified(sessionToken) {
+  if (!sessionToken) return;
+  openDb()
+    .prepare("UPDATE sessions SET admin_verified_at = NULL WHERE token_hash = ?")
+    .run(sha256Hex(sessionToken));
+}
+
+export function isAdminVerified(sessionRow) {
+  if (!sessionRow?.admin_verified_at) return false;
+  const t = Date.parse(sessionRow.admin_verified_at);
+  if (!Number.isFinite(t)) return false;
+  return Date.now() - t <= ADMIN_VERIFY_MS;
+}
+
+export { ADMIN_VERIFY_MS };

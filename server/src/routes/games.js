@@ -12,6 +12,7 @@ import {
 } from "../lib/games.js";
 import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
+import { config } from "../lib/config.js";
 
 const router = Router();
 
@@ -104,7 +105,7 @@ export function gamesConfigPayload() {
     fillModes: [...FILL_MODES],
     avatarCount: 12,
     passwordMinLength: 4,
-    features: { cloudGames: true, leaderboard: true, adminPublic: false },
+    features: { cloudGames: true, leaderboard: true, adminPublic: false, adminEnabled: !!config.adminEnabled },
   };
 }
 

@@ -91,7 +91,6 @@ export async function showLeaderboard() {
         <div class="leaderboard-head">
           <button type="button" class="leaderboard-back" id="leaderboardBackBtn">← 返回</button>
           <h2>排行榜</h2>
-          <p class="leaderboard-sub">历史行情练习榜 · 各成交模式独立 · 每人一席最佳局 · 仅供娱乐与复盘</p>
         </div>
         <div class="leaderboard-tabs" role="tablist">
           <button type="button" class="leaderboard-tab active" data-mode="next_open" role="tab">次日开盘榜</button>
