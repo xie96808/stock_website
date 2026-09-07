@@ -35,4 +35,8 @@ else
   shasum -a 256 "$ARCHIVE" | awk '{print $1}' > "$ARCHIVE.sha256"
 fi
 tar -tzf "$ARCHIVE" >/dev/null
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -x "$SCRIPT_DIR/verify-package-whitelist.sh" ]]; then
+  "$SCRIPT_DIR/verify-package-whitelist.sh" "$ARCHIVE"
+fi
 printf '%s\n' "$ARCHIVE"

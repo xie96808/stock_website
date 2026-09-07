@@ -1,4 +1,6 @@
 import { openDb } from "../db/connection.js";
+import { readBackupStatus, getBackupAgeSeconds } from "./backup.js";
+import { config } from "./config.js";
 import { findUserById, publicUser } from "./users.js";
 import { revokeAllUserSessions } from "./sessions.js";
 import { writeAuditLog } from "./audit.js";
@@ -361,3 +363,52 @@ export function moderateGame({
 
   return { status: 200, data: { game: getAdminGame(gameId) } };
 }
+
+export function getAdminOverview() {
+  const db = openDb();
+  const users = db.prepare(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN created_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) AS registered_7d
+     FROM users WHERE status != 'deleted'`
+  ).get();
+  const games = db.prepare(
+    `SELECT
+       SUM(CASE WHEN status = 'settled' THEN 1 ELSE 0 END) AS settled,
+       SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active
+     FROM game_sessions`
+  ).get();
+  let schemaVersion = null;
+  try {
+    const row = db.prepare(
+      `SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1`
+    ).get();
+    schemaVersion = row?.id || null;
+  } catch { /* ignore */ }
+  const backupStatus = readBackupStatus();
+  return {
+    users: {
+      total: Number(users?.total || 0),
+      registered7d: Number(users?.registered_7d || 0),
+    },
+    games: {
+      settled: Number(games?.settled || 0),
+      active: Number(games?.active || 0),
+    },
+    system: {
+      schemaVersion,
+      adminEnabled: !!config.adminEnabled,
+      registrationEnabled: !!config.registrationEnabled,
+      cloudGamesEnabled: !!config.cloudGamesEnabled,
+      leaderboardEnabled: !!config.leaderboardEnabled,
+    },
+    backup: {
+      lastSuccessAt: backupStatus?.lastSuccessAt || null,
+      ageSeconds: getBackupAgeSeconds(),
+      sizeBytes: backupStatus?.sizeBytes ?? null,
+      integrityOk: backupStatus?.integrityOk ?? null,
+      sha256: backupStatus?.sha256 || null,
+    },
+  };
+}
+

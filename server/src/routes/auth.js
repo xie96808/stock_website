@@ -14,6 +14,7 @@ import {
   createSession, setSessionCookie, clearSessionCookie, revokeSessionToken, revokeAllUserSessions,
 } from "../lib/sessions.js";
 import { ok, fail } from "../lib/http.js";
+import { config } from "../lib/config.js";
 import { requireUser } from "../middleware/request.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
@@ -26,6 +27,9 @@ function randomAvatarId() {
 }
 
 router.post("/auth/register", async (req, res) => {
+  if (!config.registrationEnabled) {
+    return fail(res, 403, "REGISTRATION_DISABLED", "当前暂停注册");
+  }
   const username = normalizeUsername(req.body?.username);
   if (!username) return fail(res, 400, "INVALID_USERNAME", "用户名不合法（4-24位，字母开头）");
   const pwErr = validatePassword(req.body?.password);

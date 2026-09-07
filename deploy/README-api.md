@@ -42,3 +42,7 @@ Exact root install helper: deploy/bootstrap-api.sh (pass path to unpacked API bu
 - Static shell ships at `/admin/` (override folder name via `ADMIN_UI_PATH` is documented for future; current package path is `admin/`).
 - Promote an operator: on the API host with env loaded, `cd /srv/stock-website/api && node scripts/admin-promote.mjs <username>`.
 - Writes require password reauth (`POST /api/v1/admin/reauth`, 15 minutes).
+
+## Stage 6 ops
+
+See deploy/README-ops-stage6.md for backup, restore-check, packaging whitelist, rollback, and ops env switches. Admin remains non-public.

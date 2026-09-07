@@ -13,6 +13,7 @@ import {
   searchGames,
   getAdminGame,
   moderateGame,
+  getAdminOverview,
 } from "../lib/admin.js";
 import { listAuditLogs } from "../lib/audit.js";
 import { ok, fail } from "../lib/http.js";
@@ -41,6 +42,10 @@ router.post("/admin/reauth", async (req, res) => {
     verifiedAt,
     expiresInMs: ADMIN_VERIFY_MS,
   });
+});
+
+router.get("/admin/overview", (req, res) => {
+  return ok(res, getAdminOverview());
 });
 
 router.get("/admin/session", (req, res) => {

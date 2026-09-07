@@ -12,6 +12,8 @@ import authRoutes from "./routes/auth.js";
 import gamesRoutes, { gamesConfigPayload, warmDataset } from "./routes/games.js";
 import leaderboardRoutes from "./routes/leaderboard.js";
 import adminRoutes from "./routes/admin.js";
+import { openDb } from "./db/connection.js";
+import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -31,9 +33,21 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   app.get("/api/v1/health/live", (req, res) => ok(res, { status: "live" }));
   app.get("/api/v1/health/ready", (req, res) => {
     try {
+      openDb().prepare("SELECT 1 AS ok").get();
       const cfg = gamesConfigPayload();
       if (!cfg.datasetVersion) return fail(res, 503, "NOT_READY", "行情数据不可用");
-      return ok(res, { status: "ready", datasetVersion: cfg.datasetVersion });
+      const backupStatus = readBackupStatus();
+      const backupAgeSeconds = getBackupAgeSeconds();
+      return ok(res, {
+        status: "ready",
+        datasetVersion: cfg.datasetVersion,
+        features: cfg.features,
+        backup: {
+          lastSuccessAt: backupStatus?.lastSuccessAt || null,
+          ageSeconds: backupAgeSeconds,
+          integrityOk: backupStatus?.integrityOk ?? null,
+        },
+      });
     } catch (e) {
       return fail(res, 503, "NOT_READY", String(e.message || e));
     }

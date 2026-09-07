@@ -1,11 +1,15 @@
 import { Router } from "express";
 import { ok, fail } from "../lib/http.js";
 import { getLeaderboard } from "../lib/leaderboard.js";
+import { config } from "../lib/config.js";
 
 const router = Router();
 
 /** Public GET /leaderboard — guests OK; logged-in users get myRank / reason */
 router.get("/leaderboard", (req, res) => {
+  if (!config.leaderboardEnabled) {
+    return fail(res, 403, "LEADERBOARD_DISABLED", "排行榜暂时关闭");
+  }
   const result = getLeaderboard(
     {
       fillMode: req.query.fillMode,
