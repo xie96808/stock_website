@@ -185,7 +185,8 @@ body {
 .theme-toggle {
     position: fixed;
     top: 10px;
-    right: 14px;
+    left: 14px;
+    right: auto;
     z-index: 100;
     width: auto;
     height: auto;
