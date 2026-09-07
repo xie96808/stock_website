@@ -1,0 +1,76 @@
+/* Stage 3: my games + cloud save status */
+.my-games-screen {
+  display: none;
+  padding: 1.25rem 1rem 3rem;
+}
+.my-games-screen.active { display: block; }
+.my-games-wrap { max-width: 720px; margin: 0 auto; }
+.my-games-head h2 { margin: 0.35rem 0; font-size: 1.4rem; }
+.my-games-sub { opacity: 0.7; font-size: 0.9rem; margin: 0 0 1rem; }
+.my-games-back, .my-games-refresh {
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+}
+.my-games-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.stat-card {
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 12px;
+  padding: 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+}
+.stat-card strong { font-size: 1.05rem; }
+.my-games-filters {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+.my-games-list { display: flex; flex-direction: column; gap: 0.55rem; }
+.my-game-item {
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 12px;
+  padding: 0.75rem 0.85rem;
+}
+.my-game-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+.my-game-main .code { opacity: 0.65; font-weight: 500; font-size: 0.85em; }
+.my-game-main .ret.pos { color: #e05252; }
+.my-game-main .ret.neg { color: #3db86a; }
+.my-game-meta { margin-top: 0.35rem; font-size: 0.8rem; opacity: 0.7; }
+.my-games-empty { opacity: 0.7; }
+.cloud-save-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.cloud-save-status.status-saved { color: #3db86a; }
+.cloud-save-status.status-fail { color: #e05252; }
+.cloud-save-status.status-saving,
+.cloud-save-status.status-retry { opacity: 0.9; }
+.fill-mode-dialog-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  opacity: 0.75;
+  line-height: 1.45;
+}
+.play-mode-picker { margin-top: 0.75rem; }
+@media (max-width: 640px) {
+  .my-games-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

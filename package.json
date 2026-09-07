@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/engine/engine.test.js",
+    "test": "node scripts/run-tests.mjs",
     "server:install": "npm --prefix server install",
     "server:migrate": "npm --prefix server run migrate",
     "server:start": "npm --prefix server start",
     "server:dev": "npm --prefix server run dev",
+    "test:engine": "node --test tests/engine/engine.test.js",
+    "test:server": "node --test server/tests/**/*.test.js",
     "test:stage2-auth": "node server/tests/stage2-auth.integration.mjs"
   }
 }
