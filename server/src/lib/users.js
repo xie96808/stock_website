@@ -25,7 +25,7 @@ export function findUserById(id) {
   return openDb().prepare("SELECT * FROM users WHERE id = ?").get(id);
 }
 
-export function insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn, recoveryCodeHash }) {
+export function insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn, recoveryCodeHash = null }) {
   const info = openDb()
     .prepare(`INSERT INTO users (
       username_normalized, password_hash, nickname, avatar_id,

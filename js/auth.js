@@ -1,5 +1,18 @@
-/** Stage 2 account client: session cookie + CSRF + avatar settings */
-const AVATAR_LABELS = ["","鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+/** Stage 2 account client: session cookie + CSRF + avatar/nickname settings */
+const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
+
+/** Playful stock / 韭菜-themed A的B nickname parts (keep A的B within 2–16 code points). */
+const NICK_A = [
+  "进击", "发光", "沉默", "暴躁", "佛系", "熬夜", "抄底", "追高", "满仓", "空仓",
+  "躺平", "起飞", "破防", "回血", "加仓", "割肉", "复盘", "梭哈", "止盈", "止损",
+  "潜伏", "暴富", "亏哭", "躺赢", "逆风", "顺风", "硬刚", "摸鱼", "清醒", "上头",
+  "稳住", "翻车", "解套", "红温", "蓝瘦", "干饭", "肝帝", "躺尸", "打新", "惜售",
+];
+const NICK_B = [
+  "韭菜", "套牢盘", "牛散", "游资", "打工人", "小散", "股东", "多头", "空头", "红盘",
+  "绿盘", "本金", "仓位", "钱包", "子弹", "心态", "理智", "梦想", "涨停板", "跌停板",
+  "筹码", "心肝", "账户", "信仰", "持仓", "夜盘", "本金怪", "韭菜盒", "子弹怪", "仓位怪",
+];
 
 let authState = {
   user: null,
@@ -10,6 +23,26 @@ let authState = {
 function avatarUrl(id) {
   const n = String(id).padStart(2, "0");
   return `images/avatars/${n}.svg`;
+}
+
+function randomInt(min, maxInclusive) {
+  return min + Math.floor(Math.random() * (maxInclusive - min + 1));
+}
+
+function randomAvatarId(exclude) {
+  let next = exclude;
+  for (let i = 0; i < 8 && next === exclude; i++) next = randomInt(1, 12);
+  return next;
+}
+
+function randomNickname(exclude) {
+  let nick = exclude;
+  for (let i = 0; i < 12 && nick === exclude; i++) {
+    const a = NICK_A[randomInt(0, NICK_A.length - 1)];
+    const b = NICK_B[randomInt(0, NICK_B.length - 1)];
+    nick = `${a}的${b}`;
+  }
+  return nick;
 }
 
 export async function api(path, { method = "GET", body, csrf } = {}) {
@@ -75,11 +108,9 @@ function ensureAuthDom() {
     document.body.appendChild(el(`<div class="auth-modal" id="authModal" hidden>
       <div class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <button type="button" class="auth-close" id="authCloseBtn" aria-label="关闭">×</button>
-        <div class="auth-tabs">
+        <div class="auth-tabs" id="authGuestTabs">
           <button type="button" class="auth-tab active" data-tab="login">登录</button>
           <button type="button" class="auth-tab" data-tab="register">注册</button>
-          <button type="button" class="auth-tab" data-tab="recover">恢复</button>
-          <button type="button" class="auth-tab" data-tab="settings" id="authTabSettings" hidden>设置</button>
         </div>
         <h2 id="authModalTitle">账号</h2>
         <p class="auth-error" id="authError" hidden></p>
@@ -92,22 +123,30 @@ function ensureAuthDom() {
           <label>用户名<input name="username" autocomplete="username" required></label>
           <label>密码（至少 4 位）<input name="password" type="password" autocomplete="new-password" required minlength="4"></label>
           <label>确认密码<input name="password2" type="password" autocomplete="new-password" required minlength="4"></label>
-          <label>昵称（可选）<input name="nickname" maxlength="16" placeholder="新同学"></label>
+          <div class="auth-nick-row">
+            <label class="auth-nick-field">昵称（可选）
+              <input name="nickname" id="registerNickname" maxlength="16" placeholder="掷骰生成或自填">
+            </label>
+            <button type="button" class="auth-dice" id="registerNickDice" title="随机昵称">🎲</button>
+          </div>
+          <div class="avatar-picker">
+            <img class="avatar-preview" id="registerAvatarImg" alt="头像预览">
+            <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖">🎲 随机生肖</button>
+          </div>
           <label class="auth-check"><input type="checkbox" name="terms" required> 我已阅读并同意服务条款</label>
           <button type="submit" class="auth-primary">注册</button>
         </form>
-        <form id="authRecoverForm" class="auth-form" hidden>
-          <label>用户名<input name="username" required></label>
-          <label>恢复码<input name="recoveryCode" required></label>
-          <label>新密码<input name="newPassword" type="password" required minlength="4"></label>
-          <button type="submit" class="auth-primary">重置密码</button>
-        </form>
         <div id="authSettingsPanel" class="auth-form" hidden>
           <div class="avatar-picker">
-            <div class="avatar-grid" id="avatarGrid"></div>
-            <button type="button" class="auth-dice" id="avatarDice" title="随机">🎲 随机生肖</button>
+            <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
+            <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖">🎲 随机生肖</button>
           </div>
-          <label>昵称<input id="settingsNickname" maxlength="16"></label>
+          <div class="auth-nick-row">
+            <label class="auth-nick-field">昵称
+              <input id="settingsNickname" maxlength="16">
+            </label>
+            <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">🎲</button>
+          </div>
           <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜（默认关闭）</label>
           <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
           <hr>
@@ -116,13 +155,7 @@ function ensureAuthDom() {
             <label>新密码<input name="newPassword" type="password" required minlength="4"></label>
             <button type="submit">修改密码</button>
           </form>
-          <button type="button" class="auth-secondary" id="authRecoveryReset">重新生成恢复码</button>
           <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
-        </div>
-        <div id="authRecoveryOnce" class="auth-recovery" hidden>
-          <p>请立即保存恢复码（只显示一次）：</p>
-          <code id="authRecoveryCode"></code>
-          <button type="button" class="auth-primary" id="authRecoveryAck">我已保存</button>
         </div>
       </div>
     </div>`));
@@ -134,50 +167,45 @@ function ensureAuthDom() {
   document.getElementById("authModal").addEventListener("click", (e) => {
     if (e.target.id === "authModal") closeAuthModal();
   });
-  document.querySelectorAll(".auth-tab").forEach((btn) => {
+  document.querySelectorAll("#authGuestTabs .auth-tab").forEach((btn) => {
     btn.addEventListener("click", () => openAuthModal(btn.dataset.tab));
   });
   document.getElementById("authLoginForm").onsubmit = onLogin;
   document.getElementById("authRegisterForm").onsubmit = onRegister;
-  document.getElementById("authRecoverForm").onsubmit = onRecover;
   document.getElementById("settingsSave").onclick = onSaveSettings;
-  document.getElementById("avatarDice").onclick = onDice;
-  document.getElementById("authChangePwForm").onsubmit = onChangePw;
-  document.getElementById("authRecoveryReset").onclick = onResetRecovery;
-  document.getElementById("authLogoutBtn").onclick = onLogout;
-  document.getElementById("authRecoveryAck").onclick = () => {
-    document.getElementById("authRecoveryOnce").hidden = true;
-    closeAuthModal();
+  document.getElementById("registerAvatarDice").onclick = () => setRegisterAvatar(randomAvatarId(pendingRegisterAvatarId));
+  document.getElementById("settingsAvatarDice").onclick = () => setSettingsAvatar(randomAvatarId(pendingSettingsAvatarId));
+  document.getElementById("registerNickDice").onclick = () => {
+    const input = document.getElementById("registerNickname");
+    input.value = randomNickname(input.value);
   };
-  buildAvatarGrid();
+  document.getElementById("settingsNickDice").onclick = () => {
+    const input = document.getElementById("settingsNickname");
+    input.value = randomNickname(input.value);
+  };
+  document.getElementById("authChangePwForm").onsubmit = onChangePw;
+  document.getElementById("authLogoutBtn").onclick = onLogout;
 }
 
-let pendingAvatarId = 1;
+let pendingRegisterAvatarId = 1;
+let pendingSettingsAvatarId = 1;
 
-function buildAvatarGrid() {
-  const grid = document.getElementById("avatarGrid");
-  if (!grid || grid.childElementCount) return;
-  for (let i = 1; i <= 12; i++) {
-    const b = el(`<button type="button" class="avatar-opt" data-id="${i}" title="${AVATAR_LABELS[i]}">
-      <img src="${avatarUrl(i)}" alt="${AVATAR_LABELS[i]}">
-      <span>${AVATAR_LABELS[i]}</span>
-    </button>`);
-    b.onclick = () => selectAvatar(i);
-    grid.appendChild(b);
+function setRegisterAvatar(id) {
+  pendingRegisterAvatarId = id;
+  const img = document.getElementById("registerAvatarImg");
+  if (img) {
+    img.src = avatarUrl(id);
+    img.alt = AVATAR_LABELS[id] || "avatar";
   }
 }
 
-function selectAvatar(id) {
-  pendingAvatarId = id;
-  document.querySelectorAll(".avatar-opt").forEach((n) => {
-    n.classList.toggle("selected", Number(n.dataset.id) === id);
-  });
-}
-
-function onDice() {
-  let next = pendingAvatarId;
-  for (let i = 0; i < 8 && next === pendingAvatarId; i++) next = 1 + Math.floor(Math.random() * 12);
-  selectAvatar(next);
+function setSettingsAvatar(id) {
+  pendingSettingsAvatarId = id;
+  const img = document.getElementById("settingsAvatarImg");
+  if (img) {
+    img.src = avatarUrl(id);
+    img.alt = AVATAR_LABELS[id] || "avatar";
+  }
 }
 
 function setError(msg) {
@@ -188,29 +216,34 @@ function setError(msg) {
 }
 
 function showForms(tab) {
-  const map = {
-    login: "authLoginForm",
-    register: "authRegisterForm",
-    recover: "authRecoverForm",
-    settings: "authSettingsPanel",
-  };
-  Object.entries(map).forEach(([k, id]) => {
-    document.getElementById(id).hidden = k !== tab;
+  const guest = tab === "login" || tab === "register";
+  document.getElementById("authGuestTabs").hidden = !guest;
+  document.getElementById("authLoginForm").hidden = tab !== "login";
+  document.getElementById("authRegisterForm").hidden = tab !== "register";
+  document.getElementById("authSettingsPanel").hidden = tab !== "settings";
+  document.querySelectorAll("#authGuestTabs .auth-tab").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === tab);
   });
-  document.querySelectorAll(".auth-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
-  document.getElementById("authTabSettings").hidden = !authState.user;
   document.getElementById("authModalTitle").textContent =
-    tab === "settings" ? "个人设置" : tab === "register" ? "注册" : tab === "recover" ? "账号恢复" : "登录";
+    tab === "settings" ? "个人设置" : tab === "register" ? "注册" : "登录";
 }
 
 export function openAuthModal(tab = "login") {
   ensureAuthDom();
   setError("");
-  document.getElementById("authRecoveryOnce").hidden = true;
-  if (tab === "settings" && authState.user) {
-    document.getElementById("settingsNickname").value = authState.user.nickname;
-    document.getElementById("settingsOptIn").checked = !!authState.user.leaderboardOptIn;
-    selectAvatar(authState.user.avatarId || 1);
+  if (tab === "settings") {
+    if (!authState.user) {
+      tab = "login";
+    } else {
+      document.getElementById("settingsNickname").value = authState.user.nickname;
+      document.getElementById("settingsOptIn").checked = !!authState.user.leaderboardOptIn;
+      setSettingsAvatar(authState.user.avatarId || 1);
+    }
+  }
+  if (tab === "register") {
+    setRegisterAvatar(randomAvatarId(pendingRegisterAvatarId));
+    const nick = document.getElementById("registerNickname");
+    if (nick && !nick.value) nick.value = randomNickname("");
   }
   showForms(tab);
   document.getElementById("authModal").hidden = false;
@@ -260,13 +293,15 @@ async function onRegister(ev) {
     setError("两次密码不一致");
     return;
   }
+  const nickname = String(fd.get("nickname") || "").trim();
   try {
     const { data } = await api("/auth/register", {
       method: "POST",
       body: {
         username: fd.get("username"),
         password: fd.get("password"),
-        nickname: fd.get("nickname") || undefined,
+        nickname: nickname || undefined,
+        avatarId: pendingRegisterAvatarId,
         termsVersion: "v1",
         leaderboardOptIn: false,
       },
@@ -274,36 +309,7 @@ async function onRegister(ev) {
     authState.user = data.user;
     authState.csrfToken = data.csrfToken;
     renderAuthChrome();
-    showRecoveryOnce(data.recoveryCode);
-  } catch (e) {
-    setError(e.message);
-  }
-}
-
-function showRecoveryOnce(code) {
-  showForms("login");
-  document.getElementById("authLoginForm").hidden = true;
-  document.getElementById("authRecoveryOnce").hidden = false;
-  document.getElementById("authRecoveryCode").textContent = code;
-}
-
-async function onRecover(ev) {
-  ev.preventDefault();
-  setError("");
-  const fd = new FormData(ev.target);
-  try {
-    const { data } = await api("/auth/recover", {
-      method: "POST",
-      body: {
-        username: fd.get("username"),
-        recoveryCode: fd.get("recoveryCode"),
-        newPassword: fd.get("newPassword"),
-      },
-    });
-    authState.user = null;
-    authState.csrfToken = null;
-    renderAuthChrome();
-    showRecoveryOnce(data.recoveryCode);
+    closeAuthModal();
   } catch (e) {
     setError(e.message);
   }
@@ -316,7 +322,7 @@ async function onSaveSettings() {
       method: "PATCH",
       body: {
         nickname: document.getElementById("settingsNickname").value,
-        avatarId: pendingAvatarId,
+        avatarId: pendingSettingsAvatarId,
         leaderboardOptIn: document.getElementById("settingsOptIn").checked,
       },
     });
@@ -342,21 +348,6 @@ async function onChangePw(ev) {
     renderAuthChrome();
     openAuthModal("login");
     setError("密码已修改，请重新登录");
-  } catch (e) {
-    setError(e.message);
-  }
-}
-
-async function onResetRecovery() {
-  setError("");
-  const cur = prompt("请输入当前密码以生成新恢复码");
-  if (!cur) return;
-  try {
-    const { data } = await api("/me/recovery-code", {
-      method: "POST",
-      body: { currentPassword: cur },
-    });
-    showRecoveryOnce(data.recoveryCode);
   } catch (e) {
     setError(e.message);
   }
