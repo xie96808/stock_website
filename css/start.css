@@ -17,6 +17,10 @@
     min-height: 100dvh;
     padding: 36px 28px 32px;
     box-sizing: border-box;
+}
+
+/* Only animate first paint; returning home must not replay fade (layout flicker). */
+.start-screen.animate-in {
     animation: fadeIn 0.5s ease-out;
 }
 

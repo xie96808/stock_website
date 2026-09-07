@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { Router } from "express";
 import {
   hashPassword, verifyPassword,
@@ -7,12 +8,16 @@ import {
 } from "../lib/validate.js";
 import {
   findUserByUsername, insertUser, publicUser, updatePassword, softDeleteUser, findUserById, updateUserProfile,
+  updateAvatarCustomPath,
 } from "../lib/users.js";
 import {
   createSession, setSessionCookie, clearSessionCookie, revokeSessionToken, revokeAllUserSessions,
 } from "../lib/sessions.js";
 import { ok, fail } from "../lib/http.js";
 import { requireUser } from "../middleware/request.js";
+import {
+  readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
+} from "../lib/avatars.js";
 
 const router = Router();
 
@@ -93,6 +98,42 @@ router.patch("/me", requireUser, (req, res) => {
   }
   const updated = updateUserProfile(req.user.id, patch);
   return ok(res, { user: publicUser(updated) });
+});
+
+router.post("/me/avatar", requireUser, async (req, res) => {
+  const parsed = await readMultipartAvatar(req);
+  if (parsed.error) {
+    return fail(res, parsed.error.status, parsed.error.code, parsed.error.message);
+  }
+  const saved = saveAvatarBuffer(parsed.buffer);
+  if (saved.error) {
+    return fail(res, saved.error.status, saved.error.code, saved.error.message);
+  }
+  const prev = findUserById(req.user.id);
+  const updated = updateAvatarCustomPath(req.user.id, saved.filename);
+  if (prev?.avatar_custom_path && prev.avatar_custom_path !== saved.filename) {
+    const oldPath = avatarFilePath(prev.avatar_custom_path);
+    if (oldPath) {
+      try { fs.unlinkSync(oldPath); } catch { /* ignore */ }
+    }
+  }
+  return ok(res, { user: publicUser(updated) });
+});
+
+router.get("/avatars/:id", (req, res) => {
+  const id = req.params.id;
+  if (!isSafeAvatarId(id)) {
+    return fail(res, 404, "NOT_FOUND", "头像不存在");
+  }
+  const filePath = avatarFilePath(id);
+  if (!filePath || !fs.existsSync(filePath)) {
+    return fail(res, 404, "NOT_FOUND", "头像不存在");
+  }
+  const buf = fs.readFileSync(filePath);
+  const mime = detectImageMime(buf) || "application/octet-stream";
+  res.setHeader("Content-Type", mime);
+  res.setHeader("Cache-Control", "public, max-age=86400");
+  return res.status(200).send(buf);
 });
 
 router.post("/me/password", requireUser, async (req, res) => {

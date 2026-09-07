@@ -37,9 +37,20 @@ function fmtPct(ppm, pct) {
   return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
 }
 
-function avatarUrl(id) {
-  const n = String(id || 1).padStart(2, "0");
+function avatarUrl(rowOrId) {
+  if (rowOrId && typeof rowOrId === "object") {
+    if (rowOrId.avatarUrl) return rowOrId.avatarUrl;
+    const n = String(rowOrId.avatarId || 1).padStart(2, "0");
+    return `images/avatars/${n}.svg`;
+  }
+  const n = String(rowOrId || 1).padStart(2, "0");
   return `images/avatars/${n}.svg`;
+}
+
+function fmtWinStats(gameCount, winRate) {
+  if (!gameCount) return "暂无有效局";
+  const wr = winRate == null ? "—" : `${winRate}%`;
+  return `胜率 ${wr} · ${gameCount} 局`;
 }
 
 function escapeHtml(s) {
@@ -149,7 +160,9 @@ async function loadLeaderboardPanel(fillMode) {
           <button type="button" class="leaderboard-link" id="lbLoginBtn">登录 / 注册</button></div>`;
         mineEl.querySelector("#lbLoginBtn")?.addEventListener("click", () => openAuthModal("login"));
       } else if (data.myRank != null) {
-        mineEl.innerHTML = `<div class="mine-card">你的名次：<strong>#${data.myRank}</strong>（当前榜单口径）</div>`;
+        const stats = fmtWinStats(data.myGameCount, data.myWinRate);
+        mineEl.innerHTML = `<div class="mine-card">你的名次：<strong>#${data.myRank}</strong>
+          <span class="mine-stats">${escapeHtml(stats)}</span></div>`;
       } else {
         const reason = REASON_TEXT[data.ineligibilityReason] || "暂未上榜";
         const optBtn =
@@ -170,10 +183,11 @@ async function loadLeaderboardPanel(fillMode) {
       .map((row) => {
         const cls =
           row.returnPpm > 0 ? "pos" : row.returnPpm < 0 ? "neg" : "";
+        const stats = fmtWinStats(row.gameCount, row.winRate);
         return `<li class="leaderboard-row">
           <span class="lb-rank">#${row.rank}</span>
-          <img class="lb-avatar" src="${avatarUrl(row.avatarId)}" alt="">
-          <span class="lb-nick">${escapeHtml(row.nickname)}</span>
+          <img class="lb-avatar" src="${avatarUrl(row)}" alt="">
+          <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
           <span class="lb-ret ${cls}">${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;

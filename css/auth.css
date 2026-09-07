@@ -34,3 +34,22 @@
 .auth-danger{background:#f6d6d0}
 .auth-secondary{margin-top:6px}
 @media (max-width:640px){.auth-chip{right:12px;top:14px}}
+
+.auth-success{color:#1f6b3a;background:#e4f6ea;border:1px solid #8dcaa3;padding:8px 10px;border-radius:8px;font-size:13px}
+.avatar-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.auth-upload-btn{
+  font:inherit;cursor:pointer;border:1.5px dashed var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
+  border-radius:999px;padding:6px 12px;box-shadow:1px 1px 0 rgba(0,0,0,.08)
+}
+.auth-toast-host{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:120;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:min(420px,92vw)
+}
+.auth-toast{
+  opacity:0;transform:translateY(8px);transition:opacity .22s ease,transform .22s ease;
+  border:1.5px solid #2a2a2a;border-radius:12px;padding:10px 14px;font-size:14px;
+  box-shadow:3px 3px 0 rgba(0,0,0,.14);text-align:center;width:100%
+}
+.auth-toast.show{opacity:1;transform:translateY(0)}
+.auth-toast--success{background:#3db86a;color:#0f2a18;border-color:#1f6b3a}
+.auth-toast--error{background:#e05252;color:#fff8f6;border-color:#8a2a2a}

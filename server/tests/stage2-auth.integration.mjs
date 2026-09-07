@@ -104,7 +104,7 @@ async function main() {
       method: "POST",
       body: { username: `${uniq}a`, password: weakPw, nickname: "测试用户", termsVersion: "v1" },
     });
-    record("P1-weak-short", "P1", "password <4 rejected", r.status === 400 && r.json?.error?.code === "INVALID_PASSWORD", `status=${r.status} code=${r.json?.error?.code} msg=${r.json?.error?.message}`);
+    record("P1-weak-short", "P1", "password <8 rejected", r.status === 400 && r.json?.error?.code === "INVALID_PASSWORD", `status=${r.status} code=${r.json?.error?.code} msg=${r.json?.error?.message}`);
   }
 
   // P1: weak listed password rejected
@@ -114,6 +114,15 @@ async function main() {
       body: { username: `${uniq}b`, password: weakListed, nickname: "测试用户", termsVersion: "v1" },
     });
     record("P1-weak-listed", "P1", "weak password list rejected", r.status === 400 && r.json?.error?.code === "INVALID_PASSWORD", `status=${r.status} msg=${r.json?.error?.message}`);
+  }
+
+  // P1: letters-only password rejected
+  {
+    const r = await req("/api/v1/auth/register", {
+      method: "POST",
+      body: { username: `${uniq}c`, password: "abcdefgh", nickname: "测试用户", termsVersion: "v1" },
+    });
+    record("P1-letters-only", "P1", "letters-only password rejected", r.status === 400 && r.json?.error?.code === "INVALID_PASSWORD", `status=${r.status} msg=${r.json?.error?.message}`);
   }
 
   // P0-1: Register
@@ -133,7 +142,7 @@ async function main() {
     csrfToken = r.json?.data?.csrfToken;
     user = r.json?.data?.user;
     const flags = cookieFlags(r.setCookies, "stockgame_session");
-    record("P0-1-register", "P0", "Register username+password min4", ok && !!sessionToken, `status=${r.status} user=${user?.username} avatar=${user?.avatarId} cookie=${!!sessionToken}`);
+    record("P0-1-register", "P0", "Register username+password min8 letter+digit", ok && !!sessionToken, `status=${r.status} user=${user?.username} avatar=${user?.avatarId} cookie=${!!sessionToken}`);
     record("P0-2a", "P0", "Session cookie httpOnly", flags.httpOnly && !!sessionToken, `flags=${JSON.stringify(flags)}`);
     record("P1-optin-default", "P1", "leaderboard_opt_in default false", user?.leaderboardOptIn === false, `optIn=${user?.leaderboardOptIn}`);
     record("P0-6-no-recovery", "P0", "Register does not return recoveryCode", r.json?.data?.recoveryCode == null, `recovery=${r.json?.data?.recoveryCode}`);
