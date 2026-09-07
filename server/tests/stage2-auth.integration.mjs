@@ -83,7 +83,6 @@ const weakListed = "1234";
 
 let sessionToken = null;
 let csrfToken = null;
-let recoveryCode = null;
 let user = null;
 
 async function main() {
@@ -129,16 +128,15 @@ async function main() {
         leaderboardOptIn: false,
       },
     });
-    const ok = r.status === 201 && r.json?.data?.user?.username === uniq && r.json?.data?.csrfToken && r.json?.data?.recoveryCode;
+    const ok = r.status === 201 && r.json?.data?.user?.username === uniq && r.json?.data?.csrfToken && r.json?.data?.recoveryCode == null;
     sessionToken = extractCookie(r.setCookies, "stockgame_session");
     csrfToken = r.json?.data?.csrfToken;
-    recoveryCode = r.json?.data?.recoveryCode;
     user = r.json?.data?.user;
     const flags = cookieFlags(r.setCookies, "stockgame_session");
     record("P0-1-register", "P0", "Register username+password min4", ok && !!sessionToken, `status=${r.status} user=${user?.username} avatar=${user?.avatarId} cookie=${!!sessionToken}`);
     record("P0-2a", "P0", "Session cookie httpOnly", flags.httpOnly && !!sessionToken, `flags=${JSON.stringify(flags)}`);
     record("P1-optin-default", "P1", "leaderboard_opt_in default false", user?.leaderboardOptIn === false, `optIn=${user?.leaderboardOptIn}`);
-    record("P0-6-recovery-issued", "P0", "Recovery code issued on register", typeof recoveryCode === "string" && recoveryCode.length >= 16, `len=${recoveryCode?.length}`);
+    record("P0-6-no-recovery", "P0", "Register does not return recoveryCode", r.json?.data?.recoveryCode == null, `recovery=${r.json?.data?.recoveryCode}`);
   }
 
   // P1: duplicate username
@@ -311,38 +309,30 @@ async function main() {
     record("P0-5", "P0", "Password change invalidates old sessions", passOk, `ch=${ch.status} oldMe=${meOld.status} curMe=${meNew.status} relogin=${liNew.status}`);
   }
 
-  // P0-6: recovery code flow
+  // P0-6: recovery routes removed from API surface
   {
-    // need recovery code from register; after password change recovery still valid
-    const bad = await req("/api/v1/auth/recover", {
+    const gone = await req("/api/v1/auth/recover", {
       method: "POST",
-      body: { username: uniq, recoveryCode: "wrong-code-totally", newPassword: "Recovered1" },
+      body: { username: uniq, recoveryCode: "anything", newPassword: "Recovered1" },
     });
-    record("P0-6a", "P0", "Bad recovery code rejected", bad.status === 401 && bad.json?.error?.code === "INVALID_RECOVERY", `status=${bad.status}`);
+    record("P0-6a", "P0", "POST /auth/recover gone", gone.status === 404, `status=${gone.status}`);
 
-    const good = await req("/api/v1/auth/recover", {
+    const gone2 = await req("/api/v1/me/recovery-code", {
       method: "POST",
-      body: { username: uniq, recoveryCode, newPassword: "Recovered1" },
+      cookie: sessionCookieHeader(sessionToken),
+      csrf: csrfToken,
+      body: { currentPassword: "BetterPass9" },
     });
-    const newRec = good.json?.data?.recoveryCode;
-    const oldSess = await req("/api/v1/me", { cookie: sessionCookieHeader(sessionToken) });
-    const li = await req("/api/v1/auth/login", {
-      method: "POST",
-      body: { username: uniq, password: "Recovered1" },
-    });
-    sessionToken = extractCookie(li.setCookies, "stockgame_session");
-    csrfToken = li.json?.data?.csrfToken;
-    recoveryCode = newRec;
-    record("P0-6b", "P0", "Recovery code resets password + sessions", good.status === 200 && !!newRec && oldSess.status === 401 && li.status === 200, `recover=${good.status} oldMe=${oldSess.status} login=${li.status}`);
+    record("P0-6b", "P0", "POST /me/recovery-code gone", gone2.status === 404, `status=${gone2.status}`);
   }
 
-  // P1: DELETE account
+  // P1: DELETE account (password after P0-5 change is BetterPass9)
   {
     const badConf = await req("/api/v1/me", {
       method: "DELETE",
       cookie: sessionCookieHeader(sessionToken),
       csrf: csrfToken,
-      body: { currentPassword: "Recovered1", confirmation: "NOPE" },
+      body: { currentPassword: "BetterPass9", confirmation: "NOPE" },
     });
     record("P1-delete-confirm", "P1", "DELETE requires confirmation=DELETE", badConf.status === 400, `status=${badConf.status} code=${badConf.json?.error?.code}`);
 
@@ -350,12 +340,12 @@ async function main() {
       method: "DELETE",
       cookie: sessionCookieHeader(sessionToken),
       csrf: csrfToken,
-      body: { currentPassword: "Recovered1", confirmation: "DELETE" },
+      body: { currentPassword: "BetterPass9", confirmation: "DELETE" },
     });
     const me = await req("/api/v1/me", { cookie: sessionCookieHeader(sessionToken) });
     const loginGone = await req("/api/v1/auth/login", {
       method: "POST",
-      body: { username: uniq, password: "Recovered1" },
+      body: { username: uniq, password: "BetterPass9" },
     });
     record("P1-delete", "P1", "DELETE account soft-deletes + revokes", (del.status === 204 || del.status === 200) && me.status === 401 && loginGone.status === 401, `del=${del.status} me=${me.status} login=${loginGone.status}`);
   }
@@ -364,8 +354,11 @@ async function main() {
   {
     const r = await fetch(`${BASE}/js/auth.js`);
     const t = await r.text();
-    const hasDice = t.includes("avatarDice") && t.includes("onDice") && t.includes("Math.random() * 12");
-    record("P0-3d", "P0", "Client dice/random avatar path present", r.status === 200 && hasDice, `status=${r.status} hasDice=${hasDice}`);
+    const hasAvatarDice = t.includes("registerAvatarDice") && t.includes("settingsAvatarDice") && t.includes("randomAvatarId");
+    const hasNickDice = t.includes("registerNickDice") && t.includes("settingsNickDice") && t.includes("randomNickname") && t.includes("的");
+    const noGrid = !t.includes("avatarGrid") && !t.includes("avatar-opt") && !t.includes("buildAvatarGrid");
+    const noRecover = !t.includes("authRecoverForm") && !t.includes("/auth/recover") && !t.includes("recovery-code");
+    record("P0-3d", "P0", "Client dice avatar+nickname, no grid/recovery UX", r.status === 200 && hasAvatarDice && hasNickDice && noGrid && noRecover, `status=${r.status} av=${hasAvatarDice} nick=${hasNickDice} noGrid=${noGrid} noRecover=${noRecover}`);
   }
 
   // Summary

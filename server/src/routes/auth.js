@@ -1,12 +1,12 @@
 import { Router } from "express";
 import {
-  hashPassword, verifyPassword, randomToken, hashRecoveryCode, timingSafeEqualStr,
+  hashPassword, verifyPassword,
 } from "../lib/crypto.js";
 import {
   normalizeUsername, validatePassword, normalizeNickname, validateAvatarId,
 } from "../lib/validate.js";
 import {
-  findUserByUsername, insertUser, publicUser, updatePassword, updateRecoveryHash, softDeleteUser, findUserById, updateUserProfile,
+  findUserByUsername, insertUser, publicUser, updatePassword, softDeleteUser, findUserById, updateUserProfile,
 } from "../lib/users.js";
 import {
   createSession, setSessionCookie, clearSessionCookie, revokeSessionToken, revokeAllUserSessions,
@@ -30,21 +30,25 @@ router.post("/auth/register", async (req, res) => {
   if (!req.body?.termsVersion) return fail(res, 400, "TERMS_REQUIRED", "请确认服务条款");
   if (findUserByUsername(username)) return fail(res, 409, "USERNAME_TAKEN", "用户名已被占用");
 
+  let avatarId = randomAvatarId();
+  if (req.body?.avatarId != null) {
+    const av = validateAvatarId(req.body.avatarId);
+    if (!av) return fail(res, 400, "INVALID_AVATAR", "头像 ID 须为 1-12");
+    avatarId = av;
+  }
+
   const passwordHash = await hashPassword(req.body.password);
-  const recoveryCode = randomToken(24);
-  const recoveryCodeHash = hashRecoveryCode(recoveryCode);
-  const avatarId = randomAvatarId();
   const leaderboardOptIn = !!req.body?.leaderboardOptIn;
   let user;
   try {
-    user = insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn, recoveryCodeHash });
+    user = insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn });
   } catch (e) {
     if (String(e.message || "").includes("UNIQUE")) return fail(res, 409, "USERNAME_TAKEN", "用户名已被占用");
     throw e;
   }
   const sess = createSession(user.id);
   setSessionCookie(res, sess.sessionToken);
-  return ok(res, { user: publicUser(user), csrfToken: sess.csrfToken, recoveryCode }, 201);
+  return ok(res, { user: publicUser(user), csrfToken: sess.csrfToken }, 201);
 });
 
 router.post("/auth/login", async (req, res) => {
@@ -66,28 +70,6 @@ router.post("/auth/logout", (req, res) => {
   revokeSessionToken(req.sessionToken);
   clearSessionCookie(res);
   return ok(res, null, 204);
-});
-
-router.post("/auth/recover", async (req, res) => {
-  const username = normalizeUsername(req.body?.username);
-  const recoveryCode = req.body?.recoveryCode;
-  const pwErr = validatePassword(req.body?.newPassword);
-  if (!username || typeof recoveryCode !== "string") {
-    return fail(res, 400, "INVALID_RECOVERY", "账号或恢复码错误");
-  }
-  if (pwErr) return fail(res, 400, "INVALID_PASSWORD", pwErr);
-  const row = findUserByUsername(username);
-  const expected = row?.recovery_code_hash || "";
-  const provided = hashRecoveryCode(recoveryCode);
-  const match = row && row.status === "active" && expected && timingSafeEqualStr(expected, provided);
-  if (!match) return fail(res, 401, "INVALID_RECOVERY", "账号或恢复码错误");
-  const passwordHash = await hashPassword(req.body.newPassword);
-  const newCode = randomToken(24);
-  updatePassword(row.id, passwordHash);
-  updateRecoveryHash(row.id, hashRecoveryCode(newCode));
-  revokeAllUserSessions(row.id);
-  clearSessionCookie(res);
-  return ok(res, { recoveryCode: newCode });
 });
 
 router.get("/me", requireUser, (req, res) => {
@@ -125,17 +107,6 @@ router.post("/me/password", requireUser, async (req, res) => {
   revokeAllUserSessions(row.id);
   clearSessionCookie(res);
   return ok(res, null, 204);
-});
-
-router.post("/me/recovery-code", requireUser, async (req, res) => {
-  const row = findUserById(req.user.id);
-  const cur = req.body?.currentPassword;
-  if (typeof cur !== "string" || !(await verifyPassword(row.password_hash, cur))) {
-    return fail(res, 401, "BAD_PASSWORD", "当前密码不正确");
-  }
-  const newCode = randomToken(24);
-  updateRecoveryHash(row.id, hashRecoveryCode(newCode));
-  return ok(res, { recoveryCode: newCode });
 });
 
 router.delete("/me", requireUser, async (req, res) => {
