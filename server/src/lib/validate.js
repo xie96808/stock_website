@@ -1,8 +1,4 @@
 const RESERVED = new Set(["admin","root","system","administrator","null","undefined"]);
-const WEAK = new Set([
-  "1234","12345","123456","1234567","12345678","password","password1","pass",
-  "qwer","qwerty","abcd","aaaa","0000","1111","admin","test","letmein","abc12345","11111111",
-]);
 
 export function unicodeLen(s) {
   return Array.from(s).length;
@@ -19,13 +15,9 @@ export function normalizeUsername(raw) {
 export function validatePassword(raw) {
   if (typeof raw !== "string") return "密码无效";
   const n = unicodeLen(raw);
-  if (n < 8) return "密码至少 8 位，须含字母和数字";
+  if (n < 4) return "密码至少 4 位";
   if (n > 128) return "密码最多 128 个字符";
   if (Buffer.byteLength(raw, "utf8") > 512) return "密码过长";
-  if (!/\p{L}/u.test(raw) || !/\p{Nd}/u.test(raw)) {
-    return "密码至少 8 位，须含字母和数字";
-  }
-  if (WEAK.has(raw.toLowerCase())) return "密码过于简单";
   return null;
 }
 

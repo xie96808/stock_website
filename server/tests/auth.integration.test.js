@@ -48,30 +48,31 @@ test("Stage2 AUTH username uniqueness case-insensitive", async () => {
   assert.equal(b.json.error.code, "USERNAME_TAKEN");
 });
 
-test("password policy min8 letter+digit + weak denylist", () => {
-  assert.match(validatePassword("1234567") || "", /8/);
-  assert.match(validatePassword("abcdefgh") || "", /字母和数字/);
-  assert.match(validatePassword("12345678") || "", /简单|字母和数字/);
-  assert.match(validatePassword("password") || "", /8|简单|字母和数字/);
+test("password policy min4 unicode, allow simple", () => {
+  assert.match(validatePassword("123") || "", /4/);
+  assert.equal(validatePassword("1234"), null);
+  assert.equal(validatePassword("abcd"), null);
+  assert.equal(validatePassword("password"), null);
   assert.equal(validatePassword("pass1234"), null);
+  assert.equal(validatePassword("好好学习"), null);
   assert.equal(validatePassword("GoodPass9"), null);
 });
 
-test("register rejects weak passwords", async () => {
+test("register rejects too-short passwords but allows simple ones", async () => {
   for (const k of Object.keys(jar)) delete jar[k];
   const short = await api("/api/v1/auth/register", {
     method: "POST",
-    body: { username: `pw${Date.now().toString(36)}a`, password: "ab12", nickname: "测友", termsVersion: "v1" },
+    body: { username: `pw${Date.now().toString(36)}a`, password: "abc", nickname: "测友", termsVersion: "v1" },
   });
   assert.equal(short.status, 400);
   assert.equal(short.json.error.code, "INVALID_PASSWORD");
 
-  const letters = await api("/api/v1/auth/register", {
+  const simple = await api("/api/v1/auth/register", {
     method: "POST",
-    body: { username: `pw${Date.now().toString(36)}b`, password: "abcdefgh", nickname: "测友", termsVersion: "v1" },
+    body: { username: `pw${Date.now().toString(36)}b`, password: "1234", nickname: "测友", termsVersion: "v1" },
   });
-  assert.equal(letters.status, 400);
-  assert.equal(letters.json.error.code, "INVALID_PASSWORD");
+  assert.equal(simple.status, 201, JSON.stringify(simple.json));
+  assert.ok(simple.json.data.user);
 });
 
 test("avatar upload png + serve", async () => {

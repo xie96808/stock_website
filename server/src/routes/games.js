@@ -103,7 +103,7 @@ export function gamesConfigPayload() {
     datasetVersion,
     fillModes: [...FILL_MODES],
     avatarCount: 12,
-    passwordMinLength: 8,
+    passwordMinLength: 4,
     features: { cloudGames: true, leaderboard: true, adminPublic: false },
   };
 }

@@ -1,6 +1,6 @@
 /** Stage 2 account client: session cookie + CSRF + avatar/nickname settings */
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
-const PASSWORD_HINT = "至少 8 位，须含字母和数字";
+const PASSWORD_HINT = "至少 4 位";
 
 /** Playful stock / 韭菜-themed A的B nickname parts (keep A的B within 2–16 code points). */
 const NICK_A = [
@@ -41,8 +41,8 @@ function unicodeLen(s) {
 
 function clientValidatePassword(pw) {
   const n = unicodeLen(pw);
-  if (n < 8) return PASSWORD_HINT;
-  if (!/\p{L}/u.test(pw) || !/\p{Nd}/u.test(pw)) return PASSWORD_HINT;
+  if (n < 4) return PASSWORD_HINT;
+  if (n > 128) return "密码最多 128 个字符";
   return null;
 }
 
@@ -176,13 +176,13 @@ function ensureAuthDom() {
         <p class="auth-success" id="authSuccess" hidden></p>
         <form id="authLoginForm" class="auth-form">
           <label>用户名<input name="username" autocomplete="username" required></label>
-          <label>密码<input name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+          <label>密码<input name="password" type="password" autocomplete="current-password" required minlength="4"></label>
           <button type="submit" class="auth-primary">登录</button>
         </form>
         <form id="authRegisterForm" class="auth-form" hidden>
           <label>用户名<input name="username" autocomplete="username" required></label>
-          <label>密码（${PASSWORD_HINT}）<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
-          <label>确认密码<input name="password2" type="password" autocomplete="new-password" required minlength="8"></label>
+          <label>密码（${PASSWORD_HINT}）<input name="password" type="password" autocomplete="new-password" required minlength="4"></label>
+          <label>确认密码<input name="password2" type="password" autocomplete="new-password" required minlength="4"></label>
           <div class="auth-nick-row">
             <label class="auth-nick-field">昵称（可选）
               <input name="nickname" id="registerNickname" maxlength="16" placeholder="掷骰生成或自填">
@@ -222,7 +222,7 @@ function ensureAuthDom() {
           <hr>
           <form id="authChangePwForm" class="auth-form">
             <label>当前密码<input name="currentPassword" type="password" required></label>
-            <label>新密码（${PASSWORD_HINT}）<input name="newPassword" type="password" required minlength="8"></label>
+            <label>新密码（${PASSWORD_HINT}）<input name="newPassword" type="password" required minlength="4"></label>
             <button type="submit">修改密码</button>
           </form>
           <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
