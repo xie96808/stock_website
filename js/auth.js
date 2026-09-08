@@ -1,9 +1,9 @@
 /** Stage 2 account client: session cookie + CSRF + avatar/nickname settings */
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";
-const AVATAR_MAX_EDGE = 256;
-const AVATAR_JPEG_QUALITY = 0.82;
-const AVATAR_TARGET_BYTES = 120 * 1024;
+const AVATAR_MAX_EDGE = 192;
+const AVATAR_JPEG_QUALITY = 0.72;
+const AVATAR_TARGET_BYTES = 48 * 1024;
 
 /** Playful stock / 韭菜-themed A的B nickname parts (keep A的B within 2–16 code points). */
 const NICK_A = [
@@ -250,12 +250,12 @@ function ensureAuthDom() {
             <button type="button" class="auth-dice" id="registerNickDice" title="随机昵称">🎲</button>
           </div>
           <div class="avatar-picker">
-            <img class="avatar-preview" id="registerAvatarImg" alt="头像预览">
+            <button type="button" class="avatar-preview-btn" id="registerAvatarPick" title="点击上传头像" aria-label="点击上传头像">
+              <img class="avatar-preview" id="registerAvatarImg" alt="头像预览">
+            </button>
+            <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
             <div class="avatar-actions">
-              <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖">🎲 随机生肖</button>
-              <label class="auth-upload-btn">上传头像
-                <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
-              </label>
+              <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
             </div>
           </div>
           <label class="auth-check"><input type="checkbox" name="terms" required> 我已阅读并同意服务条款</label>
@@ -263,12 +263,12 @@ function ensureAuthDom() {
         </form>
         <div id="authSettingsPanel" class="auth-form" hidden>
           <div class="avatar-picker">
-            <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
+            <button type="button" class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像">
+              <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
+            </button>
+            <input type="file" id="settingsAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
             <div class="avatar-actions">
-              <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖">🎲 随机生肖</button>
-              <label class="auth-upload-btn">上传头像
-                <input type="file" id="settingsAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
-              </label>
+              <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
             </div>
           </div>
           <div class="auth-nick-row">
@@ -324,6 +324,12 @@ function ensureAuthDom() {
   document.getElementById("settingsNickDice").onclick = () => {
     const input = document.getElementById("settingsNickname");
     input.value = randomNickname(input.value);
+  };
+  document.getElementById("registerAvatarPick").onclick = () => {
+    document.getElementById("registerAvatarFile").click();
+  };
+  document.getElementById("settingsAvatarPick").onclick = () => {
+    document.getElementById("settingsAvatarFile").click();
   };
   document.getElementById("registerAvatarFile").onchange = onRegisterFile;
   document.getElementById("settingsAvatarFile").onchange = onSettingsFile;
@@ -409,7 +415,7 @@ async function compressAvatarFile(file) {
     ctx.drawImage(img, 0, 0, cw, ch);
     let quality = AVATAR_JPEG_QUALITY;
     let blob = await canvasToBlob(canvas, "image/jpeg", quality);
-    while (blob && blob.size > AVATAR_TARGET_BYTES && quality > 0.55) {
+    while (blob && blob.size > AVATAR_TARGET_BYTES && quality > 0.45) {
       quality -= 0.08;
       blob = await canvasToBlob(canvas, "image/jpeg", quality);
     }
@@ -494,7 +500,7 @@ function showForms(tab) {
     b.classList.toggle("active", b.dataset.tab === tab);
   });
   document.getElementById("authModalTitle").textContent =
-    tab === "settings" ? "个人设置" : tab === "register" ? "注册" : "登录";
+    tab === "settings" ? "资料设置" : tab === "register" ? "注册" : "登录";
 }
 
 export function openAuthModal(tab = "login") {

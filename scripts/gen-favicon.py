@@ -61,6 +61,11 @@ write_ico(out / "favicon.ico", ico_imgs)
 write_ico(ROOT / "favicon.ico", ico_imgs)
 print("wrote favicon.ico (images/ + site root)")
 
+# Classic PNG favicons help Safari/Chrome when ICO is cached or flaky
+face.resize((32, 32), Image.Resampling.LANCZOS).save(ROOT / "favicon.png", optimize=True)
+face.resize((48, 48), Image.Resampling.LANCZOS).save(out / "favicon.png", optimize=True)
+print("wrote favicon.png (site root 32 + images/ 48)")
+
 wide.resize((180, 180), Image.Resampling.LANCZOS).convert("RGB").save(
     out / "apple-touch-icon.png", format="PNG", optimize=True
 )
@@ -78,7 +83,7 @@ for i in range(count):
     print(f"  entry {i}: {w or 256}x{h or 256} size={size} off={off}")
 
 for p in sorted(
-    list(out.glob("favicon*"))
+    list(out.glob("favicon*")) + [ROOT / "favicon.png"]
     + list(out.glob("apple-touch*"))
     + list(out.glob("og-mascot*"))
     + [ROOT / "favicon.ico"]
