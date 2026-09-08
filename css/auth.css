@@ -31,7 +31,12 @@
 .auth-nick-row{display:flex;align-items:flex-end;gap:8px}
 .auth-nick-field{flex:1;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .avatar-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.avatar-preview{width:64px;height:64px;border-radius:50%;border:1.5px solid #666;object-fit:cover;background:#111}
+.avatar-preview-btn{
+  padding:0;border:none;background:transparent;cursor:pointer;border-radius:50%;
+  box-shadow:none;line-height:0;display:inline-flex
+}
+.avatar-preview-btn:focus-visible{outline:2px solid #2a2a2a;outline-offset:3px}
+.avatar-preview{width:64px;height:64px;border-radius:50%;border:1.5px solid #666;object-fit:cover;background:#111;pointer-events:none;display:block}
 .auth-danger{background:#f6d6d0}
 .auth-secondary{margin-top:6px}
 @media (max-width:640px){.auth-chip{right:12px;top:14px}}
