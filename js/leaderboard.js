@@ -72,7 +72,8 @@ function fmtFinished(iso) {
   }
 }
 
-export async function showLeaderboard() {
+/** @param {string} [preferredFillMode] next_open | same_close — selects matching tab when opening. */
+export async function showLeaderboard(preferredFillMode) {
   hideOtherScreens();
   if (location.hash !== "#/leaderboard") {
     try {
@@ -112,6 +113,14 @@ export async function showLeaderboard() {
   }
   screen.classList.add("active");
   screen.style.display = "block";
+  const want = preferredFillMode === "same_close" || preferredFillMode === "next_open"
+    ? preferredFillMode
+    : null;
+  if (want) {
+    screen.querySelectorAll(".leaderboard-tab").forEach((b) => {
+      b.classList.toggle("active", b.dataset.mode === want);
+    });
+  }
   const mode =
     screen.querySelector(".leaderboard-tab.active")?.dataset.mode || "next_open";
   await loadLeaderboardPanel(mode);

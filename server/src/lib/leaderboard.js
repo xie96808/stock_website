@@ -237,6 +237,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       datasetVersion: board.datasetVersion,
       asOf,
       top10,
+      total: ranked.length,
       myRank,
       myGameCount,
       myWinRate,

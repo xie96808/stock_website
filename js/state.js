@@ -28,6 +28,10 @@ export const gameState = {
     saveStatus: null, // null | saving | saved | retry | fail
     saveError: null,
     practiceOnly: false,
+    // Settlement share / leaderboard meta (filled after cloud finish when available)
+    shareRank: null,
+    shareBoardTotal: null,
+    shareBeatPct: null,
 };
 
 export const chartRefs = {

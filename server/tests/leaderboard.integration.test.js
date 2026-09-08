@@ -114,6 +114,8 @@ test("2 same user multi games → one seat (best)", async () => {
   const board = await api("/api/v1/leaderboard?fillMode=next_open");
   assertOk(board.status, board.json, 200);
   assert.equal(board.json.data.myRank != null, true);
+  assert.equal(typeof board.json.data.total, "number");
+  assert.ok(board.json.data.total >= 1);
   const seat = board.json.data.top10.find((r) => r.returnPpm === 300000 && r.rank === board.json.data.myRank);
   assert.ok(seat, "best 300000 should be the seat");
   assert.equal(board.json.data.top10.filter((r) => r.rank === board.json.data.myRank).length, 1);

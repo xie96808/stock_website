@@ -3,6 +3,14 @@ import { gameState, chartRefs } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
+import {
+    clearShareRankMeta,
+    refreshShareRankMeta,
+    updateShareRankHint,
+    saveResultShareImage,
+    openResultLeaderboard,
+} from './result-share.js';
+export { saveResultShareImage, openResultLeaderboard };
 
 function calcGrade(finalReturnPercent, bsScore) {
     // Emphasize realized return; BS is a light tie-breaker only.
@@ -106,8 +114,10 @@ export function endGame() {
     if (bsDisplayEl) bsDisplayEl.textContent = gameState.bsScore != null ? gameState.bsScore : '--';
 
     updateSaveStatusUi();
+    clearShareRankMeta();
+    updateShareRankHint();
     if (gameState.cloudMode && gameState.cloudGameId) {
-        finishCloudGame().then(() => {
+        finishCloudGame().then(async (res) => {
             // Refresh return display from authoritative server result if present.
             const finalReturnEl = document.getElementById('finalReturn');
             if (finalReturnEl && gameState.returnPct != null) {
@@ -118,7 +128,12 @@ export function endGame() {
                     (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
             }
             updateSaveStatusUi();
-        }).catch(() => updateSaveStatusUi());
+            if (res) await refreshShareRankMeta();
+            updateShareRankHint();
+        }).catch(() => {
+            updateSaveStatusUi();
+            updateShareRankHint();
+        });
     }
 }
 
