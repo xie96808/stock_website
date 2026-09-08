@@ -32,6 +32,13 @@ export const config = {
     .filter(Boolean),
   /** Secret path segment for static admin shell; default "admin" */
   adminUiPath: (process.env.ADMIN_UI_PATH || "admin").replace(/^\/+|\/+$/g, "") || "admin",
+  /**
+   * Stage 6 ops switches (env only; default ON).
+   * Set to 0/false to disable. Closing new cloud games does not block finish of existing games.
+   */
+  registrationEnabled: process.env.REGISTRATION_ENABLED !== "0" && process.env.REGISTRATION_ENABLED !== "false",
+  cloudGamesEnabled: process.env.CLOUD_GAMES_ENABLED !== "0" && process.env.CLOUD_GAMES_ENABLED !== "false",
+  leaderboardEnabled: process.env.LEADERBOARD_ENABLED !== "0" && process.env.LEADERBOARD_ENABLED !== "false",
 };
 
 export function newRequestId() {

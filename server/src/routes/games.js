@@ -17,6 +17,9 @@ import { config } from "../lib/config.js";
 const router = Router();
 
 router.post("/games", requireUser, (req, res) => {
+  if (!config.cloudGamesEnabled) {
+    return fail(res, 403, "CLOUD_GAMES_DISABLED", "当前暂停新建云端对局（已有对局仍可完成结算）");
+  }
   const createKey = req.get("idempotency-key") || req.get("Idempotency-Key");
   const fillMode = req.body?.fillMode;
   let pickOpts = {};
@@ -105,7 +108,13 @@ export function gamesConfigPayload() {
     fillModes: [...FILL_MODES],
     avatarCount: 12,
     passwordMinLength: 4,
-    features: { cloudGames: true, leaderboard: true, adminPublic: false, adminEnabled: !!config.adminEnabled },
+    features: {
+      registration: !!config.registrationEnabled,
+      cloudGames: !!config.cloudGamesEnabled,
+      leaderboard: !!config.leaderboardEnabled,
+      adminPublic: false,
+      adminEnabled: !!config.adminEnabled,
+    },
   };
 }
 
