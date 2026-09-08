@@ -676,3 +676,93 @@
     background: var(--wash);
     box-shadow: 2px 3px 0 var(--line);
 }
+
+/* Settlement share image sheet (offscreen; .capturing for html2canvas) */
+.result-share-hint {
+    margin: 8px 0 0;
+    font-size: 0.78rem;
+    color: var(--mute);
+    line-height: 1.5;
+    text-align: left;
+}
+
+.result-share-sheet {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 640px;
+    padding: 28px 28px 24px;
+    box-sizing: border-box;
+    background: var(--card);
+    color: var(--ink);
+    border: 1.6px solid var(--line);
+    border-radius: 18px 24px 16px 22px;
+    font-family: var(--kaiti), serif;
+    box-shadow: 2px 2px 0 var(--line);
+    z-index: -1;
+    pointer-events: none;
+}
+
+.result-share-sheet.capturing {
+    z-index: 1;
+}
+
+.result-share-sheet__brand {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    margin-bottom: 14px;
+    color: var(--terra);
+}
+
+.result-share-sheet__stock {
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+    color: var(--ink);
+}
+
+.result-share-sheet__meta {
+    font-size: 0.82rem;
+    color: var(--mute);
+    margin-bottom: 16px;
+}
+
+.result-share-sheet__return {
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    color: var(--ink);
+}
+
+.result-share-sheet__return.positive { color: var(--gain-color); }
+.result-share-sheet__return.negative { color: var(--loss-color); }
+.result-share-sheet__return.zero { color: var(--ink); }
+
+.result-share-sheet__grade {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    margin-bottom: 18px;
+    color: var(--ink-soft);
+}
+
+.result-share-sheet__promo {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--ink);
+    padding: 14px 16px;
+    background: var(--paper-2);
+    border: 1.3px solid var(--line);
+    border-radius: 12px 16px 10px 14px;
+    margin-bottom: 14px;
+}
+
+.result-share-sheet__url {
+    font-size: 0.82rem;
+    color: var(--mute);
+    letter-spacing: 0.04em;
+    word-break: break-all;
+}
