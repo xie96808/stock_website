@@ -15,7 +15,7 @@
 | 4 | CSRF / same-origin on mutating routes | PASS | Missing/forged token 403 CSRF_FAILED; evil Origin 403 ORIGIN_DENIED |
 | 5 | Password change invalidates old sessions | PASS | POST /me/password 204; old sessions 401; new login OK |
 | 6 | Recovery code flow | PASS | Issued on register; implemented end-to-end (not stubbed) |
-| 7 | Zodiac avatars 01.svg-12.svg serve 200 | PASS | 12/12 |
+| 7 | Zodiac avatars 01.png-12.png serve 200 | PASS | 12/12 |
 | 8 | Engine tests still green | PASS | 17/17 (no Stage1 regression) |
 
 ## P1 (nice-to-verify)

@@ -40,7 +40,7 @@ function perfLog(label, ms, extra) {
 
 function zodiacAvatarUrl(id) {
   const n = String(id || 1).padStart(2, "0");
-  return `/images/avatars/${n}.svg`;
+  return `/images/avatars/${n}.png`;
 }
 
 export function displayAvatarUrl(userOrId, avatarUrl) {
