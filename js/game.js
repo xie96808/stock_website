@@ -472,49 +472,33 @@ export function updateUI() {
     const subtitleInner = document.getElementById('chartSubtitleInner');
     if (subtitleInner) subtitleInner.textContent = '身份隐藏中';
 
-    // ── Total return (engine already marks open lots to as-of close) ──
+    // ── Return ratio (judging standard). Engine still uses starting cash internally. ──
     const displayReturn = (gameState.totalReturn - 1) * 100;
 
-    // Total asset card (assumes 100,000 starting capital concept)
-    const totalAssetEl = document.getElementById('totalAsset');
-    const retMult = gameState.totalReturn;
-    const assetValue = 100000 * retMult;
-    if (totalAssetEl) {
-        totalAssetEl.textContent = '¥' + assetValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        // Pulse animation on change
-        const card = document.getElementById('totalAssetCard');
-        if (card) {
-            card.classList.remove('asset-surge');
-            void card.offsetWidth;
-            card.classList.add('asset-surge');
-        }
-    }
-
-    // Cumulative P&L card (matches totalReturn with unrealized when holding)
+    // Primary card: 收益率 (no absolute 初始/总资金 display)
     const pnlCard = document.getElementById('holdingPnlCard');
     const pnlEl = document.getElementById('holdingPnl');
     if (pnlEl && pnlCard) {
         pnlEl.textContent = (displayReturn >= 0 ? '+' : '') + displayReturn.toFixed(2) + '%';
         if (displayReturn > 0) {
             pnlEl.className = 'metric-value positive';
-            pnlCard.className = 'metric-card pnl-card positive';
+            pnlCard.className = 'metric-card primary pnl-card positive';
         } else if (displayReturn < 0) {
             pnlEl.className = 'metric-value negative';
-            pnlCard.className = 'metric-card pnl-card negative';
+            pnlCard.className = 'metric-card primary pnl-card negative';
         } else {
             pnlEl.className = 'metric-value neutral';
-            pnlCard.className = 'metric-card pnl-card neutral';
+            pnlCard.className = 'metric-card primary pnl-card neutral';
         }
+        pnlCard.classList.remove('asset-surge');
+        void pnlCard.offsetWidth;
+        pnlCard.classList.add('asset-surge');
     }
 
-    // Available funds (simplified: 100% when empty, 0% when holding)
+    // Position affordance without absolute cash amounts
     const fundsEl = document.getElementById('availableFunds');
     if (fundsEl) {
-        if (gameState.position === 'empty') {
-            fundsEl.textContent = '¥' + (100000 * gameState.totalReturn).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        } else {
-            fundsEl.textContent = '¥0.00 (全仓)';
-        }
+        fundsEl.textContent = gameState.position === 'empty' ? '可买入' : '已全仓';
     }
 
     // Position status chip

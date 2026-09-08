@@ -212,24 +212,18 @@
                 <aside class="asset-board">
                     <div class="board-kicker">SOUL PORTFOLIO</div>
 
-                    <!-- 总资产卡片 -->
+                    <!-- 收益率主卡（评判标准）；不展示初始/总资金绝对值 -->
                     <div class="metric-stack">
-                        <div class="metric-card primary" id="totalAssetCard">
-                            <div class="metric-label">总资产</div>
-                            <div class="metric-value total-asset" id="totalAsset">¥100,000.00</div>
+                        <div class="metric-card primary pnl-card neutral" id="holdingPnlCard">
+                            <div class="metric-label">收益率</div>
+                            <div class="metric-value neutral" id="holdingPnl">0.00%</div>
                         </div>
 
-                        <!-- 持仓盈亏卡片 -->
-                        <div class="metric-card pnl-card neutral" id="holdingPnlCard">
-                            <div class="metric-label">累计盈亏</div>
-                            <div class="metric-value neutral" id="holdingPnl">--</div>
-                        </div>
-
-                        <!-- 可用资金卡片 -->
+                        <!-- 仓位（不展示绝对资金） -->
                         <div class="metric-card">
-                            <div class="metric-label">可用资金</div>
-                            <div class="metric-value" id="availableFunds">¥100,000.00</div>
-                            <div class="metric-foot">仓位状态：<span class="board-chip neutral" id="positionStatus">空仓</span></div>
+                            <div class="metric-label">仓位</div>
+                            <div class="metric-value" id="availableFunds">可买入</div>
+                            <div class="metric-foot">状态：<span class="board-chip neutral" id="positionStatus">空仓</span></div>
                         </div>
                     </div>
 
@@ -244,7 +238,7 @@
                             <div class="meta-value neutral" id="dailyReturn">--</div>
                         </div>
                         <div class="meta-card">
-                            <div class="meta-label">累计收益</div>
+                            <div class="meta-label">盈亏比例</div>
                             <div class="meta-value neutral" id="totalReturn">0.00%</div>
                         </div>
                         <div class="meta-card">
@@ -370,7 +364,10 @@
                         <div class="result-date-range" id="dateRange">2024-01-02 ~ 2024-01-29</div>
                         <div class="result-fill-mode" id="fillModeLabel">成交：次日开盘</div>
                     </div>
-                    <div class="final-return positive" id="finalReturn">+12.34%</div>
+                    <div class="final-return-block">
+                        <div class="final-return-label">收益率</div>
+                        <div class="final-return positive" id="finalReturn">+12.34%</div>
+                    </div>
                     <div class="result-stats-grid">
                         <div class="result-stat">
                             <div class="result-stat__label">总交易次数</div>

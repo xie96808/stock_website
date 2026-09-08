@@ -5,8 +5,19 @@
 }
 .my-games-screen.active { display: block; }
 .my-games-wrap { max-width: 720px; margin: 0 auto; }
+.my-games-head {
+  position: relative;
+  text-align: center;
+  margin-bottom: 1rem;
+  min-height: 2.2rem;
+}
 .my-games-head h2 { margin: 0.35rem 0; font-size: 1.4rem; }
-.my-games-sub { opacity: 0.7; font-size: 0.9rem; margin: 0 0 1rem; }
+.my-games-head .my-games-back {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
 .my-games-back, .my-games-refresh {
   border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
   background: transparent;
@@ -71,6 +82,55 @@
   line-height: 1.45;
 }
 .play-mode-picker { margin-top: 0.75rem; }
+
+/* Sketch / notebook native select (fill-mode filter) */
+.my-games-filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: inherit;
+}
+.my-games-select,
+.sketch-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  font-family: var(--kaiti), var(--sans), serif;
+  color: var(--ink);
+  background-color: var(--card);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 55%,
+    calc(100% - 9px) 55%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  border: 1.5px solid var(--line);
+  border-radius: 12px 16px 10px 14px;
+  box-shadow: 1px 1px 0 var(--line);
+  padding: 0.4rem 1.85rem 0.4rem 0.75rem;
+  cursor: pointer;
+  min-width: 7.5rem;
+  line-height: 1.3;
+}
+.my-games-select:hover,
+.sketch-select:hover {
+  background-color: color-mix(in srgb, var(--wash) 18%, var(--card));
+}
+.my-games-select:focus-visible,
+.sketch-select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--terra) 55%, transparent);
+  outline-offset: 2px;
+}
+[data-theme="dark"] .my-games-select,
+[data-theme="dark"] .sketch-select {
+  background-color: var(--card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
 @media (max-width: 640px) {
   .my-games-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

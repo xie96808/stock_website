@@ -192,7 +192,7 @@ async function loadLeaderboardPanel(fillMode) {
           <span class="lb-rank">#${row.rank}</span>
           <img class="lb-avatar" src="${avatarUrl(row)}" alt="">
           <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
-          <span class="lb-ret ${cls}">${fmtPct(row.returnPpm, row.returnPct)}</span>
+          <span class="lb-ret ${cls}" title="收益率"><small class="lb-ret-label">收益率</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;
       })

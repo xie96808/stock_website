@@ -154,7 +154,7 @@
     letter-spacing: -0.02em;
 }
 
-.metric-value.total-asset {
+.metric-card.primary .metric-value {
     font-size: clamp(1.35rem, 2.2vw, 1.85rem);
 }
 
