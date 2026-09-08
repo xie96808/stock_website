@@ -3,6 +3,7 @@
 .auth-chip{position:fixed;top:14px;right:14px;z-index:40;display:flex;align-items:center;gap:8px}
 .auth-login-btn,.auth-user-btn,.auth-primary,.auth-secondary,.auth-danger,.auth-dice{
   font:inherit;cursor:pointer;border:1.5px solid var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
+  color:var(--ink,#2a2a2a);
   border-radius:999px;padding:6px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.12)
 }
 .auth-user-btn{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 4px}
@@ -45,6 +46,7 @@
 .avatar-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .auth-upload-btn{
   font:inherit;cursor:pointer;border:1.5px dashed var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
+  color:var(--ink,#2a2a2a);
   border-radius:999px;padding:6px 12px;box-shadow:1px 1px 0 rgba(0,0,0,.08)
 }
 .auth-toast-host{
