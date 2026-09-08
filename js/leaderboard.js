@@ -41,10 +41,10 @@ function avatarUrl(rowOrId) {
   if (rowOrId && typeof rowOrId === "object") {
     if (rowOrId.avatarUrl) return rowOrId.avatarUrl;
     const n = String(rowOrId.avatarId || 1).padStart(2, "0");
-    return `images/avatars/${n}.svg`;
+    return `images/avatars/${n}.png`;
   }
   const n = String(rowOrId || 1).padStart(2, "0");
-  return `images/avatars/${n}.svg`;
+  return `images/avatars/${n}.png`;
 }
 
 function fmtWinStats(gameCount, winRate) {

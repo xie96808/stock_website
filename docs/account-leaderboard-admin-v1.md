@@ -311,7 +311,7 @@ js/profile.js                   # 设置
 js/game-sync.js                 # 建局、动作记录、待提交
 js/my-games.js                   # 列表与复盘
 js/leaderboard.js                # 榜单
-images/avatars/01.svg … 12.svg（鼠…亥，深色手绘）    # 沿用现有 images 打包路径
+images/avatars/01.png … 12.png（鼠…猪，手绘圆形贴纸）    # 沿用现有 images 打包路径
 admin/index.html + js/ + css/    # 仅静态管理壳，敏感数据来自鉴权 API
 server/package.json + package-lock.json
 server/src/app.js + index.js + config.js
