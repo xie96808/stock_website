@@ -111,7 +111,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.lb-ret { font-variant-numeric: tabular-nums; font-weight: 700; }
+.lb-ret {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  line-height: 1.15;
+}
+.lb-ret-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
 .lb-ret.pos { color: #e05252; }
 .lb-ret.neg { color: #3db86a; }
 .lb-time { font-size: 0.75rem; opacity: 0.65; white-space: nowrap; }

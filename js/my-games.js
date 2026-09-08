@@ -44,12 +44,11 @@ export async function showMyGames() {
         <div class="my-games-head">
           <button type="button" class="my-games-back" id="myGamesBackBtn">← 返回</button>
           <h2>我的战绩</h2>
-          <p class="my-games-sub">仅统计当前规则 / 行情版本下已保存的有效完整局</p>
         </div>
         <div class="my-games-stats" id="myGamesStats">加载统计…</div>
         <div class="my-games-filters">
-          <label>成交方式
-            <select id="myGamesFillMode">
+          <label class="my-games-filter-label">成交方式
+            <select id="myGamesFillMode" class="my-games-select sketch-select">
               <option value="">全部</option>
               <option value="next_open">次日开盘</option>
               <option value="same_close">当日收盘</option>
@@ -105,8 +104,8 @@ async function loadMyGamesPanel() {
       } else {
         statsEl.innerHTML = `
           <div class="stat-card"><span>有效局数</span><strong>${stats.count}</strong></div>
-          <div class="stat-card"><span>最佳</span><strong>${fmtPct(stats.bestReturnPpm)}</strong></div>
-          <div class="stat-card"><span>平均</span><strong>${fmtPct(stats.avgReturnPpm)}</strong></div>
+          <div class="stat-card"><span>最佳收益率</span><strong>${fmtPct(stats.bestReturnPpm)}</strong></div>
+          <div class="stat-card"><span>平均收益率</span><strong>${fmtPct(stats.avgReturnPpm)}</strong></div>
           <div class="stat-card"><span>胜率</span><strong>${stats.winRate == null ? "—" : stats.winRate + "%"}</strong></div>`;
       }
     }
@@ -120,7 +119,7 @@ async function loadMyGamesPanel() {
             (g) => `<article class="my-game-item">
               <div class="my-game-main">
                 <strong>${escapeHtml(g.stockName || "")} <span class="code">${escapeHtml(g.stockCode || "")}</span></strong>
-                <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}">${fmtPct(g.returnPpm)}</span>
+                <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}" title="收益率">${fmtPct(g.returnPpm)}</span>
               </div>
               <div class="my-game-meta">
                 ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml((g.finishedAt || g.savedAt || "").slice(0, 19).replace("T", " "))} UTC
