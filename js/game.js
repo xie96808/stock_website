@@ -33,7 +33,7 @@ function syncMobileIntelDefaults() {
     });
 }
 
-export function startGame(options = {}) {
+export async function startGame(options = {}) {
     // Reset state
     gameState.currentDay = 1;
     gameState.position = 'empty';
@@ -99,7 +99,7 @@ export function startGame(options = {}) {
         gameState.practiceOnly = true;
     }
 
-    // Switch screens
+    // Switch screens first so the fill-mode modal can close over a painted shell.
     const hdr = document.querySelector('.header');
     hdr.style.display = 'block';
     hdr.classList.add('compact');
@@ -114,6 +114,21 @@ export function startGame(options = {}) {
     const textEl = document.getElementById('waveAnalysisText');
     if (textEl) textEl.textContent = '暂无分析数据，随着行情展开将自动生成。';
 
+    const resumeActions = Array.isArray(options.resumeActions) ? options.resumeActions : null;
+
+    // Paint shell chrome (day / PnL / buttons) before ECharts init.
+    if (!(resumeActions && resumeActions.length)) {
+        updateUI();
+        resetOHLCToToday();
+        renderWaveAnalysis();
+    }
+
+    await new Promise(function (resolve) {
+        requestAnimationFrame(function () {
+            requestAnimationFrame(resolve);
+        });
+    });
+
     if (!initChart()) {
         document.getElementById('gameScreen').classList.remove('active');
         hdr.style.display = 'none';
@@ -126,14 +141,10 @@ export function startGame(options = {}) {
         return;
     }
 
-    const resumeActions = Array.isArray(options.resumeActions) ? options.resumeActions : null;
     if (resumeActions && resumeActions.length) {
         applyCloudResume(resumeActions);
-    } else {
-        updateUI();
-        resetOHLCToToday();
-        renderWaveAnalysis();
-        if (gameState.cloudMode) persistCurrentCloudDraft();
+    } else if (gameState.cloudMode) {
+        persistCurrentCloudDraft();
     }
 }
 
@@ -237,6 +248,7 @@ function resetOHLCToToday() {
 }
 
 export function updateChart() {
+    if (!chartRefs.klineChart) return;
     const histLen = gameState.historyLength;
     const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
 

@@ -7,6 +7,14 @@ import {
   clearCloudGameDraft,
 } from './game-sync.js';
 
+/** Pack URL: JSON.parse is faster than JS Function eval; nginx already gzips (~12MB). */
+const PACK_URL = 'data/stocks_data.json';
+const PACK_JS_FALLBACK = 'data/stocks_data.js';
+const IDB_NAME = 'stockgame-pack';
+const IDB_VER = 1;
+const STORE = 'packs';
+const CACHE_KEY = 'stocks-pack-v1';
+
 function perfEnabled() {
   try {
     return localStorage.getItem('STOCKGAME_PERF') === '1';
@@ -19,6 +27,46 @@ function perfLog(label, ms, extra) {
   if (!perfEnabled()) return;
   const bit = extra ? ' ' + JSON.stringify(extra) : '';
   console.log('[perf]', label, Math.round(ms) + 'ms' + bit);
+}
+
+function openDb() {
+  return new Promise(function (resolve, reject) {
+    if (typeof indexedDB === 'undefined') {
+      reject(new Error('no idb'));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, IDB_VER);
+    req.onupgradeneeded = function () {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'key' });
+      }
+    };
+    req.onsuccess = function () { resolve(req.result); };
+    req.onerror = function () { reject(req.error || new Error('idb open failed')); };
+  });
+}
+
+function idbGet(key) {
+  return openDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(STORE, 'readonly');
+      const req = tx.objectStore(STORE).get(key);
+      req.onsuccess = function () { resolve(req.result || null); };
+      req.onerror = function () { reject(req.error || new Error('idb get failed')); };
+    });
+  });
+}
+
+function idbPut(record) {
+  return openDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error || new Error('idb put failed')); };
+      tx.objectStore(STORE).put(record);
+    });
+  });
 }
 
 export function attachDeferredStart(startGame, gameState) {
@@ -38,6 +86,10 @@ export function attachDeferredStart(startGame, gameState) {
 
   function titleEl() {
     return document.getElementById('fillModeDialogTitle');
+  }
+
+  function conflictPane() {
+    return document.getElementById('fillModeConflictPane');
   }
 
   function setProgress(pct, tip) {
@@ -66,10 +118,6 @@ export function attachDeferredStart(startGame, gameState) {
     if (modal) modal.classList.remove('is-loading');
   }
 
-  function conflictPane() {
-    return document.getElementById('fillModeConflictPane');
-  }
-
   function showLoadingView() {
     const choose = choosePane();
     const loading = loadingPane();
@@ -81,7 +129,7 @@ export function attachDeferredStart(startGame, gameState) {
     if (title) title.textContent = '正在开局';
     const modal = modalEl();
     if (modal) modal.classList.add('is-loading');
-    setProgress(4, '股票资源加载中…');
+    setProgress(4, '准备中…');
   }
 
   function showConflictView(meta) {
@@ -130,10 +178,7 @@ export function attachDeferredStart(startGame, gameState) {
     showChooseView();
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
-    // Warm pack while user picks a mode (no progress UI yet).
-    ensureStocksLoaded(gameState).catch(function (err) {
-      console.error(err);
-    });
+    prefetchStocksPack(gameState);
     const first = modal.querySelector('input[name="fillMode"]:checked');
     if (first) first.focus();
   }
@@ -157,8 +202,14 @@ export function attachDeferredStart(startGame, gameState) {
       const from = Number.isFinite(startPct) ? startPct : 0;
       const to = Math.max(from, targetPct);
       const t0 = performance.now();
+      const dur = Math.max(0, ms);
+      if (dur <= 0) {
+        setProgress(to, tip);
+        resolve();
+        return;
+      }
       function frame(now) {
-        const t = Math.min(1, (now - t0) / Math.max(1, ms));
+        const t = Math.min(1, (now - t0) / dur);
         const eased = 1 - Math.pow(1 - t, 2);
         setProgress(from + (to - from) * eased, tip);
         if (t < 1) requestAnimationFrame(frame);
@@ -198,16 +249,7 @@ export function attachDeferredStart(startGame, gameState) {
     showLoadingView();
 
     const run = async function () {
-      setProgress(6, '股票资源加载中…');
-      if (ready()) {
-        await animateTo(62, '股票资源加载中…', 480);
-      } else {
-        await ensureStocksLoaded(gameState, function (ratio) {
-          setProgress(6 + Math.max(0, Math.min(1, ratio)) * 56, '股票资源加载中…');
-        });
-        await animateTo(66, '股票资源加载中…', 160);
-      }
-
+      const tAll = performance.now();
       const fillInput = document.querySelector('input[name="fillMode"]:checked');
       const fillMode = fillInput && fillInput.value === 'same_close' ? 'same_close' : 'next_open';
       const playInput = document.querySelector('input[name="playMode"]:checked');
@@ -215,13 +257,35 @@ export function attachDeferredStart(startGame, gameState) {
       const auth = getAuthState();
       const wantCloud = auth.user && playMode !== 'local';
 
+      const packAlreadyReady = ready();
+      setProgress(packAlreadyReady ? 55 : 8, packAlreadyReady ? '资源已就绪…' : '股票资源加载中…');
+
+      let cloudPromise = null;
+      if (wantCloud) {
+        setProgress(packAlreadyReady ? 62 : 12, '创建云端对局…');
+        cloudPromise = createCloudGame(fillMode).then(function (cloud) {
+          clearCloudGameDraft();
+          return cloud;
+        });
+      }
+
+      const packPromiseEnsure = ensureStocksLoaded(gameState, function (ratio) {
+        const top = wantCloud ? 70 : 88;
+        setProgress(8 + Math.max(0, Math.min(1, ratio)) * (top - 8), '股票资源加载中…');
+      });
+
+      await packPromiseEnsure;
+      if (packAlreadyReady) {
+        await animateTo(wantCloud ? 70 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 120);
+      } else {
+        await animateTo(wantCloud ? 72 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 80);
+      }
+
       let cloud = null;
       let resumeActions = null;
       if (wantCloud) {
-        await animateTo(78, '创建云端对局…', 320);
         try {
-          cloud = await createCloudGame(fillMode);
-          clearCloudGameDraft(); // new seed → drop any stale draft
+          cloud = await cloudPromise;
         } catch (e) {
           if (e && e.code === 'ACTIVE_GAME_EXISTS') {
             let active = e.details && e.details.game ? e.details.game : null;
@@ -253,11 +317,10 @@ export function attachDeferredStart(startGame, gameState) {
               cloud = active;
               resumeActions = draft && draft.actions ? draft.actions : [];
               showLoadingView();
-              await animateTo(90, '恢复云端对局…', 280);
+              await animateTo(90, '恢复云端对局…', 120);
             } else {
-              // restart: abandon old session and create a fresh one
               showLoadingView();
-              await animateTo(82, '放弃旧局…', 200);
+              setProgress(82, '放弃旧局…');
               await abandonActiveCloudGame();
               clearCloudGameDraft(active.gameId);
               cloud = await createCloudGame(fillMode);
@@ -267,12 +330,9 @@ export function attachDeferredStart(startGame, gameState) {
             throw e;
           }
         }
-      } else {
-        await animateTo(80, '标的筛选中…', 560);
-        await animateTo(88, '标的筛选中…', 240);
       }
 
-      await animateTo(94, '初始化模拟盘…', 280);
+      setProgress(94, '进入模拟盘…');
       if (cloud) {
         await startGame({ cloud: cloud, resumeActions: resumeActions });
       } else {
@@ -284,8 +344,12 @@ export function attachDeferredStart(startGame, gameState) {
         throw new Error('game screen inactive');
       }
       setProgress(100, '即将进入…');
-      await delay(220);
+      await delay(60);
       closeModal();
+      perfLog('start.total', performance.now() - tAll, {
+        packReady: packAlreadyReady,
+        cloud: !!cloud,
+      });
     };
 
     run()
@@ -310,9 +374,10 @@ export function attachDeferredStart(startGame, gameState) {
     if (modal && !modal.hidden) window.cancelFillModeModal();
   });
 
-  // Defer pack prefetch until after first paint + idle so login/register/avatar
-  // clicks are not competing with a ~55MB download + ~1s parse on the main thread.
   scheduleDeferredPrefetch(gameState);
+  window.__stockgamePrefetchPack = function () {
+    prefetchStocksPack(gameState);
+  };
 }
 
 let packPromise = null;
@@ -338,7 +403,46 @@ function decodeChunks(chunks) {
   return new TextDecoder('utf-8').decode(merged);
 }
 
-function parsePackText(text) {
+function cacheMetaMatches(entry, meta) {
+  if (!entry || !entry.text) return false;
+  if (!meta) return true;
+  if (meta.etag && entry.meta && entry.meta.etag) {
+    return entry.meta.etag === meta.etag;
+  }
+  if (meta.lastModified && entry.meta && entry.meta.lastModified) {
+    return entry.meta.lastModified === meta.lastModified;
+  }
+  if (meta.contentLength && entry.meta && entry.meta.contentLength) {
+    return String(entry.meta.contentLength) === String(meta.contentLength);
+  }
+  return true;
+}
+
+function headPackMeta() {
+  const t0 = performance.now();
+  return fetch(PACK_URL, { method: 'HEAD', cache: 'no-cache' })
+    .then(function (res) {
+      if (!res.ok) return null;
+      const meta = {
+        etag: res.headers.get('etag') || '',
+        lastModified: res.headers.get('last-modified') || '',
+        contentLength: res.headers.get('content-length') || '',
+      };
+      perfLog('pack.head', performance.now() - t0, meta);
+      return meta;
+    })
+    .catch(function () { return null; });
+}
+
+function parseOnMain(text) {
+  const trimmed = String(text).replace(/^\uFEFF/, '').trim();
+  if (trimmed.charAt(0) === '[' || trimmed.charAt(0) === '{') {
+    return JSON.parse(trimmed);
+  }
+  return new Function(trimmed + '\nreturn STOCKS_DATA;')();
+}
+
+function parsePackText(text, meta) {
   const t0 = performance.now();
   if (typeof Worker !== 'undefined') {
     return new Promise(function (resolve, reject) {
@@ -348,7 +452,7 @@ function parsePackText(text) {
         worker = new Worker(new URL('./stocks-pack-worker.js', import.meta.url));
       } catch (err) {
         try {
-          const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+          const pack = parseOnMain(text);
           perfLog('pack.parse.main', performance.now() - t0, { stocks: pack && pack.length });
           resolve(pack);
         } catch (e2) {
@@ -372,7 +476,10 @@ function parsePackText(text) {
           reject(new Error(msg.error || 'pack parse failed'));
           return;
         }
-        perfLog('pack.parse.worker', performance.now() - t0, { stocks: msg.pack.length });
+        perfLog('pack.parse.worker', performance.now() - t0, {
+          stocks: msg.pack.length,
+          cached: !!msg.cached,
+        });
         resolve(msg.pack);
       };
       worker.onerror = function (err) {
@@ -380,21 +487,71 @@ function parsePackText(text) {
         settled = true;
         clearTimeout(timer);
         try { worker.terminate(); } catch (_) { /* ignore */ }
-        // Fallback: parse on main thread if worker fails to load.
         try {
-          const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+          const pack = parseOnMain(text);
           perfLog('pack.parse.main_fallback', performance.now() - t0, { stocks: pack && pack.length });
           resolve(pack);
         } catch (e2) {
           reject(err.error || e2 || err);
         }
       };
-      worker.postMessage({ text: text });
+      worker.postMessage({
+        mode: 'parseAndKeep',
+        text: text,
+        cacheKey: CACHE_KEY,
+        meta: meta || {},
+      });
     });
   }
-  const pack = new Function(text + '\nreturn STOCKS_DATA;')();
+  const pack = parseOnMain(text);
   perfLog('pack.parse.main', performance.now() - t0, { stocks: pack && pack.length });
+  idbPut({ key: CACHE_KEY, text: text, meta: meta || {}, savedAt: Date.now() }).catch(function () {});
   return Promise.resolve(pack);
+}
+
+function fetchPackText(onProgress) {
+  const fetchStart = performance.now();
+  function fromResponse(res) {
+    if (!res.ok) throw new Error('http ' + res.status);
+    const meta = {
+      etag: res.headers.get('etag') || '',
+      lastModified: res.headers.get('last-modified') || '',
+      contentLength: res.headers.get('content-length') || '',
+    };
+    const total = Number(meta.contentLength) || 0;
+    if (!res.body || !total || !res.body.getReader) {
+      return res.text().then(function (text) {
+        if (onProgress) onProgress(0.85);
+        perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'text' });
+        return { text: text, meta: meta };
+      });
+    }
+    const reader = res.body.getReader();
+    const chunks = [];
+    let received = 0;
+    function pump() {
+      return reader.read().then(function (result) {
+        if (result.done) {
+          if (onProgress) onProgress(0.85);
+          const text = decodeChunks(chunks);
+          perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'stream' });
+          return { text: text, meta: meta };
+        }
+        chunks.push(result.value);
+        received += result.value.length;
+        if (onProgress) onProgress(Math.min(0.85, (received / total) * 0.85));
+        return pump();
+      });
+    }
+    return pump();
+  }
+
+  return fetch(PACK_URL)
+    .then(fromResponse)
+    .catch(function (err) {
+      console.warn('stocks_data.json fetch failed, trying .js', err);
+      return fetch(PACK_JS_FALLBACK).then(fromResponse);
+    });
 }
 
 function loadPack(onProgress) {
@@ -403,53 +560,41 @@ function loadPack(onProgress) {
     return Promise.resolve();
   }
   if (packPromise) {
-    // Another caller already fetching — still emit progress when done.
     return packPromise.then(function () {
       if (onProgress) onProgress(1);
     });
   }
 
-  const fetchStart = performance.now();
-  packPromise = fetch('data/stocks_data.js')
-    .then(function (res) {
-      if (!res.ok) throw new Error('http ' + res.status);
-      const total = Number(res.headers.get('content-length')) || 0;
-      if (!res.body || !total || !res.body.getReader) {
-        return res.text().then(function (text) {
-          if (onProgress) onProgress(0.85);
-          return text;
-        });
-      }
-      const reader = res.body.getReader();
-      const chunks = [];
-      let received = 0;
-      function pump() {
-        return reader.read().then(function (result) {
-          if (result.done) {
-            if (onProgress) onProgress(0.85);
-            return decodeChunks(chunks);
+  packPromise = Promise.resolve()
+    .then(async function () {
+      try {
+        const cached = await idbGet(CACHE_KEY);
+        if (cached && cached.text) {
+          // Only pay for HEAD when we might skip the network.
+          const meta = await headPackMeta();
+          if (cacheMetaMatches(cached, meta || cached.meta || {})) {
+            if (onProgress) onProgress(0.5);
+            const pack = await parsePackText(cached.text, cached.meta || meta || {});
+            if (!Array.isArray(pack) || pack.length === 0) throw new Error('empty cached pack');
+            window.STOCKS_DATA = pack;
+            if (onProgress) onProgress(1);
+            perfLog('pack.cache.hit', 0, { stocks: pack.length });
+            return pack;
           }
-          chunks.push(result.value);
-          received += result.value.length;
-          // Reserve last 15% of progress bar for off-main-thread parse.
-          if (onProgress) onProgress(Math.min(0.85, (received / total) * 0.85));
-          return pump();
-        });
-      }
-      return pump();
-    })
-    .then(function (text) {
-      perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length });
-      return parsePackText(text).then(function (pack) {
-        // Drop giant source string ASAP for GC.
-        text = null;
-        if (!Array.isArray(pack) || pack.length === 0) {
-          throw new Error('empty pack');
         }
-        window.STOCKS_DATA = pack;
-        if (onProgress) onProgress(1);
-        return pack;
-      });
+      } catch (cacheErr) {
+        if (perfEnabled()) console.warn('[perf] pack.cache', cacheErr);
+      }
+
+      const fetched = await fetchPackText(onProgress);
+      const pack = await parsePackText(fetched.text, fetched.meta || {});
+      fetched.text = null;
+      if (!Array.isArray(pack) || pack.length === 0) {
+        throw new Error('empty pack');
+      }
+      window.STOCKS_DATA = pack;
+      if (onProgress) onProgress(1);
+      return pack;
     })
     .catch(function (err) {
       packPromise = null;
@@ -461,18 +606,23 @@ function loadPack(onProgress) {
 
 function scheduleDeferredPrefetch(gameState) {
   const start = function () {
-    ensureStocksLoaded(gameState).catch(function (err) {
-      console.error(err);
-    });
+    prefetchStocksPack(gameState);
   };
-  const delayMs = 2500;
+  const delayMs = 900;
   if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
     window.setTimeout(function () {
-      window.requestIdleCallback(start, { timeout: 4000 });
+      window.requestIdleCallback(start, { timeout: 2500 });
     }, delayMs);
   } else {
     window.setTimeout(start, delayMs);
   }
+}
+
+/** Fire-and-forget warm: home idle / 模拟盘 hub / fill-mode modal. */
+export function prefetchStocksPack(gameState) {
+  return ensureStocksLoaded(gameState).catch(function (err) {
+    console.error(err);
+  });
 }
 
 export function ensureStocksLoaded(gameState, onProgress) {

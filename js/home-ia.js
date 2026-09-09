@@ -1,5 +1,8 @@
 /** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub */
 
+import { prefetchStocksPack } from "./load-stocks.js";
+import { gameState } from "./state.js";
+
 const HASH_SIM = "sim";
 const HASH_KNOWLEDGE = "knowledge";
 const HASH_HARMONY = "harmony";
@@ -85,6 +88,8 @@ export function showSimHub(opts = {}) {
   if (home) home.hidden = true;
   if (hub) hub.hidden = false;
   if (updateHash) setHash(HASH_SIM);
+  // Intent to play: warm pack immediately (don't wait for Start / idle timer).
+  prefetchStocksPack(gameState);
 }
 
 /**
