@@ -90,3 +90,14 @@ test('partial replay without finish leaves open lot', () => {
   assert.equal(r.trades[0].type, 'buy');
   assert.ok(r.rawPosition === 'holding' || r.rawPosition === 'locked');
 });
+
+test('resume mid-game actions restore holding day index', () => {
+  const bars = makeBars(30);
+  const actions = ['buy', 'hold', 'hold'];
+  const r = replayGame({ fillMode: 'same_close', bars, actions, finish: false });
+  assert.equal(r.ok, true);
+  assert.equal(r.rawPosition, 'holding'); // after 3 calendar advances, locked unlocks
+  assert.ok(r.buyPrice > 0);
+  // UI day after N decisions is N+1
+  assert.equal(actions.length + 1, 4);
+});

@@ -208,12 +208,13 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
     const tx = db.transaction(() => {
       expireStaleActive(db, userId, now);
       const active = db
-        .prepare(`SELECT id FROM game_sessions WHERE user_id = ? AND status = 'active'`)
+        .prepare(`SELECT * FROM game_sessions WHERE user_id = ? AND status = 'active'`)
         .get(userId);
       if (active) {
         const err = new Error("ACTIVE_GAME_EXISTS");
         err.code = "ACTIVE_GAME_EXISTS";
         err.activeId = active.id;
+        err.activeGame = sessionPublic(active);
         throw err;
       }
       db.prepare(
@@ -249,8 +250,11 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
         error: {
           status: 409,
           code: "ACTIVE_GAME_EXISTS",
-          message: "已有进行中的云端对局，请先结算或放弃",
-          details: { gameId: e.activeId },
+          message: "已有进行中的云端对局，请继续对局或重新开始",
+          details: {
+            gameId: e.activeId,
+            game: e.activeGame || null,
+          },
         },
       };
     }

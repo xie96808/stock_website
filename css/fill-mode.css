@@ -212,3 +212,31 @@
     opacity: 0.78;
     letter-spacing: 0.04em;
 }
+
+.fill-mode-conflict {
+    margin-top: 0.15rem;
+}
+.fill-mode-conflict-detail {
+    margin: 0.35rem 0 0.85rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    opacity: 0.88;
+}
+.fill-mode-conflict-actions {
+    flex-wrap: wrap;
+}
+.fill-mode-btn.danger {
+    border-color: rgba(176, 72, 72, 0.55);
+    color: #a13a3a;
+}
+.fill-mode-btn.danger:hover:not(:disabled) {
+    background: rgba(176, 72, 72, 0.12);
+    border-color: rgba(176, 72, 72, 0.75);
+}
+[data-theme="dark"] .fill-mode-btn.danger {
+    color: #f0a0a0;
+    border-color: rgba(240, 140, 140, 0.45);
+}
+[data-theme="dark"] .fill-mode-btn.danger:hover:not(:disabled) {
+    background: rgba(240, 120, 120, 0.14);
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 const runs = [
-  ["node", ["--test", "tests/engine/engine.test.js"]],
+  ["node", ["--test", "tests/engine/engine.test.js", "tests/cloud-draft.test.js"]],
   ["node", ["--test", "server/tests/games.integration.test.js", "server/tests/auth.integration.test.js", "server/tests/leaderboard.integration.test.js"]],
 ];
 for (const [cmd, args] of runs) {

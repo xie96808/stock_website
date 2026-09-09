@@ -3,6 +3,7 @@ import { gameState, chartRefs } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
+import { persistCurrentCloudDraft, clearCloudGameDraft } from './game-sync.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -124,9 +125,49 @@ export function startGame(options = {}) {
         }
         return;
     }
+
+    const resumeActions = Array.isArray(options.resumeActions) ? options.resumeActions : null;
+    if (resumeActions && resumeActions.length) {
+        applyCloudResume(resumeActions);
+    } else {
+        updateUI();
+        resetOHLCToToday();
+        renderWaveAnalysis();
+        if (gameState.cloudMode) persistCurrentCloudDraft();
+    }
+}
+
+/**
+ * Replay saved mid-game actions onto the current cloud seed (day / holdings / MTM).
+ * Invalid drafts are ignored so the player still enters day 1 of the same seed.
+ */
+export function applyCloudResume(actions) {
+    if (!Array.isArray(actions) || !actions.length) return false;
+    const bars = getGameBars();
+    if (bars.length < 30) return false;
+    const clipped = actions.slice(0, 29);
+    const r = replayGame({
+        fillMode: gameState.fillMode,
+        bars,
+        actions: clipped,
+        finish: false
+    });
+    if (!r.ok) {
+        console.warn('cloud resume draft invalid, starting day 1', r);
+        updateUI();
+        resetOHLCToToday();
+        renderWaveAnalysis();
+        return false;
+    }
+    gameState.actions = clipped.slice();
+    syncFromEngine(r, { finished: false, bars });
+    gameState.currentDay = Math.min(clipped.length + 1, 30);
     updateUI();
+    updateChart();
     resetOHLCToToday();
     renderWaveAnalysis();
+    persistCurrentCloudDraft();
+    return true;
 }
 
 export function initChart() {
@@ -426,6 +467,7 @@ export function handleAction(action) {
     gameState.pendingAction = null;
     syncFromEngine(r, { finished: false, bars });
     gameState.currentDay = nextActions.length + 1;
+    persistCurrentCloudDraft();
 
     updateUI();
     updateChart();

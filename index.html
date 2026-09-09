@@ -728,6 +728,17 @@
                 </div>
             </div>
 
+            <div id="fillModeConflictPane" class="fill-mode-conflict" hidden>
+                <p class="fill-mode-dialog-sub">已有云端对局，可继续对局或重新开始</p>
+                <p class="fill-mode-conflict-detail" id="fillModeConflictDetail" aria-live="polite"></p>
+                <div class="fill-mode-actions fill-mode-conflict-actions">
+                    <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
+                    <button type="button" class="fill-mode-btn ghost danger" id="fillModeRestartBtn" onclick="restartActiveCloudGame()">重新开始</button>
+                    <button type="button" class="fill-mode-btn primary" id="fillModeContinueBtn" onclick="continueActiveCloudGame()">继续游戏</button>
+                </div>
+                <p class="fill-mode-dialog-note">重新开始会放弃当前云端活动局并按你刚选的成交方式开新局；继续游戏载入同一云端题目，并恢复本机已保存的进度。</p>
+            </div>
+
             <div id="fillModeLoadingPane" class="fill-mode-loading" hidden>
                 <div class="fill-load-shell">
                     <div class="fill-load-meta">
