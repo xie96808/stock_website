@@ -173,3 +173,33 @@
   color: #c44;
   font-size: 0.85em;
 }
+
+/* Metric segmented control (最佳单局 / 平均收益) */
+.leaderboard-metric-tabs {
+  display: inline-flex;
+  gap: 0;
+  margin-bottom: 0.65rem;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 100%;
+}
+.leaderboard-metric-tab {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.4rem 0.95rem;
+  cursor: pointer;
+  font: inherit;
+  opacity: 0.78;
+}
+.leaderboard-metric-tab.active {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font-weight: 700;
+  opacity: 1;
+}
+.leaderboard-metric-note {
+  border-left: 3px solid color-mix(in srgb, currentColor 28%, transparent);
+  padding-left: 0.65rem;
+  margin-top: 0.55rem;
+}

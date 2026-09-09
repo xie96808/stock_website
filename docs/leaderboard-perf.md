@@ -1,6 +1,6 @@
 # 排行榜性能与增长路径
 
-更新：2026-09-09（`perf/leaderboard-speed`）
+更新：2026-09-09（`feat/leaderboard-average-metric`；承接 `perf/leaderboard-speed`）
 
 ## 已验证的瓶颈
 
@@ -19,9 +19,10 @@
 ## 本轮改动
 
 1. **API**：只物化 **Top N**（N=10）+ `total`；站外 `myRank` 用「最佳席位 + 更优席位计数」；胜率仅对 Top N（及查看者）聚合。
-2. **进程内短 TTL 缓存**（默认 8s，`LEADERBOARD_CACHE_TTL_MS`）：键 = `fillMode|ruleVersion|datasetVersion`，缓存共享榜；`myRank` 仍按登录态附加。失效：结算、unlist/relist/invalidate/restore、禁用/启用用户、opt-in/昵称头像变更、测试 helper。
-3. **前端**：按 `fillMode` 缓存上次响应；切 tab 先画缓存再后台刷新（busy 样式）；打开时预取另一模式；头像 `loading=lazy`。
-4. **正确性**：双模式语义不变；公开字段不变。
+2. **进程内短 TTL 缓存**（默认 8s，`LEADERBOARD_CACHE_TTL_MS`）：键 = `fillMode|metric|ruleVersion|datasetVersion`，缓存共享榜；`myRank` 仍按登录态附加。失效：结算、unlist/relist/invalidate/restore、禁用/启用用户、opt-in/昵称头像变更、测试 helper（按 fillMode 前缀清两种 metric）。
+3. **前端**：按 `metric|fillMode` 缓存上次响应；切 tab 先画缓存再后台刷新（busy 样式）；打开时预取其余 metric×mode 组合；头像 `loading=lazy`。
+4. **正确性**：双模式语义不变；新增 `metric=best|average`（默认 best）；公开字段增加 `metric`。
+5. **平均榜**：与最佳榜相同入榜过滤；按 `AVG(return_ppm)` 降序（展示 ROUND）；非百分比点求和、非复利。
 
 ## 增长路径（用户/对局变多时）
 
@@ -59,4 +60,4 @@ CREATE INDEX idx_lb_best_rank
 ## 运维
 
 - 环境变量：`LEADERBOARD_CACHE_TTL_MS`（默认 `8000`；测压可调大，强一致可设 `0` 关闭缓存——实现上 expires 立即过期即可，或后续加开关）。
-- 部署：本改动含 `server/src/**` 与静态 `js/`/`css/`，**需要 API 进程重启/redeploy**。
+- 部署：平均收益榜改动含 `server/src/**` 与静态 `js/`/`css/`，**需要生产 API redeploy + 静态前端一并发布**（仅发其一会出现旧前端无 metric tab，或新前端打到旧 API 忽略/报错 metric）。

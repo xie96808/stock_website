@@ -1,4 +1,4 @@
-/** Stage 4: dual-mode public leaderboard (perf: per-mode cache + prefetch) */
+/** Stage 4: dual-mode + dual-metric public leaderboard (perf: per-panel cache + prefetch) */
 import { getAuthState, openAuthModal, api } from "./auth.js";
 
 const REASON_TEXT = {
@@ -9,14 +9,23 @@ const REASON_TEXT = {
 };
 
 const MODES = ["next_open", "same_close"];
+const METRICS = ["best", "average"];
 
 /** @type {Map<string, { data: object, fetchedAt: number }>} */
 const panelCache = new Map();
 
-/** In-flight fetches keyed by fillMode (dedupe + race guard). */
+/** In-flight fetches keyed by panelKey (dedupe + race guard). */
 const inflight = new Map();
 
 let activeLoadToken = 0;
+/** @type {"best"|"average"} */
+let activeMetric = "best";
+/** @type {"next_open"|"same_close"} */
+let activeFillMode = "next_open";
+
+function panelKey(metric, fillMode) {
+  return `${metric}|${fillMode}`;
+}
 
 function hideOtherScreens() {
   const hdr = document.querySelector(".header");
@@ -89,12 +98,32 @@ function setBusy(screen, busy) {
   if (meta) meta.classList.toggle("is-refreshing", !!busy);
 }
 
+function retLabel(metric) {
+  return metric === "average" ? "平均收益" : "收益率";
+}
+
+function syncMetricNote(metric) {
+  const note = document.getElementById("leaderboardMetricNote");
+  if (!note) return;
+  if (metric === "average") {
+    note.hidden = false;
+    note.textContent =
+      "平均收益 = 各有效上榜局 return 的算术平均（非百分比点相加），不等于一笔资金的连续复利结果。示例：+40% 与 −10% 两局，平均为 +15%，不是综合 +30%。";
+  } else {
+    note.hidden = true;
+    note.textContent = "";
+  }
+}
+
 function renderPanel(data) {
   const listEl = document.getElementById("leaderboardList");
   const metaEl = document.getElementById("leaderboardMeta");
   const mineEl = document.getElementById("leaderboardMine");
+  const metric = data.metric === "average" ? "average" : "best";
+  syncMetricNote(metric);
   if (metaEl) {
-    metaEl.innerHTML = `规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
+    const metricLabel = metric === "average" ? "平均收益" : "最佳单局";
+    metaEl.innerHTML = `${escapeHtml(metricLabel)} · 规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
       String(data.datasetVersion || "").slice(0, 12)
     )}…</code> · 更新于 ${fmtFinished(data.asOf)}`;
   }
@@ -124,6 +153,7 @@ function renderPanel(data) {
     listEl.innerHTML = `<li class="leaderboard-empty">还没有有效成绩，完成一局试试</li>`;
     return;
   }
+  const label = retLabel(metric);
   listEl.innerHTML = items
     .map((row) => {
       const cls =
@@ -133,33 +163,58 @@ function renderPanel(data) {
           <span class="lb-rank">#${row.rank}</span>
           <img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">
           <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
-          <span class="lb-ret ${cls}" title="收益率"><small class="lb-ret-label">收益率</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
+          <span class="lb-ret ${cls}" title="${escapeHtml(label)}"><small class="lb-ret-label">${escapeHtml(label)}</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;
     })
     .join("");
 }
 
-async function fetchLeaderboard(fillMode) {
-  if (inflight.has(fillMode)) return inflight.get(fillMode);
+async function fetchLeaderboard(metric, fillMode) {
+  const key = panelKey(metric, fillMode);
+  if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
-    const qs = new URLSearchParams({ fillMode });
+    const qs = new URLSearchParams({ fillMode, metric });
     const { data } = await api(`/leaderboard?${qs.toString()}`);
-    panelCache.set(fillMode, { data, fetchedAt: Date.now() });
+    panelCache.set(key, { data, fetchedAt: Date.now() });
     return data;
   })().finally(() => {
-    inflight.delete(fillMode);
+    inflight.delete(key);
   });
-  inflight.set(fillMode, p);
+  inflight.set(key, p);
   return p;
 }
 
-function prefetchOtherModes(current) {
-  for (const mode of MODES) {
-    if (mode === current) continue;
-    if (panelCache.has(mode) || inflight.has(mode)) continue;
-    fetchLeaderboard(mode).catch(() => {});
+function prefetchOtherPanels(metric, fillMode) {
+  for (const m of METRICS) {
+    for (const mode of MODES) {
+      if (m === metric && mode === fillMode) continue;
+      const key = panelKey(m, mode);
+      if (panelCache.has(key) || inflight.has(key)) continue;
+      fetchLeaderboard(m, mode).catch(() => {});
+    }
   }
+}
+
+function bindTabHandlers(screen) {
+  screen.querySelectorAll(".leaderboard-metric-tab").forEach((btn) => {
+    btn.onclick = () => {
+      screen.querySelectorAll(".leaderboard-metric-tab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      activeMetric = btn.dataset.metric === "average" ? "average" : "best";
+      loadLeaderboardPanel(activeMetric, activeFillMode);
+    };
+  });
+  screen.querySelectorAll(".leaderboard-tab").forEach((btn) => {
+    btn.onclick = () => {
+      screen.querySelectorAll(".leaderboard-tab").forEach((b) => b.classList.toggle("active", b === btn));
+      activeFillMode = btn.dataset.mode === "same_close" ? "same_close" : "next_open";
+      loadLeaderboardPanel(activeMetric, activeFillMode);
+    };
+  });
 }
 
 /** @param {string} [preferredFillMode] next_open | same_close — selects matching tab when opening. */
@@ -183,7 +238,11 @@ export async function showLeaderboard(preferredFillMode) {
           <button type="button" class="leaderboard-back" id="leaderboardBackBtn">← 返回</button>
           <h2>排行榜</h2>
         </div>
-        <div class="leaderboard-tabs" role="tablist">
+        <div class="leaderboard-metric-tabs" role="tablist" aria-label="榜单类型">
+          <button type="button" class="leaderboard-metric-tab active" data-metric="best" role="tab" aria-selected="true">最佳单局</button>
+          <button type="button" class="leaderboard-metric-tab" data-metric="average" role="tab" aria-selected="false">平均收益</button>
+        </div>
+        <div class="leaderboard-tabs" role="tablist" aria-label="成交模式">
           <button type="button" class="leaderboard-tab active" data-mode="next_open" role="tab">次日开盘榜</button>
           <button type="button" class="leaderboard-tab" data-mode="same_close" role="tab">当日收盘榜</button>
         </div>
@@ -191,15 +250,11 @@ export async function showLeaderboard(preferredFillMode) {
         <div class="leaderboard-mine" id="leaderboardMine"></div>
         <ol class="leaderboard-list" id="leaderboardList"></ol>
         <p class="leaderboard-note">公开仅展示昵称与头像，不含登录名。收益按内部精度排序，显示四舍五入后可能相同。</p>
+        <p class="leaderboard-note leaderboard-metric-note" id="leaderboardMetricNote" hidden></p>
       </div>`;
     document.querySelector(".container")?.appendChild(screen);
     screen.querySelector("#leaderboardBackBtn").onclick = hideLeaderboard;
-    screen.querySelectorAll(".leaderboard-tab").forEach((btn) => {
-      btn.onclick = () => {
-        screen.querySelectorAll(".leaderboard-tab").forEach((b) => b.classList.toggle("active", b === btn));
-        loadLeaderboardPanel(btn.dataset.mode);
-      };
-    });
+    bindTabHandlers(screen);
   }
   screen.classList.add("active");
   screen.style.display = "block";
@@ -207,13 +262,22 @@ export async function showLeaderboard(preferredFillMode) {
     ? preferredFillMode
     : null;
   if (want) {
+    activeFillMode = want;
     screen.querySelectorAll(".leaderboard-tab").forEach((b) => {
       b.classList.toggle("active", b.dataset.mode === want);
     });
+  } else {
+    activeFillMode =
+      screen.querySelector(".leaderboard-tab.active")?.dataset.mode || "next_open";
   }
-  const mode =
-    screen.querySelector(".leaderboard-tab.active")?.dataset.mode || "next_open";
-  await loadLeaderboardPanel(mode);
+  activeMetric =
+    screen.querySelector(".leaderboard-metric-tab.active")?.dataset.metric || "best";
+  screen.querySelectorAll(".leaderboard-metric-tab").forEach((b) => {
+    const on = b.dataset.metric === activeMetric;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  await loadLeaderboardPanel(activeMetric, activeFillMode);
 }
 
 export function hideLeaderboard() {
@@ -244,27 +308,29 @@ export function hideLeaderboard() {
   }
 }
 
-async function loadLeaderboardPanel(fillMode) {
+async function loadLeaderboardPanel(metric, fillMode) {
   const screen = document.getElementById("leaderboardScreen");
   const listEl = document.getElementById("leaderboardList");
   const metaEl = document.getElementById("leaderboardMeta");
   const mineEl = document.getElementById("leaderboardMine");
   const token = ++activeLoadToken;
+  const key = panelKey(metric, fillMode);
 
-  const cached = panelCache.get(fillMode);
+  const cached = panelCache.get(key);
   if (cached?.data) {
     renderPanel(cached.data);
     setBusy(screen, true);
   } else {
     if (listEl) listEl.innerHTML = `<li class="leaderboard-empty">加载中…</li>`;
+    syncMetricNote(metric);
     setBusy(screen, true);
   }
 
   try {
-    const data = await fetchLeaderboard(fillMode);
+    const data = await fetchLeaderboard(metric, fillMode);
     if (token !== activeLoadToken) return;
     renderPanel(data);
-    prefetchOtherModes(fillMode);
+    prefetchOtherPanels(metric, fillMode);
   } catch (e) {
     if (token !== activeLoadToken) return;
     if (!cached?.data) {
