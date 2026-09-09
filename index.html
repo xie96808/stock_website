@@ -759,15 +759,21 @@
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
         import { startGame, handleAction, finishSettle, toggleIndicatorPanel } from './js/game.js';
-        import { attachDeferredStart } from "./js/load-stocks.js";
+        import { attachDeferredStart } from "./js/start-flow.js";
+        import {
+            Route,
+            registerHashRoute,
+            initAppHashRouting,
+            parseRouteHash,
+        } from './js/screen-router.js';
         import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
-        import { showLeaderboard, hideLeaderboard, initLeaderboardRouting } from './js/leaderboard.js';
-        import { showHome, showSimHub, restoreSimShell, initHomeIaRouting } from './js/home-ia.js';
+        import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
+        import { showHome, showSimHub, restoreSimShell } from './js/home-ia.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -833,8 +839,24 @@
           start.addEventListener('animationend', clear, { once: true });
           setTimeout(clear, 700);
         })();
-        initHomeIaRouting();
-        initLeaderboardRouting();
+        // Single hashchange owner (Phase 1) — home/sim/academy/hindsight/leaderboard
+        registerHashRoute(Route.HOME, () => showHome());
+        registerHashRoute(Route.SIM, () => showSimHub({ updateHash: false }));
+        registerHashRoute(Route.ACADEMY, () => showAcademy({ updateHash: false }));
+        registerHashRoute(Route.HINDSIGHT, () => showHindsight({ updateHash: false }));
+        registerHashRoute(Route.LEADERBOARD, () => { showLeaderboard(); });
+        // Cold start with empty hash: only sync lane visibility (match prior initHomeIaRouting).
+        // Still listen for later hashchange back to home/sim/etc.
+        const bootHash = parseRouteHash();
+        if (!bootHash) {
+            const home = document.getElementById('homeLanes');
+            const hub = document.getElementById('simHub');
+            if (home) home.hidden = false;
+            if (hub) hub.hidden = true;
+            initAppHashRouting({ applyInitial: false });
+        } else {
+            initAppHashRouting();
+        }
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
         window.onHindsightBlur  = onHindsightBlur;

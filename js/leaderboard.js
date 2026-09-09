@@ -1,5 +1,14 @@
 /** Stage 4: dual-mode + dual-metric public leaderboard (perf: per-panel cache + prefetch) */
 import { getAuthState, openAuthModal, api } from "./auth.js";
+import {
+  Route,
+  prepareScreen,
+  activateScreen,
+  deactivateScreen,
+  setRouteHash,
+  setHeaderChrome,
+  parseRouteHash,
+} from "./screen-router.js";
 
 const REASON_TEXT = {
   not_opted_in: "尚未开启排行榜参与，可在设置中打开",
@@ -27,24 +36,6 @@ function panelKey(metric, fillMode) {
   return `${metric}|${fillMode}`;
 }
 
-function hideOtherScreens() {
-  const hdr = document.querySelector(".header");
-  if (hdr) {
-    hdr.style.display = "block";
-    hdr.classList.add("compact");
-  }
-  const start = document.getElementById("startScreen");
-  if (start) start.style.display = "none";
-  document.getElementById("gameScreen")?.classList.remove("active");
-  document.getElementById("resultScreen")?.classList.remove("active");
-  document.getElementById("academyScreen")?.classList.remove("active");
-  document.getElementById("hindsightScreen")?.classList.remove("active");
-  const my = document.getElementById("myGamesScreen");
-  if (my) {
-    my.classList.remove("active");
-    my.style.display = "none";
-  }
-}
 
 function fmtPct(ppm, pct) {
   if (pct != null && pct !== "") {
@@ -219,14 +210,8 @@ function bindTabHandlers(screen) {
 
 /** @param {string} [preferredFillMode] next_open | same_close — selects matching tab when opening. */
 export async function showLeaderboard(preferredFillMode) {
-  hideOtherScreens();
-  if (location.hash !== "#/leaderboard") {
-    try {
-      history.replaceState(null, "", "#/leaderboard");
-    } catch {
-      location.hash = "#/leaderboard";
-    }
-  }
+  prepareScreen(Route.LEADERBOARD);
+  setRouteHash(Route.LEADERBOARD);
   let screen = document.getElementById("leaderboardScreen");
   if (!screen) {
     screen = document.createElement("section");
@@ -256,8 +241,7 @@ export async function showLeaderboard(preferredFillMode) {
     screen.querySelector("#leaderboardBackBtn").onclick = hideLeaderboard;
     bindTabHandlers(screen);
   }
-  screen.classList.add("active");
-  screen.style.display = "block";
+  activateScreen(Route.LEADERBOARD);
   const want = preferredFillMode === "same_close" || preferredFillMode === "next_open"
     ? preferredFillMode
     : null;
@@ -282,29 +266,18 @@ export async function showLeaderboard(preferredFillMode) {
 
 export function hideLeaderboard() {
   const screen = document.getElementById("leaderboardScreen");
-  if (screen) {
-    screen.classList.remove("active");
-    screen.style.display = "none";
-    setBusy(screen, false);
-  }
-  const hdr = document.querySelector(".header");
-  if (hdr) {
-    hdr.style.display = "none";
-    hdr.classList.remove("compact");
-  }
+  if (screen) setBusy(screen, false);
+  deactivateScreen(Route.LEADERBOARD);
   // Return to 模拟盘 hub (Scheme A); keep /#/sim deep link
   if (typeof window.restoreSimShell === "function") {
     window.restoreSimShell();
     return;
   }
+  setHeaderChrome("hidden");
   const start = document.getElementById("startScreen");
   if (start) start.style.display = "flex";
-  if (location.hash === "#/leaderboard") {
-    try {
-      history.replaceState(null, "", location.pathname + location.search);
-    } catch {
-      location.hash = "";
-    }
+  if (parseRouteHash() === "leaderboard") {
+    setRouteHash(Route.HOME);
   }
 }
 
@@ -353,11 +326,7 @@ export function invalidateLeaderboardClientCache() {
   panelCache.clear();
 }
 
+/** @deprecated Use initAppHashRouting + registerHashRoute(Route.LEADERBOARD). */
 export function initLeaderboardRouting() {
-  const apply = () => {
-    const h = (location.hash || "").replace(/^#\/?/, "");
-    if (h === "leaderboard") showLeaderboard();
-  };
-  window.addEventListener("hashchange", apply);
-  apply();
+  if (parseRouteHash() === "leaderboard") showLeaderboard();
 }

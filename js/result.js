@@ -4,6 +4,7 @@ import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_COLORS } from
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
 import {
+import { Route, prepareScreen, activateScreen } from './screen-router.js';
     clearShareRankMeta,
     refreshShareRankMeta,
     updateShareRankHint,
@@ -53,8 +54,8 @@ export function endGame() {
     // Settlement P&L / valuation already applied by finishSettle() via shared engine.
     // Do not invent a day-30 sell fill here.
 
-    document.getElementById('gameScreen').classList.remove('active');
-    document.getElementById('resultScreen').classList.add('active');
+    prepareScreen(Route.RESULT);
+    activateScreen(Route.RESULT);
 
     document.getElementById('stockReveal').textContent =
         `${gameState.currentStock.name} (${gameState.currentStock.code})`;
@@ -440,15 +441,10 @@ export function buildPointNavigator(chart, histLen, fullData) {
 }
 
 export function resetGame() {
-    const hdr = document.querySelector('.header');
-    hdr.classList.remove('compact');
-    hdr.style.display = 'none';
-    document.getElementById('resultScreen').classList.remove('active');
-    document.getElementById('gameScreen').classList.remove('active');
     if (typeof window.showHome === 'function') {
         window.showHome();
     } else {
-        document.getElementById('startScreen').style.display = 'flex';
+        prepareScreen(Route.HOME);
     }
     const tagsEl = document.getElementById('waveAnalysisTags');
     if (tagsEl) tagsEl.innerHTML = '';
