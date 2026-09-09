@@ -12,7 +12,8 @@
     "db:backup": "node src/lib/backup.js backup",
     "db:restore-check": "node src/lib/backup.js restore-check",
     "db:restore": "node src/lib/backup.js restore",
-    "admin:create": "node scripts/admin-promote.mjs"
+    "admin:create": "node scripts/admin-promote.mjs",
+    "db:replay-tombstones": "node scripts/replay-tombstones.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

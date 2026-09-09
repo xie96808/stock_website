@@ -48,3 +48,34 @@ API：保留上一版 api 包；停止服务后覆盖 api/ 与 shared/（见 rol
 - admin/overview：用户、局数、开关、最近备份（管理员）
 
 告警建议：备份年龄超过 2 小时；ready 连续失败；磁盘超过 80%。
+
+## 8. Phase 0 launch hardening
+
+### Rate limits (in-memory, single-process API)
+
+Defaults (override via env; restart resets counters):
+
+| Op | Default | Env knobs |
+|---|---|---|
+| Login failures | 5 / 15min per account+IP; 30 / 15min per IP | `RATE_LOGIN_FAIL_PER_ACCOUNT_IP`, `RATE_LOGIN_FAIL_PER_IP`, `RATE_LOGIN_FAIL_WINDOW_MS` |
+| Register | 5 / hour / IP; 20 / day / IP | `RATE_REGISTER_PER_IP_HOUR`, `RATE_REGISTER_PER_IP_DAY`, `RATE_REGISTER_HOUR_MS`, `RATE_REGISTER_DAY_MS` |
+| Create game | 10 / min / user; 100 / day / user | `RATE_CREATE_GAME_PER_USER_MINUTE`, `RATE_CREATE_GAME_PER_USER_DAY`, `RATE_CREATE_GAME_MINUTE_MS`, `RATE_CREATE_GAME_DAY_MS` |
+
+429 responses use Chinese messages and `Retry-After`. Password min length remains **4** (no complexity strengthen).
+
+### Absolute session expiry
+
+- Idle sliding window default **7 days** (`SESSION_IDLE_DAYS`).
+- Absolute max from session `created_at` default **7 days** (`SESSION_ABSOLUTE_DAYS`). Idle refresh cannot extend past absolute; cookie `maxAge` = absolute.
+- Redeploy **API** required for these changes.
+
+### Tombstones + soft-delete
+
+- Soft-delete (self or admin) writes `user_tombstones`.
+- Admin `/admin/` can soft-delete and restore users (reason + reauth + audit). Ban/unban unchanged.
+- **Whole-DB backup restore stays CLI/server only** — never a web button.
+- After `db:restore`: revoke old sessions, then `npm run db:replay-tombstones` before opening writes.
+
+### Co-deploy reminder
+
+Ship **API + static** together when admin shell or client auth messages change. Phase 0 needs API migrate (`006_user_tombstones.sql`) + API restart; static `admin/` for soft-delete UI.

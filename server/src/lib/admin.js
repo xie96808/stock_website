@@ -1,10 +1,11 @@
 import { openDb } from "../db/connection.js";
 import { readBackupStatus, getBackupAgeSeconds } from "./backup.js";
 import { config } from "./config.js";
-import { findUserById, publicUser } from "./users.js";
+import { findUserById, publicUser, softDeleteUser } from "./users.js";
 import { revokeAllUserSessions } from "./sessions.js";
 import { writeAuditLog } from "./audit.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
+import { reverseActiveTombstonesForUser } from "./tombstones.js";
 
 function requireReason(reason) {
   if (typeof reason !== "string") return "必须填写原因";
@@ -16,7 +17,7 @@ function requireReason(reason) {
 
 export function searchUsers({ q = "", status = "", limit = 20, cursor = null } = {}) {
   const lim = Math.min(Math.max(Number(limit) || 20, 1), 50);
-  const clauses = ["status != 'deleted'"];
+  const clauses = [];
   const params = [];
   const query = typeof q === "string" ? q.trim() : "";
   if (query) {
@@ -28,9 +29,11 @@ export function searchUsers({ q = "", status = "", limit = 20, cursor = null } =
       params.push(`%${query.toLowerCase()}%`, `%${query}%`);
     }
   }
-  if (status === "active" || status === "disabled") {
+  if (status === "active" || status === "disabled" || status === "deleted") {
     clauses.push("status = ?");
     params.push(status);
+  } else {
+    clauses.push("status != 'deleted'");
   }
   if (cursor != null && cursor !== "") {
     const c = Number(cursor);
@@ -57,7 +60,7 @@ export function searchUsers({ q = "", status = "", limit = 20, cursor = null } =
 
 export function getAdminUser(id) {
   const row = findUserById(id);
-  if (!row || row.status === "deleted") return null;
+  if (!row) return null;
   const stats = openDb()
     .prepare(
       `SELECT
@@ -141,6 +144,127 @@ export function setUserStatus({
       reason: reason.trim(),
       before,
       after: { status },
+      requestId,
+    });
+  });
+  tx();
+  invalidateLeaderboardCache();
+  return { status: 200, data: { user: publicUser(findUserById(targetUserId)) } };
+}
+
+
+/**
+ * Admin soft-delete user. Keeps password hash so restore can reactivate.
+ * Writes tombstone + audit; revokes sessions. Not a whole-DB restore.
+ */
+export function adminSoftDeleteUser({
+  actorId,
+  targetUserId,
+  reason,
+  requestId = null,
+  expectedUpdatedAt = null,
+}) {
+  const reasonErr = requireReason(reason);
+  if (reasonErr) return { error: { status: 400, code: "REASON_REQUIRED", message: reasonErr } };
+  if (Number(actorId) === Number(targetUserId)) {
+    return { error: { status: 400, code: "CANNOT_DELETE_SELF", message: "不能注销自己的管理员账号" } };
+  }
+
+  const db = openDb();
+  const target = findUserById(targetUserId);
+  if (!target) {
+    return { error: { status: 404, code: "NOT_FOUND", message: "用户不存在" } };
+  }
+  if (target.status === "deleted") {
+    return { status: 200, data: { user: publicUser(target), unchanged: true } };
+  }
+  if (expectedUpdatedAt != null && target.updated_at !== expectedUpdatedAt) {
+    return { error: { status: 409, code: "VERSION_CONFLICT", message: "用户已被他人修改，请刷新后重试" } };
+  }
+  if (target.role === "admin") {
+    const adminCount = db
+      .prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND status = 'active'`)
+      .get().n;
+    if (adminCount <= 1) {
+      return {
+        error: {
+          status: 400,
+          code: "LAST_ADMIN",
+          message: "不能注销最后一个管理员",
+        },
+      };
+    }
+  }
+
+  const before = { status: target.status };
+  softDeleteUser(targetUserId, {
+    wipeCredentials: false,
+    source: "admin",
+    reason: reason.trim(),
+  });
+  revokeAllUserSessions(targetUserId);
+  writeAuditLog({
+    actorId,
+    action: "user.soft_delete",
+    targetType: "user",
+    targetId: String(targetUserId),
+    reason: reason.trim(),
+    before,
+    after: { status: "deleted" },
+    requestId,
+  });
+  return { status: 200, data: { user: publicUser(findUserById(targetUserId)) } };
+}
+
+/**
+ * Restore a soft-deleted user (admin). Reverses active tombstones for this user.
+ * Does not restore wiped credentials from self-delete (password_hash === '!').
+ */
+export function adminRestoreUser({
+  actorId,
+  targetUserId,
+  reason,
+  requestId = null,
+  expectedUpdatedAt = null,
+}) {
+  const reasonErr = requireReason(reason);
+  if (reasonErr) return { error: { status: 400, code: "REASON_REQUIRED", message: reasonErr } };
+
+  const target = findUserById(targetUserId);
+  if (!target) {
+    return { error: { status: 404, code: "NOT_FOUND", message: "用户不存在" } };
+  }
+  if (target.status !== "deleted") {
+    return { error: { status: 400, code: "NOT_DELETED", message: "用户未处于已注销状态" } };
+  }
+  if (expectedUpdatedAt != null && target.updated_at !== expectedUpdatedAt) {
+    return { error: { status: 409, code: "VERSION_CONFLICT", message: "用户已被他人修改，请刷新后重试" } };
+  }
+  if (target.password_hash === "!") {
+    return {
+      error: {
+        status: 409,
+        code: "CREDENTIALS_WIPED",
+        message: "该账号凭据已清除（自助注销），无法直接恢复登录；仅可保留审计记录",
+      },
+    };
+  }
+
+  const before = { status: target.status };
+  const db = openDb();
+  const tx = db.transaction(() => {
+    db.prepare(
+      `UPDATE users SET status = 'active', deleted_at = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).run(targetUserId);
+    reverseActiveTombstonesForUser(targetUserId);
+    writeAuditLog({
+      actorId,
+      action: "user.restore",
+      targetType: "user",
+      targetId: String(targetUserId),
+      reason: reason.trim(),
+      before,
+      after: { status: "active" },
       requestId,
     });
   });

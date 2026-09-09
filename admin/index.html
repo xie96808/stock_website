@@ -16,7 +16,7 @@
   <main class="wrap">
     <header class="head">
       <h1>最小治理后台</h1>
-      <p class="note">非公网运营工具 · 禁用用户 / 下榜与判无效 / 审计。需管理员账号 + 二次验证。</p>
+      <p class="note">非公网运营工具 · 禁用/软删用户 / 下榜与判无效 / 审计。需管理员账号 + 二次验证。整库恢复仅 CLI。</p>
     </header>
 
     <section id="loginPanel" class="card">
@@ -41,13 +41,14 @@
       </div>
       <p id="opsMsg" class="msg"></p>
 
-      <h2>用户 · 禁用 / 解禁</h2>
+      <h2>用户 · 禁用 / 解禁 / 软删 / 恢复</h2>
       <div class="row">
         <input id="userQ" placeholder="用户 ID / 登录名 / 昵称" />
         <select id="userStatus">
-          <option value="">全部状态</option>
+          <option value="">未注销</option>
           <option value="active">active</option>
           <option value="disabled">disabled</option>
+          <option value="deleted">deleted</option>
         </select>
         <button type="button" id="userSearchBtn">搜索</button>
       </div>
@@ -59,8 +60,15 @@
           <option value="active">解禁</option>
         </select>
         <input id="banReason" class="grow" placeholder="原因（必填）" />
-        <button type="button" id="banBtn">提交</button>
+        <button type="button" id="banBtn">提交禁用/解禁</button>
       </div>
+      <div class="row">
+        <input id="delUserId" placeholder="用户 ID（软删/恢复）" />
+        <input id="delReason" class="grow" placeholder="原因（必填）" />
+        <button type="button" id="softDeleteBtn">软删用户</button>
+        <button type="button" id="restoreUserBtn">恢复软删</button>
+      </div>
+      <p class="note">软删会写 tombstone 并撤销会话；整库备份恢复仍仅 CLI。自助注销（凭据已清）不可在此恢复登录。</p>
 
       <h2>战绩 · 下榜 / 判无效</h2>
       <div class="row">

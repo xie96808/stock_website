@@ -1,5 +1,6 @@
 import { openDb } from "../db/connection.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
+import { writeUserTombstone } from "./tombstones.js";
 
 export function publicUser(row) {
   if (!row) return null;
@@ -15,6 +16,7 @@ export function publicUser(row) {
     leaderboardOptIn: !!row.leaderboard_opt_in,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at || null,
   };
 }
 
@@ -75,10 +77,40 @@ export function updateRecoveryHash(id, recoveryCodeHash) {
     .run(recoveryCodeHash, id);
 }
 
-export function softDeleteUser(id) {
-  openDb()
-    .prepare(`UPDATE users SET status = 'deleted', deleted_at = datetime('now'),
-      updated_at = datetime('now'), password_hash = '!', recovery_code_hash = NULL WHERE id = ?`)
-    .run(id);
+/**
+ * Soft-delete a user and write a tombstone.
+ * @param {number} id
+ * @param {{ wipeCredentials?: boolean, source?: 'self'|'admin', reason?: string|null }} [opts]
+ *   - wipeCredentials: true for self-delete (default true). Admin soft-delete keeps hash for restore.
+ */
+export function softDeleteUser(id, opts = {}) {
+  const wipeCredentials = opts.wipeCredentials !== false;
+  const source = opts.source === "admin" ? "admin" : "self";
+  const reason = opts.reason ?? null;
+  const row = findUserById(id);
+  if (!row || row.status === "deleted") return row;
+
+  const db = openDb();
+  const tx = db.transaction(() => {
+    if (wipeCredentials) {
+      db.prepare(
+        `UPDATE users SET status = 'deleted', deleted_at = datetime('now'),
+          updated_at = datetime('now'), password_hash = '!', recovery_code_hash = NULL WHERE id = ?`
+      ).run(id);
+    } else {
+      db.prepare(
+        `UPDATE users SET status = 'deleted', deleted_at = datetime('now'),
+          updated_at = datetime('now') WHERE id = ?`
+      ).run(id);
+    }
+    writeUserTombstone({
+      userId: id,
+      usernameNormalized: row.username_normalized,
+      source,
+      reason,
+    });
+  });
+  tx();
   invalidateLeaderboardCache();
+  return findUserById(id);
 }

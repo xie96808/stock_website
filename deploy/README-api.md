@@ -29,7 +29,7 @@ Runtime user: stockapi preferred. stockdeploy sudo today cannot edit nginx or ad
 
 ## Session cookies
 
-Production: __Host-stockgame_session, httpOnly, secure, sameSite=lax, path=/, 30d maxAge; idle 7d server-side. Matches server/src/lib/config.js and sessions.js.
+Production: __Host-stockgame_session, httpOnly, secure, sameSite=lax, path=/, maxAge = absolute lifetime (default 7d Phase 0); idle sliding within absolute (default 7d). See SESSION_*_DAYS and README-ops-stage6.md §8.
 
 Exact root install helper: deploy/bootstrap-api.sh (pass path to unpacked API bundle).
 
@@ -46,3 +46,7 @@ Exact root install helper: deploy/bootstrap-api.sh (pass path to unpacked API bu
 ## Stage 6 ops
 
 See deploy/README-ops-stage6.md for backup, restore-check, packaging whitelist, rollback, and ops env switches. Admin remains non-public.
+
+## Phase 0 launch hardening
+
+See deploy/README-ops-stage6.md §8: rate limits, absolute session expiry, user tombstones, admin soft-delete/restore. Password min 4 unchanged. Full DB restore remains CLI-only (`db:restore` + `db:replay-tombstones`). Co-deploy API + static when shipping admin UI changes; **API redeploy required**.
