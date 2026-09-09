@@ -93,6 +93,7 @@ export async function startTestServer() {
         password,
         nickname: "测友",
         termsVersion: "v1",
+        // Explicit opt-out so game/leaderboard fixtures stay isolated from default-on product.
         leaderboardOptIn: false,
       },
     });

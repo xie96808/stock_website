@@ -23,6 +23,15 @@ export function readFillModeFromUi() {
     return v === 'same_close' ? 'same_close' : 'next_open';
 }
 
+
+/** On phone, collapse 波段分析 / 交易日志 so K-line + sticky actions share the viewport. */
+function syncMobileIntelDefaults() {
+    if (!window.matchMedia('(max-width: 900px)').matches) return;
+    document.querySelectorAll('#gameScreen details.intel-card').forEach((el) => {
+        el.open = false;
+    });
+}
+
 export function startGame(options = {}) {
     // Reset state
     gameState.currentDay = 1;
@@ -96,6 +105,7 @@ export function startGame(options = {}) {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('gameScreen').classList.add('active');
     document.getElementById('resultScreen').classList.remove('active');
+    syncMobileIntelDefaults();
 
     // Clear leftover 波段分析 from a previous run
     const tagsEl = document.getElementById('waveAnalysisTags');

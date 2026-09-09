@@ -47,7 +47,11 @@ router.post("/auth/register", async (req, res) => {
   }
 
   const passwordHash = await hashPassword(req.body.password);
-  const leaderboardOptIn = !!req.body?.leaderboardOptIn;
+  // Product: new registrations participate in the leaderboard by default (opt-out in 资料设置).
+  // Explicit false still opts out. Existing DB rows are not mass-migrated.
+  const leaderboardOptIn = req.body?.leaderboardOptIn == null
+    ? true
+    : !!req.body.leaderboardOptIn;
   let user;
   try {
     user = insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn });

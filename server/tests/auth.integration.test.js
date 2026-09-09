@@ -75,6 +75,36 @@ test("register rejects too-short passwords but allows simple ones", async () => 
   assert.ok(simple.json.data.user);
 });
 
+
+test("register defaults leaderboardOptIn true; explicit false opts out", async () => {
+  for (const k of Object.keys(jar)) delete jar[k];
+  const def = await api("/api/v1/auth/register", {
+    method: "POST",
+    body: {
+      username: `lbdef${Date.now().toString(36)}`,
+      password: "pass1234",
+      nickname: "默参",
+      termsVersion: "v1",
+    },
+  });
+  assert.equal(def.status, 201, JSON.stringify(def.json));
+  assert.equal(def.json.data.user.leaderboardOptIn, true);
+
+  for (const k of Object.keys(jar)) delete jar[k];
+  const off = await api("/api/v1/auth/register", {
+    method: "POST",
+    body: {
+      username: `lboff${Date.now().toString(36)}`,
+      password: "pass1234",
+      nickname: "不参",
+      termsVersion: "v1",
+      leaderboardOptIn: false,
+    },
+  });
+  assert.equal(off.status, 201, JSON.stringify(off.json));
+  assert.equal(off.json.data.user.leaderboardOptIn, false);
+});
+
 test("avatar upload png + serve", async () => {
   const auth = await register(`av${Date.now().toString(36)}`);
   // 1x1 PNG
