@@ -55,6 +55,16 @@ export async function startTestServer() {
   resetDatasetCache();
   const { invalidateLeaderboardCache } = await import("../src/lib/leaderboard.js");
   invalidateLeaderboardCache();
+  // Shared in-memory rate limiter across files in one node --test process.
+  const { config } = await import("../src/lib/config.js");
+  const { resetRateLimitBuckets } = await import("../src/lib/rateLimit.js");
+  config.rateLimit.loginFailPerAccountIp = 10_000;
+  config.rateLimit.loginFailPerIp = 10_000;
+  config.rateLimit.registerPerIpHour = 10_000;
+  config.rateLimit.registerPerIpDay = 10_000;
+  config.rateLimit.createGamePerUserMinute = 10_000;
+  config.rateLimit.createGamePerUserDay = 10_000;
+  resetRateLimitBuckets();
   const { createApp } = await import("../src/app.js");
   const app = createApp({ skipStatic: true });
   const server = await new Promise((resolve) => {

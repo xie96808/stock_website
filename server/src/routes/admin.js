@@ -10,6 +10,8 @@ import {
   searchUsers,
   getAdminUser,
   setUserStatus,
+  adminSoftDeleteUser,
+  adminRestoreUser,
   searchGames,
   getAdminGame,
   moderateGame,
@@ -81,6 +83,39 @@ router.patch("/admin/users/:id/status", requireAdminVerified, (req, res) => {
     actorId: req.user.id,
     targetUserId: id,
     status: req.body?.status,
+    reason: req.body?.reason,
+    expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+
+router.post("/admin/users/:id/soft-delete", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const result = adminSoftDeleteUser({
+    actorId: req.user.id,
+    targetUserId: id,
+    reason: req.body?.reason,
+    expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.post("/admin/users/:id/restore", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const result = adminRestoreUser({
+    actorId: req.user.id,
+    targetUserId: id,
     reason: req.body?.reason,
     expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
     requestId: res.locals.requestId,

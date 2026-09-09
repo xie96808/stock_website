@@ -152,6 +152,7 @@ function renderUsers(items) {
   el.querySelectorAll("button[data-uid]").forEach((btn) => {
     btn.onclick = () => {
       $("banUserId").value = btn.dataset.uid;
+      if ($("delUserId")) $("delUserId").value = btn.dataset.uid;
     };
   });
 }
@@ -277,6 +278,46 @@ $("auditBtn").onclick = async () => {
     </div>`
     )
     .join("");
+};
+
+
+async function handleAdminUserMutation(path, body, successMsg) {
+  setMsg($("opsMsg"), "");
+  const r = await api(path, {
+    method: "POST",
+    csrf: csrfToken,
+    body,
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "操作失败");
+    return;
+  }
+  setMsg($("opsMsg"), successMsg(r.json.data.user), true);
+  $("userSearchBtn").click();
+}
+
+$("softDeleteBtn").onclick = async () => {
+  const id = $("delUserId").value.trim();
+  const reason = $("delReason").value;
+  await handleAdminUserMutation(
+    `/admin/users/${encodeURIComponent(id)}/soft-delete`,
+    { reason },
+    (u) => `用户 #${u.id} 已软删（status=${u.status}）`
+  );
+};
+
+$("restoreUserBtn").onclick = async () => {
+  const id = $("delUserId").value.trim();
+  const reason = $("delReason").value;
+  await handleAdminUserMutation(
+    `/admin/users/${encodeURIComponent(id)}/restore`,
+    { reason },
+    (u) => `用户 #${u.id} 已恢复（status=${u.status}）`
+  );
 };
 
 refreshSession().catch(() => showLoggedOut());

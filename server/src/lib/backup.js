@@ -309,7 +309,7 @@ async function cliMain(argv) {
       backupPath,
       targetPath,
       stats: check.stats,
-      note: "恢复后须全量撤销旧 session，并按运维文档重放注销 tombstone 后再开放写入",
+      note: "恢复后须：1) 全量撤销旧 session 2) npm run db:replay-tombstones 重放注销 tombstone 3) 再启动 API 开放写入。整库恢复仅 CLI，无 Web 按钮。",
     }));
     return 0;
   }

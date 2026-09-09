@@ -15,6 +15,9 @@ import {
 } from "../lib/sessions.js";
 import { ok, fail } from "../lib/http.js";
 import { config } from "../lib/config.js";
+import {
+  clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, rateLimitFail,
+} from "../lib/rateLimit.js";
 import { requireUser } from "../middleware/request.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
@@ -29,6 +32,11 @@ function randomAvatarId() {
 router.post("/auth/register", async (req, res) => {
   if (!config.registrationEnabled) {
     return fail(res, 403, "REGISTRATION_DISABLED", "当前暂停注册");
+  }
+  const ip = clientIp(req);
+  const regLimit = checkRegisterLimits(ip);
+  if (regLimit.limited) {
+    return rateLimitFail(res, regLimit.retryAfterSec, regLimit.message);
   }
   const username = normalizeUsername(req.body?.username);
   if (!username) return fail(res, 400, "INVALID_USERNAME", "用户名不合法（4-24位，字母开头）");
@@ -67,12 +75,20 @@ router.post("/auth/register", async (req, res) => {
 router.post("/auth/login", async (req, res) => {
   const username = normalizeUsername(req.body?.username);
   const password = req.body?.password;
+  const ip = clientIp(req);
   if (!username || typeof password !== "string") {
     return fail(res, 400, "INVALID_CREDENTIALS", "账号或密码错误");
   }
+  const failLimit = checkLoginFailLimits(username || "_", ip);
+  if (failLimit.limited) {
+    return rateLimitFail(res, failLimit.retryAfterSec, failLimit.message);
+  }
   const row = findUserByUsername(username);
   const good = row && row.status === "active" && (await verifyPassword(row.password_hash, password));
-  if (!good) return fail(res, 401, "INVALID_CREDENTIALS", "账号或密码错误");
+  if (!good) {
+    recordLoginFailure(username || "_", ip);
+    return fail(res, 401, "INVALID_CREDENTIALS", "账号或密码错误");
+  }
   if (req.sessionToken) revokeSessionToken(req.sessionToken);
   const sess = createSession(row.id);
   setSessionCookie(res, sess.sessionToken);
@@ -175,7 +191,7 @@ router.delete("/me", requireUser, async (req, res) => {
   if (typeof cur !== "string" || !(await verifyPassword(row.password_hash, cur))) {
     return fail(res, 401, "BAD_PASSWORD", "当前密码不正确");
   }
-  softDeleteUser(row.id);
+  softDeleteUser(row.id, { wipeCredentials: true, source: "self", reason: "self_delete" });
   revokeAllUserSessions(row.id);
   clearSessionCookie(res);
   return ok(res, null, 204);

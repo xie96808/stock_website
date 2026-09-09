@@ -9,6 +9,18 @@ function requireSecret(name, fallbackDev) {
   return fallbackDev;
 }
 
+function envInt(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+function envDaysMs(name, fallbackDays) {
+  const days = envInt(name, fallbackDays);
+  return days * 24 * 60 * 60 * 1000;
+}
+
 export const config = {
   port: Number(process.env.PORT || 8787),
   isProd,
@@ -19,8 +31,13 @@ export const config = {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean),
-  sessionIdleMs: 7 * 24 * 60 * 60 * 1000,
-  sessionAbsoluteMs: 30 * 24 * 60 * 60 * 1000,
+  /** Sliding idle window (default 7d). Idle refresh cannot pass absolute max. */
+  sessionIdleMs: envDaysMs("SESSION_IDLE_DAYS", 7),
+  /**
+   * Absolute max lifetime from session created_at (default 7d Phase 0).
+   * Cookie maxAge aligns with this. Override with SESSION_ABSOLUTE_DAYS.
+   */
+  sessionAbsoluteMs: envDaysMs("SESSION_ABSOLUTE_DAYS", 7),
   staticRoot: process.env.STATIC_ROOT || "",
   skipStatic: process.env.SKIP_STATIC === "1" || process.env.SKIP_STATIC === "true",
   /** Stage 5: admin API off by default; set ADMIN_ENABLED=1 on VPS behind IP/VPN */
@@ -39,6 +56,22 @@ export const config = {
   registrationEnabled: process.env.REGISTRATION_ENABLED !== "0" && process.env.REGISTRATION_ENABLED !== "false",
   cloudGamesEnabled: process.env.CLOUD_GAMES_ENABLED !== "0" && process.env.CLOUD_GAMES_ENABLED !== "false",
   leaderboardEnabled: process.env.LEADERBOARD_ENABLED !== "0" && process.env.LEADERBOARD_ENABLED !== "false",
+  /**
+   * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
+   */
+  rateLimit: {
+    loginFailPerAccountIp: envInt("RATE_LOGIN_FAIL_PER_ACCOUNT_IP", 5),
+    loginFailPerIp: envInt("RATE_LOGIN_FAIL_PER_IP", 30),
+    loginFailWindowMs: envInt("RATE_LOGIN_FAIL_WINDOW_MS", 15 * 60 * 1000),
+    registerPerIpHour: envInt("RATE_REGISTER_PER_IP_HOUR", 5),
+    registerPerIpDay: envInt("RATE_REGISTER_PER_IP_DAY", 20),
+    registerHourMs: envInt("RATE_REGISTER_HOUR_MS", 60 * 60 * 1000),
+    registerDayMs: envInt("RATE_REGISTER_DAY_MS", 24 * 60 * 60 * 1000),
+    createGamePerUserMinute: envInt("RATE_CREATE_GAME_PER_USER_MINUTE", 10),
+    createGamePerUserDay: envInt("RATE_CREATE_GAME_PER_USER_DAY", 100),
+    createGameMinuteMs: envInt("RATE_CREATE_GAME_MINUTE_MS", 60 * 1000),
+    createGameDayMs: envInt("RATE_CREATE_GAME_DAY_MS", 24 * 60 * 60 * 1000),
+  },
 };
 
 export function newRequestId() {

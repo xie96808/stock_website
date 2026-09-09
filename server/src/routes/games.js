@@ -13,12 +13,17 @@ import {
 import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import { config } from "../lib/config.js";
+import { checkCreateGameLimits, rateLimitFail } from "../lib/rateLimit.js";
 
 const router = Router();
 
 router.post("/games", requireUser, (req, res) => {
   if (!config.cloudGamesEnabled) {
     return fail(res, 403, "CLOUD_GAMES_DISABLED", "当前暂停新建云端对局（已有对局仍可完成结算）");
+  }
+  const gameLimit = checkCreateGameLimits(req.user.id);
+  if (gameLimit.limited) {
+    return rateLimitFail(res, gameLimit.retryAfterSec, gameLimit.message);
   }
   const createKey = req.get("idempotency-key") || req.get("Idempotency-Key");
   const fillMode = req.body?.fillMode;
