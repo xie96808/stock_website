@@ -20,6 +20,28 @@ export function calculateMA(data, period) {
     return result;
 }
 
+
+/** 1-based day-index labels for K-line category axis (no calendar dates on axis). */
+export function buildDayIndexLabels(length) {
+    const labels = new Array(length);
+    for (let i = 0; i < length; i++) labels[i] = String(i + 1);
+    return labels;
+}
+
+/** Chinese MA series / legend name, e.g. 5 → 「5日线」. */
+export function maDayLabel(period) {
+    return period + '日线';
+}
+
+export const MA_DAY_LABELS = ['5日线', '10日线', '20日线', '30日线'];
+
+export const MA_DAY_COLORS = {
+    '5日线': '#f5c542',
+    '10日线': '#42a5f5',
+    '20日线': '#ab47bc',
+    '30日线': '#26a69a'
+};
+
 export function shuffleArray(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {

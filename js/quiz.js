@@ -254,7 +254,7 @@ export function startQuiz() {
 
 function renderMiniKline(chart, data, isMini) {
     const ohlc = data.map(d => [d.open, d.close, d.low, d.high]);
-    const dates = data.map(d => d.date);
+    const dayLabels = data.map((_, i) => String(i + 1));
 
     function calcMaLine(period) {
         const result = [];
@@ -278,21 +278,30 @@ function renderMiniKline(chart, data, isMini) {
         const ma10 = calcMaLine(10);
         const ma20 = calcMaLine(20);
         series.push(
-            { name: 'MA5', type: 'line', data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#f5c542' } },
-            { name: 'MA10', type: 'line', data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#42a5f5' } },
-            { name: 'MA20', type: 'line', data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#ab47bc' } }
+            { name: '5日线', type: 'line', data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#f5c542' } },
+            { name: '10日线', type: 'line', data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#42a5f5' } },
+            { name: '20日线', type: 'line', data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#ab47bc' } }
         );
-        legendData.push('MA5', 'MA10', 'MA20');
+        legendData.push('5日线', '10日线', '20日线');
     }
 
     chart.setOption({
         backgroundColor: 'transparent', animation: false,
         legend: !isMini ? { data: legendData, top: 0, right: 0, textStyle: { color: '#6b6660', fontSize: 10 }, itemWidth: 14, itemHeight: 2 } : undefined,
         grid: { left: isMini ? '2%' : '10%', right: '2%', top: isMini ? '8%' : '28px', bottom: isMini ? '2%' : '18%', containLabel: !isMini },
-        tooltip: isMini ? undefined : { trigger: 'axis', axisPointer: { type: 'cross' } },
+        tooltip: isMini ? undefined : {
+            trigger: 'axis',
+            axisPointer: { type: 'cross' },
+            formatter: (params) => {
+                const p = params.find(x => x.seriesType === 'candlestick') || params[0];
+                if (!p) return '';
+                const kd = data[p.dataIndex];
+                return kd ? kd.date : '';
+            }
+        },
         xAxis: {
-            type: 'category', data: dates,
-            axisLabel: { show: !isMini, fontSize: 9, color: '#6b6660', rotate: 45 },
+            type: 'category', data: dayLabels,
+            axisLabel: { show: !isMini, fontSize: 9, color: '#6b6660', rotate: 0 },
             axisLine: { lineStyle: { color: 'rgba(200,164,78,0.15)' } },
             axisTick: { show: false }, splitLine: { show: false }
         },
