@@ -11,7 +11,7 @@
 | 资源 | 原始 | 传输（Accept-Encoding: gzip） | 备注 |
 |------|------|-------------------------------|------|
 | `data/stocks_data.json` / `.js` | ~55 MB | ~11.8 MB gzip | nginx 已开 gzip；**未开 brotli**（`Accept-Encoding: br` 时仍回落未压缩或仅 gzip） |
-| `js/load-stocks.js` | ~15–20 KB | ~4–5 KB gzip | |
+| `js/pack-store.js` + `js/start-flow.js` (was `load-stocks.js`) | ~15–20 KB | ~4–5 KB gzip | Phase 1 split; barrel still at `load-stocks.js` |
 | `js/game.js` | ~31 KB | ~8 KB gzip | |
 | ECharts | CDN `echarts@5.4.3` | 外链 | 开局前 `waitForEcharts` |
 
