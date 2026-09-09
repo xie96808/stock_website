@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareTestEnv, startTestServer } from "./helpers.js";
-import { validatePassword } from "../src/lib/validate.js";
+import { validatePassword, normalizeNickname, normalizeUsername } from "../src/lib/validate.js";
 
 prepareTestEnv();
 const ctx = await startTestServer();
@@ -56,6 +56,34 @@ test("password policy min4 unicode, allow simple", () => {
   assert.equal(validatePassword("pass1234"), null);
   assert.equal(validatePassword("好好学习"), null);
   assert.equal(validatePassword("GoodPass9"), null);
+});
+
+test("nickname allows playful 管理员/官方/客服; reserved only on username", () => {
+  assert.equal(normalizeNickname("管理员xx"), "管理员xx");
+  assert.equal(normalizeNickname("官方客服"), "官方客服");
+  assert.equal(normalizeNickname("客服小助手"), "客服小助手");
+  assert.equal(normalizeNickname("admin"), "admin");
+  assert.equal(normalizeNickname("a"), null); // too short
+  assert.equal(normalizeNickname("一二三四五六七八九十十一十二十三十四"), null); // >16
+  assert.equal(normalizeNickname("坏\u0000名"), null); // control char
+  assert.equal(normalizeUsername("admin"), null);
+  assert.equal(normalizeUsername("root"), null);
+  assert.ok(normalizeUsername("player1"));
+});
+
+test("register accepts nickname containing 管理员", async () => {
+  for (const k of Object.keys(jar)) delete jar[k];
+  const r = await api("/api/v1/auth/register", {
+    method: "POST",
+    body: {
+      username: `nick${Date.now().toString(36)}`,
+      password: "pass1234",
+      nickname: "管理员xx",
+      termsVersion: "v1",
+    },
+  });
+  assert.equal(r.status, 201, JSON.stringify(r.json));
+  assert.equal(r.json.data.user.nickname, "管理员xx");
 });
 
 test("register rejects too-short passwords but allows simple ones", async () => {
@@ -114,7 +142,7 @@ test("avatar upload png + serve", async () => {
   );
   const boundary = "----stockBoundary7MA4YWxk";
   const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="avatar"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n`),
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name=\"avatar\"; filename=\"a.png\"\r\nContent-Type: image/png\r\n\r\n`),
     png,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
