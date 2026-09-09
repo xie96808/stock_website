@@ -140,7 +140,7 @@
 - 用户名：4～24 位 ASCII 字母、数字、下划线，首位字母；trim 后小写存储与查重；注册后不改。保留 admin、root、system 等运维名称。
 - 密码：4～128 个 Unicode 码点（产品覆盖：最短 4；见 §0.1），最多 512 UTF-8 字节；允许粘贴、密码管理器、空格；不截断、不 trim、不强制字母数字组合；允许简单密码（不启用弱口令黑名单）。前后端采用同一校验口径。
 - 昵称：NFC 标准化、两端去空白后 2～16 个码点，可重名；禁止控制字符与冒充官方的保留名称；按纯文本输出。
-- 显示数据用途与服务条款入口，由用户主动确认；未勾选不提交。榜单参与是独立开关，默认关闭，不捆绑服务条款。
+- 显示数据用途与服务条款入口，由用户主动确认；未勾选不提交。榜单参与是独立开关，注册后默认开启，可在资料设置中关闭；不捆绑服务条款。
 - 注册成功即建立普通会话；展示一次恢复码，提示妥善保存，然后回到原界面。恢复码不进入日志、埋点或本地存储。
 - 登录错误统一“账号或密码错误”，不在登录／找回接口透露账号存在性。注册用户名冲突可明确告知。
 - 无邮箱／手机号：恢复账号使用用户名＋恢复码；两者与密码均丢失时，不做人工凭昵称认领或管理员直接设密。
@@ -335,7 +335,7 @@ deploy/stockgame-api.service     # systemd
 
 | 表 | 必需字段与约束 |
 |---|---|
-| users | id PK；username_normalized UNIQUE；password_hash；nickname；avatar_id CHECK 1…12；role=user/admin；status=active/disabled/deleted；leaderboard_opt_in 默认 false；recovery_code_hash；created_at、updated_at、deleted_at |
+| users | id PK；username_normalized UNIQUE；password_hash；nickname；avatar_id CHECK 1…12；role=user/admin；status=active/disabled/deleted；leaderboard_opt_in（注册 API 默认 true，库列历史 DEFAULT 仍为 0；既有行不强制迁移）；recovery_code_hash；created_at、updated_at、deleted_at |
 | sessions | token_hash PK；user_id FK；csrf_token_hash；created_at、last_seen_at、expires_at、revoked_at；admin_verified_at 可空；token 原文不落库 |
 | datasets | version PK（规范化行情文件 SHA256）；file_path（服务端只读路径）；sha256；stock_count；date_min、date_max；created_at；active；复权方式和导入校验摘要 |
 | game_sessions | id PK；user_id FK；create_key；create_payload_hash；rule_version；dataset_version FK；fill_mode；stock_code、stock_name、window_start；snapshot_json、snapshot_sha256；status；started_at、expires_at、finished_at；UNIQUE(user_id, create_key) |
@@ -453,7 +453,7 @@ nginx 做基础 IP 请求速率限制；单 API 进程做业务限流。进程�
 
 ### 11.3 数据用途与保留
 
-- 只收集账号、密码哈希、昵称头像、必要战绩与运维事件。公开榜参与默认关闭，关闭后立即去榜，私有记录保留。
+- 只收集账号、密码哈希、昵称头像、必要战绩与运维事件。公开榜参与注册默认开启，用户可在设置关闭；关闭后立即去榜，私有记录保留。
 - 日志不含密码、恢复码、cookie、CSRF token、完整请求 body。仅为滥用排查保留必要 IP，运维访问受控；应用日志默认 30 天、审计 180 天，这是产品保留策略，不是法律结论。
 - 未结算过期／放弃局 30 天后清理快照与动作；有效战绩随账号保留；服务条款说明数据范围及删除流程。
 - 注销立即去标识并使公开成绩不可见；30 天内删除该账号凭据、session、对局及成绩，保留不含昵称／登录名的必要审计。用户名在清理前保持占用，清理后可再注册为新账号，不恢复旧身份。

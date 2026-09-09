@@ -277,7 +277,7 @@ function ensureAuthDom() {
             </label>
             <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">🎲</button>
           </div>
-          <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜（默认关闭）</label>
+          <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜</label>
           <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
           <hr>
           <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
@@ -625,7 +625,7 @@ async function onRegister(ev) {
         nickname: nickname || undefined,
         avatarId: pendingRegisterAvatarId,
         termsVersion: "v1",
-        leaderboardOptIn: false,
+        leaderboardOptIn: true,
       },
     });
     authState.user = data.user;

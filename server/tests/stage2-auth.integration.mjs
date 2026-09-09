@@ -134,7 +134,6 @@ async function main() {
         password,
         nickname: "验测同学",
         termsVersion: "v1",
-        leaderboardOptIn: false,
       },
     });
     const ok = r.status === 201 && r.json?.data?.user?.username === uniq && r.json?.data?.csrfToken && r.json?.data?.recoveryCode == null;
@@ -144,7 +143,7 @@ async function main() {
     const flags = cookieFlags(r.setCookies, "stockgame_session");
     record("P0-1-register", "P0", "Register username+password min8 letter+digit", ok && !!sessionToken, `status=${r.status} user=${user?.username} avatar=${user?.avatarId} cookie=${!!sessionToken}`);
     record("P0-2a", "P0", "Session cookie httpOnly", flags.httpOnly && !!sessionToken, `flags=${JSON.stringify(flags)}`);
-    record("P1-optin-default", "P1", "leaderboard_opt_in default false", user?.leaderboardOptIn === false, `optIn=${user?.leaderboardOptIn}`);
+    record("P1-optin-default", "P1", "leaderboard_opt_in default true", user?.leaderboardOptIn === true, `optIn=${user?.leaderboardOptIn}`);
     record("P0-6-no-recovery", "P0", "Register does not return recoveryCode", r.json?.data?.recoveryCode == null, `recovery=${r.json?.data?.recoveryCode}`);
   }
 

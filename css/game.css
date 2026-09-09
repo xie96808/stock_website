@@ -575,14 +575,63 @@
     .dashboard-layout { grid-template-columns: 1fr; }
     .asset-board { order: 2; }
     .dashboard-main { order: 1; }
+
+    /* Keep Buy / Sell / Hold visible while viewing the K-line (mobile only). */
+    .game-screen.active {
+        /* room for fixed 3-up action row + hint + safe area */
+        padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .action-zone {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 35;
+        margin-top: 0;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px 8px;
+        align-items: stretch;
+        background: var(--card);
+        border-top: 1.6px solid var(--line);
+        box-shadow: 0 -2px 0 var(--line);
+    }
+
+    .action-zone .action-btn {
+        width: auto;
+        padding: 12px 6px;
+        letter-spacing: 0.12em;
+        font-size: 0.95rem;
+    }
+
+    .action-zone .action-hint {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 0 4px 2px;
+        font-size: 0.72rem;
+    }
+
+    .action-zone #finishBtn {
+        grid-column: 1 / -1;
+    }
+
+    /* Shorter chart so sticky bar + progress leave usable K-line viewport */
+    .market-stage { min-height: 280px; }
+    #kline-chart { min-height: 240px; }
 }
 
 @media (max-width: 600px) {
-    .market-stage { min-height: 300px; }
-    #kline-chart { min-height: 260px; }
+    .market-stage { min-height: 260px; }
+    #kline-chart { min-height: 220px; }
     .action-btn { padding: 11px; font-size: 0.95rem; }
+    .action-zone .action-btn { padding: 11px 4px; font-size: 0.9rem; letter-spacing: 0.08em; }
     .metric-value { font-size: 1.15rem; }
     .board-meta-grid { grid-template-columns: 1fr 1fr; }
+    .game-screen.active {
+        padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 .status-value.gain    { color: var(--gain-color); text-shadow: none; }
