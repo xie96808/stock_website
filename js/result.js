@@ -8,9 +8,10 @@ import {
     refreshShareRankMeta,
     updateShareRankHint,
     saveResultShareImage,
+    copyResultShareText,
     openResultLeaderboard,
 } from './result-share.js';
-export { saveResultShareImage, openResultLeaderboard };
+export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
 
 function calcGrade(finalReturnPercent, bsScore) {
     // Emphasize realized return; BS is a light tie-breaker only.
