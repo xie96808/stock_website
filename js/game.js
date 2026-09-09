@@ -1,6 +1,6 @@
 // ========== GAME FUNCTIONS ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
+import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_LABELS, MA_DAY_COLORS } from './utils.js';
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import { persistCurrentCloudDraft, clearCloudGameDraft } from './game-sync.js';
@@ -240,7 +240,8 @@ export function updateChart() {
     const histLen = gameState.historyLength;
     const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
 
-    const dates = visibleData.map(d => d.date);
+    // Axis shows day index (1…N); calendar date stays in tooltip / OHLC panel.
+    const dayLabels = buildDayIndexLabels(visibleData.length);
     const ohlc = visibleData.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = visibleData.map(d => d.volume);
     const volumeColors = visibleData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
@@ -250,21 +251,21 @@ export function updateChart() {
     const ma20 = calculateMA(visibleData, 20);
     const ma30 = calculateMA(visibleData, 30);
 
-    // Buy/sell markers on game chart
+    // Buy/sell markers on game chart (coord x = day-index category label)
     const markPoints = gameState.tradeHistory.map(trade => ({
         name: trade.type === 'buy' ? '买' : '卖',
-        coord: [histLen + trade.day - 1, trade.price],
+        coord: [String(histLen + trade.day), trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
-    })).filter(p => p.coord[0] < visibleData.length);
+    })).filter(p => Number(p.coord[0]) <= visibleData.length);
 
     const maSelected = {
-        MA5: maChecked('indicatorMA5'),
-        MA10: maChecked('indicatorMA10'),
-        MA20: maChecked('indicatorMA20'),
-        MA30: maChecked('indicatorMA30'),
+        '5日线': maChecked('indicatorMA5'),
+        '10日线': maChecked('indicatorMA10'),
+        '20日线': maChecked('indicatorMA20'),
+        '30日线': maChecked('indicatorMA30'),
     };
 
     const option = {
@@ -272,12 +273,12 @@ export function updateChart() {
         animation: true,
         animationDuration: 300,
         legend: {
-            data: ['MA5', 'MA10', 'MA20', 'MA30'],
+            data: MA_DAY_LABELS.slice(),
             selected: maSelected,
             selectedMode: false,
             top: 5,
             left: 10,
-            textStyle: { color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 11 },
+            textStyle: { color: '#8b949e', fontFamily: 'Noto Sans SC', fontSize: 11 },
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
@@ -327,15 +328,16 @@ export function updateChart() {
                 }
                 const isUp = close >= open;
                 const clr = isUp ? '#e05252' : '#3db86a';
+                // Keep original calendar date in tooltip (axis itself shows day index).
+                const dateLabel = kd ? kd.date : '';
                 let html = `<div style="padding:4px 2px">
-                    <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${cs.axisValue}</div>
+                    <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${dateLabel}</div>
                     <div style="color:${clr}">开 ${open.toFixed(2)}&nbsp;&nbsp;收 ${close.toFixed(2)}</div>
                     <div>低 ${low.toFixed(2)}&nbsp;&nbsp;高 ${high.toFixed(2)}</div>`;
                 html += `<div style="color:#8b949e">量 ${(volume / 10000).toFixed(0)}万手</div>`;
-                const maMap = { MA5: '#f5c542', MA10: '#42a5f5', MA20: '#ab47bc', MA30: '#26a69a' };
                 params.forEach(p => {
-                    if (maMap[p.seriesName] && p.data != null)
-                        html += `<div style="color:${maMap[p.seriesName]}">${p.seriesName}: ${p.data.toFixed(2)}</div>`;
+                    if (MA_DAY_COLORS[p.seriesName] && p.data != null)
+                        html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${p.data.toFixed(2)}</div>`;
                 });
                 html += '</div>';
                 return html;
@@ -348,14 +350,17 @@ export function updateChart() {
         ],
         xAxis: [
             {
-                type: 'category', data: dates, gridIndex: 0,
+                type: 'category', data: dayLabels, gridIndex: 0,
                 axisLine: { lineStyle: { color: 'rgba(88,166,255,0.15)' } },
                 axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
             },
             {
-                type: 'category', data: dates, gridIndex: 1,
+                type: 'category', data: dayLabels, gridIndex: 1,
                 axisLine: { lineStyle: { color: 'rgba(88,166,255,0.15)' } },
-                axisLabel: { color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 30 },
+                axisLabel: {
+                    color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
+                    formatter: (v) => v
+                },
                 splitLine: { show: false }
             }
         ],
@@ -378,19 +383,19 @@ export function updateChart() {
                 }
             },
             {
-                name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5,
+                name: '5日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5,
                 smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' }
             },
             {
-                name: 'MA10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10,
+                name: '10日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10,
                 smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' }
             },
             {
-                name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
+                name: '20日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
                 smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' }
             },
             {
-                name: 'MA30', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30,
+                name: '30日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30,
                 smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' }
             },
             {

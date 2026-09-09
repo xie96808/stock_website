@@ -1,6 +1,6 @@
 // ========== RESULT SCREEN ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
+import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_COLORS } from './utils.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
 import {
@@ -146,7 +146,9 @@ export function drawResultChart() {
 
     const histLen = gameState.historyLength;
     const fullData = gameState.gameKline.slice(0, histLen + 30); // history + day-1…day-30
-    const dates = fullData.map(d => d.date);
+    // Axis: day index 1…N (no calendar dates). Tooltip keeps original date.
+    const dayLabels = buildDayIndexLabels(fullData.length);
+    const startDayLabel = String(histLen + 1); // 开局第1天 category
     const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = fullData.map(d => d.volume);
     const volumeColors = fullData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
@@ -158,18 +160,18 @@ export function drawResultChart() {
 
     const markPoints = gameState.tradeHistory.map(trade => ({
         name: trade.type === 'buy' ? '买' : '卖',
-        coord: [histLen + trade.day - 1, trade.price],
+        coord: [String(histLen + trade.day), trade.price],
         value: trade.type === 'buy' ? '买' : '卖',
         itemStyle: {
             color: trade.type === 'buy' ? '#e05252' : '#3db86a'
         }
-    })).filter(p => p.coord[0] < histLen + 30);
+    })).filter(p => Number(p.coord[0]) <= histLen + 30);
 
     if (gameState.valuation) {
         const v = gameState.valuation;
         markPoints.push({
             name: '估值',
-            coord: [histLen + v.day - 1, v.price],
+            coord: [String(histLen + v.day), v.price],
             value: '估值',
             symbol: 'diamond',
             symbolSize: 14,
@@ -178,12 +180,14 @@ export function drawResultChart() {
         });
     }
 
+    // 开局第1天: marked via markLine + x-axis emphasis below.
+
     const bp = gameState.bestPoints || { buys: [], sells: [] };
     const bestMarkPoints = [];
     bp.buys.forEach((p, idx) => {
         bestMarkPoints.push({
             name: 'B' + (idx + 1),
-            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].low],
+            coord: [String(histLen + p.day), fullData[histLen + p.day - 1].low],
             value: 'B' + (idx + 1),
             symbolOffset: [0, 20],
             symbol: 'diamond',
@@ -195,7 +199,7 @@ export function drawResultChart() {
     bp.sells.forEach((p, idx) => {
         bestMarkPoints.push({
             name: 'S' + (idx + 1),
-            coord: [histLen + p.day - 1, fullData[histLen + p.day - 1].high],
+            coord: [String(histLen + p.day), fullData[histLen + p.day - 1].high],
             value: 'S' + (idx + 1),
             symbol: 'diamond',
             symbolSize: 14,
@@ -206,28 +210,63 @@ export function drawResultChart() {
 
     const option = {
         backgroundColor: 'transparent',
+        legend: {
+            data: ['5日线', '10日线', '20日线', '30日线'],
+            top: 0,
+            left: 10,
+            textStyle: { color: '#6b6660', fontFamily: 'Noto Sans SC', fontSize: 11 },
+            itemWidth: 18,
+            itemHeight: 2,
+            itemGap: 12
+        },
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'cross' },
             backgroundColor: 'rgba(22, 22, 29, 0.95)',
             borderColor: 'rgba(200, 164, 78, 0.2)',
-            textStyle: { color: '#e8e4dd', fontFamily: 'JetBrains Mono' }
+            textStyle: { color: '#e8e4dd', fontFamily: 'JetBrains Mono' },
+            formatter: function(params) {
+                const cs = params.find(p => p.seriesName === 'K线');
+                if (!cs) return '';
+                const idx = cs.dataIndex;
+                const kd = fullData[idx];
+                if (!kd) return '';
+                const isUp = kd.close >= kd.open;
+                const clr = isUp ? '#e05252' : '#3db86a';
+                let html = `<div style="padding:4px 2px">
+                    <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${kd.date}</div>
+                    <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
+                    <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
+                    <div style="color:#8b949e">量 ${(kd.volume / 10000).toFixed(0)}万手</div>`;
+                params.forEach(p => {
+                    if (MA_DAY_COLORS[p.seriesName] && p.data != null)
+                        html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${Number(p.data).toFixed(2)}</div>`;
+                });
+                html += '</div>';
+                return html;
+            }
         },
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: [
-            { left: '10%', right: '2%', top: '5%', bottom: '35%' },
+            { left: '10%', right: '2%', top: '12%', bottom: '35%' },
             { left: '10%', right: '2%', top: '72%', bottom: '8%' }
         ],
         xAxis: [
             {
-                type: 'category', data: dates, gridIndex: 0,
+                type: 'category', data: dayLabels, gridIndex: 0,
                 axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
                 axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
             },
             {
-                type: 'category', data: dates, gridIndex: 1,
+                type: 'category', data: dayLabels, gridIndex: 1,
                 axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
-                axisLabel: { color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 45 }
+                axisLabel: {
+                    color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
+                    formatter: (v) => (v === startDayLabel ? '{start|' + v + '}' : v),
+                    rich: {
+                        start: { color: '#f5c542', fontWeight: 'bold', fontSize: 11 }
+                    }
+                }
             }
         ],
         yAxis: [
@@ -247,16 +286,42 @@ export function drawResultChart() {
                     data: [...markPoints, ...bestMarkPoints],
                     symbol: 'pin', symbolSize: 40,
                     label: { formatter: '{b}', color: '#fff', fontWeight: 'bold' }
+                },
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    animation: false,
+                    data: [{
+                        xAxis: startDayLabel,
+                        label: {
+                            show: true,
+                            formatter: '开局第1天',
+                            position: 'insideEndTop',
+                            color: '#f5c542',
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            fontFamily: 'Noto Sans SC',
+                            backgroundColor: 'rgba(22,22,29,0.88)',
+                            padding: [3, 6],
+                            borderRadius: 3
+                        },
+                        lineStyle: {
+                            color: '#f5c542',
+                            type: 'dashed',
+                            width: 2,
+                            opacity: 0.9
+                        }
+                    }]
                 }
             },
             {
                 name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes,
                 itemStyle: { color: function(params) { return volumeColors[params.dataIndex]; } }
             },
-            { name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' } },
-            { name: 'MA10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' } },
-            { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' } },
-            { name: 'MA30', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' } }
+            { name: '5日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' } },
+            { name: '10日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' } },
+            { name: '20日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' } },
+            { name: '30日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' } }
         ]
     };
 
