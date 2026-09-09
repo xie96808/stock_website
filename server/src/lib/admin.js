@@ -4,6 +4,7 @@ import { config } from "./config.js";
 import { findUserById, publicUser } from "./users.js";
 import { revokeAllUserSessions } from "./sessions.js";
 import { writeAuditLog } from "./audit.js";
+import { invalidateLeaderboardCache } from "./leaderboard.js";
 
 function requireReason(reason) {
   if (typeof reason !== "string") return "必须填写原因";
@@ -144,6 +145,7 @@ export function setUserStatus({
     });
   });
   tx();
+  invalidateLeaderboardCache();
   return { status: 200, data: { user: publicUser(findUserById(targetUserId)) } };
 }
 
@@ -360,6 +362,7 @@ export function moderateGame({
     });
   });
   tx();
+  invalidateLeaderboardCache();
 
   return { status: 200, data: { game: getAdminGame(gameId) } };
 }

@@ -5,6 +5,12 @@ import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 const FILL_SET = new Set(FILL_MODES);
 const TOP_N = 10;
 
+/** Short in-memory TTL for shared board (topN + total). Viewer fields stay request-scoped. */
+const CACHE_TTL_MS = Number(process.env.LEADERBOARD_CACHE_TTL_MS || 8000);
+
+/** @type {Map<string, { expiresAt: number, payload: object }>} */
+const boardCache = new Map();
+
 /**
  * Resolve board key; defaults to current published rule + dataset versions.
  */
@@ -31,6 +37,29 @@ export function resolveBoardKey(query = {}) {
   return { fillMode, ruleVersion, datasetVersion };
 }
 
+function boardCacheKey(board) {
+  return `${board.fillMode}\0${board.ruleVersion}\0${board.datasetVersion}`;
+}
+
+/**
+ * Drop cached boards. Pass fillMode to clear one mode across versions, or omit to clear all.
+ * Call after settle / unlist / ban / opt-in (and test helpers that mutate ranks).
+ */
+export function invalidateLeaderboardCache(fillMode) {
+  if (!fillMode) {
+    boardCache.clear();
+    return;
+  }
+  for (const key of boardCache.keys()) {
+    if (key.startsWith(`${fillMode}\0`)) boardCache.delete(key);
+  }
+}
+
+/** Test / ops helper */
+export function getLeaderboardCacheStats() {
+  return { size: boardCache.size, ttlMs: CACHE_TTL_MS };
+}
+
 function ppmToPct(ppm) {
   return (ppm / 10000).toFixed(2);
 }
@@ -51,85 +80,150 @@ function publicEntry(row) {
 }
 
 /**
- * Eligible settled games for a board, one best seat per user.
- * Ranking: return_ppm DESC, finished_at ASC, user_id ASC — deterministic ranks.
- * Per-user gameCount/winRate match me/stats: settled + validity=valid on board key
- * (does not require trade_count >= 1).
+ * Eligible best-seat SQL fragment (binds: rule, dataset, fill ×1).
+ * One row per opted-in active user with at least one eligible settled game.
  */
-function loadRankedSeats(db, { ruleVersion, datasetVersion, fillMode }) {
-  const sql = `
-    WITH user_stats AS (
-      SELECT
-        s.user_id AS user_id,
-        COUNT(*) AS game_count,
-        SUM(CASE WHEN r.return_ppm > 0 THEN 1 ELSE 0 END) AS win_count
-      FROM game_sessions s
-      JOIN game_results r ON r.game_id = s.id
-      WHERE s.status = 'settled'
-        AND s.rule_version = ?
-        AND s.dataset_version = ?
-        AND s.fill_mode = ?
-        AND r.validity = 'valid'
-      GROUP BY s.user_id
-    ),
-    eligible AS (
-      SELECT
-        s.user_id AS user_id,
-        s.id AS game_id,
-        s.finished_at AS finished_at,
-        r.return_ppm AS return_ppm,
-        u.nickname AS nickname,
-        u.avatar_id AS avatar_id,
-        u.avatar_custom_path AS avatar_custom_path,
-        COALESCE(st.game_count, 0) AS game_count,
-        CASE
-          WHEN COALESCE(st.game_count, 0) = 0 THEN NULL
-          ELSE ROUND(100.0 * st.win_count / st.game_count, 2)
-        END AS win_rate,
-        ROW_NUMBER() OVER (
-          PARTITION BY s.user_id
-          ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
-        ) AS seat_rn
-      FROM game_sessions s
-      JOIN game_results r ON r.game_id = s.id
-      JOIN users u ON u.id = s.user_id
-      LEFT JOIN user_stats st ON st.user_id = s.user_id
-      WHERE s.status = 'settled'
-        AND s.rule_version = ?
-        AND s.dataset_version = ?
-        AND s.fill_mode = ?
-        AND r.validity = 'valid'
-        AND r.leaderboard_hidden = 0
-        AND r.trade_count >= 1
-        AND u.status = 'active'
-        AND u.role = 'user'
-        AND u.leaderboard_opt_in = 1
-    ),
-    best AS (
-      SELECT * FROM eligible WHERE seat_rn = 1
-    ),
-    ranked AS (
-      SELECT
-        user_id,
-        game_id,
-        finished_at,
-        return_ppm,
-        nickname,
-        avatar_id,
-        avatar_custom_path,
-        game_count,
-        win_rate,
-        ROW_NUMBER() OVER (
-          ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
-        ) AS rank
-      FROM best
+const BEST_SEATS_CTE = `
+  WITH eligible AS (
+    SELECT
+      s.user_id AS user_id,
+      s.id AS game_id,
+      s.finished_at AS finished_at,
+      r.return_ppm AS return_ppm,
+      u.nickname AS nickname,
+      u.avatar_id AS avatar_id,
+      u.avatar_custom_path AS avatar_custom_path,
+      ROW_NUMBER() OVER (
+        PARTITION BY s.user_id
+        ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
+      ) AS seat_rn
+    FROM game_sessions s
+    JOIN game_results r ON r.game_id = s.id
+    JOIN users u ON u.id = s.user_id
+    WHERE s.status = 'settled'
+      AND s.rule_version = ?
+      AND s.dataset_version = ?
+      AND s.fill_mode = ?
+      AND r.validity = 'valid'
+      AND r.leaderboard_hidden = 0
+      AND r.trade_count >= 1
+      AND u.status = 'active'
+      AND u.role = 'user'
+      AND u.leaderboard_opt_in = 1
+  ),
+  best AS (
+    SELECT user_id, game_id, finished_at, return_ppm, nickname, avatar_id, avatar_custom_path
+    FROM eligible
+    WHERE seat_rn = 1
+  )
+`;
+
+function boardBinds(board) {
+  return [board.ruleVersion, board.datasetVersion, board.fillMode];
+}
+
+function loadUserStatsMap(db, userIds, board) {
+  const map = new Map();
+  if (!userIds.length) return map;
+  const placeholders = userIds.map(() => "?").join(",");
+  const rows = db
+    .prepare(
+      `SELECT
+         s.user_id AS user_id,
+         COUNT(*) AS game_count,
+         SUM(CASE WHEN r.return_ppm > 0 THEN 1 ELSE 0 END) AS win_count
+       FROM game_sessions s
+       JOIN game_results r ON r.game_id = s.id
+       WHERE s.user_id IN (${placeholders})
+         AND s.status = 'settled'
+         AND s.rule_version = ?
+         AND s.dataset_version = ?
+         AND s.fill_mode = ?
+         AND r.validity = 'valid'
+       GROUP BY s.user_id`
     )
-    SELECT * FROM ranked ORDER BY rank ASC
-  `;
-  return db.prepare(sql).all(
-    ruleVersion, datasetVersion, fillMode,
-    ruleVersion, datasetVersion, fillMode
+    .all(...userIds, ...boardBinds(board));
+  for (const row of rows) {
+    const gameCount = Number(row.game_count || 0);
+    const winCount = Number(row.win_count || 0);
+    map.set(row.user_id, {
+      game_count: gameCount,
+      win_rate: gameCount
+        ? Number(((100.0 * winCount) / gameCount).toFixed(2))
+        : null,
+    });
+  }
+  return map;
+}
+
+/**
+ * Shared board payload: Top N + total only (not full rank list).
+ * Stats are attached only for the Top N user ids.
+ */
+function computeSharedBoard(db, board) {
+  const binds = boardBinds(board);
+  const topRows = db
+    .prepare(
+      `${BEST_SEATS_CTE}
+       SELECT
+         user_id,
+         game_id,
+         finished_at,
+         return_ppm,
+         nickname,
+         avatar_id,
+         avatar_custom_path,
+         ROW_NUMBER() OVER (
+           ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
+         ) AS rank
+       FROM best
+       ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
+       LIMIT ?`
+    )
+    .all(...binds, TOP_N);
+
+  const totalRow = db
+    .prepare(`${BEST_SEATS_CTE} SELECT COUNT(*) AS n FROM best`)
+    .get(...binds);
+  const total = Number(totalRow?.n || 0);
+
+  const stats = loadUserStatsMap(
+    db,
+    topRows.map((r) => r.user_id),
+    board
   );
+  for (const row of topRows) {
+    const st = stats.get(row.user_id);
+    row.game_count = st?.game_count ?? 0;
+    row.win_rate = st?.win_rate ?? null;
+  }
+
+  return {
+    fillMode: board.fillMode,
+    ruleVersion: board.ruleVersion,
+    datasetVersion: board.datasetVersion,
+    asOf: new Date().toISOString(),
+    top10: topRows.map(publicEntry),
+    total,
+    /** Compact seats for myRank when viewer is inside Top N (avoid extra query). */
+    _topUserIds: topRows.map((r) => ({ userId: r.user_id, rank: r.rank })),
+  };
+}
+
+function getSharedBoard(db, board) {
+  const key = boardCacheKey(board);
+  const now = Date.now();
+  if (CACHE_TTL_MS > 0) {
+    const hit = boardCache.get(key);
+    if (hit && hit.expiresAt > now) {
+      return { ...hit.payload, _cacheHit: true };
+    }
+  }
+  const payload = computeSharedBoard(db, board);
+  if (CACHE_TTL_MS > 0) {
+    boardCache.set(key, { expiresAt: now + CACHE_TTL_MS, payload });
+  }
+  return { ...payload, _cacheHit: false };
 }
 
 function userIneligibility(db, user, board) {
@@ -195,6 +289,60 @@ function loadUserBoardStats(db, userId, board) {
 }
 
 /**
+ * Viewer's best eligible seat on this board (for rank lookup outside Top N).
+ */
+function loadViewerBestSeat(db, userId, board) {
+  return db
+    .prepare(
+      `SELECT s.user_id AS user_id, s.id AS game_id, s.finished_at AS finished_at, r.return_ppm AS return_ppm
+       FROM game_sessions s
+       JOIN game_results r ON r.game_id = s.id
+       JOIN users u ON u.id = s.user_id
+       WHERE s.user_id = ?
+         AND s.status = 'settled'
+         AND s.rule_version = ?
+         AND s.dataset_version = ?
+         AND s.fill_mode = ?
+         AND r.validity = 'valid'
+         AND r.leaderboard_hidden = 0
+         AND r.trade_count >= 1
+         AND u.status = 'active'
+         AND u.role = 'user'
+         AND u.leaderboard_opt_in = 1
+       ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
+       LIMIT 1`
+    )
+    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+}
+
+/**
+ * Deterministic dense rank: 1 + count of seats strictly better
+ * (return_ppm DESC, finished_at ASC, user_id ASC).
+ */
+function rankForSeat(db, board, seat) {
+  const binds = boardBinds(board);
+  const row = db
+    .prepare(
+      `${BEST_SEATS_CTE}
+       SELECT COUNT(*) AS better
+       FROM best
+       WHERE return_ppm > ?
+          OR (return_ppm = ? AND finished_at < ?)
+          OR (return_ppm = ? AND finished_at = ? AND user_id < ?)`
+    )
+    .get(
+      ...binds,
+      seat.return_ppm,
+      seat.return_ppm,
+      seat.finished_at,
+      seat.return_ppm,
+      seat.finished_at,
+      seat.user_id
+    );
+  return Number(row?.better || 0) + 1;
+}
+
+/**
  * GET /leaderboard payload.
  * @param {{ fillMode, ruleVersion?, datasetVersion? }} query
  * @param {object|null} viewerUser publicUser-shaped or null
@@ -204,9 +352,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
   if (board.error) return { error: board.error };
 
   const db = openDb();
-  const asOf = new Date().toISOString();
-  const ranked = loadRankedSeats(db, board);
-  const top10 = ranked.slice(0, TOP_N).map(publicEntry);
+  const shared = getSharedBoard(db, board);
 
   let myRank = null;
   let myGameCount = null;
@@ -214,30 +360,40 @@ export function getLeaderboard(query = {}, viewerUser = null) {
   let ineligibilityReason = null;
 
   if (viewerUser) {
-    const seat = ranked.find((r) => r.user_id === viewerUser.id);
-    if (seat) {
-      myRank = seat.rank;
-      myGameCount = Number(seat.game_count || 0);
-      myWinRate = seat.win_rate != null ? Number(seat.win_rate) : null;
+    const inTop = shared._topUserIds.find((s) => s.userId === viewerUser.id);
+    if (inTop) {
+      myRank = inTop.rank;
+      const seat = shared.top10.find((r) => r.rank === inTop.rank);
+      myGameCount = seat?.gameCount ?? 0;
+      myWinRate = seat?.winRate ?? null;
       ineligibilityReason = null;
     } else {
-      myRank = null;
-      ineligibilityReason = userIneligibility(db, viewerUser, board);
-      const stats = loadUserBoardStats(db, viewerUser.id, board);
-      myGameCount = stats.gameCount;
-      myWinRate = stats.winRate;
+      const seat = loadViewerBestSeat(db, viewerUser.id, board);
+      if (seat) {
+        myRank = rankForSeat(db, board, seat);
+        const stats = loadUserBoardStats(db, viewerUser.id, board);
+        myGameCount = stats.gameCount;
+        myWinRate = stats.winRate;
+        ineligibilityReason = null;
+      } else {
+        myRank = null;
+        ineligibilityReason = userIneligibility(db, viewerUser, board);
+        const stats = loadUserBoardStats(db, viewerUser.id, board);
+        myGameCount = stats.gameCount;
+        myWinRate = stats.winRate;
+      }
     }
   }
 
   return {
     status: 200,
     data: {
-      fillMode: board.fillMode,
-      ruleVersion: board.ruleVersion,
-      datasetVersion: board.datasetVersion,
-      asOf,
-      top10,
-      total: ranked.length,
+      fillMode: shared.fillMode,
+      ruleVersion: shared.ruleVersion,
+      datasetVersion: shared.datasetVersion,
+      asOf: shared.asOf,
+      top10: shared.top10,
+      total: shared.total,
       myRank,
       myGameCount,
       myWinRate,
@@ -249,6 +405,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
 /** Test helper: override return_ppm / finished_at after settle */
 export function forceResultRanking(gameId, { returnPpm, finishedAt, tradeCount, validity, leaderboardHidden, ruleVersion } = {}) {
   const db = openDb();
+  let fillMode = null;
   if (returnPpm != null || tradeCount != null || validity != null || leaderboardHidden != null) {
     const row = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
     if (!row) throw new Error(`no result for ${gameId}`);
@@ -270,6 +427,7 @@ export function forceResultRanking(gameId, { returnPpm, finishedAt, tradeCount, 
   if (finishedAt != null || ruleVersion != null) {
     const sess = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
     if (!sess) throw new Error(`no session for ${gameId}`);
+    fillMode = sess.fill_mode;
     db.prepare(
       `UPDATE game_sessions SET finished_at = ?, rule_version = ? WHERE id = ?`
     ).run(
@@ -277,7 +435,11 @@ export function forceResultRanking(gameId, { returnPpm, finishedAt, tradeCount, 
       ruleVersion != null ? ruleVersion : sess.rule_version,
       gameId
     );
+  } else {
+    const sess = db.prepare(`SELECT fill_mode FROM game_sessions WHERE id = ?`).get(gameId);
+    fillMode = sess?.fill_mode || null;
   }
+  invalidateLeaderboardCache(fillMode || undefined);
 }
 
 export function setUserFlags(userId, { role, status, leaderboardOptIn } = {}) {
@@ -297,4 +459,5 @@ export function setUserFlags(userId, { role, status, leaderboardOptIn } = {}) {
     leaderboardOptIn != null ? (leaderboardOptIn ? 1 : 0) : row.leaderboard_opt_in,
     userId
   );
+  invalidateLeaderboardCache();
 }
