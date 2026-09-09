@@ -186,6 +186,12 @@ test("P0 second active blocked / abandon then create", async () => {
   });
   assert.equal(c2.status, 409);
   assert.equal(c2.json.error.code, "ACTIVE_GAME_EXISTS");
+  assert.equal(c2.json.error.details.gameId, c1.json.data.gameId);
+  assert.ok(c2.json.error.details.game);
+  assert.equal(c2.json.error.details.game.gameId, c1.json.data.gameId);
+  assert.equal(c2.json.error.details.game.fillMode, "next_open");
+  assert.equal(typeof c2.json.error.details.game.stockIndex, "number");
+  assert.equal(typeof c2.json.error.details.game.windowStartIndex, "number");
 
   const abd = await api(`/api/v1/games/${c1.json.data.gameId}/abandon`, {
     method: "POST",

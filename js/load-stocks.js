@@ -1,5 +1,11 @@
 import { getAuthState } from './auth.js';
-import { createCloudGame } from './game-sync.js';
+import {
+  createCloudGame,
+  fetchActiveCloudGame,
+  abandonActiveCloudGame,
+  loadCloudGameDraft,
+  clearCloudGameDraft,
+} from './game-sync.js';
 
 function perfEnabled() {
   try {
@@ -49,25 +55,73 @@ export function attachDeferredStart(startGame, gameState) {
   function showChooseView() {
     const choose = choosePane();
     const loading = loadingPane();
+    const conflict = conflictPane();
     const title = titleEl();
     if (choose) choose.hidden = false;
     if (loading) loading.hidden = true;
+    if (conflict) conflict.hidden = true;
     if (title) title.textContent = '选择成交方式';
     setProgress(0, '股票资源加载中…');
     const modal = modalEl();
     if (modal) modal.classList.remove('is-loading');
   }
 
+  function conflictPane() {
+    return document.getElementById('fillModeConflictPane');
+  }
+
   function showLoadingView() {
     const choose = choosePane();
     const loading = loadingPane();
+    const conflict = conflictPane();
     const title = titleEl();
     if (choose) choose.hidden = true;
+    if (conflict) conflict.hidden = true;
     if (loading) loading.hidden = false;
     if (title) title.textContent = '正在开局';
     const modal = modalEl();
     if (modal) modal.classList.add('is-loading');
     setProgress(4, '股票资源加载中…');
+  }
+
+  function showConflictView(meta) {
+    const choose = choosePane();
+    const loading = loadingPane();
+    const conflict = conflictPane();
+    const title = titleEl();
+    if (choose) choose.hidden = true;
+    if (loading) loading.hidden = true;
+    if (conflict) conflict.hidden = false;
+    if (title) title.textContent = '已有云端对局';
+    const modal = modalEl();
+    if (modal) modal.classList.remove('is-loading');
+    const detail = document.getElementById('fillModeConflictDetail');
+    if (detail) {
+      const fillLabel = meta && meta.fillMode === 'same_close' ? '当日收盘成交' : '次日开盘成交';
+      const stockBit = meta && (meta.stockName || meta.stockCode)
+        ? (' · ' + (meta.stockName || '') + (meta.stockCode ? '（' + meta.stockCode + '）' : ''))
+        : '';
+      const draftBit = meta && meta.draftDay
+        ? ('本机进度：已决策 ' + meta.decided + ' 日，将从第 ' + meta.draftDay + ' 日继续')
+        : '本机暂无未提交进度（将从第 1 日继续同一云端题目）';
+      detail.textContent = fillLabel + stockBit + '。' + draftBit + '。跨设备不保证同步未提交动作。';
+    }
+  }
+
+  let conflictResolver = null;
+
+  function askActiveGameConflict(meta) {
+    return new Promise(function (resolve) {
+      conflictResolver = resolve;
+      showConflictView(meta || {});
+    });
+  }
+
+  function resolveConflict(choice) {
+    if (!conflictResolver) return;
+    const r = conflictResolver;
+    conflictResolver = null;
+    r(choice);
   }
 
   function openModal() {
@@ -120,8 +174,22 @@ export function attachDeferredStart(startGame, gameState) {
   };
 
   window.cancelFillModeModal = function () {
+    if (conflictResolver) {
+      resolveConflict('cancel');
+      closeModal();
+      locked = false;
+      return;
+    }
     if (locked) return;
     closeModal();
+  };
+
+  window.continueActiveCloudGame = function () {
+    resolveConflict('continue');
+  };
+
+  window.restartActiveCloudGame = function () {
+    resolveConflict('restart');
   };
 
   window.confirmFillModeAndStart = function () {
@@ -148,17 +216,53 @@ export function attachDeferredStart(startGame, gameState) {
       const wantCloud = auth.user && playMode !== 'local';
 
       let cloud = null;
+      let resumeActions = null;
       if (wantCloud) {
         await animateTo(78, '创建云端对局…', 320);
         try {
           cloud = await createCloudGame(fillMode);
+          clearCloudGameDraft(); // new seed → drop any stale draft
         } catch (e) {
           if (e && e.code === 'ACTIVE_GAME_EXISTS') {
-            const go = window.confirm('已有进行中的云端对局。放弃旧局并开新局？');
-            if (!go) throw e;
-            const { abandonActiveCloudGame } = await import('./game-sync.js');
-            await abandonActiveCloudGame();
-            cloud = await createCloudGame(fillMode);
+            let active = e.details && e.details.game ? e.details.game : null;
+            if (!active || !active.gameId) {
+              active = await fetchActiveCloudGame();
+            }
+            if (!active || !active.gameId) throw e;
+
+            const draft = loadCloudGameDraft({
+              gameId: active.gameId,
+              userId: auth.user && auth.user.id,
+            });
+            const decided = draft && draft.actions ? draft.actions.length : 0;
+            const choice = await askActiveGameConflict({
+              fillMode: active.fillMode,
+              stockName: active.stockName,
+              stockCode: active.stockCode,
+              decided: decided,
+              draftDay: decided ? decided + 1 : 0,
+            });
+
+            if (choice === 'cancel') {
+              const cancelErr = new Error('已取消');
+              cancelErr.code = 'USER_CANCELLED';
+              throw cancelErr;
+            }
+
+            if (choice === 'continue') {
+              cloud = active;
+              resumeActions = draft && draft.actions ? draft.actions : [];
+              showLoadingView();
+              await animateTo(90, '恢复云端对局…', 280);
+            } else {
+              // restart: abandon old session and create a fresh one
+              showLoadingView();
+              await animateTo(82, '放弃旧局…', 200);
+              await abandonActiveCloudGame();
+              clearCloudGameDraft(active.gameId);
+              cloud = await createCloudGame(fillMode);
+              resumeActions = null;
+            }
           } else {
             throw e;
           }
@@ -170,7 +274,7 @@ export function attachDeferredStart(startGame, gameState) {
 
       await animateTo(94, '初始化模拟盘…', 280);
       if (cloud) {
-        await startGame({ cloud: cloud });
+        await startGame({ cloud: cloud, resumeActions: resumeActions });
       } else {
         await startGame({ practiceOnly: true });
       }
@@ -186,6 +290,10 @@ export function attachDeferredStart(startGame, gameState) {
 
     run()
       .catch(function (err) {
+        if (err && err.code === 'USER_CANCELLED') {
+          showChooseView();
+          return;
+        }
         console.error(err);
         showChooseView();
         const msg = (err && err.message) ? err.message : '股票数据加载失败，请刷新后重试';

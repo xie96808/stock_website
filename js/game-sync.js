@@ -1,6 +1,21 @@
 /** Stage 3: cloud game create / finish with light retry */
 import { api, getAuthState } from "./auth.js";
 import { gameState } from "./state.js";
+import {
+  CLOUD_DRAFT_KEY,
+  normalizeDraftActions,
+  saveCloudGameDraft,
+  loadCloudGameDraft,
+  clearCloudGameDraft,
+} from "./cloud-draft.js";
+
+export {
+  CLOUD_DRAFT_KEY,
+  normalizeDraftActions,
+  saveCloudGameDraft,
+  loadCloudGameDraft,
+  clearCloudGameDraft,
+};
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -29,6 +44,7 @@ async function apiWithHeaders(path, { method = "GET", body, headers = {} } = {})
     err.code = json?.error?.code;
     err.status = res.status;
     err.payload = json;
+    err.details = json?.error?.details;
     throw err;
   }
   return { ok: true, status: res.status, data: json.data, requestId: json.requestId };
@@ -104,6 +120,7 @@ export async function finishCloudGame() {
         gameState.returnPpm = data.returnPpm;
         gameState.returnPct = data.returnPct;
       }
+      clearCloudGameDraft(gameId);
       updateSaveStatusUi();
       import("./leaderboard.js")
         .then((m) => m.invalidateLeaderboardClientCache?.())
@@ -148,11 +165,36 @@ export async function fetchMyStats(params = {}) {
   return data;
 }
 
-export async function abandonActiveCloudGame() {
+/** Active cloud session metadata (seed), or null. */
+export async function fetchActiveCloudGame() {
   const auth = getAuthState();
   if (!auth.user) return null;
   const { data } = await api("/games/active");
+  return data?.gameId ? data : null;
+}
+
+export async function abandonActiveCloudGame() {
+  const auth = getAuthState();
+  if (!auth.user) return null;
+  const data = await fetchActiveCloudGame();
   if (!data?.gameId) return null;
   await api(`/games/${data.gameId}/abandon`, { method: "POST" });
+  clearCloudGameDraft(data.gameId);
   return data.gameId;
+}
+
+
+/** Persist current in-memory cloud game progress (no-op if not cloud). */
+export function persistCurrentCloudDraft() {
+  if (!gameState.cloudMode || !gameState.cloudGameId) return false;
+  const auth = getAuthState();
+  if (!auth.user?.id) return false;
+  return saveCloudGameDraft({
+    gameId: gameState.cloudGameId,
+    userId: auth.user.id,
+    fillMode: gameState.fillMode,
+    actions: gameState.actions,
+    ruleVersion: gameState.ruleVersion,
+    datasetVersion: gameState.datasetVersion,
+  });
 }
