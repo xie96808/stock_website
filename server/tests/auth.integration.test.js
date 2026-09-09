@@ -142,7 +142,7 @@ test("avatar upload png + serve", async () => {
   );
   const boundary = "----stockBoundary7MA4YWxk";
   const body = Buffer.concat([
-    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name=\"avatar\"; filename=\"a.png\"\r\nContent-Type: image/png\r\n\r\n`),
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="avatar"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n`),
     png,
     Buffer.from(`\r\n--${boundary}--\r\n`),
   ]);
