@@ -400,6 +400,7 @@
                     <div class="result-actions">
                         <button class="play-again-btn" onclick="playAgain()">再来一局</button>
                         <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareImageBtn" onclick="saveResultShareImage()">📷 保存分享图</button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareCopyBtn" onclick="copyResultShareText()">📋 复制分享文案</button>
                         <button type="button" class="play-again-btn play-again-btn--ghost" id="resultLeaderboardBtn" onclick="openResultLeaderboard()">查看排行榜</button>
                         <button class="play-again-btn play-again-btn--ghost" onclick="resetGame()">返回首页</button>
                     </div>
@@ -759,7 +760,7 @@
         import { toggleTheme } from './js/theme.js';
         import { startGame, handleAction, finishSettle, toggleIndicatorPanel } from './js/game.js';
         import { attachDeferredStart } from "./js/load-stocks.js";
-        import { resetGame, playAgain, saveResultShareImage, openResultLeaderboard } from './js/result.js';
+        import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
@@ -800,6 +801,7 @@
         window.resetGame = resetGame;
         window.playAgain = playAgain;
         window.saveResultShareImage = saveResultShareImage;
+        window.copyResultShareText = copyResultShareText;
         window.openResultLeaderboard = openResultLeaderboard;
         window.showAcademy = showAcademy;
         window.hideAcademy = hideAcademy;

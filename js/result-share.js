@@ -45,6 +45,97 @@ function buildResultPromoCaption() {
     );
 }
 
+function buildResultShareCopyText() {
+    const opening = '我在「' + SHARE_SITE_NAME + '」用真实 A 股数据练了一局';
+    const ret = formatReturnPctDisplay();
+    const rank = gameState.shareRank;
+    const beat = gameState.shareBeatPct;
+    const ranked = rank != null || beat != null;
+    if (ranked) {
+        const bits = [];
+        if (rank != null) bits.push('目前排在第 ' + rank + ' 名');
+        if (beat != null) bits.push('超越约 ' + beat + '% 的玩家');
+        const mid = bits.join('／');
+        return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
+    }
+    return opening + '，收益率 ' + ret + '。你也来试试？\n' + SHARE_SITE_URL;
+}
+
+function showShareToast(message, kind) {
+    let host = document.getElementById('authToastHost');
+    if (!host) {
+        host = document.createElement('div');
+        host.className = 'auth-toast-host';
+        host.id = 'authToastHost';
+        host.setAttribute('aria-live', 'polite');
+        document.body.appendChild(host);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'auth-toast auth-toast--' + (kind || 'success');
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    host.appendChild(toast);
+    requestAnimationFrame(function () { toast.classList.add('show'); });
+    setTimeout(function () {
+        toast.classList.remove('show');
+        setTimeout(function () { toast.remove(); }, 280);
+    }, 2600);
+}
+
+function copyTextToClipboard(text) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        return navigator.clipboard.writeText(text).then(function () {
+            return true;
+        }).catch(function () {
+            return fallbackCopyText(text);
+        });
+    }
+    return Promise.resolve(fallbackCopyText(text));
+}
+
+function fallbackCopyText(text) {
+    try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+export async function copyResultShareText() {
+    const text = buildResultShareCopyText();
+    const btn = document.getElementById('resultShareCopyBtn');
+    const orig = btn ? btn.textContent : '';
+    if (btn) btn.disabled = true;
+    try {
+        const ok = await copyTextToClipboard(text);
+        if (ok) {
+            showShareToast('已复制，去粘贴吧', 'success');
+        } else {
+            showShareToast('复制失败，请手动长按选择文案', 'error');
+            console.warn('share copy failed; text:', text);
+        }
+    } catch (err) {
+        console.error('复制分享文案失败', err);
+        showShareToast('复制失败，请稍后再试', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            if (orig) btn.textContent = orig;
+        }
+    }
+}
+
 export async function refreshShareRankMeta() {
     clearShareRankMeta();
     const auth = getAuthState();
