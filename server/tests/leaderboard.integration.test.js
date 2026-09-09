@@ -357,3 +357,134 @@ test("10 myRank outside top10 without returning full board", async () => {
   assert.equal(board.json.data.myRank, 12);
   assert.ok(!board.json.data.top10.some((r) => r.nickname === "速榜11"));
 });
+
+
+test("11 metric=best default; average ranks by arithmetic mean not sum", async () => {
+  const stamp = Date.now().toString(36);
+  const boardRule = `sim30-mtm-v1-lb11-${stamp}`;
+
+  // User A: one great game + one mediocre → high best, lower average
+  const a = await register(`lb11a${stamp}`);
+  await api("/api/v1/me", {
+    method: "PATCH",
+    csrf: a.csrfToken,
+    body: { nickname: `均榜A${stamp}`, leaderboardOptIn: true },
+  });
+  const a1 = await settleBuySell(a, "next_open", `lb11-a1-${stamp}`);
+  forceResultRanking(a1.gameId, {
+    returnPpm: 400000, // +40%
+    finishedAt: "2026-09-09T10:00:00.000Z",
+    ruleVersion: boardRule,
+  });
+  const a2 = await settleBuySell(a, "next_open", `lb11-a2-${stamp}`);
+  forceResultRanking(a2.gameId, {
+    returnPpm: -100000, // -10%
+    finishedAt: "2026-09-09T11:00:00.000Z",
+    ruleVersion: boardRule,
+  });
+  // Arithmetic mean = 150000 (+15%); sum-of-pcts fallacy would be +30%
+
+  // User B: two solid +20% → best 200000, average 200000
+  const b = await register(`lb11b${stamp}`);
+  await api("/api/v1/me", {
+    method: "PATCH",
+    csrf: b.csrfToken,
+    body: { nickname: `均榜B${stamp}`, leaderboardOptIn: true },
+  });
+  const b1 = await settleBuySell(b, "next_open", `lb11-b1-${stamp}`);
+  forceResultRanking(b1.gameId, {
+    returnPpm: 200000,
+    finishedAt: "2026-09-09T10:30:00.000Z",
+    ruleVersion: boardRule,
+  });
+  const b2 = await settleBuySell(b, "next_open", `lb11-b2-${stamp}`);
+  forceResultRanking(b2.gameId, {
+    returnPpm: 200000,
+    finishedAt: "2026-09-09T11:30:00.000Z",
+    ruleVersion: boardRule,
+  });
+
+  const bestQ = `/api/v1/leaderboard?fillMode=next_open&ruleVersion=${encodeURIComponent(boardRule)}`;
+  const best = await api(bestQ);
+  assertOk(best.status, best.json, 200);
+  assert.equal(best.json.data.metric, "best");
+  assert.equal(best.json.data.top10[0].nickname, `均榜A${stamp}`);
+  assert.equal(best.json.data.top10[0].returnPpm, 400000);
+  assert.equal(best.json.data.top10[1].nickname, `均榜B${stamp}`);
+  assert.equal(best.json.data.top10[1].returnPpm, 200000);
+
+  const avg = await api(
+    `/api/v1/leaderboard?fillMode=next_open&metric=average&ruleVersion=${encodeURIComponent(boardRule)}`
+  );
+  assertOk(avg.status, avg.json, 200);
+  assert.equal(avg.json.data.metric, "average");
+  // B avg 200000 > A avg 150000
+  assert.equal(avg.json.data.top10[0].nickname, `均榜B${stamp}`);
+  assert.equal(avg.json.data.top10[0].returnPpm, 200000);
+  assert.equal(avg.json.data.top10[1].nickname, `均榜A${stamp}`);
+  assert.equal(avg.json.data.top10[1].returnPpm, 150000);
+  // Explicit: not ranking by summed percentage points (300000)
+  assert.ok(!avg.json.data.top10.some((r) => r.returnPpm === 300000));
+
+  // Logged in as B → myRank 1 on average, 2 on best
+  assert.equal(avg.json.data.myRank, 1);
+  const bestAsB = await api(`${bestQ}&metric=best`);
+  assertOk(bestAsB.status, bestAsB.json, 200);
+  assert.equal(bestAsB.json.data.myRank, 2);
+});
+
+test("12 average board eligibility + invalid metric", async () => {
+  const auth = await register(`lb12${Date.now().toString(36)}`);
+  await optIn(auth.csrfToken);
+  const hidden = await settleBuySell(auth, "same_close", `lb12-h-${Date.now()}`);
+  forceResultRanking(hidden.gameId, {
+    returnPpm: 500000,
+    leaderboardHidden: true,
+    finishedAt: "2026-09-09T08:00:00.000Z",
+  });
+  const okGame = await settleBuySell(auth, "same_close", `lb12-ok-${Date.now()}`);
+  forceResultRanking(okGame.gameId, {
+    returnPpm: 100000,
+    finishedAt: "2026-09-09T09:00:00.000Z",
+  });
+  const board = await api("/api/v1/leaderboard?fillMode=same_close&metric=average");
+  assertOk(board.status, board.json, 200);
+  assert.equal(board.json.data.metric, "average");
+  const seat = board.json.data.top10.find((r) => r.rank === board.json.data.myRank);
+  assert.ok(seat);
+  assert.equal(seat.returnPpm, 100000); // hidden 500000 excluded from average
+  assert.ok(!board.json.data.top10.some((r) => r.returnPpm === 500000));
+
+  const bad = await api("/api/v1/leaderboard?fillMode=next_open&metric=sum");
+  assert.equal(bad.status, 400);
+  const code = bad.json?.error?.code || bad.json?.code;
+  assert.equal(code, "INVALID_METRIC");
+});
+
+test("13 average myRank outside top10", async () => {
+  const stamp = Date.now().toString(36);
+  const boardRule = `sim30-mtm-v1-lb13-${stamp}`;
+  for (let i = 0; i < 12; i++) {
+    const auth = await register(`lb13${stamp}${i}`);
+    await api("/api/v1/me", {
+      method: "PATCH",
+      csrf: auth.csrfToken,
+      body: { nickname: `均名${i}`, leaderboardOptIn: true },
+    });
+    const g = await settleBuySell(auth, "next_open", `lb13-${stamp}-${i}`);
+    forceResultRanking(g.gameId, {
+      returnPpm: 300000 - i * 1000,
+      finishedAt: `2026-09-09T${String(10 + (i % 10)).padStart(2, "0")}:00:00.000Z`,
+      ruleVersion: boardRule,
+    });
+  }
+  const board = await api(
+    `/api/v1/leaderboard?fillMode=next_open&metric=average&ruleVersion=${encodeURIComponent(boardRule)}`
+  );
+  assertOk(board.status, board.json, 200);
+  assert.equal(board.json.data.metric, "average");
+  assert.equal(board.json.data.top10.length, 10);
+  assert.equal(board.json.data.total, 12);
+  assert.equal(board.json.data.myRank, 12);
+  assert.ok(!board.json.data.top10.some((r) => r.nickname === "均名11"));
+});

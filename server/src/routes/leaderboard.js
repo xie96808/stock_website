@@ -13,6 +13,7 @@ router.get("/leaderboard", (req, res) => {
   const result = getLeaderboard(
     {
       fillMode: req.query.fillMode,
+      metric: req.query.metric,
       ruleVersion: req.query.ruleVersion,
       datasetVersion: req.query.datasetVersion,
     },

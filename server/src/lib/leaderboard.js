@@ -3,6 +3,7 @@ import { ensureDatasetLoaded } from "./dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 
 const FILL_SET = new Set(FILL_MODES);
+const METRIC_SET = new Set(["best", "average"]);
 const TOP_N = 10;
 
 /** Short in-memory TTL for shared board (topN + total). Viewer fields stay request-scoped. */
@@ -13,6 +14,7 @@ const boardCache = new Map();
 
 /**
  * Resolve board key; defaults to current published rule + dataset versions.
+ * metric defaults to "best" (最佳单局).
  */
 export function resolveBoardKey(query = {}) {
   const meta = ensureDatasetLoaded();
@@ -26,6 +28,19 @@ export function resolveBoardKey(query = {}) {
       },
     };
   }
+  let metric = "best";
+  if (query.metric != null && query.metric !== "") {
+    if (!METRIC_SET.has(query.metric)) {
+      return {
+        error: {
+          status: 400,
+          code: "INVALID_METRIC",
+          message: "metric 必须为 best 或 average",
+        },
+      };
+    }
+    metric = query.metric;
+  }
   const ruleVersion =
     typeof query.ruleVersion === "string" && query.ruleVersion.trim()
       ? query.ruleVersion.trim()
@@ -34,15 +49,15 @@ export function resolveBoardKey(query = {}) {
     typeof query.datasetVersion === "string" && query.datasetVersion.trim()
       ? query.datasetVersion.trim()
       : meta.version;
-  return { fillMode, ruleVersion, datasetVersion };
+  return { fillMode, metric, ruleVersion, datasetVersion };
 }
 
 function boardCacheKey(board) {
-  return `${board.fillMode}\0${board.ruleVersion}\0${board.datasetVersion}`;
+  return `${board.fillMode}\0${board.metric}\0${board.ruleVersion}\0${board.datasetVersion}`;
 }
 
 /**
- * Drop cached boards. Pass fillMode to clear one mode across versions, or omit to clear all.
+ * Drop cached boards. Pass fillMode to clear one mode across metrics/versions, or omit to clear all.
  * Call after settle / unlist / ban / opt-in (and test helpers that mutate ranks).
  */
 export function invalidateLeaderboardCache(fillMode) {
@@ -111,12 +126,56 @@ const BEST_SEATS_CTE = `
       AND u.role = 'user'
       AND u.leaderboard_opt_in = 1
   ),
-  best AS (
+  seats AS (
     SELECT user_id, game_id, finished_at, return_ppm, nickname, avatar_id, avatar_custom_path
     FROM eligible
     WHERE seat_rn = 1
   )
 `;
+
+/**
+ * Average-seat CTE: arithmetic mean of eligible return_ppm per user (same eligibility as best).
+ * Ranking uses exact avg (return_avg); display uses ROUND → return_ppm.
+ * Tie-break: MIN(finished_at) ASC, user_id ASC.
+ */
+const AVG_SEATS_CTE = `
+  WITH eligible AS (
+    SELECT
+      s.user_id AS user_id,
+      s.finished_at AS finished_at,
+      r.return_ppm AS return_ppm
+    FROM game_sessions s
+    JOIN game_results r ON r.game_id = s.id
+    JOIN users u ON u.id = s.user_id
+    WHERE s.status = 'settled'
+      AND s.rule_version = ?
+      AND s.dataset_version = ?
+      AND s.fill_mode = ?
+      AND r.validity = 'valid'
+      AND r.leaderboard_hidden = 0
+      AND r.trade_count >= 1
+      AND u.status = 'active'
+      AND u.role = 'user'
+      AND u.leaderboard_opt_in = 1
+  ),
+  seats AS (
+    SELECT
+      e.user_id AS user_id,
+      AVG(e.return_ppm * 1.0) AS return_avg,
+      CAST(ROUND(AVG(e.return_ppm * 1.0)) AS INTEGER) AS return_ppm,
+      MIN(e.finished_at) AS finished_at,
+      u.nickname AS nickname,
+      u.avatar_id AS avatar_id,
+      u.avatar_custom_path AS avatar_custom_path
+    FROM eligible e
+    JOIN users u ON u.id = e.user_id
+    GROUP BY e.user_id, u.nickname, u.avatar_id, u.avatar_custom_path
+  )
+`;
+
+function seatsCte(metric) {
+  return metric === "average" ? AVG_SEATS_CTE : BEST_SEATS_CTE;
+}
 
 function boardBinds(board) {
   return [board.ruleVersion, board.datasetVersion, board.fillMode];
@@ -162,28 +221,33 @@ function loadUserStatsMap(db, userIds, board) {
  */
 function computeSharedBoard(db, board) {
   const binds = boardBinds(board);
+  const cte = seatsCte(board.metric);
+  const orderExpr =
+    board.metric === "average"
+      ? "return_avg DESC, finished_at ASC, user_id ASC"
+      : "return_ppm DESC, finished_at ASC, user_id ASC";
+
   const topRows = db
     .prepare(
-      `${BEST_SEATS_CTE}
+      `${cte}
        SELECT
          user_id,
-         game_id,
          finished_at,
          return_ppm,
          nickname,
          avatar_id,
          avatar_custom_path,
          ROW_NUMBER() OVER (
-           ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
+           ORDER BY ${orderExpr}
          ) AS rank
-       FROM best
-       ORDER BY return_ppm DESC, finished_at ASC, user_id ASC
+       FROM seats
+       ORDER BY ${orderExpr}
        LIMIT ?`
     )
     .all(...binds, TOP_N);
 
   const totalRow = db
-    .prepare(`${BEST_SEATS_CTE} SELECT COUNT(*) AS n FROM best`)
+    .prepare(`${cte} SELECT COUNT(*) AS n FROM seats`)
     .get(...binds);
   const total = Number(totalRow?.n || 0);
 
@@ -200,6 +264,7 @@ function computeSharedBoard(db, board) {
 
   return {
     fillMode: board.fillMode,
+    metric: board.metric,
     ruleVersion: board.ruleVersion,
     datasetVersion: board.datasetVersion,
     asOf: new Date().toISOString(),
@@ -316,16 +381,75 @@ function loadViewerBestSeat(db, userId, board) {
 }
 
 /**
- * Deterministic dense rank: 1 + count of seats strictly better
- * (return_ppm DESC, finished_at ASC, user_id ASC).
+ * Viewer's average eligible seat (exact avg + rounded display ppm + min finished_at).
+ */
+function loadViewerAverageSeat(db, userId, board) {
+  return db
+    .prepare(
+      `SELECT
+         s.user_id AS user_id,
+         AVG(r.return_ppm * 1.0) AS return_avg,
+         CAST(ROUND(AVG(r.return_ppm * 1.0)) AS INTEGER) AS return_ppm,
+         MIN(s.finished_at) AS finished_at
+       FROM game_sessions s
+       JOIN game_results r ON r.game_id = s.id
+       JOIN users u ON u.id = s.user_id
+       WHERE s.user_id = ?
+         AND s.status = 'settled'
+         AND s.rule_version = ?
+         AND s.dataset_version = ?
+         AND s.fill_mode = ?
+         AND r.validity = 'valid'
+         AND r.leaderboard_hidden = 0
+         AND r.trade_count >= 1
+         AND u.status = 'active'
+         AND u.role = 'user'
+         AND u.leaderboard_opt_in = 1
+       GROUP BY s.user_id`
+    )
+    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+}
+
+function loadViewerSeat(db, userId, board) {
+  return board.metric === "average"
+    ? loadViewerAverageSeat(db, userId, board)
+    : loadViewerBestSeat(db, userId, board);
+}
+
+/**
+ * Deterministic dense rank: 1 + count of seats strictly better.
+ * best: return_ppm DESC, finished_at ASC, user_id ASC
+ * average: return_avg DESC, finished_at ASC, user_id ASC
  */
 function rankForSeat(db, board, seat) {
   const binds = boardBinds(board);
+  const cte = seatsCte(board.metric);
+  if (board.metric === "average") {
+    const row = db
+      .prepare(
+        `${cte}
+         SELECT COUNT(*) AS better
+         FROM seats
+         WHERE return_avg > ?
+            OR (return_avg = ? AND finished_at < ?)
+            OR (return_avg = ? AND finished_at = ? AND user_id < ?)`
+      )
+      .get(
+        ...binds,
+        seat.return_avg,
+        seat.return_avg,
+        seat.finished_at,
+        seat.return_avg,
+        seat.finished_at,
+        seat.user_id
+      );
+    return Number(row?.better || 0) + 1;
+  }
   const row = db
     .prepare(
-      `${BEST_SEATS_CTE}
+      `${cte}
        SELECT COUNT(*) AS better
-       FROM best
+       FROM seats
        WHERE return_ppm > ?
           OR (return_ppm = ? AND finished_at < ?)
           OR (return_ppm = ? AND finished_at = ? AND user_id < ?)`
@@ -344,7 +468,7 @@ function rankForSeat(db, board, seat) {
 
 /**
  * GET /leaderboard payload.
- * @param {{ fillMode, ruleVersion?, datasetVersion? }} query
+ * @param {{ fillMode, metric?, ruleVersion?, datasetVersion? }} query
  * @param {object|null} viewerUser publicUser-shaped or null
  */
 export function getLeaderboard(query = {}, viewerUser = null) {
@@ -368,7 +492,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       myWinRate = seat?.winRate ?? null;
       ineligibilityReason = null;
     } else {
-      const seat = loadViewerBestSeat(db, viewerUser.id, board);
+      const seat = loadViewerSeat(db, viewerUser.id, board);
       if (seat) {
         myRank = rankForSeat(db, board, seat);
         const stats = loadUserBoardStats(db, viewerUser.id, board);
@@ -389,6 +513,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
     status: 200,
     data: {
       fillMode: shared.fillMode,
+      metric: shared.metric,
       ruleVersion: shared.ruleVersion,
       datasetVersion: shared.datasetVersion,
       asOf: shared.asOf,
