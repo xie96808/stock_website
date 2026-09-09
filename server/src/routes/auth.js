@@ -35,7 +35,7 @@ router.post("/auth/register", async (req, res) => {
   const pwErr = validatePassword(req.body?.password);
   if (pwErr) return fail(res, 400, "INVALID_PASSWORD", pwErr);
   const nickname = normalizeNickname(req.body?.nickname);
-  if (!nickname) return fail(res, 400, "INVALID_NICKNAME", "昵称不合法（2-16字）");
+  if (!nickname) return fail(res, 400, "INVALID_NICKNAME", "昵称须为 2-16 字（勿含控制字符）");
   if (!req.body?.termsVersion) return fail(res, 400, "TERMS_REQUIRED", "请确认服务条款");
   if (findUserByUsername(username)) return fail(res, 409, "USERNAME_TAKEN", "用户名已被占用");
 
@@ -93,7 +93,7 @@ router.patch("/me", requireUser, (req, res) => {
   const patch = {};
   if (req.body?.nickname != null) {
     const nn = normalizeNickname(req.body.nickname);
-    if (!nn) return fail(res, 400, "INVALID_NICKNAME", "昵称不合法（2-16字）");
+    if (!nn) return fail(res, 400, "INVALID_NICKNAME", "昵称须为 2-16 字（勿含控制字符）");
     patch.nickname = nn;
   }
   if (req.body?.avatarId != null) {
