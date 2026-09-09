@@ -29,8 +29,8 @@ export function normalizeNickname(raw, fallback = "新同学") {
   if (/[\u0000-\u001F\u007F]/.test(s)) return null;
   const n = unicodeLen(s);
   if (n < 2 || n > 16) return null;
-  const low = s.toLowerCase();
-  if (RESERVED.has(low) || /官方|客服|管理员/.test(s)) return null;
+  // Playful nicknames allowed (incl. 管理员/官方/客服 substrings).
+  // RESERVED names apply to usernames only (see normalizeUsername).
   return s;
 }
 
