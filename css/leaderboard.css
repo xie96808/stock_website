@@ -159,3 +159,17 @@
 .mine-stats {
   margin-left: 0.35rem;
 }
+
+/* Perceived perf: keep last board visible while refreshing */
+.leaderboard-screen.is-busy .leaderboard-list {
+  opacity: 0.72;
+  transition: opacity 0.15s ease;
+}
+.leaderboard-meta.is-refreshing::after {
+  content: " · 刷新中…";
+  opacity: 0.7;
+}
+.lb-refresh-err {
+  color: #c44;
+  font-size: 0.85em;
+}

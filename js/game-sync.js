@@ -105,6 +105,9 @@ export async function finishCloudGame() {
         gameState.returnPct = data.returnPct;
       }
       updateSaveStatusUi();
+      import("./leaderboard.js")
+        .then((m) => m.invalidateLeaderboardClientCache?.())
+        .catch(() => {});
       return { data, status };
     } catch (e) {
       lastErr = e;

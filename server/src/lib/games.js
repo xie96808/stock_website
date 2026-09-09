@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js";
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
+import { invalidateLeaderboardCache } from "./leaderboard.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -498,6 +499,8 @@ export function finishGame(userId, gameId, body) {
 
   const result = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
   const sess = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+  if (sess?.fill_mode) invalidateLeaderboardCache(sess.fill_mode);
+  else invalidateLeaderboardCache();
   return { status: 201, data: resultDto(result, sess) };
 }
 

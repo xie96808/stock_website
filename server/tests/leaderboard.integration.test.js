@@ -294,3 +294,66 @@ test("8 gameCount + winRate on board key", async () => {
   assert.equal(seat.gameCount, 5);
   assert.equal(seat.winRate, 80);
 });
+
+test("9 in-memory board cache hit + invalidate on opt-in", async () => {
+  const { getLeaderboardCacheStats, invalidateLeaderboardCache } = await import("../src/lib/leaderboard.js");
+  invalidateLeaderboardCache();
+  const before = getLeaderboardCacheStats().size;
+
+  const a = await api("/api/v1/leaderboard?fillMode=next_open");
+  assertOk(a.status, a.json, 200);
+  const mid = getLeaderboardCacheStats().size;
+  assert.ok(mid >= before);
+
+  const b = await api("/api/v1/leaderboard?fillMode=next_open");
+  assertOk(b.status, b.json, 200);
+  assert.equal(b.json.data.total, a.json.data.total);
+  assert.deepEqual(
+    b.json.data.top10.map((r) => r.returnPpm),
+    a.json.data.top10.map((r) => r.returnPpm)
+  );
+
+  const auth = await register(`lb9${Date.now().toString(36)}`);
+  const settled = await settleBuySell(auth, "next_open", `lb9-${Date.now()}`);
+  forceResultRanking(settled.gameId, {
+    returnPpm: 654321,
+    finishedAt: "2026-09-08T12:00:00.000Z",
+  });
+  // forceResultRanking invalidates; still not opted in → not on board
+  let board = await api("/api/v1/leaderboard?fillMode=next_open");
+  assertOk(board.status, board.json, 200);
+  assert.ok(!board.json.data.top10.some((r) => r.returnPpm === 654321));
+
+  await optIn(auth.csrfToken);
+  board = await api("/api/v1/leaderboard?fillMode=next_open");
+  assertOk(board.status, board.json, 200);
+  assert.ok(board.json.data.top10.some((r) => r.returnPpm === 654321));
+});
+
+test("10 myRank outside top10 without returning full board", async () => {
+  const stamp = Date.now().toString(36);
+  const boardRule = `sim30-mtm-v1-lb10-${stamp}`;
+  for (let i = 0; i < 12; i++) {
+    const auth = await register(`lb10${stamp}${i}`);
+    const nick = await api("/api/v1/me", {
+      method: "PATCH",
+      csrf: auth.csrfToken,
+      body: { nickname: `速榜${i}`, leaderboardOptIn: true },
+    });
+    assertOk(nick.status, nick.json, 200);
+    const g = await settleBuySell(auth, "same_close", `lb10-${stamp}-${i}`);
+    forceResultRanking(g.gameId, {
+      returnPpm: 400000 - i * 1000,
+      finishedAt: `2026-09-08T${String(10 + (i % 10)).padStart(2, "0")}:00:00.000Z`,
+      ruleVersion: boardRule,
+    });
+  }
+  const board = await api(
+    `/api/v1/leaderboard?fillMode=same_close&ruleVersion=${encodeURIComponent(boardRule)}`
+  );
+  assertOk(board.status, board.json, 200);
+  assert.equal(board.json.data.top10.length, 10);
+  assert.equal(board.json.data.total, 12);
+  assert.equal(board.json.data.myRank, 12);
+  assert.ok(!board.json.data.top10.some((r) => r.nickname === "速榜11"));
+});

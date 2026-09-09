@@ -53,6 +53,8 @@ export async function startTestServer() {
   closeDb();
   const { resetDatasetCache } = await import("../src/lib/dataset.js");
   resetDatasetCache();
+  const { invalidateLeaderboardCache } = await import("../src/lib/leaderboard.js");
+  invalidateLeaderboardCache();
   const { createApp } = await import("../src/app.js");
   const app = createApp({ skipStatic: true });
   const server = await new Promise((resolve) => {

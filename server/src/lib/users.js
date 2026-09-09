@@ -1,4 +1,5 @@
 import { openDb } from "../db/connection.js";
+import { invalidateLeaderboardCache } from "./leaderboard.js";
 
 export function publicUser(row) {
   if (!row) return null;
@@ -43,8 +44,14 @@ export function updateUserProfile(id, { nickname, avatarId, leaderboardOptIn }) 
   const nn = nickname != null ? nickname : row.nickname;
   const av = avatarId != null ? avatarId : row.avatar_id;
   const opt = leaderboardOptIn != null ? (leaderboardOptIn ? 1 : 0) : row.leaderboard_opt_in;
+  const optChanged = leaderboardOptIn != null && opt !== row.leaderboard_opt_in;
+  const nickOrAvatarChanged =
+    (nickname != null && nickname !== row.nickname) ||
+    (avatarId != null && avatarId !== row.avatar_id);
   openDb().prepare(`UPDATE users SET nickname = ?, avatar_id = ?, leaderboard_opt_in = ?,
     updated_at = datetime('now') WHERE id = ?`).run(nn, av, opt, id);
+  // Opt-in flips membership; nickname/avatar refresh public Top N display.
+  if (optChanged || nickOrAvatarChanged) invalidateLeaderboardCache();
   return findUserById(id);
 }
 
@@ -52,6 +59,7 @@ export function updateAvatarCustomPath(id, filename) {
   openDb()
     .prepare(`UPDATE users SET avatar_custom_path = ?, updated_at = datetime('now') WHERE id = ?`)
     .run(filename, id);
+  invalidateLeaderboardCache();
   return findUserById(id);
 }
 
@@ -72,4 +80,5 @@ export function softDeleteUser(id) {
     .prepare(`UPDATE users SET status = 'deleted', deleted_at = datetime('now'),
       updated_at = datetime('now'), password_hash = '!', recovery_code_hash = NULL WHERE id = ?`)
     .run(id);
+  invalidateLeaderboardCache();
 }

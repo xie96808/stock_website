@@ -1,4 +1,4 @@
-/** Stage 4: dual-mode public leaderboard */
+/** Stage 4: dual-mode public leaderboard (perf: per-mode cache + prefetch) */
 import { getAuthState, openAuthModal, api } from "./auth.js";
 
 const REASON_TEXT = {
@@ -7,6 +7,16 @@ const REASON_TEXT = {
   admin_role: "管理员成绩不进入公共榜",
   account_not_active: "账号当前不可参与排行榜",
 };
+
+const MODES = ["next_open", "same_close"];
+
+/** @type {Map<string, { data: object, fetchedAt: number }>} */
+const panelCache = new Map();
+
+/** In-flight fetches keyed by fillMode (dedupe + race guard). */
+const inflight = new Map();
+
+let activeLoadToken = 0;
 
 function hideOtherScreens() {
   const hdr = document.querySelector(".header");
@@ -72,6 +82,86 @@ function fmtFinished(iso) {
   }
 }
 
+function setBusy(screen, busy) {
+  if (!screen) return;
+  screen.classList.toggle("is-busy", !!busy);
+  const meta = screen.querySelector("#leaderboardMeta");
+  if (meta) meta.classList.toggle("is-refreshing", !!busy);
+}
+
+function renderPanel(data) {
+  const listEl = document.getElementById("leaderboardList");
+  const metaEl = document.getElementById("leaderboardMeta");
+  const mineEl = document.getElementById("leaderboardMine");
+  if (metaEl) {
+    metaEl.innerHTML = `规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
+      String(data.datasetVersion || "").slice(0, 12)
+    )}…</code> · 更新于 ${fmtFinished(data.asOf)}`;
+  }
+  const auth = getAuthState();
+  if (mineEl) {
+    if (!auth.user) {
+      mineEl.innerHTML = `<div class="mine-card guest">游客可浏览榜单。登录并在设置中开启「参与排行榜」后显示你的名次。
+          <button type="button" class="leaderboard-link" id="lbLoginBtn">登录 / 注册</button></div>`;
+      mineEl.querySelector("#lbLoginBtn")?.addEventListener("click", () => openAuthModal("login"));
+    } else if (data.myRank != null) {
+      const stats = fmtWinStats(data.myGameCount, data.myWinRate);
+      mineEl.innerHTML = `<div class="mine-card">你的名次：<strong>#${data.myRank}</strong>
+          <span class="mine-stats">${escapeHtml(stats)}</span></div>`;
+    } else {
+      const reason = REASON_TEXT[data.ineligibilityReason] || "暂未上榜";
+      const optBtn =
+        data.ineligibilityReason === "not_opted_in"
+          ? `<button type="button" class="leaderboard-link" id="lbSettingsBtn">打开设置</button>`
+          : "";
+      mineEl.innerHTML = `<div class="mine-card">${escapeHtml(reason)} ${optBtn}</div>`;
+      mineEl.querySelector("#lbSettingsBtn")?.addEventListener("click", () => openAuthModal("settings"));
+    }
+  }
+  const items = data.top10 || [];
+  if (!listEl) return;
+  if (!items.length) {
+    listEl.innerHTML = `<li class="leaderboard-empty">还没有有效成绩，完成一局试试</li>`;
+    return;
+  }
+  listEl.innerHTML = items
+    .map((row) => {
+      const cls =
+        row.returnPpm > 0 ? "pos" : row.returnPpm < 0 ? "neg" : "";
+      const stats = fmtWinStats(row.gameCount, row.winRate);
+      return `<li class="leaderboard-row">
+          <span class="lb-rank">#${row.rank}</span>
+          <img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">
+          <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
+          <span class="lb-ret ${cls}" title="收益率"><small class="lb-ret-label">收益率</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
+          <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
+        </li>`;
+    })
+    .join("");
+}
+
+async function fetchLeaderboard(fillMode) {
+  if (inflight.has(fillMode)) return inflight.get(fillMode);
+  const p = (async () => {
+    const qs = new URLSearchParams({ fillMode });
+    const { data } = await api(`/leaderboard?${qs.toString()}`);
+    panelCache.set(fillMode, { data, fetchedAt: Date.now() });
+    return data;
+  })().finally(() => {
+    inflight.delete(fillMode);
+  });
+  inflight.set(fillMode, p);
+  return p;
+}
+
+function prefetchOtherModes(current) {
+  for (const mode of MODES) {
+    if (mode === current) continue;
+    if (panelCache.has(mode) || inflight.has(mode)) continue;
+    fetchLeaderboard(mode).catch(() => {});
+  }
+}
+
 /** @param {string} [preferredFillMode] next_open | same_close — selects matching tab when opening. */
 export async function showLeaderboard(preferredFillMode) {
   hideOtherScreens();
@@ -131,6 +221,7 @@ export function hideLeaderboard() {
   if (screen) {
     screen.classList.remove("active");
     screen.style.display = "none";
+    setBusy(screen, false);
   }
   const hdr = document.querySelector(".header");
   if (hdr) {
@@ -154,63 +245,46 @@ export function hideLeaderboard() {
 }
 
 async function loadLeaderboardPanel(fillMode) {
+  const screen = document.getElementById("leaderboardScreen");
   const listEl = document.getElementById("leaderboardList");
   const metaEl = document.getElementById("leaderboardMeta");
   const mineEl = document.getElementById("leaderboardMine");
-  if (listEl) listEl.innerHTML = `<li class="leaderboard-empty">加载中…</li>`;
-  try {
-    const qs = new URLSearchParams({ fillMode });
-    const { data } = await api(`/leaderboard?${qs.toString()}`);
-    if (metaEl) {
-      metaEl.innerHTML = `规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
-        String(data.datasetVersion || "").slice(0, 12)
-      )}…</code> · 更新于 ${fmtFinished(data.asOf)}`;
-    }
-    const auth = getAuthState();
-    if (mineEl) {
-      if (!auth.user) {
-        mineEl.innerHTML = `<div class="mine-card guest">游客可浏览榜单。登录并在设置中开启「参与排行榜」后显示你的名次。
-          <button type="button" class="leaderboard-link" id="lbLoginBtn">登录 / 注册</button></div>`;
-        mineEl.querySelector("#lbLoginBtn")?.addEventListener("click", () => openAuthModal("login"));
-      } else if (data.myRank != null) {
-        const stats = fmtWinStats(data.myGameCount, data.myWinRate);
-        mineEl.innerHTML = `<div class="mine-card">你的名次：<strong>#${data.myRank}</strong>
-          <span class="mine-stats">${escapeHtml(stats)}</span></div>`;
-      } else {
-        const reason = REASON_TEXT[data.ineligibilityReason] || "暂未上榜";
-        const optBtn =
-          data.ineligibilityReason === "not_opted_in"
-            ? `<button type="button" class="leaderboard-link" id="lbSettingsBtn">打开设置</button>`
-            : "";
-        mineEl.innerHTML = `<div class="mine-card">${escapeHtml(reason)} ${optBtn}</div>`;
-        mineEl.querySelector("#lbSettingsBtn")?.addEventListener("click", () => openAuthModal("settings"));
-      }
-    }
-    const items = data.top10 || [];
-    if (!listEl) return;
-    if (!items.length) {
-      listEl.innerHTML = `<li class="leaderboard-empty">还没有有效成绩，完成一局试试</li>`;
-      return;
-    }
-    listEl.innerHTML = items
-      .map((row) => {
-        const cls =
-          row.returnPpm > 0 ? "pos" : row.returnPpm < 0 ? "neg" : "";
-        const stats = fmtWinStats(row.gameCount, row.winRate);
-        return `<li class="leaderboard-row">
-          <span class="lb-rank">#${row.rank}</span>
-          <img class="lb-avatar" src="${avatarUrl(row)}" alt="">
-          <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
-          <span class="lb-ret ${cls}" title="收益率"><small class="lb-ret-label">收益率</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
-          <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
-        </li>`;
-      })
-      .join("");
-  } catch (e) {
-    if (metaEl) metaEl.textContent = e.message || "加载失败";
-    if (listEl) listEl.innerHTML = "";
-    if (mineEl) mineEl.innerHTML = "";
+  const token = ++activeLoadToken;
+
+  const cached = panelCache.get(fillMode);
+  if (cached?.data) {
+    renderPanel(cached.data);
+    setBusy(screen, true);
+  } else {
+    if (listEl) listEl.innerHTML = `<li class="leaderboard-empty">加载中…</li>`;
+    setBusy(screen, true);
   }
+
+  try {
+    const data = await fetchLeaderboard(fillMode);
+    if (token !== activeLoadToken) return;
+    renderPanel(data);
+    prefetchOtherModes(fillMode);
+  } catch (e) {
+    if (token !== activeLoadToken) return;
+    if (!cached?.data) {
+      if (metaEl) metaEl.textContent = e.message || "加载失败";
+      if (listEl) listEl.innerHTML = "";
+      if (mineEl) mineEl.innerHTML = "";
+    } else if (metaEl) {
+      metaEl.insertAdjacentHTML(
+        "beforeend",
+        ` <span class="lb-refresh-err">（刷新失败：${escapeHtml(e.message || "网络错误")}）</span>`
+      );
+    }
+  } finally {
+    if (token === activeLoadToken) setBusy(screen, false);
+  }
+}
+
+/** Clear client cache after settle / opt-in so next open is fresh. */
+export function invalidateLeaderboardClientCache() {
+  panelCache.clear();
 }
 
 export function initLeaderboardRouting() {

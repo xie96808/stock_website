@@ -690,6 +690,9 @@ async function onSaveSettings() {
     setSettingsAvatar(authState.user.avatarId || 1, authState.user.avatarUrl);
     setSuccess("已保存");
     showToast("已保存", "success");
+    import("./leaderboard.js")
+      .then((m) => m.invalidateLeaderboardClientCache?.())
+      .catch(() => {});
     perfLog("auth.settings.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);
