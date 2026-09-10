@@ -7,7 +7,8 @@
 1. **Brotli / 预压缩 `.br`**：打包时为 js / css / html / json / svg / txt 生成 `.br`，保留既有 `.gz`；nginx 开启 `brotli_static`（及动态 `brotli` 回落），`gzip_static` 不变。
 2. **js/css cache-bust**：发布包内把本地 script/link / ESM `import` / CSS `@import` / worker `new URL(...)` 打上 `?v=<revision前12位>`，避免 7 天强缓存导致发版后仍用旧模块。
 
-**刻意不做（留给后续 PR）**：按 `datasetSha` 版本化 pack URL + 长缓存；紧凑 pack 编码；常驻 worker 窗口化；无整包云开局等。
+**刻意不做（本轮）**：紧凑 pack 编码；常驻 worker 窗口化；无整包云开局等。
+**后续已做**：版本化 pack URL + 长缓存 → 见 `docs/phase4-versioned-pack.md`。
 
 ## 为什么
 
@@ -31,7 +32,7 @@
 
 ## 残余陈旧风险
 
-- **未 stamp 的引用**：pack URL（`data/stocks_data.json`）仍无 `?v=`（已 defer）；`pack-store` 用 HEAD / IDB 校验，不依赖 7 天静态缓存策略。
+- **未 stamp 的引用**：js/css 已 stamp；行情包改为 **文件名含 sha**（见 `phase4-versioned-pack.md`），不再依赖 `?v=`。
 - **用户钉住的旧 HTML 标签页**：若标签页在发版前打开且未刷新，仍可能握着旧入口；刷新 `index.html`（默认无长缓存）即拿到新 `?v=`。
 - **动态拼接路径**：若将来有字符串拼出来的模块路径且未被正则扫到，可能漏戳；当前仓库为静态 `from './x.js'` / `import("./x.js")` / `new URL('./w.js', import.meta.url)`。
 - **无 brotli 模块的 nginx**：`nginx -t` 会因 `brotli*` 指令失败——见下方 VPS 步骤；可临时注释 brotli 行，仅靠 gzip_static。
@@ -73,4 +74,4 @@
 
 ## 与 first-start-perf 的关系
 
-`docs/first-start-perf.md` 已记录「brotli 未开」为残余瓶颈。本轮补上**打包侧预压缩 + conf 模板**；真正线上 br 仍依赖 VPS 模块。版本化 pack URL 仍 defer。
+`docs/first-start-perf.md` 已记录「brotli 未开」为残余瓶颈。本轮补上**打包侧预压缩 + conf 模板**；真正线上 br 仍依赖 VPS 模块。版本化 pack URL 见后续 `phase4-versioned-pack.md`。

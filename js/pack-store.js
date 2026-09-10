@@ -1,14 +1,30 @@
 /** Pack store: fetch / IDB / worker / ensure / prefetch only.
  * Split from load-stocks.js (Architecture Phase 1). No start-flow / modal UI here.
+ *
+ * Phase 4 residual: prefer versioned `data/stocks_data.<datasetSha>.json`
+ * (sha === server datasetVersion). Unversioned JSON/JS remain fallbacks.
  */
 
-/** Pack URL: JSON.parse is faster than JS Function eval; nginx already gzips (~12MB). */
-const PACK_URL = 'data/stocks_data.json';
-const PACK_JS_FALLBACK = 'data/stocks_data.js';
+import {
+  PACK_META_URL,
+  PACK_FALLBACK_URL,
+  PACK_JS_FALLBACK_URL,
+  LEGACY_IDB_KEY,
+  normalizePackMeta,
+  idbKeyForPack,
+  versionedPackUrl,
+} from './pack-url.js';
+
 const IDB_NAME = 'stockgame-pack';
 const IDB_VER = 1;
 const STORE = 'packs';
-const CACHE_KEY = 'stocks-pack-v1';
+
+/** Last resolved dataset sha (pack-meta or legacy null). */
+let loadedDatasetSha = null;
+
+export function getLoadedDatasetSha() {
+  return loadedDatasetSha;
+}
 
 function perfEnabled() {
   try {
@@ -106,9 +122,9 @@ function cacheMetaMatches(entry, meta) {
   return true;
 }
 
-function headPackMeta() {
+function headPackMeta(url) {
   const t0 = performance.now();
-  return fetch(PACK_URL, { method: 'HEAD', cache: 'no-cache' })
+  return fetch(url, { method: 'HEAD', cache: 'no-cache' })
     .then(function (res) {
       if (!res.ok) return null;
       const meta = {
@@ -130,8 +146,9 @@ function parseOnMain(text) {
   return new Function(trimmed + '\nreturn STOCKS_DATA;')();
 }
 
-function parsePackText(text, meta) {
+function parsePackText(text, meta, cacheKey) {
   const t0 = performance.now();
+  const key = cacheKey || LEGACY_IDB_KEY;
   if (typeof Worker !== 'undefined') {
     return new Promise(function (resolve, reject) {
       let settled = false;
@@ -186,18 +203,18 @@ function parsePackText(text, meta) {
       worker.postMessage({
         mode: 'parseAndKeep',
         text: text,
-        cacheKey: CACHE_KEY,
+        cacheKey: key,
         meta: meta || {},
       });
     });
   }
   const pack = parseOnMain(text);
   perfLog('pack.parse.main', performance.now() - t0, { stocks: pack && pack.length });
-  idbPut({ key: CACHE_KEY, text: text, meta: meta || {}, savedAt: Date.now() }).catch(function () {});
+  idbPut({ key: key, text: text, meta: meta || {}, savedAt: Date.now() }).catch(function () {});
   return Promise.resolve(pack);
 }
 
-function fetchPackText(onProgress) {
+function fetchPackText(url, onProgress, fallbackUrl) {
   const fetchStart = performance.now();
   function fromResponse(res) {
     if (!res.ok) throw new Error('http ' + res.status);
@@ -210,7 +227,7 @@ function fetchPackText(onProgress) {
     if (!res.body || !total || !res.body.getReader) {
       return res.text().then(function (text) {
         if (onProgress) onProgress(0.85);
-        perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'text' });
+        perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'text', url: url });
         return { text: text, meta: meta };
       });
     }
@@ -222,7 +239,7 @@ function fetchPackText(onProgress) {
         if (result.done) {
           if (onProgress) onProgress(0.85);
           const text = decodeChunks(chunks);
-          perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'stream' });
+          perfLog('pack.fetch', performance.now() - fetchStart, { bytes: text.length, via: 'stream', url: url });
           return { text: text, meta: meta };
         }
         chunks.push(result.value);
@@ -234,11 +251,29 @@ function fetchPackText(onProgress) {
     return pump();
   }
 
-  return fetch(PACK_URL)
+  return fetch(url)
     .then(fromResponse)
     .catch(function (err) {
-      console.warn('stocks_data.json fetch failed, trying .js', err);
-      return fetch(PACK_JS_FALLBACK).then(fromResponse);
+      if (!fallbackUrl || fallbackUrl === url) throw err;
+      console.warn('pack fetch failed, trying fallback', url, err);
+      return fetch(fallbackUrl).then(fromResponse);
+    });
+}
+
+function fetchPackMetaDoc() {
+  const t0 = performance.now();
+  return fetch(PACK_META_URL, { cache: 'no-cache' })
+    .then(function (res) {
+      if (!res.ok) return null;
+      return res.json();
+    })
+    .then(function (raw) {
+      const meta = normalizePackMeta(raw);
+      perfLog('pack.meta', performance.now() - t0, meta ? { sha: meta.datasetSha.slice(0, 12) } : { miss: true });
+      return meta;
+    })
+    .catch(function () {
+      return null;
     });
 }
 
@@ -255,18 +290,43 @@ function loadPack(onProgress) {
 
   packPromise = Promise.resolve()
     .then(async function () {
+      const packMeta = await fetchPackMetaDoc();
+      const datasetSha = packMeta ? packMeta.datasetSha : null;
+      const cacheKey = idbKeyForPack(datasetSha);
+      const primaryUrl = packMeta
+        ? packMeta.packUrl
+        : PACK_FALLBACK_URL;
+      const fallbackUrl = packMeta
+        ? packMeta.fallbackUrl
+        : PACK_JS_FALLBACK_URL;
+      // When versioned: secondary fallback is unversioned json then js handled below.
+      const secondaryFallback = packMeta ? PACK_JS_FALLBACK_URL : null;
+
       try {
-        const cached = await idbGet(CACHE_KEY);
+        const cached = await idbGet(cacheKey);
         if (cached && cached.text) {
-          // Only pay for HEAD when we might skip the network.
-          const meta = await headPackMeta();
-          if (cacheMetaMatches(cached, meta || cached.meta || {})) {
+          if (datasetSha) {
+            // Versioned: sha key is authoritative — skip HEAD.
             if (onProgress) onProgress(0.5);
-            const pack = await parsePackText(cached.text, cached.meta || meta || {});
+            const pack = await parsePackText(cached.text, cached.meta || {}, cacheKey);
             if (!Array.isArray(pack) || pack.length === 0) throw new Error('empty cached pack');
             window.STOCKS_DATA = pack;
+            loadedDatasetSha = datasetSha;
+            if (typeof window !== 'undefined') window.STOCKS_DATASET_SHA = datasetSha;
             if (onProgress) onProgress(1);
-            perfLog('pack.cache.hit', 0, { stocks: pack.length });
+            perfLog('pack.cache.hit', 0, { stocks: pack.length, key: cacheKey.slice(0, 12) });
+            return pack;
+          }
+          // Legacy unversioned: validate with HEAD etag / length.
+          const headMeta = await headPackMeta(primaryUrl);
+          if (cacheMetaMatches(cached, headMeta || cached.meta || {})) {
+            if (onProgress) onProgress(0.5);
+            const pack = await parsePackText(cached.text, cached.meta || headMeta || {}, cacheKey);
+            if (!Array.isArray(pack) || pack.length === 0) throw new Error('empty cached pack');
+            window.STOCKS_DATA = pack;
+            loadedDatasetSha = null;
+            if (onProgress) onProgress(1);
+            perfLog('pack.cache.hit', 0, { stocks: pack.length, key: LEGACY_IDB_KEY });
             return pack;
           }
         }
@@ -274,13 +334,34 @@ function loadPack(onProgress) {
         if (perfEnabled()) console.warn('[perf] pack.cache', cacheErr);
       }
 
-      const fetched = await fetchPackText(onProgress);
-      const pack = await parsePackText(fetched.text, fetched.meta || {});
+      let fetched;
+      try {
+        fetched = await fetchPackText(primaryUrl, onProgress, fallbackUrl);
+      } catch (err) {
+        if (secondaryFallback) {
+          fetched = await fetchPackText(fallbackUrl, onProgress, secondaryFallback);
+        } else {
+          throw err;
+        }
+      }
+      const pack = await parsePackText(fetched.text, fetched.meta || {}, cacheKey);
+      // Persist for IDB when worker path did not (worker keeps its own); always put here for sha key.
+      idbPut({
+        key: cacheKey,
+        text: fetched.text,
+        meta: fetched.meta || {},
+        savedAt: Date.now(),
+        datasetSha: datasetSha || null,
+      }).catch(function () {});
       fetched.text = null;
       if (!Array.isArray(pack) || pack.length === 0) {
         throw new Error('empty pack');
       }
       window.STOCKS_DATA = pack;
+      loadedDatasetSha = datasetSha;
+      if (typeof window !== 'undefined' && datasetSha) {
+        window.STOCKS_DATASET_SHA = datasetSha;
+      }
       if (onProgress) onProgress(1);
       return pack;
     })
@@ -322,3 +403,12 @@ export function ensureStocksLoaded(gameState, onProgress) {
     if (onProgress) onProgress(1);
   });
 }
+
+// Re-export helpers for tests / advanced callers
+export {
+  versionedPackUrl,
+  idbKeyForPack,
+  normalizePackMeta,
+  PACK_META_URL,
+  PACK_FALLBACK_URL,
+};
