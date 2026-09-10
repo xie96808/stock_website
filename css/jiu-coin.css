@@ -1,0 +1,72 @@
+/* ===== 韭币 chrome (auth chip) ===== */
+.jiu-coin-chrome {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.jiu-coin-chrome[hidden] {
+  display: none !important;
+}
+.jiu-coin-balance {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #1f6b3a;
+  padding: 4px 8px 4px 6px;
+  border: 1.5px solid #1f6b3a;
+  border-radius: 999px;
+  background: rgba(61, 184, 106, 0.12);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
+}
+.jiu-coin-icon {
+  color: #1f6b3a;
+  flex: 0 0 auto;
+}
+.jiu-coin-daily-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 1.5px solid #1f6b3a;
+  background: #e4f6ea;
+  color: #14532d;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
+}
+.jiu-coin-daily-btn:hover:not(:disabled) {
+  background: #d2efdc;
+}
+.jiu-coin-daily-btn:disabled,
+.jiu-coin-daily-btn.is-claimed {
+  opacity: 0.72;
+  cursor: default;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .jiu-coin-balance {
+  color: #7dcea0;
+  border-color: #3d8f5f;
+  background: rgba(61, 184, 106, 0.16);
+}
+[data-theme="dark"] .jiu-coin-icon {
+  color: #7dcea0;
+}
+[data-theme="dark"] .jiu-coin-daily-btn {
+  border-color: #3d8f5f;
+  background: #1a3324;
+  color: #b7e0c5;
+}
+[data-theme="dark"] .jiu-coin-daily-btn:hover:not(:disabled) {
+  background: #21402d;
+}
+
+@media (max-width: 640px) {
+  .jiu-coin-daily-btn {
+    padding: 5px 8px;
+  }
+  .jiu-coin-balance {
+    padding: 4px 7px 4px 5px;
+  }
+}

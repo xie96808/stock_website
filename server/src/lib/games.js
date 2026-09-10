@@ -3,6 +3,7 @@ import { openDb } from "../db/connection.js";
 import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js";
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
+import { deductGameCreate } from "./jiuCoin.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -242,9 +243,24 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
         now,
         expiresAt
       );
+      // Same TX: −10 韭币 on successful CREATE only (no refund on abandon).
+      deductGameCreate(userId, id, db);
     });
     tx();
   } catch (e) {
+    if (e.code === "INSUFFICIENT_FUNDS") {
+      return {
+        error: {
+          status: 402,
+          code: "INSUFFICIENT_FUNDS",
+          message: e.message || "韭币不足，无法创建云端对局",
+          details: {
+            balance: e.balance ?? null,
+            required: e.required ?? 10,
+          },
+        },
+      };
+    }
     if (e.code === "ACTIVE_GAME_EXISTS") {
       return {
         error: {

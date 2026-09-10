@@ -3,7 +3,7 @@
  * attachDeferredStart still sets window.startGame as the modal wrapper (playAgain depends on it).
  */
 
-import { getAuthState } from './auth.js';
+import { getAuthState, openAuthModal, refreshMe } from './auth.js';
 import {
   createCloudGame,
   fetchActiveCloudGame,
@@ -184,6 +184,11 @@ export function attachDeferredStart(startGame, gameState) {
 
   window.startGame = function () {
     if (locked) return;
+    const auth = getAuthState();
+    if (!auth.user) {
+      openAuthModal('login');
+      return;
+    }
     openModal();
   };
 
@@ -215,10 +220,15 @@ export function attachDeferredStart(startGame, gameState) {
       const tAll = performance.now();
       const fillInput = document.querySelector('input[name="fillMode"]:checked');
       const fillMode = fillInput && fillInput.value === 'same_close' ? 'same_close' : 'next_open';
-      const playInput = document.querySelector('input[name="playMode"]:checked');
-      const playMode = playInput ? playInput.value : 'auto';
       const auth = getAuthState();
-      const wantCloud = auth.user && playMode !== 'local';
+      // Locked economy: cloud CREATE only; no silent local full-game substitute when logged out.
+      if (!auth.user) {
+        openAuthModal('login');
+        const cancelErr = new Error('请先登录');
+        cancelErr.code = 'USER_CANCELLED';
+        throw cancelErr;
+      }
+      const wantCloud = true;
 
       const packAlreadyReady = packReady();
       setProgress(packAlreadyReady ? 55 : 8, packAlreadyReady ? '资源已就绪…' : '股票资源加载中…');
@@ -297,9 +307,13 @@ export function attachDeferredStart(startGame, gameState) {
 
       setProgress(94, '进入模拟盘…');
       if (cloud) {
+        try {
+          await refreshMe();
+        } catch { /* ignore */ }
         await startGame({ cloud: cloud, resumeActions: resumeActions });
       } else {
-        await startGame({ practiceOnly: true });
+        // Should not reach: guest/local path removed.
+        throw new Error('需要登录后创建云端对局');
       }
 
       const game = document.getElementById('gameScreen');

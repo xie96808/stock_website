@@ -18,6 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/jiu-coin.css">
     <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -111,7 +112,7 @@
                             <span class="copy">
                                 <small>开始练习</small>
                                 <strong>开始游戏</strong>
-                                <p>随机三十日 K 线，点开始后选择成交方式，终局揭晓身份。</p>
+                                <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
                             </span>
                             <span class="cta cta-fill">立即开始</span>
                         </button>
@@ -120,7 +121,7 @@
                             <span class="copy">
                                 <small>云端战绩</small>
                                 <strong>我的战绩</strong>
-                                <p>登录后查看已保存对局与基础统计；游客仅可本地练习。</p>
+                                <p>登录后查看已保存对局与基础统计。</p>
                             </span>
                             <span class="cta cta-wash">查看战绩</span>
                         </button>
@@ -708,23 +709,7 @@
                         </span>
                     </label>
                 </div>
-                <div class="fill-mode-picker play-mode-picker" role="radiogroup" aria-label="对局类型" id="playModePicker">
-                    <label class="fill-mode-option">
-                        <input type="radio" name="playMode" value="cloud" checked>
-                        <span>
-                            <strong>云端战绩局</strong>
-                            <small>登录后服务端签发题目并保存结算；游客将自动改为本地练习</small>
-                        </span>
-                    </label>
-                    <label class="fill-mode-option">
-                        <input type="radio" name="playMode" value="local">
-                        <span>
-                            <strong>本地练习</strong>
-                            <small>不创建云端对局、不保存成绩；登录不会追认本局游客练习</small>
-                        </span>
-                    </label>
-                </div>
-                <p class="fill-mode-dialog-note" id="playModeGuestNote">游客仅可本地练习；登录后可开云端战绩局。登录不会把当前游客局改存为云端成绩。</p>
+                <p class="fill-mode-dialog-note" id="playModeGuestNote">云端对局每次新建消耗 10 韭币；继续未完成对局不扣费。放弃不退款。</p>
                 <div class="fill-mode-actions">
                     <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
                     <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始游戏</button>
@@ -773,6 +758,7 @@
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
+        import { initJiuCoin } from './js/jiu-coin.js';
         import { initAnnouncements } from './js/announcements.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
@@ -834,7 +820,9 @@
         window.showHome = showHome;
         window.showSimHub = showSimHub;
         window.restoreSimShell = restoreSimShell;
-        initAuth().catch((e) => console.warn('auth init', e));
+        initAuth()
+          .then(() => initJiuCoin())
+          .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         (function () {
           const start = document.getElementById('startScreen');
