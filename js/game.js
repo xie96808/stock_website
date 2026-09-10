@@ -1,6 +1,15 @@
 // ========== GAME FUNCTIONS ==========
-import { gameState, chartRefs } from './state.js';
-import { resetSession, applyEngineResult, patchSession } from './game-session.js';
+import { chartRefs } from './state.js';
+import {
+    getSession,
+    getStocksCatalog,
+    resetSession,
+    applyEngineResult,
+    patchSession,
+    selectVisibleKline,
+    selectGameWindow,
+    selectTodayBar,
+} from './game-session.js';
 import { applyChartTheme } from './utils.js';
 import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
@@ -46,8 +55,9 @@ export async function startGame(options = {}) {
     const cloud = options.cloud || null;
     const gameDays = 30;
 
-    if (cloud && Number.isInteger(cloud.stockIndex) && gameState.stocksData[cloud.stockIndex]) {
-        const currentStock = gameState.stocksData[cloud.stockIndex];
+    const catalog = getStocksCatalog();
+    if (cloud && Number.isInteger(cloud.stockIndex) && catalog[cloud.stockIndex]) {
+        const currentStock = catalog[cloud.stockIndex];
         const historyDays = Number.isInteger(cloud.historyLength)
             ? cloud.historyLength
             : Math.min(30, currentStock.kline.length - gameDays);
@@ -58,8 +68,8 @@ export async function startGame(options = {}) {
             cloudMode: true,
             cloudGameId: cloud.gameId,
             datasetVersion: cloud.datasetVersion || null,
-            ruleVersion: cloud.ruleVersion || gameState.ruleVersion,
-            fillMode: cloud.fillMode || gameState.fillMode,
+            ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
+            fillMode: cloud.fillMode || getSession().fillMode,
             currentStock,
             historyLength: historyDays,
             gameKline: currentStock.kline.slice(
@@ -69,8 +79,8 @@ export async function startGame(options = {}) {
         });
     } else {
         // Local practice: pick random stock and window (30 game days).
-        const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
-        const currentStock = gameState.stocksData[stockIndex];
+        const stockIndex = Math.floor(Math.random() * catalog.length);
+        const currentStock = catalog[stockIndex];
         const klineLen = currentStock.kline.length;
         const historyDays = Math.min(30, klineLen - gameDays);
         const minStart = historyDays;
@@ -127,7 +137,7 @@ export async function startGame(options = {}) {
 
     if (resumeActions && resumeActions.length) {
         applyCloudResume(resumeActions);
-    } else if (gameState.cloudMode) {
+    } else if (getSession().cloudMode) {
         persistCurrentCloudDraft();
     }
 }
@@ -142,7 +152,7 @@ export function applyCloudResume(actions) {
     if (bars.length < 30) return false;
     const clipped = actions.slice(0, 29);
     const r = replayGame({
-        fillMode: gameState.fillMode,
+        fillMode: getSession().fillMode,
         bars,
         actions: clipped,
         finish: false
@@ -179,8 +189,9 @@ export function initChart() {
     // Sync crosshair to OHLC panel
     chartRefs.klineChart.on('mousemove', function(params) {
         if (params.dataIndex == null) return;
-        const histLen = gameState.historyLength;
-        const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
+        const session = getSession();
+        const histLen = session.historyLength;
+        const visibleData = selectVisibleKline(session);
         const d = visibleData[params.dataIndex];
         if (!d) return;
         document.getElementById('hoverLabel').textContent = '悬停数据';
@@ -219,8 +230,7 @@ function maChecked(id) {
 }
 
 function resetOHLCToToday() {
-    const histLen = gameState.historyLength;
-    const todayData = gameState.gameKline[histLen + gameState.currentDay - 1];
+    const todayData = selectTodayBar();
     if (!todayData) return;
     document.getElementById('hoverLabel').textContent = '今日收盘';
     document.getElementById('hoverDate').textContent = todayData.date;
@@ -233,8 +243,9 @@ function resetOHLCToToday() {
 
 export function updateChart() {
     if (!chartRefs.klineChart) return;
-    const histLen = gameState.historyLength;
-    const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
+    const session = getSession();
+    const histLen = session.historyLength;
+    const visibleData = selectVisibleKline(session);
 
     const maSelected = {
         '5日线': maChecked('indicatorMA5'),
@@ -246,7 +257,7 @@ export function updateChart() {
     const option = buildKlineOption({
         bars: visibleData,
         historyLength: histLen,
-        trades: gameState.tradeHistory,
+        trades: session.tradeHistory,
         mode: 'game',
         maSelected,
         syncHover: (kd) => {
@@ -265,8 +276,7 @@ export function updateChart() {
 }
 
 export function getGameBars() {
-    const histLen = gameState.historyLength;
-    return gameState.gameKline.slice(histLen, histLen + 30);
+    return selectGameWindow();
 }
 
 function syncFromEngine(r, { finished = false, bars = null } = {}) {
@@ -274,15 +284,16 @@ function syncFromEngine(r, { finished = false, bars = null } = {}) {
 }
 
 export function handleAction(action) {
-    if (gameState.currentDay >= 30) return;
+    const session = getSession();
+    if (session.currentDay >= 30) return;
     if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
 
     const bars = getGameBars();
     if (bars.length < 30) return;
 
-    const nextActions = gameState.actions.concat(action);
+    const nextActions = session.actions.concat(action);
     const r = replayGame({
-        fillMode: gameState.fillMode,
+        fillMode: session.fillMode,
         bars,
         actions: nextActions,
         finish: false
@@ -301,12 +312,13 @@ export function handleAction(action) {
 
 /** Day-30 only: settle with valuation (not a fake sell). */
 export function finishSettle() {
-    if (gameState.currentDay < 30 || gameState.actions.length !== 29) return;
+    const session = getSession();
+    if (session.currentDay < 30 || session.actions.length !== 29) return;
     const bars = getGameBars();
     const r = settleGame({
-        fillMode: gameState.fillMode,
+        fillMode: session.fillMode,
         bars,
-        actions: gameState.actions
+        actions: session.actions
     });
     if (!r.ok) {
         console.error('settle failed', r);
@@ -318,28 +330,29 @@ export function finishSettle() {
 
 // Kept for compatibility; engine now owns fill/replay.
 export function nextDay() {
-    const action = gameState.pendingAction || 'hold';
+    const action = getSession().pendingAction || 'hold';
     handleAction(action);
 }
 
 export function addTradeHistory(type, day, price, returnVal = null) {
-    gameState.tradeHistory.push({ type, day, price, return: returnVal });
+    getSession().tradeHistory.push({ type, day, price, return: returnVal });
 }
 
 export function updateUI() {
-    const histLen = gameState.historyLength;
-    const todayData = gameState.gameKline[histLen + gameState.currentDay - 1];
+    const session = getSession();
+    const histLen = session.historyLength;
+    const todayData = selectTodayBar(session);
 
     // Progress bar
-    const pct = ((gameState.currentDay - 1) / 30 * 100).toFixed(1);
+    const pct = ((session.currentDay - 1) / 30 * 100).toFixed(1);
     const fillEl = document.getElementById('dayProgressFill');
     if (fillEl) fillEl.style.width = pct + '%';
 
     // Day counter & mood
-    document.getElementById('currentDay').textContent = gameState.currentDay;
+    document.getElementById('currentDay').textContent = session.currentDay;
     const moodEl = document.getElementById('progressMood');
     if (moodEl) {
-        const moodIdx = Math.min(Math.floor((gameState.currentDay - 1) / 3), MOODS.length - 1);
+        const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
         moodEl.textContent = MOODS[moodIdx];
     }
 
@@ -350,7 +363,7 @@ export function updateUI() {
     if (subtitleInner) subtitleInner.textContent = '身份隐藏中';
 
     // ── Return ratio (judging standard). Engine still uses starting cash internally. ──
-    const displayReturn = (gameState.totalReturn - 1) * 100;
+    const displayReturn = (session.totalReturn - 1) * 100;
 
     // Primary card: 收益率 (no absolute 初始/总资金 display)
     const pnlCard = document.getElementById('holdingPnlCard');
@@ -375,16 +388,16 @@ export function updateUI() {
     // Position affordance without absolute cash amounts
     const fundsEl = document.getElementById('availableFunds');
     if (fundsEl) {
-        fundsEl.textContent = gameState.position === 'empty' ? '可买入' : '已全仓';
+        fundsEl.textContent = session.position === 'empty' ? '可买入' : '已全仓';
     }
 
     // Position status chip
     const posEl = document.getElementById('positionStatus');
     if (posEl) {
-        if (gameState.position === 'empty') {
+        if (session.position === 'empty') {
             posEl.textContent = '空仓';
             posEl.className = 'board-chip neutral';
-        } else if (gameState.position === 'locked') {
+        } else if (session.position === 'locked') {
             posEl.textContent = 'T+1 锁定';
             posEl.className = 'board-chip locked';
         } else {
@@ -396,8 +409,8 @@ export function updateUI() {
     // Meta grid values
     document.getElementById('currentPrice').textContent = todayData.close.toFixed(2);
 
-    const prevIdx = histLen + gameState.currentDay - 2;
-    const prevData = prevIdx >= 0 ? gameState.gameKline[prevIdx] : null;
+    const prevIdx = histLen + session.currentDay - 2;
+    const prevData = prevIdx >= 0 ? session.gameKline[prevIdx] : null;
     let dailyPct = null;
     if (prevData && prevData.close > 0) {
         dailyPct = (todayData.close / prevData.close - 1) * 100;
@@ -422,15 +435,15 @@ export function updateUI() {
     }
 
     const costEl = document.getElementById('costBasis');
-    if (costEl) costEl.textContent = gameState.costBasis > 0 ? gameState.costBasis.toFixed(2) : '--';
+    if (costEl) costEl.textContent = session.costBasis > 0 ? session.costBasis.toFixed(2) : '--';
 
-    document.getElementById('tradeCount').textContent = gameState.tradeHistory.length;
+    document.getElementById('tradeCount').textContent = session.tradeHistory.length;
 
     // OHLC panel — show today by default
     resetOHLCToToday();
 
     // Day 30: only「结束并结算」— no buy/sell pretending to liquidate.
-    const settleDay = gameState.currentDay >= 30;
+    const settleDay = session.currentDay >= 30;
     const buyBtn = document.getElementById('buyBtn');
     const sellBtn = document.getElementById('sellBtn');
     const holdBtn = document.getElementById('holdBtn');
@@ -447,12 +460,12 @@ export function updateUI() {
     } else {
         if (buyBtn) {
             buyBtn.hidden = false;
-            buyBtn.disabled = gameState.position !== 'empty';
+            buyBtn.disabled = session.position !== 'empty';
         }
         if (sellBtn) {
             sellBtn.hidden = false;
             // locked: may queue sell for next open (T+1)
-            sellBtn.disabled = gameState.position === 'empty';
+            sellBtn.disabled = session.position === 'empty';
         }
         if (holdBtn) {
             holdBtn.hidden = false;
@@ -466,21 +479,21 @@ export function updateUI() {
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
-        const sameClose = gameState.fillMode === 'same_close';
+        const sameClose = session.fillMode === 'same_close';
         if (settleDay) {
-            if (gameState.position === 'empty') {
+            if (session.position === 'empty') {
                 hintEl.textContent = '第 30 日 · 空仓可直接结束并结算';
                 hintEl.className = 'action-hint';
             } else {
                 hintEl.textContent = '第 30 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）';
                 hintEl.className = 'action-hint warning';
             }
-        } else if (gameState.position === 'locked') {
+        } else if (session.position === 'locked') {
             hintEl.textContent = sameClose
                 ? 'T+1 锁定中，今日可卖出（按今日收盘价成交）'
                 : 'T+1 锁定中，今日可挂卖单（按次日开盘成交）';
             hintEl.className = 'action-hint warning';
-        } else if (gameState.position === 'empty') {
+        } else if (session.position === 'empty') {
             hintEl.textContent = sameClose
                 ? '当前空仓 · 买入将按今日收盘价成交'
                 : '当前空仓，可以选择买入或继续观望';
@@ -498,11 +511,12 @@ export function updateUI() {
 
 
 export function updateTradeLog() {
+    const session = getSession();
     const listEl = document.getElementById('historyList');
     const countEl = document.getElementById('tradeLogCount');
     if (!listEl) return;
 
-    const rows = gameState.tradeHistory.map((trade) => {
+    const rows = session.tradeHistory.map((trade) => {
         const retStr = trade.return
             ? ` · 收益 <strong>${((trade.return - 1) * 100 >= 0 ? '+' : '') + ((trade.return - 1) * 100).toFixed(2)}%</strong>`
             : '';
@@ -512,8 +526,8 @@ export function updateTradeLog() {
             message: `${trade.type === 'buy' ? '买入' : '卖出'} @ ${trade.price.toFixed(2)}${retStr}`
         };
     });
-    if (gameState.valuation) {
-        const v = gameState.valuation;
+    if (session.valuation) {
+        const v = session.valuation;
         const mult = v.multiple != null ? v.multiple : (v.price / v.buyPrice);
         const pct = (mult - 1) * 100;
         rows.push({
@@ -529,7 +543,7 @@ export function updateTradeLog() {
         return;
     }
 
-    if (countEl) countEl.textContent = `${gameState.tradeHistory.length} 笔成交`;
+    if (countEl) countEl.textContent = `${session.tradeHistory.length} 笔成交`;
 
     listEl.innerHTML = [...rows].reverse().map((row) => `
             <div class="log-item ${row.cls}">
@@ -543,12 +557,13 @@ export function updateTradeLog() {
 export function updateTradeHistory() { updateTradeLog(); }
 
 export function renderWaveAnalysis() {
-    if (gameState.currentDay < 5) return; // not enough data
+    const session = getSession();
+    if (session.currentDay < 5) return; // not enough data
 
-    const histLen = gameState.historyLength;
-    const endIdx = histLen + gameState.currentDay - 1;
-    const lookback = Math.min(gameState.currentDay, 20);
-    const data = gameState.gameKline.slice(endIdx - lookback + 1, endIdx + 1);
+    const histLen = session.historyLength;
+    const endIdx = histLen + session.currentDay - 1;
+    const lookback = Math.min(session.currentDay, 20);
+    const data = session.gameKline.slice(endIdx - lookback + 1, endIdx + 1);
 
     const closes = data.map(d => d.close);
     const volumes = data.map(d => d.volume);

@@ -13,6 +13,12 @@ import {
   clearShareMeta,
   setShareMeta,
   snapshotSession,
+  selectVisibleKline,
+  selectGameWindow,
+  selectTodayBar,
+  selectAnalysisInput,
+  selectSettleView,
+  selectShareView,
 } from '../js/game-session.js';
 
 function seedDirtySession() {
@@ -202,4 +208,58 @@ test('snapshotSession returns session keys only', () => {
     assert.ok(Object.prototype.hasOwnProperty.call(snap, k), k);
   }
   assert.equal(Object.prototype.hasOwnProperty.call(snap, 'stocksData'), false);
+});
+
+test('read selectors expose live session slices without copying identity', () => {
+  resetSession({ fillMode: 'next_open' });
+  const bars = [];
+  for (let i = 0; i < 40; i++) {
+    bars.push({ date: '2020-01-' + String(i + 1).padStart(2, '0'), open: 10, high: 11, low: 9, close: 10 + i * 0.01, volume: 1000 });
+  }
+  patchSession({
+    historyLength: 10,
+    currentDay: 5,
+    gameKline: bars.slice(0, 40),
+    tradeHistory: [{ type: 'buy', day: 2, price: 10.1, return: null }],
+    tradeGains: [],
+    totalReturn: 1.02,
+    returnPct: '2.00',
+    fillMode: 'same_close',
+    bestPoints: { buys: [], sells: [] },
+    cloudMode: true,
+    saveStatus: 'saved',
+    currentStock: { code: '600000', name: 'Demo' },
+  });
+  setShareMeta({ rank: 4, boardTotal: 40, beatPct: 90 });
+
+  const session = getSession();
+  const visible = selectVisibleKline(session);
+  assert.equal(visible.length, 15); // 10 hist + day 5
+  const visibleDefault = selectVisibleKline(); // default arg uses getSession
+  assert.equal(visibleDefault.length, 15);
+  assert.equal(visible[0], session.gameKline[0]); // element identity preserved
+  assert.equal(visibleDefault[14], session.gameKline[14]);
+
+  const windowBars = selectGameWindow(session);
+  assert.equal(windowBars.length, 30);
+  assert.equal(windowBars[0], session.gameKline[10]);
+
+  const today = selectTodayBar(session);
+  assert.equal(today, session.gameKline[10 + 5 - 1]);
+
+  const analysis = selectAnalysisInput(session);
+  assert.equal(analysis.kline, session.gameKline);
+  assert.equal(analysis.trades, session.tradeHistory);
+  assert.equal(analysis.fillMode, 'same_close');
+
+  const settle = selectSettleView(session);
+  assert.equal(settle.currentStock, session.currentStock);
+  assert.equal(settle.returnPct, '2.00');
+  assert.equal(settle.cloudMode, true);
+
+  const share = selectShareView(session);
+  assert.equal(share.shareRank, 4);
+  assert.equal(share.shareBeatPct, 90);
+  assert.equal(share.fillMode, 'same_close');
+  assert.equal(share.currentStock.code, '600000');
 });

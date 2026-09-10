@@ -1,5 +1,6 @@
 // ========== RESULT SCREEN ==========
-import { gameState, chartRefs } from './state.js';
+import { chartRefs } from './state.js';
+import { getSession, selectSettleView } from './game-session.js';
 import { applyChartTheme } from './utils.js';
 import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
@@ -24,51 +25,55 @@ export function endGame() {
     prepareScreen(Route.RESULT);
     activateScreen(Route.RESULT);
 
+    const view = selectSettleView();
+
     document.getElementById('stockReveal').textContent =
-        `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+        `${view.currentStock.name} (${view.currentStock.code})`;
 
     // Date range covers the 30 game days only (day-1 … day-30).
-    const histLen = gameState.historyLength;
-    const startBar = gameState.gameKline[histLen];
-    const endBar = gameState.gameKline[histLen + 29];
+    const histLen = view.historyLength;
+    const startBar = view.gameKline[histLen];
+    const endBar = view.gameKline[histLen + 29];
     document.getElementById('dateRange').textContent =
         `${startBar.date} ~ ${endBar.date}`;
 
     const fillModeEl = document.getElementById('fillModeLabel');
     if (fillModeEl) {
-        fillModeEl.textContent = gameState.fillMode === 'same_close'
+        fillModeEl.textContent = view.fillMode === 'same_close'
             ? '成交：当日收盘'
             : '成交：次日开盘';
     }
 
-    const finalReturnPercent = gameState.returnPct != null
-        ? parseFloat(gameState.returnPct)
-        : (gameState.totalReturn - 1) * 100;
+    const finalReturnPercent = view.returnPct != null
+        ? parseFloat(view.returnPct)
+        : (view.totalReturn - 1) * 100;
     const finalReturnEl = document.getElementById('finalReturn');
-    const pctStr = gameState.returnPct != null
-        ? ((parseFloat(gameState.returnPct) >= 0 ? '+' : '') + gameState.returnPct)
+    const pctStr = view.returnPct != null
+        ? ((parseFloat(view.returnPct) >= 0 ? '+' : '') + view.returnPct)
         : ((finalReturnPercent >= 0 ? '+' : '') + finalReturnPercent.toFixed(2));
     finalReturnEl.textContent = pctStr + '%';
     finalReturnEl.className = 'final-return ' +
         (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
 
-    document.getElementById('finalTradeCount').textContent = gameState.tradeHistory.length;
-    document.getElementById('holdingDays').textContent = gameState.holdingDays;
+    document.getElementById('finalTradeCount').textContent = view.tradeHistory.length;
+    document.getElementById('holdingDays').textContent = view.holdingDays;
 
-    const maxGain = gameState.tradeGains.length > 0 ?
-        Math.max(...gameState.tradeGains) : 0;
+    const maxGain = view.tradeGains.length > 0 ?
+        Math.max(...view.tradeGains) : 0;
     document.getElementById('maxGain').textContent =
         (maxGain >= 0 ? '+' : '') + maxGain.toFixed(2) + '%';
 
     document.getElementById('resultChartSubtitle').textContent =
-        `${gameState.currentStock.name} (${gameState.currentStock.code})`;
+        `${view.currentStock.name} (${view.currentStock.code})`;
 
     generateBSReport();
     generateBestPoints();
     drawResultChart();
     generateKlineAnalysis();
 
-    const grade = calcGrade(finalReturnPercent, gameState.bsScore);
+    // BS score written by generateBSReport — re-read live session.
+    const settled = selectSettleView();
+    const grade = calcGrade(finalReturnPercent, settled.bsScore);
     const medalEl = document.getElementById('gradeMedal');
     if (medalEl) {
         medalEl.className = 'grade-medal ' + grade.cls;
@@ -80,18 +85,19 @@ export function endGame() {
     if (verdictEl) verdictEl.textContent = grade.verdict;
 
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
-    if (bsDisplayEl) bsDisplayEl.textContent = gameState.bsScore != null ? gameState.bsScore : '--';
+    if (bsDisplayEl) bsDisplayEl.textContent = settled.bsScore != null ? settled.bsScore : '--';
 
     updateSaveStatusUi();
     clearShareRankMeta();
     updateShareRankHint();
-    if (gameState.cloudMode && gameState.cloudGameId) {
+    if (settled.cloudMode && settled.cloudGameId) {
         finishCloudGame().then(async (res) => {
             // Refresh return display from authoritative server result if present.
+            const live = getSession();
             const finalReturnEl = document.getElementById('finalReturn');
-            if (finalReturnEl && gameState.returnPct != null) {
-                const finalReturnPercent = parseFloat(gameState.returnPct);
-                const pctStr = (finalReturnPercent >= 0 ? '+' : '') + gameState.returnPct;
+            if (finalReturnEl && live.returnPct != null) {
+                const finalReturnPercent = parseFloat(live.returnPct);
+                const pctStr = (finalReturnPercent >= 0 ? '+' : '') + live.returnPct;
                 finalReturnEl.textContent = pctStr + '%';
                 finalReturnEl.className = 'final-return ' +
                     (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
@@ -113,15 +119,16 @@ export function drawResultChart() {
     }
     chartRefs.resultChart = echarts.init(chartDom);
 
-    const histLen = gameState.historyLength;
-    const fullData = gameState.gameKline.slice(0, histLen + 30); // history + day-1…day-30
+    const view = selectSettleView();
+    const histLen = view.historyLength;
+    const fullData = view.gameKline.slice(0, histLen + 30); // history + day-1…day-30
 
     const option = buildKlineOption({
         bars: fullData,
         historyLength: histLen,
-        trades: gameState.tradeHistory,
-        bestPoints: gameState.bestPoints || { buys: [], sells: [] },
-        valuation: gameState.valuation || null,
+        trades: view.tradeHistory,
+        bestPoints: view.bestPoints || { buys: [], sells: [] },
+        valuation: view.valuation || null,
         mode: 'result',
     });
 
@@ -134,8 +141,9 @@ export function buildPointNavigator(chart, histLen, fullData) {
     const nav = document.getElementById('pointNavigator');
     nav.innerHTML = '';
 
-    const bp = gameState.bestPoints || { buys: [], sells: [] };
-    const trades = gameState.tradeHistory || [];
+    const view = selectSettleView();
+    const bp = view.bestPoints || { buys: [], sells: [] };
+    const trades = view.tradeHistory || [];
     const allPoints = [];
 
     bp.buys.forEach((p, idx) => {
@@ -157,8 +165,8 @@ export function buildPointNavigator(chart, histLen, fullData) {
             tradeReturn: t.return
         });
     });
-    if (gameState.valuation) {
-        const v = gameState.valuation;
+    if (view.valuation) {
+        const v = view.valuation;
         const dayData = fullData[histLen + v.day - 1];
         allPoints.push({
             day: v.day,

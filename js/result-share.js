@@ -1,5 +1,4 @@
-import { gameState } from './state.js';
-import { clearShareMeta, setShareMeta } from './game-session.js';
+import { clearShareMeta, setShareMeta, selectShareView } from './game-session.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 
@@ -16,22 +15,24 @@ function fillModeBoardLabel(mode) {
 }
 
 function formatReturnPctDisplay() {
-    if (gameState.returnPct != null) {
-        const n = parseFloat(gameState.returnPct);
-        const raw = String(gameState.returnPct);
+    const share = selectShareView();
+    if (share.returnPct != null) {
+        const n = parseFloat(share.returnPct);
+        const raw = String(share.returnPct);
         if (Number.isFinite(n)) {
             return (n >= 0 && !raw.startsWith('+') ? '+' : '') + raw + '%';
         }
         return raw + '%';
     }
-    const pct = (gameState.totalReturn - 1) * 100;
+    const pct = (share.totalReturn - 1) * 100;
     return (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
 }
 
 function buildResultPromoCaption() {
+    const share = selectShareView();
     const ret = formatReturnPctDisplay();
-    const board = fillModeBoardLabel(gameState.fillMode);
-    const beat = gameState.shareBeatPct;
+    const board = fillModeBoardLabel(share.fillMode);
+    const beat = share.shareBeatPct;
     if (beat != null) {
         return (
             '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
@@ -45,10 +46,11 @@ function buildResultPromoCaption() {
 }
 
 function buildResultShareCopyText() {
+    const share = selectShareView();
     const opening = '我在「' + SHARE_SITE_NAME + '」用真实 A 股数据练了一局';
     const ret = formatReturnPctDisplay();
-    const rank = gameState.shareRank;
-    const beat = gameState.shareBeatPct;
+    const rank = share.shareRank;
+    const beat = share.shareBeatPct;
     const ranked = rank != null || beat != null;
     if (ranked) {
         const bits = [];
@@ -138,10 +140,11 @@ export async function copyResultShareText() {
 export async function refreshShareRankMeta() {
     clearShareRankMeta();
     const auth = getAuthState();
-    if (!auth || !auth.user || !gameState.cloudMode || gameState.saveStatus !== 'saved') {
+    const share = selectShareView();
+    if (!auth || !auth.user || !share.cloudMode || share.saveStatus !== 'saved') {
         return null;
     }
-    const fillMode = gameState.fillMode === 'same_close' ? 'same_close' : 'next_open';
+    const fillMode = share.fillMode === 'same_close' ? 'same_close' : 'next_open';
     try {
         const { data } = await api('/leaderboard?fillMode=' + encodeURIComponent(fillMode));
         const total = Number((data && data.total) || 0);
@@ -158,19 +161,20 @@ export async function refreshShareRankMeta() {
 export function updateShareRankHint() {
     const el = document.getElementById('resultShareHint');
     if (!el) return;
-    if (gameState.shareBeatPct != null && gameState.shareRank != null) {
+    const share = selectShareView();
+    if (share.shareBeatPct != null && share.shareRank != null) {
         el.hidden = false;
         el.textContent =
-            '已上' + fillModeBoardLabel(gameState.fillMode) + '榜 · #' + gameState.shareRank +
-            ' · 超越约 ' + gameState.shareBeatPct + '% 玩家';
+            '已上' + fillModeBoardLabel(share.fillMode) + '榜 · #' + share.shareRank +
+            ' · 超越约 ' + share.shareBeatPct + '% 玩家';
         return;
     }
-    if (gameState.cloudMode && gameState.saveStatus === 'saving') {
+    if (share.cloudMode && share.saveStatus === 'saving') {
         el.hidden = false;
         el.textContent = '战绩保存后分享图可带超越比例';
         return;
     }
-    if (gameState.cloudMode && gameState.saveStatus === 'saved') {
+    if (share.cloudMode && share.saveStatus === 'saved') {
         el.hidden = false;
         el.textContent = '暂无上榜超越数据，分享图将使用简明文案';
         return;
@@ -213,20 +217,21 @@ function ensureResultShareSheet() {
 
 function populateResultShareSheet() {
     const sheet = ensureResultShareSheet();
+    const share = selectShareView();
     const stockEl = document.getElementById('stockReveal');
-    const stock = gameState.currentStock
-        ? (gameState.currentStock.name + '（' + gameState.currentStock.code + '）')
+    const stock = share.currentStock
+        ? (share.currentStock.name + '（' + share.currentStock.code + '）')
         : ((stockEl && stockEl.textContent) || '');
     const dateEl = document.getElementById('dateRange');
     const dateRange = (dateEl && dateEl.textContent) || '';
-    const fill = fillModeBoardLabel(gameState.fillMode) + '成交';
+    const fill = fillModeBoardLabel(share.fillMode) + '成交';
     const ret = formatReturnPctDisplay();
     const gradeEl = document.getElementById('gradeTitle');
     const gradeTitle = (gradeEl && gradeEl.textContent) || '';
     const retEl = sheet.querySelector('#rssReturn');
-    const pct = gameState.returnPct != null
-        ? parseFloat(gameState.returnPct)
-        : (gameState.totalReturn - 1) * 100;
+    const pct = share.returnPct != null
+        ? parseFloat(share.returnPct)
+        : (share.totalReturn - 1) * 100;
     retEl.className = 'result-share-sheet__return ' +
         (pct > 0 ? 'positive' : pct < 0 ? 'negative' : 'zero');
     sheet.querySelector('#rssStock').textContent = stock;
@@ -269,7 +274,8 @@ export async function saveResultShareImage() {
             alert('生成分享图失败，请稍后再试');
             return;
         }
-        const code = (gameState.currentStock && gameState.currentStock.code) || 'game';
+        const shareStock = selectShareView().currentStock;
+        const code = (shareStock && shareStock.code) || 'game';
         const safeCode = String(code).replace(/[\\\/:*?"<>|]/g, '_');
         const filename = '结算分享_' + safeCode + '.png';
         const url = URL.createObjectURL(blob);
@@ -294,6 +300,6 @@ export async function saveResultShareImage() {
 }
 
 export function openResultLeaderboard() {
-    const mode = gameState.fillMode === 'same_close' ? 'same_close' : 'next_open';
+    const mode = selectShareView().fillMode === 'same_close' ? 'same_close' : 'next_open';
     showLeaderboard(mode);
 }
