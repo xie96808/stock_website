@@ -181,13 +181,25 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== 纸 / 墨 pills (global) ===== */
-.theme-toggle {
+/* ===== Top-left chrome: 纸/墨 + page zoom ===== */
+.top-left-chrome {
     position: fixed;
     top: 10px;
     left: 14px;
-    right: auto;
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    max-width: calc(100vw - 8px);
+}
+
+.theme-toggle {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    z-index: auto;
     width: auto;
     height: auto;
     display: flex;
@@ -245,6 +257,164 @@ html:not([data-theme="dark"]) .pill[data-mode="light"] {
     background: var(--wash);
     color: var(--wash-ink);
     box-shadow: 1px 1px 0 var(--line);
+}
+
+
+/* ===== Page zoom control (sketchbook) ===== */
+.page-zoom {
+    position: relative;
+    z-index: 101;
+}
+.page-zoom-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--chip-bg);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+}
+.page-zoom-step,
+.page-zoom-toggle {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--ink);
+    min-height: 32px;
+    min-width: 32px;
+    padding: 4px 6px;
+    border-radius: 999px;
+    line-height: 1;
+}
+.page-zoom-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-family: var(--kaiti);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    min-width: 0;
+}
+.page-zoom-glyph {
+    opacity: 0.85;
+}
+.page-zoom-label {
+    font-family: var(--sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    font-size: 11px;
+    opacity: 0.9;
+}
+.page-zoom-step:hover,
+.page-zoom-toggle:hover,
+.page-zoom-step:focus-visible,
+.page-zoom-toggle:focus-visible {
+    background: rgba(196, 160, 122, 0.28);
+    outline: none;
+}
+.page-zoom-step:focus-visible,
+.page-zoom-toggle:focus-visible {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--line);
+}
+.page-zoom-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 108px;
+    padding: 8px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1.6px solid var(--line);
+    border-radius: 14px 16px 12px 18px;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.14);
+}
+.page-zoom-menu[hidden] {
+    display: none !important;
+}
+.page-zoom-menu button {
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    border: 1px dashed transparent;
+    background: transparent;
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    min-height: 34px;
+}
+.page-zoom-menu button:hover,
+.page-zoom-menu button:focus-visible {
+    background: rgba(196, 160, 122, 0.22);
+    border-color: var(--line);
+    outline: none;
+}
+.page-zoom-menu button.is-active {
+    background: var(--wash);
+    color: var(--wash-ink);
+    border-style: solid;
+    border-color: var(--line);
+    box-shadow: 1px 1px 0 var(--line);
+}
+
+@media (max-width: 640px) {
+    .top-left-chrome {
+        top: 8px;
+        left: 8px;
+        gap: 4px;
+        /* Keep clear of right auth chip */
+        max-width: min(9.5rem, calc(100vw - 42vw));
+    }
+    .theme-toggle {
+        gap: 4px;
+    }
+    .theme-toggle .pill,
+    .pill {
+        min-width: 0;
+        padding: 6px 10px 5px;
+        font-size: 13px;
+        letter-spacing: 0.1em;
+        min-height: 36px;
+    }
+    .page-zoom-bar {
+        max-width: 100%;
+    }
+    .page-zoom-toggle {
+        padding: 4px 6px;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        min-height: 36px;
+    }
+    .page-zoom-step {
+        min-width: 36px;
+        min-height: 36px;
+    }
+    .page-zoom-glyph {
+        display: none; /* show % only on narrow to save width */
+    }
+    .page-zoom-label {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .top-left-chrome {
+        max-width: min(8.75rem, calc(100vw - 48vw));
+    }
+    .theme-toggle .pill,
+    .pill {
+        padding: 6px 8px 5px;
+        letter-spacing: 0.06em;
+    }
 }
 
 /* Scrollbar */

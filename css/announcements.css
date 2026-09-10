@@ -140,8 +140,11 @@
 
 @media (max-width: 640px) {
   .announcements-btn {
-    padding: 6px 10px;
-    font-size: 13px;
+    padding: 6px 8px;
+    font-size: 12px;
+    min-height: 36px;
+    letter-spacing: 0.04em;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
   }
   .announcements-actions {
     justify-content: stretch;
@@ -150,6 +153,13 @@
   .announcements-secondary {
     flex: 1;
     text-align: center;
+  }
+}
+@media (max-width: 420px) {
+  .announcements-btn {
+    padding: 6px 7px;
+    font-size: 12px;
+    letter-spacing: 0;
   }
 }
 

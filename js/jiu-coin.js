@@ -60,7 +60,7 @@ function ensureCoinDom() {
           ${coinIconHtml({ size: 14 })}
         </span>
       </span>
-      <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币">每日领取</button>
+      <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币" aria-label="每日领取韭币"><span class="jiu-daily-full">每日领取</span><span class="jiu-daily-short">领取</span></button>
     `;
     const loginBtn = document.getElementById("authLoginBtn");
     if (loginBtn) chip.insertBefore(wrap, loginBtn);
@@ -153,8 +153,35 @@ function openSuccessModal(amount) {
   if (modal) modal.hidden = false;
 }
 
+
+function setDailyBtnLabel(btn, state) {
+  if (!btn) return;
+  const labels = {
+    idle: { full: "每日领取", short: "领取" },
+    claimed: { full: "今日已领", short: "已领" },
+    busy: { full: "领取中…", short: "…" },
+  };
+  const L = labels[state] || labels.idle;
+  let full = btn.querySelector(".jiu-daily-full");
+  let short = btn.querySelector(".jiu-daily-short");
+  if (!full || !short) {
+    btn.textContent = "";
+    full = document.createElement("span");
+    full.className = "jiu-daily-full";
+    short = document.createElement("span");
+    short.className = "jiu-daily-short";
+    btn.append(full, short);
+  }
+  full.textContent = L.full;
+  short.textContent = L.short;
+}
+
 function isAlreadyClaimedBtn(btn) {
-  return !!(btn && (btn.classList.contains("is-claimed") || btn.textContent === "今日已领"));
+  if (!btn) return false;
+  if (btn.classList.contains("is-claimed")) return true;
+  const full = btn.querySelector(".jiu-daily-full");
+  const t = (full ? full.textContent : btn.textContent) || "";
+  return t.includes("今日已领") || t.includes("已领");
 }
 
 export function renderJiuCoinChrome() {
@@ -171,7 +198,7 @@ export function renderJiuCoinChrome() {
     balEl.textContent = "0";
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "每日领取";
+      setDailyBtnLabel(btn, "idle");
       btn.classList.remove("is-claimed");
     }
     return;
@@ -195,11 +222,11 @@ export async function refreshJiuCoinStatus() {
     if (btn) {
       if (data.claimedToday) {
         btn.disabled = true;
-        btn.textContent = "今日已领";
+        setDailyBtnLabel(btn, "claimed");
         btn.classList.add("is-claimed");
       } else {
         btn.disabled = false;
-        btn.textContent = "每日领取";
+        setDailyBtnLabel(btn, "idle");
         btn.classList.remove("is-claimed");
       }
     }
@@ -238,7 +265,7 @@ async function onDailyClaimConfirm() {
   }
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "领取中…";
+    setDailyBtnLabel(btn, "busy");
   }
   try {
     const { data } = await api("/me/jiu-coin/daily", { method: "POST" });
@@ -246,7 +273,7 @@ async function onDailyClaimConfirm() {
     renderJiuCoinChrome();
     if (btn) {
       btn.disabled = true;
-      btn.textContent = "今日已领";
+      setDailyBtnLabel(btn, "claimed");
       btn.classList.add("is-claimed");
     }
     openSuccessModal(data.amount);
@@ -256,12 +283,12 @@ async function onDailyClaimConfirm() {
     if (e?.code === "ALREADY_CLAIMED_TODAY" || /已领取/.test(msg)) {
       if (btn) {
         btn.disabled = true;
-        btn.textContent = "今日已领";
+        setDailyBtnLabel(btn, "claimed");
         btn.classList.add("is-claimed");
       }
     } else if (btn) {
       btn.disabled = false;
-      btn.textContent = "每日领取";
+      setDailyBtnLabel(btn, "idle");
       btn.classList.remove("is-claimed");
     }
     await refreshJiuCoinStatus();

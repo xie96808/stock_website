@@ -22,15 +22,34 @@
     <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
-    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.8&&n<=1.25){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
     <div class="bg-grid"></div>
     <div class="bg-gradient"></div>
 
-    <div class="theme-toggle" title="切换主题" role="group" aria-label="切换主题">
-        <button type="button" class="pill" data-mode="light" onclick="toggleTheme('light')">纸</button>
-        <button type="button" class="pill" data-mode="dark" onclick="toggleTheme('dark')">墨</button>
+    <div class="top-left-chrome" id="topLeftChrome">
+        <div class="theme-toggle" title="切换主题" role="group" aria-label="切换主题">
+            <button type="button" class="pill" data-mode="light" onclick="toggleTheme('light')">纸</button>
+            <button type="button" class="pill" data-mode="dark" onclick="toggleTheme('dark')">墨</button>
+        </div>
+        <div class="page-zoom" id="pageZoom">
+            <div class="page-zoom-bar" role="group" aria-label="页面缩放">
+                <button type="button" class="page-zoom-step" id="pageZoomMinus" title="缩小" aria-label="缩小">−</button>
+                <button type="button" class="page-zoom-toggle" id="pageZoomToggle" title="页面缩放" aria-haspopup="true" aria-expanded="false" aria-controls="pageZoomMenu">
+                    <span class="page-zoom-glyph" aria-hidden="true">缩放</span>
+                    <span class="page-zoom-label" id="pageZoomLabel">100%</span>
+                </button>
+                <button type="button" class="page-zoom-step" id="pageZoomPlus" title="放大" aria-label="放大">+</button>
+            </div>
+            <div class="page-zoom-menu" id="pageZoomMenu" role="menu" hidden>
+                <button type="button" role="menuitemradio" data-zoom-preset="0.8" aria-checked="false">80%</button>
+                <button type="button" role="menuitemradio" data-zoom-preset="0.9" aria-checked="false">90%</button>
+                <button type="button" role="menuitemradio" data-zoom-preset="1" aria-checked="true">100%</button>
+                <button type="button" role="menuitemradio" data-zoom-preset="1.1" aria-checked="false">110%</button>
+                <button type="button" role="menuitemradio" data-zoom-preset="1.25" aria-checked="false">125%</button>
+            </div>
+        </div>
     </div>
 
     <!-- Reserved chrome: avoid late JS insert shifting controls -->
@@ -759,6 +778,7 @@
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
         import { initJiuCoin } from './js/jiu-coin.js';
+        import { initPageZoom } from './js/page-zoom.js';
         import { initAnnouncements } from './js/announcements.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
@@ -820,6 +840,7 @@
         window.showHome = showHome;
         window.showSimHub = showSimHub;
         window.restoreSimShell = restoreSimShell;
+        initPageZoom();
         initAuth()
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));
