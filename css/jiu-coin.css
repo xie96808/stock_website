@@ -22,10 +22,10 @@
 }
 .jiu-coin-icon {
   color: #1f6b3a;
-  flex: 0 0 auto;
-  display: inline-block;
-  vertical-align: middle;
-  /* neutralize SVG default baseline so it doesn't drop below text */
+  display: block;
+  flex-shrink: 0;
+  width: 0.95em;
+  height: 0.95em;
   overflow: hidden;
 }
 .jiu-coin-inline,
@@ -33,26 +33,20 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  vertical-align: middle;
   line-height: 1;
 }
 .jiu-coin-inline {
   margin: 0 0.12em;
 }
-.jiu-coin-inline .jiu-coin-icon,
-.jiu-coin-amt .jiu-coin-icon {
-  display: block;
-  vertical-align: 0;
-}
 .jiu-coin-success-amt,
 .jiu-coin-amt .jiu-price-num {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
+  line-height: 1;
 }
 .jiu-coin-success-body .jiu-coin-icon,
 .jiu-coin-modal-body .jiu-coin-icon {
   color: #1f6b3a;
-  vertical-align: middle;
 }
 .jiu-coin-daily-btn {
   font: inherit;
@@ -98,13 +92,13 @@
   align-items: center;
   gap: 2px;
   margin-left: 0.4em;
-  padding: 1px 7px 2px 8px;
+  padding: 2px 7px 2px 8px;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  line-height: 1.35;
-  vertical-align: 0.12em;
+  line-height: 1;
+  vertical-align: 0.12em; /* whole pill vs title, not icon vs digit */
   border-radius: 999px;
   border: 1.5px solid var(--ink, #2a2a2a);
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
@@ -112,12 +106,7 @@
 }
 .jiu-price-badge .jiu-price-num {
   font-variant-numeric: tabular-nums;
-}
-.jiu-price-badge .jiu-coin-icon {
-  width: 12px;
-  height: 12px;
-  display: block;
-  vertical-align: 0;
+  line-height: 1;
 }
 .jiu-price-badge.jiu-price-paid .jiu-coin-icon {
   color: #1f6b3a;
@@ -289,6 +278,6 @@
   }
   .jiu-price-badge {
     font-size: 10px;
-    padding: 1px 7px 2px;
+    padding: 2px 7px;
   }
 }

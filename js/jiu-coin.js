@@ -55,8 +55,10 @@ function ensureCoinDom() {
     wrap.hidden = true;
     wrap.innerHTML = `
       <span class="jiu-coin-balance" title="韭币余额" aria-live="polite">
-        <span id="jiuCoinBalanceVal">0</span>
-        ${coinIconHtml({ size: 18 })}
+        <span class="jiu-coin-amt">
+          <span id="jiuCoinBalanceVal" class="jiu-price-num">0</span>
+          ${coinIconHtml({ size: 14 })}
+        </span>
       </span>
       <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币">每日领取</button>
     `;
