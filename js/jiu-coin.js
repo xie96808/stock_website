@@ -16,7 +16,7 @@ export function coinIconHtml({ size = 18, className = "jiu-coin-icon" } = {}) {
 /** Number + coin icon (icon after amount). */
 export function amountWithCoinHtml(amount, { size = 12 } = {}) {
   const n = amount == null ? "" : String(amount);
-  return `<span class="jiu-price-num">${n}</span>${coinIconHtml({ size })}`;
+  return `<span class="jiu-coin-amt"><span class="jiu-price-num">${n}</span>${coinIconHtml({ size })}</span>`;
 }
 
 let claimBusy = false;
@@ -55,8 +55,8 @@ function ensureCoinDom() {
     wrap.hidden = true;
     wrap.innerHTML = `
       <span class="jiu-coin-balance" title="韭币余额" aria-live="polite">
-        ${coinIconHtml({ size: 18 })}
         <span id="jiuCoinBalanceVal">0</span>
+        ${coinIconHtml({ size: 18 })}
       </span>
       <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币">每日领取</button>
     `;
@@ -74,15 +74,13 @@ function ensureCoinDom() {
 function ensureModals() {
   if (document.getElementById("jiuCoinDailyModal")) return;
 
-  const coin14 = coinIconHtml({ size: 14 });
-
   document.body.appendChild(
     el(`<div class="jiu-coin-modal" id="jiuCoinDailyModal" hidden>
       <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="jiuCoinDailyTitle">
         <button type="button" class="jiu-coin-close-x" id="jiuCoinDailyCloseX" aria-label="关闭">×</button>
         <h2 id="jiuCoinDailyTitle">每日领取</h2>
         <p class="jiu-coin-modal-body" id="jiuCoinDailyBody">
-          每天 0 点（北京时间）刷新一次；本次额度随机（50–200 ${coin14}），领取后立即到账。
+          每天 0 点（北京时间）刷新一次；本次额度随机，领取后立即到账。
         </p>
         <div class="jiu-coin-modal-actions">
           <button type="button" class="jiu-coin-secondary" id="jiuCoinDailyCancel">取消</button>
@@ -98,7 +96,7 @@ function ensureModals() {
         <button type="button" class="jiu-coin-close-x" id="jiuCoinSuccessCloseX" aria-label="关闭">×</button>
         <h2 id="jiuCoinSuccessTitle">领取成功</h2>
         <p class="jiu-coin-modal-body jiu-coin-success-body" id="jiuCoinSuccessBody">
-          恭喜你，获得 ${coin14}！
+          恭喜你，获得奖励！
         </p>
         <div class="jiu-coin-modal-actions">
           <button type="button" class="jiu-coin-primary" id="jiuCoinSuccessOk">好的</button>
@@ -146,8 +144,8 @@ function openSuccessModal(amount) {
   const n = Number(amount);
   const shown = Number.isFinite(n) ? String(n) : "—";
   if (body) {
-    // 获得 [icon] 85
-    body.innerHTML = `恭喜你，获得 ${coinIconHtml({ size: 16 })} <strong class="jiu-coin-success-amt">${shown}</strong>！快去模拟盘大展身手吧！`;
+    // 获得 85 [icon] — number then coin SVG
+    body.innerHTML = `恭喜你，获得 <strong class="jiu-coin-amt jiu-coin-success-amt"><span class="jiu-price-num">${shown}</span>${coinIconHtml({ size: 16 })}</strong>！快去模拟盘大展身手吧！`;
   }
   const modal = document.getElementById("jiuCoinSuccessModal");
   if (modal) modal.hidden = false;

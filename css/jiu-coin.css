@@ -24,29 +24,35 @@
   color: #1f6b3a;
   flex: 0 0 auto;
   display: inline-block;
-  vertical-align: -0.2em;
+  vertical-align: middle;
+  /* neutralize SVG default baseline so it doesn't drop below text */
+  overflow: hidden;
 }
-.jiu-coin-inline {
+.jiu-coin-inline,
+.jiu-coin-amt {
   display: inline-flex;
   align-items: center;
-  vertical-align: -0.15em;
+  gap: 2px;
+  vertical-align: middle;
+  line-height: 1;
+}
+.jiu-coin-inline {
   margin: 0 0.12em;
 }
-.jiu-coin-inline .jiu-coin-icon {
+.jiu-coin-inline .jiu-coin-icon,
+.jiu-coin-amt .jiu-coin-icon {
   display: block;
+  vertical-align: 0;
 }
-.jiu-coin-success-amt {
+.jiu-coin-success-amt,
+.jiu-coin-amt .jiu-price-num {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  margin-left: 0.1em;
 }
-.jiu-coin-success-body .jiu-coin-icon {
-  color: #1f6b3a;
-  vertical-align: -0.25em;
-}
+.jiu-coin-success-body .jiu-coin-icon,
 .jiu-coin-modal-body .jiu-coin-icon {
   color: #1f6b3a;
-  vertical-align: -0.2em;
+  vertical-align: middle;
 }
 .jiu-coin-daily-btn {
   font: inherit;
@@ -110,6 +116,7 @@
 .jiu-price-badge .jiu-coin-icon {
   width: 12px;
   height: 12px;
+  display: block;
   vertical-align: 0;
 }
 .jiu-price-badge.jiu-price-paid .jiu-coin-icon {
