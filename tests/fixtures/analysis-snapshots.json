@@ -1,0 +1,172 @@
+{
+  "bestPoints": {
+    "buyDays": [
+      9,
+      21,
+      25
+    ],
+    "sellDays": [
+      3,
+      13,
+      18
+    ],
+    "buyScores": [
+      11,
+      8,
+      7
+    ],
+    "sellScores": [
+      7,
+      7,
+      7
+    ],
+    "buyReasonsTags": [
+      [
+        "金叉",
+        "金叉",
+        "放量",
+        "形态"
+      ],
+      [
+        "支撑",
+        "形态",
+        "形态"
+      ],
+      [
+        "金叉",
+        "金叉"
+      ]
+    ],
+    "sellReasonsTags": [
+      [
+        "死叉",
+        "均线压力"
+      ],
+      [
+        "压力",
+        "形态",
+        "超涨"
+      ],
+      [
+        "死叉",
+        "均线压力"
+      ]
+    ]
+  },
+  "bs": {
+    "score": 100,
+    "grade": "优秀",
+    "gradeCls": "excellent",
+    "detailLabels": [
+      "收益率表现",
+      "相对区间涨跌",
+      "买点位置",
+      "卖点位置",
+      "交易频率",
+      "止损意识"
+    ],
+    "detailValues": [
+      "+12.00%",
+      "+8.28%",
+      "低位",
+      "高位",
+      "适度",
+      "优秀"
+    ],
+    "comment": "操作精准，买卖时机把握出色，展现了优秀的盘感和纪律性！",
+    "periodReturn": 3.72093,
+    "userReturn": 12
+  },
+  "analysis": {
+    "tags": [
+      {
+        "text": "上行趋势",
+        "cls": "up"
+      },
+      {
+        "text": "中等波动",
+        "cls": "info"
+      },
+      {
+        "text": "多头排列",
+        "cls": "up"
+      },
+      {
+        "text": "+3.7%",
+        "cls": "up"
+      }
+    ],
+    "trend": "上行趋势",
+    "volatility": "中等波动",
+    "maAlignment": "多头排列",
+    "periodReturn1": 3.7209,
+    "analysisHtmlHash": -1646875588
+  },
+  "grade": {
+    "letter": "A",
+    "title": "技术流玩家",
+    "verdict": "买卖时机较准，本局收益明显跑赢可交易区间，继续保持纪律。",
+    "cls": "grade-A"
+  },
+  "maDiffer": {
+    "nullPad": [
+      null,
+      null,
+      null,
+      null,
+      10.1,
+      10.15,
+      10.2,
+      10.249999999999998
+    ],
+    "expanding": [
+      10,
+      10.03,
+      10.05,
+      10.07,
+      10.1,
+      10.15,
+      10.2,
+      10.25
+    ]
+  },
+  "kline": {
+    "gameLegend": [
+      "5日线",
+      "10日线",
+      "20日线",
+      "30日线"
+    ],
+    "resultLegend": [
+      "5日线",
+      "10日线",
+      "20日线",
+      "30日线"
+    ],
+    "gameSeriesNames": [
+      "K线",
+      "5日线",
+      "10日线",
+      "20日线",
+      "30日线",
+      "成交量"
+    ],
+    "resultSeriesNames": [
+      "K线",
+      "成交量",
+      "5日线",
+      "10日线",
+      "20日线",
+      "30日线"
+    ],
+    "dayLabelLen": 50,
+    "firstDayLabel": "1",
+    "startDayLabel": "21",
+    "resultHasMarkLine": true,
+    "markLineFormatter": "开局第1天",
+    "resultAxisRich": true,
+    "gameAnim": true,
+    "ma5FirstGame": 10,
+    "ma5FirstResult": 10
+  }
+}

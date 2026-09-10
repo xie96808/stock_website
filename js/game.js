@@ -1,6 +1,7 @@
 // ========== GAME FUNCTIONS ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_LABELS, MA_DAY_COLORS } from './utils.js';
+import { applyChartTheme } from './utils.js';
+import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import { persistCurrentCloudDraft, clearCloudGameDraft } from './game-sync.js';
@@ -248,27 +249,6 @@ export function updateChart() {
     const histLen = gameState.historyLength;
     const visibleData = gameState.gameKline.slice(0, histLen + gameState.currentDay);
 
-    // Axis shows day index (1…N); calendar date stays in tooltip / OHLC panel.
-    const dayLabels = buildDayIndexLabels(visibleData.length);
-    const ohlc = visibleData.map(d => [d.open, d.close, d.low, d.high]);
-    const volumes = visibleData.map(d => d.volume);
-    const volumeColors = visibleData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
-
-    const ma5 = calculateMA(visibleData, 5);
-    const ma10 = calculateMA(visibleData, 10);
-    const ma20 = calculateMA(visibleData, 20);
-    const ma30 = calculateMA(visibleData, 30);
-
-    // Buy/sell markers on game chart (coord x = day-index category label)
-    const markPoints = gameState.tradeHistory.map(trade => ({
-        name: trade.type === 'buy' ? '买' : '卖',
-        coord: [String(histLen + trade.day), trade.price],
-        value: trade.type === 'buy' ? '买' : '卖',
-        itemStyle: {
-            color: trade.type === 'buy' ? '#e05252' : '#3db86a'
-        }
-    })).filter(p => Number(p.coord[0]) <= visibleData.length);
-
     const maSelected = {
         '5日线': maChecked('indicatorMA5'),
         '10日线': maChecked('indicatorMA10'),
@@ -276,142 +256,22 @@ export function updateChart() {
         '30日线': maChecked('indicatorMA30'),
     };
 
-    const option = {
-        backgroundColor: 'transparent',
-        animation: true,
-        animationDuration: 300,
-        legend: {
-            data: MA_DAY_LABELS.slice(),
-            selected: maSelected,
-            selectedMode: false,
-            top: 5,
-            left: 10,
-            textStyle: { color: '#8b949e', fontFamily: 'Noto Sans SC', fontSize: 11 },
-            itemWidth: 18,
-            itemHeight: 2,
-            itemGap: 12
+    const option = buildKlineOption({
+        bars: visibleData,
+        historyLength: histLen,
+        trades: gameState.tradeHistory,
+        mode: 'game',
+        maSelected,
+        syncHover: (kd) => {
+            document.getElementById('hoverLabel').textContent = '悬停数据';
+            document.getElementById('hoverDate').textContent = kd.date;
+            document.getElementById('hoverOpen').textContent = kd.open.toFixed(2);
+            document.getElementById('hoverHigh').textContent = kd.high.toFixed(2);
+            document.getElementById('hoverLow').textContent = kd.low.toFixed(2);
+            document.getElementById('hoverClose').textContent = kd.close.toFixed(2);
+            document.getElementById('hoverVolume').textContent = (kd.volume / 10000).toFixed(0) + ' 万手';
         },
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'cross' },
-            backgroundColor: 'rgba(13,17,23,0.97)',
-            borderColor: 'rgba(88,166,255,0.2)',
-            textStyle: { color: '#e6edf3', fontFamily: 'JetBrains Mono', fontSize: 12 },
-            formatter: function(params) {
-                const cs = params.find(p => p.seriesName === 'K线');
-                if (!cs) return '';
-                // sync OHLC panel
-                const histLen2 = gameState.historyLength;
-                const idx = cs.dataIndex;
-                const kd = gameState.gameKline.slice(0, histLen2 + gameState.currentDay)[idx];
-                if (kd) {
-                    document.getElementById('hoverLabel').textContent = '悬停数据';
-                    document.getElementById('hoverDate').textContent = kd.date;
-                    document.getElementById('hoverOpen').textContent = kd.open.toFixed(2);
-                    document.getElementById('hoverHigh').textContent = kd.high.toFixed(2);
-                    document.getElementById('hoverLow').textContent = kd.low.toFixed(2);
-                    document.getElementById('hoverClose').textContent = kd.close.toFixed(2);
-                    document.getElementById('hoverVolume').textContent = (kd.volume / 10000).toFixed(0) + ' 万手';
-                }
-                // Prefer kd for tooltip OHLC. ECharts candlestick with category axis
-                // may pass params.data as [dataIndex, open, close, low, high].
-                let open, close, low, high, volume;
-                if (kd) {
-                    open = kd.open;
-                    close = kd.close;
-                    low = kd.low;
-                    high = kd.high;
-                    volume = kd.volume;
-                } else {
-                    const d = cs.data;
-                    if (Array.isArray(d) && d.length >= 5) {
-                        open = d[1]; close = d[2]; low = d[3]; high = d[4];
-                    } else if (Array.isArray(d) && d.length >= 4) {
-                        open = d[0]; close = d[1]; low = d[2]; high = d[3];
-                    } else {
-                        return '';
-                    }
-                    const vol = params.find(p => p.seriesName === '成交量');
-                    volume = vol ? vol.data : 0;
-                }
-                const isUp = close >= open;
-                const clr = isUp ? '#e05252' : '#3db86a';
-                // Keep original calendar date in tooltip (axis itself shows day index).
-                const dateLabel = kd ? kd.date : '';
-                let html = `<div style="padding:4px 2px">
-                    <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${dateLabel}</div>
-                    <div style="color:${clr}">开 ${open.toFixed(2)}&nbsp;&nbsp;收 ${close.toFixed(2)}</div>
-                    <div>低 ${low.toFixed(2)}&nbsp;&nbsp;高 ${high.toFixed(2)}</div>`;
-                html += `<div style="color:#8b949e">量 ${(volume / 10000).toFixed(0)}万手</div>`;
-                params.forEach(p => {
-                    if (MA_DAY_COLORS[p.seriesName] && p.data != null)
-                        html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${p.data.toFixed(2)}</div>`;
-                });
-                html += '</div>';
-                return html;
-            }
-        },
-        axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        grid: [
-            { left: '8%', right: '2%', top: '8%', bottom: '34%' },
-            { left: '8%', right: '2%', top: '73%', bottom: '6%' }
-        ],
-        xAxis: [
-            {
-                type: 'category', data: dayLabels, gridIndex: 0,
-                axisLine: { lineStyle: { color: 'rgba(88,166,255,0.15)' } },
-                axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
-            },
-            {
-                type: 'category', data: dayLabels, gridIndex: 1,
-                axisLine: { lineStyle: { color: 'rgba(88,166,255,0.15)' } },
-                axisLabel: {
-                    color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
-                    formatter: (v) => v
-                },
-                splitLine: { show: false }
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value', scale: true, gridIndex: 0,
-                axisLabel: { color: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 10 },
-                axisLine: { show: false },
-                splitLine: { lineStyle: { color: 'rgba(88,166,255,0.06)' } }
-            },
-            { type: 'value', scale: true, gridIndex: 1, show: false }
-        ],
-        series: [
-            {
-                name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
-                itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
-                markPoint: {
-                    data: markPoints, symbol: 'pin', symbolSize: 35,
-                    label: { formatter: '{c}', color: '#fff', fontWeight: 'bold', fontSize: 11 }
-                }
-            },
-            {
-                name: '5日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5,
-                smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' }
-            },
-            {
-                name: '10日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10,
-                smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' }
-            },
-            {
-                name: '20日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
-                smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' }
-            },
-            {
-                name: '30日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30,
-                smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' }
-            },
-            {
-                name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes,
-                itemStyle: { color: params => volumeColors[params.dataIndex] }
-            }
-        ]
-    };
+    });
 
     chartRefs.klineChart.setOption(option);
     applyChartTheme(chartRefs.klineChart);

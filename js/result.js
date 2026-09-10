@@ -1,10 +1,12 @@
 // ========== RESULT SCREEN ==========
 import { gameState, chartRefs } from './state.js';
-import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_COLORS } from './utils.js';
+import { applyChartTheme } from './utils.js';
+import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
+import { calcGrade } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
-import {
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
+import {
     clearShareRankMeta,
     refreshShareRankMeta,
     updateShareRankHint,
@@ -14,41 +16,6 @@ import { Route, prepareScreen, activateScreen } from './screen-router.js';
 } from './result-share.js';
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
 
-function calcGrade(finalReturnPercent, bsScore) {
-    // Emphasize realized return; BS is a light tie-breaker only.
-    const score = finalReturnPercent * 0.85 + ((bsScore || 50) - 70) * 0.08;
-    let letter, title, cls;
-    if (score >= 18 && finalReturnPercent >= 12) {
-        letter = 'S'; title = '交易之神'; cls = 'grade-S';
-    } else if (score >= 10 && finalReturnPercent >= 5) {
-        letter = 'A'; title = '技术流玩家'; cls = 'grade-A';
-    } else if (score >= 2 || finalReturnPercent >= 1) {
-        letter = 'B'; title = '稳健操盘手'; cls = 'grade-B';
-    } else if (finalReturnPercent >= -5) {
-        letter = 'C'; title = '韭菜培育中'; cls = 'grade-C';
-    } else {
-        letter = 'D'; title = '慈善韭菜'; cls = 'grade-D';
-    }
-    let verdict;
-    if (letter === 'S') {
-        verdict = '完美操作，教科书级别的走势把握。每一笔都入木三分。';
-    } else if (letter === 'A') {
-        verdict = finalReturnPercent >= 10
-            ? '买卖时机较准，本局收益明显跑赢可交易区间，继续保持纪律。'
-            : '操作质量不错，本局取得了扎实正收益。';
-    } else if (letter === 'B') {
-        verdict = finalReturnPercent >= 0
-            ? '整体操作稳健，略有遗憾但瑕不掩瑜。继续磨练！'
-            : '有一定判断，但收益仍偏弱，进出场可以再打磨。';
-    } else if (letter === 'C') {
-        verdict = Math.abs(finalReturnPercent) < 1
-            ? '几乎打平，这局更像观望课。下次试着更果断地执行计划。'
-            : '小幅回撤，别灰心——复盘买卖点比纠结单局更重要。';
-    } else {
-        verdict = '亏损偏大……别担心，这只是模拟，现实里要三思啊。';
-    }
-    return { letter, title, verdict, cls };
-}
 
 export function endGame() {
     // Settlement P&L / valuation already applied by finishSettle() via shared engine.
@@ -148,184 +115,15 @@ export function drawResultChart() {
 
     const histLen = gameState.historyLength;
     const fullData = gameState.gameKline.slice(0, histLen + 30); // history + day-1…day-30
-    // Axis: day index 1…N (no calendar dates). Tooltip keeps original date.
-    const dayLabels = buildDayIndexLabels(fullData.length);
-    const startDayLabel = String(histLen + 1); // 开局第1天 category
-    const ohlc = fullData.map(d => [d.open, d.close, d.low, d.high]);
-    const volumes = fullData.map(d => d.volume);
-    const volumeColors = fullData.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
 
-    const ma5 = calculateMA(fullData, 5);
-    const ma10 = calculateMA(fullData, 10);
-    const ma20 = calculateMA(fullData, 20);
-    const ma30 = calculateMA(fullData, 30);
-
-    const markPoints = gameState.tradeHistory.map(trade => ({
-        name: trade.type === 'buy' ? '买' : '卖',
-        coord: [String(histLen + trade.day), trade.price],
-        value: trade.type === 'buy' ? '买' : '卖',
-        itemStyle: {
-            color: trade.type === 'buy' ? '#e05252' : '#3db86a'
-        }
-    })).filter(p => Number(p.coord[0]) <= histLen + 30);
-
-    if (gameState.valuation) {
-        const v = gameState.valuation;
-        markPoints.push({
-            name: '估值',
-            coord: [String(histLen + v.day), v.price],
-            value: '估值',
-            symbol: 'diamond',
-            symbolSize: 14,
-            itemStyle: { color: '#f5c542' },
-            label: { color: '#f5c542', fontSize: 10, fontWeight: 'bold' }
-        });
-    }
-
-    // 开局第1天: marked via markLine + x-axis emphasis below.
-
-    const bp = gameState.bestPoints || { buys: [], sells: [] };
-    const bestMarkPoints = [];
-    bp.buys.forEach((p, idx) => {
-        bestMarkPoints.push({
-            name: 'B' + (idx + 1),
-            coord: [String(histLen + p.day), fullData[histLen + p.day - 1].low],
-            value: 'B' + (idx + 1),
-            symbolOffset: [0, 20],
-            symbol: 'diamond',
-            symbolSize: 14,
-            itemStyle: { color: '#fbbf24' },
-            label: { color: '#fbbf24', fontSize: 10, fontWeight: 'bold', position: 'bottom' }
-        });
+    const option = buildKlineOption({
+        bars: fullData,
+        historyLength: histLen,
+        trades: gameState.tradeHistory,
+        bestPoints: gameState.bestPoints || { buys: [], sells: [] },
+        valuation: gameState.valuation || null,
+        mode: 'result',
     });
-    bp.sells.forEach((p, idx) => {
-        bestMarkPoints.push({
-            name: 'S' + (idx + 1),
-            coord: [String(histLen + p.day), fullData[histLen + p.day - 1].high],
-            value: 'S' + (idx + 1),
-            symbol: 'diamond',
-            symbolSize: 14,
-            itemStyle: { color: '#a78bfa' },
-            label: { color: '#a78bfa', fontSize: 10, fontWeight: 'bold', position: 'top' }
-        });
-    });
-
-    const option = {
-        backgroundColor: 'transparent',
-        legend: {
-            data: ['5日线', '10日线', '20日线', '30日线'],
-            top: 0,
-            left: 10,
-            textStyle: { color: '#6b6660', fontFamily: 'Noto Sans SC', fontSize: 11 },
-            itemWidth: 18,
-            itemHeight: 2,
-            itemGap: 12
-        },
-        tooltip: {
-            trigger: 'axis',
-            axisPointer: { type: 'cross' },
-            backgroundColor: 'rgba(22, 22, 29, 0.95)',
-            borderColor: 'rgba(200, 164, 78, 0.2)',
-            textStyle: { color: '#e8e4dd', fontFamily: 'JetBrains Mono' },
-            formatter: function(params) {
-                const cs = params.find(p => p.seriesName === 'K线');
-                if (!cs) return '';
-                const idx = cs.dataIndex;
-                const kd = fullData[idx];
-                if (!kd) return '';
-                const isUp = kd.close >= kd.open;
-                const clr = isUp ? '#e05252' : '#3db86a';
-                let html = `<div style="padding:4px 2px">
-                    <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${kd.date}</div>
-                    <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
-                    <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
-                    <div style="color:#8b949e">量 ${(kd.volume / 10000).toFixed(0)}万手</div>`;
-                params.forEach(p => {
-                    if (MA_DAY_COLORS[p.seriesName] && p.data != null)
-                        html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${Number(p.data).toFixed(2)}</div>`;
-                });
-                html += '</div>';
-                return html;
-            }
-        },
-        axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        grid: [
-            { left: '10%', right: '2%', top: '12%', bottom: '35%' },
-            { left: '10%', right: '2%', top: '72%', bottom: '8%' }
-        ],
-        xAxis: [
-            {
-                type: 'category', data: dayLabels, gridIndex: 0,
-                axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
-                axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
-            },
-            {
-                type: 'category', data: dayLabels, gridIndex: 1,
-                axisLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.2)' } },
-                axisLabel: {
-                    color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
-                    formatter: (v) => (v === startDayLabel ? '{start|' + v + '}' : v),
-                    rich: {
-                        start: { color: '#f5c542', fontWeight: 'bold', fontSize: 11 }
-                    }
-                }
-            }
-        ],
-        yAxis: [
-            {
-                type: 'value', scale: true, gridIndex: 0,
-                axisLabel: { color: '#6b6660', fontFamily: 'JetBrains Mono', fontSize: 10 },
-                axisLine: { show: false },
-                splitLine: { lineStyle: { color: 'rgba(200, 164, 78, 0.06)' } }
-            },
-            { type: 'value', scale: true, gridIndex: 1, show: false }
-        ],
-        series: [
-            {
-                name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
-                itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
-                markPoint: {
-                    data: [...markPoints, ...bestMarkPoints],
-                    symbol: 'pin', symbolSize: 40,
-                    label: { formatter: '{b}', color: '#fff', fontWeight: 'bold' }
-                },
-                markLine: {
-                    silent: true,
-                    symbol: 'none',
-                    animation: false,
-                    data: [{
-                        xAxis: startDayLabel,
-                        label: {
-                            show: true,
-                            formatter: '开局第1天',
-                            position: 'insideEndTop',
-                            color: '#f5c542',
-                            fontSize: 11,
-                            fontWeight: 'bold',
-                            fontFamily: 'Noto Sans SC',
-                            backgroundColor: 'rgba(22,22,29,0.88)',
-                            padding: [3, 6],
-                            borderRadius: 3
-                        },
-                        lineStyle: {
-                            color: '#f5c542',
-                            type: 'dashed',
-                            width: 2,
-                            opacity: 0.9
-                        }
-                    }]
-                }
-            },
-            {
-                name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes,
-                itemStyle: { color: function(params) { return volumeColors[params.dataIndex]; } }
-            },
-            { name: '5日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' } },
-            { name: '10日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' } },
-            { name: '20日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' } },
-            { name: '30日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' } }
-        ]
-    };
 
     chartRefs.resultChart.setOption(option);
     applyChartTheme(chartRefs.resultChart);

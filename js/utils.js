@@ -6,6 +6,10 @@ export function roundHalfUp(value, digits = 2) {
     return Math.round((Number(value) + Number.EPSILON) * f) / f;
 }
 
+/** Expanding / rounded MA for chart series (cold-start average).
+ *  Analysis scoring uses calcMANullPad in analysis-pure.js instead —
+ *  the two algorithms intentionally differ; do not merge without re-golden.
+ */
 export function calculateMA(data, period) {
     const result = [];
     for (let i = 0; i < data.length; i++) {
