@@ -344,9 +344,9 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: min(980px, 100%);
+    max-width: min(1080px, 100%);
     margin: 0 auto;
-    gap: 14px;
+    gap: 12px;
     position: relative;
     z-index: 1;
 }
@@ -383,8 +383,8 @@
 
 .sim-hub-grid {
     display: grid;
-    grid-template-columns: minmax(150px, 200px) minmax(240px, 1fr) minmax(200px, 260px);
-    gap: 18px;
+    grid-template-columns: minmax(140px, 176px) minmax(340px, 1.45fr) minmax(180px, 236px);
+    gap: 10px;
     align-items: stretch;
 }
 
@@ -478,6 +478,7 @@
 .sim-hub-primary {
     display: flex;
     min-width: 0;
+    flex: 1 1 auto;
 }
 
 .sim-hub-card {
@@ -486,8 +487,9 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 10px;
-    padding: 22px 22px 20px;
+    gap: 12px;
+    min-height: 340px;
+    padding: 26px 28px 22px;
     border: 1.6px solid var(--line);
     background: var(--card);
     border-radius: 20px 26px 18px 24px;
@@ -556,9 +558,9 @@
 .sim-hub-cta {
     position: relative;
     margin-top: auto;
-    min-width: 168px;
-    height: 46px;
-    padding: 0 28px;
+    min-width: 188px;
+    height: 48px;
+    padding: 0 32px;
     border: 1.6px solid var(--line);
     border-radius: 999px 22px 999px 18px;
     background: var(--terra);
@@ -602,6 +604,46 @@
     filter: none;
 }
 
+.sim-hub-tips {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    max-width: 100%;
+}
+
+.sim-hub-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border: 1.4px dashed rgba(58, 53, 48, 0.38);
+    border-radius: 999px 14px 999px 12px;
+    background: rgba(196, 92, 58, 0.06);
+    color: var(--ink-soft);
+    font-family: var(--kaiti);
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    line-height: 1.2;
+    pointer-events: none;
+    user-select: none;
+}
+
+[data-theme="dark"] .sim-hub-tip {
+    border-color: rgba(200, 188, 168, 0.34);
+    background: rgba(200, 188, 168, 0.08);
+}
+
+.sim-hub-tip-ico {
+    font-size: 0.78rem;
+    opacity: 0.85;
+    line-height: 1;
+}
+
 .sim-hub-atmosphere {
     display: flex;
     flex-direction: column;
@@ -622,7 +664,7 @@
 .sim-hub-atm-frame {
     position: relative;
     flex: 1;
-    min-height: 280px;
+    min-height: 320px;
     border-radius: 18px 24px 16px 22px;
     background: #e8dcc4;
     overflow: hidden;
@@ -682,28 +724,18 @@
     vector-effect: non-scaling-stroke;
 }
 
-.sim-hub-kline {
-    position: absolute;
-    right: 14px;
-    bottom: 14px;
-    width: 112px;
-    height: 44px;
-    opacity: 0.72;
-    pointer-events: none;
-    z-index: 2;
-    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.12));
-}
-
 @media (max-width: 900px) {
     .sim-hub-grid {
-        grid-template-columns: minmax(140px, 180px) 1fr;
+        grid-template-columns: minmax(132px, 168px) minmax(0, 1fr);
         grid-template-areas:
             "rail primary"
             "atm atm";
+        gap: 12px;
     }
     .sim-hub-rail { grid-area: rail; }
     .sim-hub-primary { grid-area: primary; }
     .sim-hub-atmosphere { grid-area: atm; }
+    .sim-hub-card { min-height: 300px; }
     .sim-hub-atm-frame { min-height: 220px; max-height: 280px; }
 }
 
@@ -742,10 +774,20 @@
     .sim-hub-card {
         padding: 18px 16px 16px;
         width: 100%;
+        min-height: 0;
+        gap: 10px;
     }
     .sim-hub-cta {
         width: 100%;
         min-width: 0;
+    }
+    .sim-hub-tips {
+        gap: 6px;
+    }
+    .sim-hub-tip {
+        font-size: 0.78rem;
+        padding: 4px 9px;
+        letter-spacing: 0.06em;
     }
     .sim-hub-atm-frame {
         min-height: 200px;
