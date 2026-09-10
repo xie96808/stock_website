@@ -1,6 +1,5 @@
 // ========== TECHNICAL ANALYSIS (DOM adapters over analysis-pure) ==========
-import { gameState } from './state.js';
-import { patchSession } from './game-session.js';
+import { patchSession, selectAnalysisInput } from './game-session.js';
 import {
     computeBestPoints,
     computeBSReport,
@@ -8,9 +7,10 @@ import {
 } from './analysis-pure.js';
 
 export function generateKlineAnalysis() {
+    const input = selectAnalysisInput();
     const model = computeKlineAnalysisModel({
-        kline: gameState.gameKline,
-        historyLength: gameState.historyLength,
+        kline: input.kline,
+        historyLength: input.historyLength,
     });
 
     document.getElementById('klineAnalysis').innerHTML = `
@@ -19,7 +19,7 @@ export function generateKlineAnalysis() {
         <div class="analysis-text">${model.analysisHtml}</div>
     `;
 
-    const bp = gameState.bestPoints || { buys: [], sells: [] };
+    const bp = input.bestPoints || { buys: [], sells: [] };
     const analysisEl = document.getElementById('klineAnalysis');
     if (analysisEl) {
         const renderPt = (p, kind) => {
@@ -47,20 +47,22 @@ export function generateKlineAnalysis() {
 }
 
 export function generateBestPoints() {
+    const input = selectAnalysisInput();
     patchSession({ bestPoints: computeBestPoints({
-        kline: gameState.gameKline,
-        historyLength: gameState.historyLength,
+        kline: input.kline,
+        historyLength: input.historyLength,
     }) });
 }
 
 export function generateBSReport() {
+    const input = selectAnalysisInput();
     const report = computeBSReport({
-        kline: gameState.gameKline,
-        historyLength: gameState.historyLength,
-        trades: gameState.tradeHistory,
-        fillMode: gameState.fillMode,
-        totalReturn: gameState.totalReturn,
-        tradeGains: gameState.tradeGains,
+        kline: input.kline,
+        historyLength: input.historyLength,
+        trades: input.trades,
+        fillMode: input.fillMode,
+        totalReturn: input.totalReturn,
+        tradeGains: input.tradeGains,
     });
 
     patchSession({ bsScore: report.score });

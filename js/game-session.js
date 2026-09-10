@@ -193,6 +193,84 @@ export function setShareMeta({ rank = null, boardTotal = null, beatPct = null } 
   return gameState;
 }
 
+
+/**
+ * Read-model selectors (façade). Prefer these / getSession() over importing
+ * `gameState` in HUD / chart / analysis / result / share paths.
+ * Same object identity: fields are live references into the blackboard.
+ */
+
+/** Visible history + revealed game days for live K-line. */
+export function selectVisibleKline(s = getSession()) {
+  const histLen = s.historyLength || 0;
+  const day = s.currentDay || 1;
+  const kline = s.gameKline || [];
+  return kline.slice(0, histLen + day);
+}
+
+/** The 30 decision-window bars (day 1..30). */
+export function selectGameWindow(s = getSession()) {
+  const histLen = s.historyLength || 0;
+  const kline = s.gameKline || [];
+  return kline.slice(histLen, histLen + 30);
+}
+
+/** Bar for the currently shown game day (1-based currentDay). */
+export function selectTodayBar(s = getSession()) {
+  const histLen = s.historyLength || 0;
+  const kline = s.gameKline || [];
+  return kline[histLen + (s.currentDay || 1) - 1] || null;
+}
+
+/** Inputs for analysis-pure adapters (kline / BS / best points). */
+export function selectAnalysisInput(s = getSession()) {
+  return {
+    kline: s.gameKline,
+    historyLength: s.historyLength,
+    trades: s.tradeHistory,
+    fillMode: s.fillMode,
+    totalReturn: s.totalReturn,
+    tradeGains: s.tradeGains,
+    bestPoints: s.bestPoints,
+  };
+}
+
+/** Settlement / result screen read bag. */
+export function selectSettleView(s = getSession()) {
+  return {
+    currentStock: s.currentStock,
+    historyLength: s.historyLength,
+    gameKline: s.gameKline,
+    fillMode: s.fillMode,
+    returnPct: s.returnPct,
+    totalReturn: s.totalReturn,
+    tradeHistory: s.tradeHistory,
+    holdingDays: s.holdingDays,
+    tradeGains: s.tradeGains,
+    bsScore: s.bsScore,
+    bestPoints: s.bestPoints,
+    valuation: s.valuation,
+    cloudMode: s.cloudMode,
+    cloudGameId: s.cloudGameId,
+    saveStatus: s.saveStatus,
+  };
+}
+
+/** Share hint / promo / copy-text read bag. */
+export function selectShareView(s = getSession()) {
+  return {
+    returnPct: s.returnPct,
+    totalReturn: s.totalReturn,
+    fillMode: s.fillMode,
+    shareRank: s.shareRank,
+    shareBeatPct: s.shareBeatPct,
+    shareBoardTotal: s.shareBoardTotal,
+    cloudMode: s.cloudMode,
+    saveStatus: s.saveStatus,
+    currentStock: s.currentStock,
+  };
+}
+
 /** Snapshot of session fields (shallow). Useful for tests / diagnostics. */
 export function snapshotSession() {
   const out = {};
