@@ -11,6 +11,12 @@ const COIN_SVG = `<svg class="jiu-coin-icon" viewBox="0 0 24 24" width="18" heig
 
 let claimBusy = false;
 
+function el(html) {
+  const t = document.createElement("template");
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
 function ensureCoinDom() {
   const chip = document.getElementById("authChip");
   if (!chip) return null;
@@ -32,9 +38,93 @@ function ensureCoinDom() {
     else chip.appendChild(wrap);
 
     const btn = document.getElementById("jiuCoinDailyBtn");
-    if (btn) btn.addEventListener("click", onDailyClaim);
+    if (btn) btn.addEventListener("click", onDailyClaimClick);
   }
+  ensureModals();
   return wrap;
+}
+
+function ensureModals() {
+  if (document.getElementById("jiuCoinDailyModal")) return;
+
+  document.body.appendChild(
+    el(`<div class="jiu-coin-modal" id="jiuCoinDailyModal" hidden>
+      <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="jiuCoinDailyTitle">
+        <button type="button" class="jiu-coin-close-x" id="jiuCoinDailyCloseX" aria-label="关闭">×</button>
+        <h2 id="jiuCoinDailyTitle">每日领取</h2>
+        <p class="jiu-coin-modal-body" id="jiuCoinDailyBody">
+          每天 0 点（北京时间）刷新一次；本次额度随机（50–200 韭币），领取后立即到账。
+        </p>
+        <div class="jiu-coin-modal-actions">
+          <button type="button" class="jiu-coin-secondary" id="jiuCoinDailyCancel">取消</button>
+          <button type="button" class="jiu-coin-primary" id="jiuCoinDailyConfirm">领取</button>
+        </div>
+      </div>
+    </div>`)
+  );
+
+  document.body.appendChild(
+    el(`<div class="jiu-coin-modal" id="jiuCoinSuccessModal" hidden>
+      <div class="jiu-coin-dialog jiu-coin-dialog--celebrate" role="dialog" aria-modal="true" aria-labelledby="jiuCoinSuccessTitle">
+        <button type="button" class="jiu-coin-close-x" id="jiuCoinSuccessCloseX" aria-label="关闭">×</button>
+        <h2 id="jiuCoinSuccessTitle">领取成功</h2>
+        <p class="jiu-coin-modal-body jiu-coin-success-body" id="jiuCoinSuccessBody">
+          恭喜你，获得 韭币！
+        </p>
+        <div class="jiu-coin-modal-actions">
+          <button type="button" class="jiu-coin-primary" id="jiuCoinSuccessOk">好的</button>
+        </div>
+      </div>
+    </div>`)
+  );
+
+  const bindClose = (modalId, ...btnIds) => {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    const hide = () => {
+      modal.hidden = true;
+    };
+    for (const id of btnIds) {
+      const b = document.getElementById(id);
+      if (b) b.addEventListener("click", hide);
+    }
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) hide();
+    });
+  };
+
+  bindClose("jiuCoinDailyModal", "jiuCoinDailyCloseX", "jiuCoinDailyCancel");
+  bindClose("jiuCoinSuccessModal", "jiuCoinSuccessCloseX", "jiuCoinSuccessOk");
+
+  const confirmBtn = document.getElementById("jiuCoinDailyConfirm");
+  if (confirmBtn) confirmBtn.addEventListener("click", onDailyClaimConfirm);
+}
+
+function openDailyConfirmModal() {
+  ensureModals();
+  const modal = document.getElementById("jiuCoinDailyModal");
+  if (modal) modal.hidden = false;
+}
+
+function closeDailyConfirmModal() {
+  const modal = document.getElementById("jiuCoinDailyModal");
+  if (modal) modal.hidden = true;
+}
+
+function openSuccessModal(amount) {
+  ensureModals();
+  const body = document.getElementById("jiuCoinSuccessBody");
+  const n = Number(amount);
+  const shown = Number.isFinite(n) ? String(n) : "—";
+  if (body) {
+    body.textContent = `恭喜你，获得 韭币 ${shown}！快去模拟盘大展身手吧！`;
+  }
+  const modal = document.getElementById("jiuCoinSuccessModal");
+  if (modal) modal.hidden = false;
+}
+
+function isAlreadyClaimedBtn(btn) {
+  return !!(btn && (btn.classList.contains("is-claimed") || btn.textContent === "今日已领"));
 }
 
 export function renderJiuCoinChrome() {
@@ -90,12 +180,32 @@ export async function refreshJiuCoinStatus() {
   }
 }
 
-async function onDailyClaim() {
+function onDailyClaimClick() {
   if (claimBusy) return;
   const auth = getAuthState();
   if (!auth.user) return;
-  claimBusy = true;
   const btn = document.getElementById("jiuCoinDailyBtn");
+  if (isAlreadyClaimedBtn(btn)) return;
+  openDailyConfirmModal();
+}
+
+async function onDailyClaimConfirm() {
+  if (claimBusy) return;
+  const auth = getAuthState();
+  if (!auth.user) return;
+  const btn = document.getElementById("jiuCoinDailyBtn");
+  if (isAlreadyClaimedBtn(btn)) {
+    closeDailyConfirmModal();
+    return;
+  }
+
+  claimBusy = true;
+  closeDailyConfirmModal();
+  const confirmBtn = document.getElementById("jiuCoinDailyConfirm");
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "领取中…";
+  }
   if (btn) {
     btn.disabled = true;
     btn.textContent = "领取中…";
@@ -109,7 +219,7 @@ async function onDailyClaim() {
       btn.textContent = "今日已领";
       btn.classList.add("is-claimed");
     }
-    showToast(`领取成功 +${data.amount} 韭币`, "success");
+    openSuccessModal(data.amount);
   } catch (e) {
     const msg = e?.message || "领取失败";
     showToast(msg, "error");
@@ -122,10 +232,15 @@ async function onDailyClaim() {
     } else if (btn) {
       btn.disabled = false;
       btn.textContent = "每日领取";
+      btn.classList.remove("is-claimed");
     }
     await refreshJiuCoinStatus();
   } finally {
     claimBusy = false;
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "领取";
+    }
   }
 }
 

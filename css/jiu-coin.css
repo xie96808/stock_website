@@ -62,11 +62,175 @@
   background: #21402d;
 }
 
+/* ===== Title-trailing price pills (home / hub) ===== */
+.jiu-price-badge {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 1px 8px 2px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  vertical-align: 0.12em;
+  border-radius: 999px;
+  border: 1.5px solid var(--ink, #2a2a2a);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+}
+.jiu-price-badge.jiu-price-paid {
+  color: #14532d;
+  background: rgba(61, 184, 106, 0.16);
+  border-color: #1f6b3a;
+}
+.jiu-price-badge.jiu-price-free {
+  color: var(--ink-soft, #5a5348);
+  background: rgba(0, 0, 0, 0.05);
+  border-color: var(--line, #3a3530);
+}
+
+[data-theme="dark"] .jiu-price-badge.jiu-price-paid {
+  color: #b7e0c5;
+  background: rgba(61, 184, 106, 0.18);
+  border-color: #3d8f5f;
+}
+[data-theme="dark"] .jiu-price-badge.jiu-price-free {
+  color: var(--mute, #a89f90);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line, #efe6d4);
+}
+
+/* ===== Daily claim confirm / success modals (纸墨) ===== */
+.jiu-coin-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.45);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.jiu-coin-modal[hidden] {
+  display: none !important;
+}
+.jiu-coin-dialog {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--paper, #f7f1e6);
+  color: var(--ink, #222);
+  border: 2px solid var(--line, #2a2a2a);
+  border-radius: 16px;
+  padding: 22px 18px 16px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18);
+}
+.jiu-coin-dialog h2 {
+  margin: 0 28px 12px 0;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-size: 1.3rem;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+.jiu-coin-close-x {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #222);
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+.jiu-coin-modal-body {
+  margin: 0 0 16px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ink, #222);
+}
+.jiu-coin-success-body {
+  font-size: 1.05rem;
+  text-align: center;
+  padding: 6px 4px 2px;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  letter-spacing: 0.06em;
+}
+.jiu-coin-dialog--celebrate {
+  text-align: center;
+}
+.jiu-coin-dialog--celebrate .jiu-coin-modal-actions {
+  justify-content: center;
+}
+.jiu-coin-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.jiu-coin-primary,
+.jiu-coin-secondary {
+  font: inherit;
+  cursor: pointer;
+  border: 1.5px solid var(--ink, #2a2a2a);
+  border-radius: 999px;
+  padding: 7px 16px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+  color: var(--ink, #2a2a2a);
+}
+.jiu-coin-primary {
+  background: #e4f6ea;
+  color: #14532d;
+  border-color: #1f6b3a;
+}
+.jiu-coin-secondary {
+  background: var(--paper, #f7f1e6);
+}
+.jiu-coin-primary:hover:not(:disabled),
+.jiu-coin-secondary:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+.jiu-coin-primary:disabled {
+  opacity: 0.72;
+  cursor: wait;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .jiu-coin-modal {
+  background: rgba(0, 0, 0, 0.55);
+}
+[data-theme="dark"] .jiu-coin-dialog {
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+}
+[data-theme="dark"] .jiu-coin-primary {
+  background: #1a3324;
+  color: #b7e0c5;
+  border-color: #3d8f5f;
+}
+[data-theme="dark"] .jiu-coin-secondary {
+  background: var(--paper, #1c1a16);
+  color: var(--ink, #efe6d4);
+  border-color: var(--line, #efe6d4);
+}
+
 @media (max-width: 640px) {
   .jiu-coin-daily-btn {
     padding: 5px 8px;
   }
   .jiu-coin-balance {
     padding: 4px 7px 4px 5px;
+  }
+  .jiu-coin-modal-actions {
+    justify-content: stretch;
+  }
+  .jiu-coin-primary,
+  .jiu-coin-secondary {
+    flex: 1;
+    text-align: center;
+  }
+  .jiu-price-badge {
+    font-size: 10px;
+    padding: 1px 7px 2px;
   }
 }
