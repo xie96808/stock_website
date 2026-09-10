@@ -16,6 +16,8 @@ const BEFORE_AFTER_ALLOW = new Set([
   "body",
   "published_at",
   "publishedAt",
+  "jiuCoinBalance",
+  "jiu_coin_balance",
 ]);
 
 function pickAllowed(obj) {

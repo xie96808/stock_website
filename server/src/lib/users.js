@@ -1,6 +1,7 @@
 import { openDb } from "../db/connection.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { writeUserTombstone } from "./tombstones.js";
+import { grantRegisterBonus } from "./jiuCoin.js";
 
 export function publicUser(row) {
   if (!row) return null;
@@ -14,6 +15,7 @@ export function publicUser(row) {
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,
+    jiuCoinBalance: Number(row.jiu_coin_balance) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     deletedAt: row.deleted_at || null,
@@ -31,13 +33,20 @@ export function findUserById(id) {
 }
 
 export function insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn, recoveryCodeHash = null }) {
-  const info = openDb()
-    .prepare(`INSERT INTO users (
-      username_normalized, password_hash, nickname, avatar_id,
-      leaderboard_opt_in, recovery_code_hash
-    ) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(username, passwordHash, nickname, avatarId, leaderboardOptIn ? 1 : 0, recoveryCodeHash);
-  return findUserById(info.lastInsertRowid);
+  const db = openDb();
+  const tx = db.transaction(() => {
+    const info = db
+      .prepare(`INSERT INTO users (
+        username_normalized, password_hash, nickname, avatar_id,
+        leaderboard_opt_in, recovery_code_hash, jiu_coin_balance
+      ) VALUES (?, ?, ?, ?, ?, ?, 0)`)
+      .run(username, passwordHash, nickname, avatarId, leaderboardOptIn ? 1 : 0, recoveryCodeHash);
+    const id = info.lastInsertRowid;
+    grantRegisterBonus(id, db);
+    return id;
+  });
+  const id = tx();
+  return findUserById(id);
 }
 
 export function updateUserProfile(id, { nickname, avatarId, leaderboardOptIn }) {

@@ -19,6 +19,7 @@ import {
   clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, rateLimitFail,
 } from "../lib/rateLimit.js";
 import { requireUser } from "../middleware/request.js";
+import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
 } from "../lib/avatars.js";
@@ -103,6 +104,18 @@ router.post("/auth/logout", (req, res) => {
 
 router.get("/me", requireUser, (req, res) => {
   return ok(res, { user: req.user, csrfToken: req.csrfToken });
+});
+
+router.get("/me/jiu-coin", requireUser, (req, res) => {
+  return ok(res, dailyClaimStatus(req.user.id));
+});
+
+router.post("/me/jiu-coin/daily", requireUser, (req, res) => {
+  const result = claimDaily(req.user.id);
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
 });
 
 router.patch("/me", requireUser, (req, res) => {

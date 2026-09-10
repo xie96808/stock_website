@@ -160,7 +160,7 @@ function ensureToastHost() {
   document.body.appendChild(el(`<div class="auth-toast-host" id="authToastHost" aria-live="polite"></div>`));
 }
 
-function showToast(message, kind = "error") {
+export function showToast(message, kind = "error") {
   ensureToastHost();
   const host = document.getElementById("authToastHost");
   const toast = el(`<div class="auth-toast auth-toast--${kind}" role="status">${message}</div>`);
@@ -533,7 +533,15 @@ export function openAuthModal(tab = "login") {
     if (nick && !nick.value) nick.value = randomNickname("");
   }
   showForms(tab);
-  document.getElementById("authModal").hidden = false;
+  const modal = document.getElementById("authModal");
+  modal.hidden = false;
+  // Re-open / focus existing modal (top-right auth).
+  const focusable = modal.querySelector(
+    tab === "register" ? "#authRegisterForm input" : "#authLoginForm input"
+  );
+  if (focusable) {
+    try { focusable.focus(); } catch { /* ignore */ }
+  }
 }
 
 export function closeAuthModal() {
@@ -560,6 +568,11 @@ function renderAuthChrome() {
     img.removeAttribute("src");
     img.alt = "";
   }
+  try {
+    document.dispatchEvent(new CustomEvent("stockgame:auth-changed", {
+      detail: { user: authState.user },
+    }));
+  } catch { /* ignore */ }
 }
 
 async function uploadPendingAvatar(file) {
@@ -739,5 +752,5 @@ export async function initAuth() {
 }
 
 if (typeof window !== "undefined") {
-  window.__stockAuth = { initAuth, openAuthModal, getAuthState, refreshMe, displayAvatarUrl };
+  window.__stockAuth = { initAuth, openAuthModal, getAuthState, refreshMe, displayAvatarUrl, showToast };
 }

@@ -18,6 +18,7 @@ import {
   getAdminOverview,
 } from "../lib/admin.js";
 import { listAuditLogs } from "../lib/audit.js";
+import { adminAdjustJiuCoin, dailyClaimStatus } from "../lib/jiuCoin.js";
 import {
   listAdminAnnouncements,
   getAdminAnnouncement,
@@ -81,6 +82,35 @@ router.get("/admin/users/:id", (req, res) => {
   const data = getAdminUser(id);
   if (!data) return fail(res, 404, "NOT_FOUND", "用户不存在");
   return ok(res, data);
+});
+
+router.post("/admin/users/:id/jiu-coin", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const result = adminAdjustJiuCoin({
+    actorId: req.user.id,
+    targetUserId: id,
+    op: req.body?.op,
+    amount: req.body?.amount,
+    reason: req.body?.reason,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.get("/admin/users/:id/jiu-coin", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const data = getAdminUser(id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "用户不存在");
+  return ok(res, {
+    userId: id,
+    balance: data.user.jiuCoinBalance,
+    daily: dailyClaimStatus(id),
+  });
 });
 
 router.patch("/admin/users/:id/status", requireAdminVerified, (req, res) => {

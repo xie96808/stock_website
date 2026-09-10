@@ -70,6 +70,20 @@
       </div>
       <p class="note">软删会写 tombstone 并撤销会话；整库备份恢复仍仅 CLI。自助注销（凭据已清）不可在此恢复登录。</p>
 
+      <h2>韭币 · 余额调整</h2>
+      <div class="row">
+        <input id="coinUserId" placeholder="用户 ID" />
+        <select id="coinOp">
+          <option value="add">增加</option>
+          <option value="sub">扣减</option>
+          <option value="set">设为</option>
+        </select>
+        <input id="coinAmount" type="number" min="0" step="1" placeholder="数量" style="max-width:7rem" />
+        <input id="coinReason" class="grow" placeholder="原因（必填）" />
+        <button type="button" id="coinAdjustBtn">提交调整</button>
+      </div>
+      <p class="note">用户列表会显示当前韭币余额；调整需二次验证，写入审计。</p>
+
       <h2>战绩 · 下榜 / 判无效</h2>
       <div class="row">
         <input id="gameQ" class="grow" placeholder="对局 ID / 用户 ID / 登录名 / 昵称" />

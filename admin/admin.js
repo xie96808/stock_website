@@ -145,6 +145,7 @@ function renderUsers(items) {
       (u) => `<div class="item">
       #${u.id} · <code>${escapeHtml(u.username)}</code> · ${escapeHtml(u.nickname)}
       · ${escapeHtml(u.status)} · ${escapeHtml(u.role)}
+      · 韭币 ${u.jiuCoinBalance ?? 0}
       <button type="button" data-uid="${u.id}">填入</button>
     </div>`
     )
@@ -153,9 +154,38 @@ function renderUsers(items) {
     btn.onclick = () => {
       $("banUserId").value = btn.dataset.uid;
       if ($("delUserId")) $("delUserId").value = btn.dataset.uid;
+      if ($("coinUserId")) $("coinUserId").value = btn.dataset.uid;
     };
   });
 }
+
+
+$("coinAdjustBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const id = $("coinUserId").value.trim();
+  const op = $("coinOp").value;
+  const amount = Number($("coinAmount").value);
+  const reason = $("coinReason").value;
+  const r = await api(`/admin/users/${encodeURIComponent(id)}/jiu-coin`, {
+    method: "POST",
+    csrf: csrfToken,
+    body: { op, amount, reason },
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "韭币调整失败");
+    return;
+  }
+  setMsg(
+    $("opsMsg"),
+    `韭币已调整：余额 ${r.json.data.balance}（Δ ${r.json.data.delta}）`,
+    true
+  );
+  $("userSearchBtn").click();
+};
 
 $("userSearchBtn").onclick = async () => {
   setMsg($("opsMsg"), "");
