@@ -1,13 +1,23 @@
 /** 韭币 client: balance chrome + daily claim beside auth chip */
 import { api, getAuthState, showToast } from "./auth.js";
 
-const COIN_SVG = `<svg class="jiu-coin-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+/** Shared coin SVG markup (auth chrome, price badges, modals). */
+export function coinIconHtml({ size = 18, className = "jiu-coin-icon" } = {}) {
+  const s = Number(size) || 18;
+  return `<svg class="${className}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" focusable="false">
   <circle cx="12" cy="12" r="10" fill="currentColor" opacity=".18"/>
   <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
   <circle cx="12" cy="12" r="5.2" fill="none" stroke="currentColor" stroke-width="1.2"/>
   <path d="M12 7.2v9.6M9.2 9.4c.7-1 2-1.5 2.8-1.5 1.6 0 2.7 1 2.7 2.3 0 1.5-1.3 2.2-2.7 2.6-1.5.4-2.7 1-2.7 2.5 0 1.4 1.2 2.4 3 2.4 1 0 2-.4 2.7-1.2"
     fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
+}
+
+/** Number + coin icon (icon after amount). */
+export function amountWithCoinHtml(amount, { size = 12 } = {}) {
+  const n = amount == null ? "" : String(amount);
+  return `<span class="jiu-price-num">${n}</span>${coinIconHtml({ size })}`;
+}
 
 let claimBusy = false;
 
@@ -15,6 +25,23 @@ function el(html) {
   const t = document.createElement("template");
   t.innerHTML = html.trim();
   return t.content.firstElementChild;
+}
+
+function hydratePriceBadges() {
+  document.querySelectorAll(".jiu-price-badge[data-jiu-price]").forEach((badge) => {
+    const amount = badge.getAttribute("data-jiu-price");
+    badge.innerHTML = amountWithCoinHtml(amount, { size: 12 });
+  });
+}
+
+function hydrateInlineCoinIcons() {
+  document.querySelectorAll("[data-jiu-coin-icon]").forEach((node) => {
+    const size = Number(node.getAttribute("data-size") || 14) || 14;
+    const span = document.createElement("span");
+    span.className = "jiu-coin-inline";
+    span.innerHTML = coinIconHtml({ size });
+    node.replaceWith(span);
+  });
 }
 
 function ensureCoinDom() {
@@ -28,7 +55,7 @@ function ensureCoinDom() {
     wrap.hidden = true;
     wrap.innerHTML = `
       <span class="jiu-coin-balance" title="韭币余额" aria-live="polite">
-        ${COIN_SVG}
+        ${coinIconHtml({ size: 18 })}
         <span id="jiuCoinBalanceVal">0</span>
       </span>
       <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币">每日领取</button>
@@ -47,13 +74,15 @@ function ensureCoinDom() {
 function ensureModals() {
   if (document.getElementById("jiuCoinDailyModal")) return;
 
+  const coin14 = coinIconHtml({ size: 14 });
+
   document.body.appendChild(
     el(`<div class="jiu-coin-modal" id="jiuCoinDailyModal" hidden>
       <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="jiuCoinDailyTitle">
         <button type="button" class="jiu-coin-close-x" id="jiuCoinDailyCloseX" aria-label="关闭">×</button>
         <h2 id="jiuCoinDailyTitle">每日领取</h2>
         <p class="jiu-coin-modal-body" id="jiuCoinDailyBody">
-          每天 0 点（北京时间）刷新一次；本次额度随机（50–200 韭币），领取后立即到账。
+          每天 0 点（北京时间）刷新一次；本次额度随机（50–200 ${coin14}），领取后立即到账。
         </p>
         <div class="jiu-coin-modal-actions">
           <button type="button" class="jiu-coin-secondary" id="jiuCoinDailyCancel">取消</button>
@@ -69,7 +98,7 @@ function ensureModals() {
         <button type="button" class="jiu-coin-close-x" id="jiuCoinSuccessCloseX" aria-label="关闭">×</button>
         <h2 id="jiuCoinSuccessTitle">领取成功</h2>
         <p class="jiu-coin-modal-body jiu-coin-success-body" id="jiuCoinSuccessBody">
-          恭喜你，获得 韭币！
+          恭喜你，获得 ${coin14}！
         </p>
         <div class="jiu-coin-modal-actions">
           <button type="button" class="jiu-coin-primary" id="jiuCoinSuccessOk">好的</button>
@@ -117,7 +146,8 @@ function openSuccessModal(amount) {
   const n = Number(amount);
   const shown = Number.isFinite(n) ? String(n) : "—";
   if (body) {
-    body.textContent = `恭喜你，获得 韭币 ${shown}！快去模拟盘大展身手吧！`;
+    // 获得 [icon] 85
+    body.innerHTML = `恭喜你，获得 ${coinIconHtml({ size: 16 })} <strong class="jiu-coin-success-amt">${shown}</strong>！快去模拟盘大展身手吧！`;
   }
   const modal = document.getElementById("jiuCoinSuccessModal");
   if (modal) modal.hidden = false;
@@ -245,6 +275,8 @@ async function onDailyClaimConfirm() {
 }
 
 export function initJiuCoin() {
+  hydratePriceBadges();
+  hydrateInlineCoinIcons();
   ensureCoinDom();
   renderJiuCoinChrome();
   document.addEventListener("stockgame:auth-changed", () => {

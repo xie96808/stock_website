@@ -23,6 +23,30 @@
 .jiu-coin-icon {
   color: #1f6b3a;
   flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: -0.2em;
+}
+.jiu-coin-inline {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -0.15em;
+  margin: 0 0.12em;
+}
+.jiu-coin-inline .jiu-coin-icon {
+  display: block;
+}
+.jiu-coin-success-amt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  margin-left: 0.1em;
+}
+.jiu-coin-success-body .jiu-coin-icon {
+  color: #1f6b3a;
+  vertical-align: -0.25em;
+}
+.jiu-coin-modal-body .jiu-coin-icon {
+  color: #1f6b3a;
+  vertical-align: -0.2em;
 }
 .jiu-coin-daily-btn {
   font: inherit;
@@ -64,9 +88,11 @@
 
 /* ===== Title-trailing price pills (home / hub) ===== */
 .jiu-price-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   margin-left: 0.4em;
-  padding: 1px 8px 2px;
+  padding: 1px 7px 2px 8px;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 11px;
   font-weight: 700;
@@ -77,6 +103,21 @@
   border: 1.5px solid var(--ink, #2a2a2a);
   box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
   white-space: nowrap;
+}
+.jiu-price-badge .jiu-price-num {
+  font-variant-numeric: tabular-nums;
+}
+.jiu-price-badge .jiu-coin-icon {
+  width: 12px;
+  height: 12px;
+  vertical-align: 0;
+}
+.jiu-price-badge.jiu-price-paid .jiu-coin-icon {
+  color: #1f6b3a;
+}
+.jiu-price-badge.jiu-price-free .jiu-coin-icon {
+  color: var(--ink-soft, #5a5348);
+  opacity: 0.85;
 }
 .jiu-price-badge.jiu-price-paid {
   color: #14532d;
@@ -98,6 +139,16 @@
   color: var(--mute, #a89f90);
   background: rgba(255, 255, 255, 0.06);
   border-color: var(--line, #efe6d4);
+}
+[data-theme="dark"] .jiu-price-badge.jiu-price-paid .jiu-coin-icon {
+  color: #7dcea0;
+}
+[data-theme="dark"] .jiu-price-badge.jiu-price-free .jiu-coin-icon {
+  color: var(--mute, #a89f90);
+}
+[data-theme="dark"] .jiu-coin-modal-body .jiu-coin-icon,
+[data-theme="dark"] .jiu-coin-success-body .jiu-coin-icon {
+  color: #7dcea0;
 }
 
 /* ===== Daily claim confirm / success modals (纸墨) ===== */
