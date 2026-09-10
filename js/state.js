@@ -1,4 +1,7 @@
 // ========== GAME STATE ==========
+// In-game session lifecycle (start / settle / share meta) goes through
+// js/game-session.js. This object remains the shared blackboard for
+// Phase-1 export / window compat — do not big-bang rename fields here.
 export const gameState = {
     stocksData: [],
     currentStock: null,

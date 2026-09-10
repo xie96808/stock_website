@@ -1,6 +1,7 @@
 /** Stage 3: cloud game create / finish with light retry */
 import { api, getAuthState } from "./auth.js";
 import { gameState } from "./state.js";
+import { patchSession } from "./game-session.js";
 import {
   CLOUD_DRAFT_KEY,
   normalizeDraftActions,
@@ -96,15 +97,14 @@ export function updateSaveStatusUi() {
 /** Finish cloud game with retries on network / 5xx. */
 export async function finishCloudGame() {
   if (!gameState.cloudMode || !gameState.cloudGameId) {
-    gameState.saveStatus = null;
+    patchSession({ saveStatus: null });
     updateSaveStatusUi();
     return null;
   }
   const gameId = gameState.cloudGameId;
   const body = { actions: actionsPayload(gameState.actions), finish: true };
   const delays = [1000, 3000, 10000];
-  gameState.saveStatus = "saving";
-  gameState.saveError = null;
+  patchSession({ saveStatus: "saving", saveError: null });
   updateSaveStatusUi();
 
   let lastErr = null;
@@ -114,12 +114,12 @@ export async function finishCloudGame() {
         method: "POST",
         body,
       });
-      gameState.saveStatus = "saved";
-      gameState.saveError = null;
+      const savedPatch = { saveStatus: "saved", saveError: null };
       if (data?.returnPpm != null) {
-        gameState.returnPpm = data.returnPpm;
-        gameState.returnPct = data.returnPct;
+        savedPatch.returnPpm = data.returnPpm;
+        savedPatch.returnPct = data.returnPct;
       }
+      patchSession(savedPatch);
       clearCloudGameDraft(gameId);
       updateSaveStatusUi();
       import("./leaderboard.js")
@@ -130,19 +130,16 @@ export async function finishCloudGame() {
       lastErr = e;
       const retryable = !e.status || e.status >= 500 || e.status === 429;
       if (!retryable || attempt === delays.length) {
-        gameState.saveStatus = "fail";
-        gameState.saveError = e.message || "保存失败";
+        patchSession({ saveStatus: "fail", saveError: e.message || "保存失败" });
         updateSaveStatusUi();
         return null;
       }
-      gameState.saveStatus = "retry";
-      gameState.saveError = e.message || "网络异常，重试中…";
+      patchSession({ saveStatus: "retry", saveError: e.message || "网络异常，重试中…" });
       updateSaveStatusUi();
       await sleep(e.status === 429 ? delays[attempt] * 2 : delays[attempt]);
     }
   }
-  gameState.saveStatus = "fail";
-  gameState.saveError = lastErr?.message || "保存失败";
+  patchSession({ saveStatus: "fail", saveError: lastErr?.message || "保存失败" });
   updateSaveStatusUi();
   return null;
 }
