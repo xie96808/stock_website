@@ -88,6 +88,38 @@
         <button type="button" id="modBtn">提交</button>
       </div>
 
+
+      <h2>系统公告 · 发布 / 草稿 / 归档</h2>
+      <div class="row">
+        <select id="annStatusFilter">
+          <option value="">全部</option>
+          <option value="published">published</option>
+          <option value="draft">draft</option>
+          <option value="archived">archived</option>
+        </select>
+        <button type="button" id="annSearchBtn">刷新列表</button>
+      </div>
+      <div id="annList" class="list"></div>
+      <div class="row">
+        <input id="annId" placeholder="ID（更新/归档时填）" style="max-width:7rem" />
+        <input id="annTitle" placeholder="标题（可选）" />
+        <select id="annStatus">
+          <option value="draft">draft</option>
+          <option value="published">published</option>
+          <option value="archived">archived</option>
+        </select>
+      </div>
+      <div class="row">
+        <textarea id="annBody" class="grow" rows="3" placeholder="正文（必填）" style="width:100%;min-height:4.5rem;font:inherit"></textarea>
+      </div>
+      <div class="row">
+        <button type="button" id="annCreateBtn">新建</button>
+        <button type="button" id="annUpdateBtn">更新</button>
+        <button type="button" id="annPublishBtn">发布</button>
+        <button type="button" id="annArchiveBtn">归档</button>
+      </div>
+      <p class="note">写操作需二次验证。公开页仅展示 published；「今日关闭」由访客本地日历日记住。</p>
+
       <h2>审计日志</h2>
       <div class="row">
         <button type="button" id="auditBtn">刷新最近审计</button>

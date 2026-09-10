@@ -18,6 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');})()</script>
@@ -33,6 +34,7 @@
 
     <!-- Reserved chrome: avoid late JS insert shifting controls -->
     <div class="auth-chip" id="authChip">
+        <button type="button" class="announcements-btn" id="announcementsBtn" title="系统公告" aria-label="系统公告">公告</button>
         <button type="button" class="auth-login-btn" id="authLoginBtn">登录 / 注册</button>
         <button type="button" class="auth-user-btn" id="authUserBtn" hidden>
             <img class="auth-avatar" id="authAvatarImg" alt="">
@@ -771,6 +773,7 @@
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
+        import { initAnnouncements } from './js/announcements.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, restoreSimShell } from './js/home-ia.js';
@@ -832,6 +835,7 @@
         window.showSimHub = showSimHub;
         window.restoreSimShell = restoreSimShell;
         initAuth().catch((e) => console.warn('auth init', e));
+        initAnnouncements().catch((e) => console.warn('announcements init', e));
         (function () {
           const start = document.getElementById('startScreen');
           if (!start) return;

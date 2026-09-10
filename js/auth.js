@@ -212,6 +212,7 @@ function ensureAuthDom() {
   // Chip may already exist in index.html (reserved layout).
   if (!document.getElementById("authChip")) {
     const chip = el(`<div class="auth-chip" id="authChip">
+      <button type="button" class="announcements-btn" id="announcementsBtn" title="系统公告" aria-label="系统公告">公告</button>
       <button type="button" class="auth-login-btn" id="authLoginBtn">登录 / 注册</button>
       <button type="button" class="auth-user-btn" id="authUserBtn" hidden>
         <img class="auth-avatar" id="authAvatarImg" alt="">

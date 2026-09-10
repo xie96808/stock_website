@@ -12,6 +12,10 @@ const BEFORE_AFTER_ALLOW = new Set([
   "nickname",
   "username_normalized",
   "username",
+  "title",
+  "body",
+  "published_at",
+  "publishedAt",
 ]);
 
 function pickAllowed(obj) {

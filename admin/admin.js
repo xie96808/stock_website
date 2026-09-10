@@ -320,4 +320,148 @@ $("restoreUserBtn").onclick = async () => {
   );
 };
 
+
+function renderAnnouncements(items) {
+  const el = $("annList");
+  if (!el) return;
+  if (!items?.length) {
+    el.innerHTML = `<div class="item">无公告</div>`;
+    return;
+  }
+  el.innerHTML = items
+    .map(
+      (a) => `<div class="item">
+      #${a.id} · <code>${escapeHtml(a.status)}</code>
+      · ${escapeHtml(a.title || "(无标题)")}
+      · ${escapeHtml((a.body || "").slice(0, 48))}
+      · ${escapeHtml(a.publishedAt || "—")}
+      <button type="button" data-ann="${a.id}">填入</button>
+    </div>`
+    )
+    .join("");
+  el.querySelectorAll("button[data-ann]").forEach((btn) => {
+    btn.onclick = async () => {
+      const id = btn.dataset.ann;
+      $("annId").value = id;
+      const r = await api(`/admin/announcements/${encodeURIComponent(id)}`);
+      if (r.status !== 200) {
+        setMsg($("opsMsg"), r.json?.error?.message || "加载失败");
+        return;
+      }
+      const a = r.json.data.announcement;
+      $("annTitle").value = a.title || "";
+      $("annBody").value = a.body || "";
+      $("annStatus").value = a.status || "draft";
+    };
+  });
+}
+
+$("annSearchBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const qs = new URLSearchParams();
+  if ($("annStatusFilter").value) qs.set("status", $("annStatusFilter").value);
+  const r = await api(`/admin/announcements?${qs}`);
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "加载公告失败");
+    return;
+  }
+  renderAnnouncements(r.json.data.items);
+};
+
+$("annCreateBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const r = await api("/admin/announcements", {
+    method: "POST",
+    csrf: csrfToken,
+    body: {
+      title: $("annTitle").value.trim() || null,
+      body: $("annBody").value,
+      status: $("annStatus").value || "draft",
+    },
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 201 && r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "创建失败");
+    return;
+  }
+  setMsg($("opsMsg"), `公告 #${r.json.data.announcement.id} 已创建`, true);
+  $("annId").value = String(r.json.data.announcement.id);
+  $("annSearchBtn").click();
+};
+
+$("annUpdateBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const id = $("annId").value.trim();
+  const r = await api(`/admin/announcements/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    csrf: csrfToken,
+    body: {
+      title: $("annTitle").value.trim() || null,
+      body: $("annBody").value,
+      status: $("annStatus").value,
+    },
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "更新失败");
+    return;
+  }
+  setMsg($("opsMsg"), `公告 #${r.json.data.announcement.id} 已更新`, true);
+  $("annSearchBtn").click();
+};
+
+$("annPublishBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const id = $("annId").value.trim();
+  const body = {
+    status: "published",
+  };
+  if ($("annBody").value.trim()) body.body = $("annBody").value;
+  if ($("annTitle").value.trim()) body.title = $("annTitle").value.trim();
+  const r = await api(`/admin/announcements/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    csrf: csrfToken,
+    body,
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "发布失败");
+    return;
+  }
+  $("annStatus").value = "published";
+  setMsg($("opsMsg"), `公告 #${r.json.data.announcement.id} 已发布`, true);
+  $("annSearchBtn").click();
+};
+
+$("annArchiveBtn").onclick = async () => {
+  setMsg($("opsMsg"), "");
+  const id = $("annId").value.trim();
+  const r = await api(`/admin/announcements/${encodeURIComponent(id)}/archive`, {
+    method: "POST",
+    csrf: csrfToken,
+    body: {},
+  });
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "归档失败");
+    return;
+  }
+  $("annStatus").value = "archived";
+  setMsg($("opsMsg"), `公告 #${r.json.data.announcement.id} 已归档`, true);
+  $("annSearchBtn").click();
+};
+
+
 refreshSession().catch(() => showLoggedOut());
