@@ -329,37 +329,434 @@
 
 
 /* ============================================================
-   Scheme A — 模拟盘 hub back
+   Concept C — 模拟盘 hub (distinct page shell)
    ============================================================ */
 
-.start-screen .hub-back {
+.start-screen .page[hidden],
+.start-screen #homePage[hidden],
+.start-screen #homeLanes[hidden],
+.start-screen #simHub[hidden],
+.start-screen .sim-hub[hidden] {
+    display: none !important;
+}
+
+.sim-hub {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: min(980px, 100%);
+    margin: 0 auto;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.sim-hub-leave {
     align-self: flex-start;
     margin: 0 0 2px 2px;
-    padding: 4px 2px;
-    border: none;
+    padding: 6px 12px;
+    border: 1.5px solid transparent;
     background: transparent;
     font-family: var(--kaiti);
-    font-size: 0.9rem;
-    letter-spacing: 0.12em;
+    font-size: 0.95rem;
+    letter-spacing: 0.14em;
     color: var(--mute);
     cursor: pointer;
-    box-shadow: none;
-    border-radius: 0;
+    border-radius: 999px 14px 999px 12px;
+    transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
-.start-screen .hub-back:hover {
+.sim-hub-leave:hover,
+.sim-hub-leave:focus-visible {
     color: var(--ink);
-    transform: none;
-    box-shadow: none;
+    background: rgba(196, 92, 58, 0.1);
+    border-color: var(--line);
+    box-shadow: 2px 2px 0 var(--line);
+    transform: translate(-1px, -1px);
+    outline: none;
 }
 
-.start-screen .sim-hub-lanes {
+.sim-hub-leave:focus-visible {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+}
+
+.sim-hub-grid {
+    display: grid;
+    grid-template-columns: minmax(150px, 200px) minmax(240px, 1fr) minmax(200px, 260px);
+    gap: 18px;
+    align-items: stretch;
+}
+
+.sim-hub-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 6px 2px 0;
+}
+
+.sim-hub-brand {
+    padding: 2px 4px 4px;
+}
+
+.sim-hub-title {
+    font-family: var(--kaiti);
+    font-size: clamp(1.7rem, 2.4vw, 2.15rem);
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    line-height: 1.2;
+    color: var(--ink);
+    margin: 0;
+}
+
+.sim-hub-subtitle {
+    margin-top: 4px;
+    font-family: var(--kaiti);
+    font-size: 1.05rem;
+    letter-spacing: 0.28em;
+    color: var(--ink-soft);
+}
+
+.sim-hub-nav {
+    display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
-/* HTML hidden must beat .lanes { display:flex } (UA [hidden] loses to author CSS) */
-.start-screen .lanes[hidden],
-.start-screen #simHub[hidden],
-.start-screen #homeLanes[hidden] {
-    display: none !important;
+.sim-hub-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 14px;
+    text-align: left;
+    font-family: var(--kaiti);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+    cursor: pointer;
+    appearance: none;
+    border: 1.6px solid var(--line);
+    background: var(--card);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-nudge);
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sim-hub-nav-btn:nth-child(2) {
+    border-radius: var(--radius-alt);
+}
+
+.sim-hub-nav-btn:hover,
+.sim-hub-nav-btn:focus-visible {
+    transform: translate(-1px, -2px);
+    box-shadow: 3px 4px 0 var(--line);
+    background: var(--chip-bg);
+    outline: none;
+}
+
+.sim-hub-nav-btn:focus-visible {
+    outline: 2px solid var(--terra);
+    outline-offset: 2px;
+}
+
+.sim-hub-nav-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--line);
+}
+
+.sim-hub-nav-ico {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    color: var(--ink);
+}
+
+.sim-hub-primary {
+    display: flex;
+    min-width: 0;
+}
+
+.sim-hub-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 22px 22px 20px;
+    border: 1.6px solid var(--line);
+    background: var(--card);
+    border-radius: 20px 26px 18px 24px;
+    box-shadow:
+        0 0 0 2px var(--paper),
+        2px 3px 0 var(--line);
+    position: relative;
+}
+
+.sim-hub-card::before {
+    content: "";
+    position: absolute;
+    inset: 5px;
+    border: 1px dashed rgba(58, 53, 48, 0.28);
+    border-radius: 16px 22px 14px 20px;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .sim-hub-card::before {
+    border-color: rgba(200, 188, 168, 0.28);
+}
+
+.sim-hub-card-title {
+    font-family: var(--kaiti);
+    font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+    margin: 4px 0 0;
+    position: relative;
+}
+
+.sim-hub-card-sub {
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    margin: 0;
+    position: relative;
+}
+
+.sim-hub-card-rule {
+    width: min(220px, 78%);
+    height: 0;
+    border-top: 1.5px dashed var(--line);
+    opacity: 0.45;
+    margin: 4px 0 2px;
+    position: relative;
+}
+
+.sim-hub-cost {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 8px;
+    position: relative;
+}
+
+.sim-hub-cost-badge {
+    margin-left: 0;
+    font-size: 14px;
+    padding: 5px 12px 5px 12px;
+    transform: scale(1.15);
+    transform-origin: center;
+}
+
+.sim-hub-cost-hint {
+    font-family: var(--kaiti);
+    font-size: 0.82rem;
+    letter-spacing: 0.16em;
+    color: var(--mute);
+}
+
+.sim-hub-cta {
+    position: relative;
+    margin-top: auto;
+    min-width: 168px;
+    height: 46px;
+    padding: 0 28px;
+    border: 1.6px solid var(--line);
+    border-radius: 999px 22px 999px 18px;
+    background: var(--terra);
+    color: var(--terra-ink);
+    font-family: var(--kaiti);
+    font-size: 1.08rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    cursor: pointer;
+    box-shadow: 2px 3px 0 var(--line);
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s, background 0.15s;
+}
+
+.sim-hub-cta::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.18;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+}
+
+.sim-hub-cta:hover,
+.sim-hub-cta:focus-visible {
+    transform: translate(-1px, -2px);
+    box-shadow: 3px 5px 0 var(--line);
+    filter: brightness(1.06);
+    outline: none;
+}
+
+.sim-hub-cta:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+.sim-hub-cta:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--line);
+    filter: none;
+}
+
+.sim-hub-atmosphere {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.sim-hub-atm-title {
+    font-family: var(--kaiti);
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--ink);
+    margin: 0;
+    padding-left: 2px;
+}
+
+.sim-hub-atm-frame {
+    position: relative;
+    flex: 1;
+    min-height: 280px;
+    border-radius: 18px 24px 16px 22px;
+    background: #e8dcc4;
+    overflow: hidden;
+    box-shadow:
+        0 0 0 2px var(--line),
+        2px 3px 0 var(--line),
+        inset 0 0 0 6px var(--paper);
+}
+
+[data-theme="dark"] .sim-hub-atm-frame {
+    background: #2a241c;
+}
+
+.sim-hub-atm-frame img {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 28px);
+    max-height: calc(100% - 52px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    border-radius: 8px 12px 8px 10px;
+}
+
+.sim-hub-atm-frame img.night {
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .sim-hub-atm-frame img.day {
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .sim-hub-atm-frame img.night {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sim-hub-atm-frame svg.scribble {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.sim-hub-atm-frame svg.scribble path {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.sim-hub-kline {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    width: 112px;
+    height: 44px;
+    opacity: 0.72;
+    pointer-events: none;
+    z-index: 2;
+    filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.12));
+}
+
+@media (max-width: 900px) {
+    .sim-hub-grid {
+        grid-template-columns: minmax(140px, 180px) 1fr;
+        grid-template-areas:
+            "rail primary"
+            "atm atm";
+    }
+    .sim-hub-rail { grid-area: rail; }
+    .sim-hub-primary { grid-area: primary; }
+    .sim-hub-atmosphere { grid-area: atm; }
+    .sim-hub-atm-frame { min-height: 220px; max-height: 280px; }
+}
+
+@media (max-width: 720px) {
+    .sim-hub {
+        gap: 12px;
+    }
+    .sim-hub-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "rail"
+            "primary"
+            "atm";
+        gap: 14px;
+    }
+    .sim-hub-rail {
+        gap: 12px;
+        padding-top: 0;
+    }
+    .sim-hub-brand {
+        padding-bottom: 0;
+    }
+    .sim-hub-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .sim-hub-nav-btn {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+        justify-content: center;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+        letter-spacing: 0.14em;
+    }
+    .sim-hub-card {
+        padding: 18px 16px 16px;
+        width: 100%;
+    }
+    .sim-hub-cta {
+        width: 100%;
+        min-width: 0;
+    }
+    .sim-hub-atm-frame {
+        min-height: 200px;
+        max-height: 240px;
+    }
 }
