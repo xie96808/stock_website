@@ -1,4 +1,4 @@
-/** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub (Concept C) */
+/** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub */
 
 import { prefetchStocksPack } from "./pack-store.js";
 import { gameState } from "./state.js";
@@ -9,29 +9,24 @@ import {
   parseRouteHash,
 } from "./screen-router.js";
 
-function homeShellEl() {
-  return document.getElementById("homePage") || document.getElementById("homeLanes");
-}
-
-function setSimShellVisible(showHub) {
-  const home = homeShellEl();
-  const hub = document.getElementById("simHub");
-  if (home) home.hidden = !!showHub;
-  if (hub) hub.hidden = !showHub;
-}
-
 /** Root home: three primary entries only */
 export function showHome() {
   prepareScreen(Route.HOME);
-  setSimShellVisible(false);
+  const home = document.getElementById("homeLanes");
+  const hub = document.getElementById("simHub");
+  if (home) home.hidden = false;
+  if (hub) hub.hidden = true;
   setRouteHash(Route.HOME);
 }
 
-/** 模拟盘二级 hub: leave + rail + start card + atmosphere */
+/** 模拟盘二级 hub: 开始游戏 / 我的战绩 / 练习榜 */
 export function showSimHub(opts = {}) {
   const { updateHash = true } = opts;
   prepareScreen(Route.SIM);
-  setSimShellVisible(true);
+  const home = document.getElementById("homeLanes");
+  const hub = document.getElementById("simHub");
+  if (home) home.hidden = true;
+  if (hub) hub.hidden = false;
   if (updateHash) setRouteHash(Route.SIM);
   // Intent to play: warm pack immediately (don't wait for Start / idle timer).
   prefetchStocksPack(gameState);
@@ -77,7 +72,10 @@ export function applyHomeHashRoute(hash = parseRouteHash()) {
 export function initHomeIaRouting() {
   const h = parseRouteHash();
   if (!h) {
-    setSimShellVisible(false);
+    const home = document.getElementById("homeLanes");
+    const hub = document.getElementById("simHub");
+    if (home) home.hidden = false;
+    if (hub) hub.hidden = true;
   } else if (h !== "leaderboard") {
     applyHomeHashRoute(h);
   }

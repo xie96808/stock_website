@@ -52,8 +52,7 @@
         <!-- Start Screen — 手绘 notebook split -->
         <section class="start-screen animate-in" id="startScreen">
 
-            <!-- Home shell: art + three primary lanes -->
-            <div class="page" id="homePage">
+            <div class="page">
                 <aside class="art">
                     <div class="frame">
                         <img class="day" src="images/mascot-day-sketch.jpg" alt="白天书桌前的后悔猫">
@@ -74,6 +73,7 @@
                             <p class="sub">用真实 A 股数据，重走每一次错过的行情</p>
                         </div>
                     </div>
+                    <!-- Scheme A: root home — three primary entries only -->
                     <div class="lanes" id="homeLanes">
                         <button type="button" class="lane" onclick="showSimHub()">
                             <span class="mark">一</span>
@@ -103,61 +103,38 @@
                             <span class="cta cta-wash">立即回溯</span>
                         </button>
                     </div>
-                </div>
-            </div>
 
-            <!-- Concept C: 模拟盘 hub — distinct page vs home -->
-            <div class="sim-hub" id="simHub" hidden>
-                <button type="button" class="sim-hub-leave" onclick="showHome()">← 离开模拟盘</button>
-                <div class="sim-hub-grid">
-                    <div class="sim-hub-rail">
-                        <div class="sim-hub-brand">
-                            <h2 class="sim-hub-title">模拟盘</h2>
-                            <p class="sim-hub-subtitle">实战演练</p>
-                        </div>
-                        <nav class="sim-hub-nav" aria-label="模拟盘导航">
-                            <button type="button" class="sim-hub-nav-btn" onclick="showMyGames()">
-                                <span class="sim-hub-nav-ico" aria-hidden="true">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h9.5c.8 0 1.5.7 1.5 1.5v12.2l-4.2-2.1-4.3 2.1V6c0-.8-.7-1.5-1.5-1.5H5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 4.5v15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-                                </span>
-                                <span>我的战绩</span>
-                            </button>
-                            <button type="button" class="sim-hub-nav-btn" onclick="showLeaderboard()">
-                                <span class="sim-hub-nav-ico" aria-hidden="true">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 18V11h4v7H5Zm5 0V6h4v12h-4Zm5 0v-4h4v4h-4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 3.5l1.1 2.3 2.5.3-1.9 1.7.5 2.5L12 9.1 9.8 10.3l.5-2.5-1.9-1.7 2.5-.3L12 3.5Z" fill="currentColor" opacity=".85"/></svg>
-                                </span>
-                                <span>练习榜</span>
-                            </button>
-                        </nav>
+                    <!-- Scheme A: 模拟盘二级 hub -->
+                    <div class="lanes sim-hub-lanes" id="simHub" hidden>
+                        <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                        <button type="button" class="lane" onclick="startGame()">
+                            <span class="mark">一</span>
+                            <span class="copy">
+                                <small>开始练习</small>
+                                <strong>开始游戏<span class="jiu-price-badge jiu-price-paid" data-jiu-price="10" aria-label="消耗 10 韭币"></span></strong>
+                                <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
+                            </span>
+                            <span class="cta cta-fill">立即开始</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showMyGames()">
+                            <span class="mark">二</span>
+                            <span class="copy">
+                                <small>云端战绩</small>
+                                <strong>我的战绩</strong>
+                                <p>登录后查看已保存对局与基础统计。</p>
+                            </span>
+                            <span class="cta cta-wash">查看战绩</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showLeaderboard()">
+                            <span class="mark">三</span>
+                            <span class="copy">
+                                <small>练习榜</small>
+                                <strong>双模式练习榜</strong>
+                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
+                            </span>
+                            <span class="cta cta-wash">查看榜单</span>
+                        </button>
                     </div>
-
-                    <div class="sim-hub-primary">
-                        <div class="sim-hub-card">
-                            <h3 class="sim-hub-card-title">开始模拟盘实战</h3>
-                            <p class="sim-hub-card-sub">模拟真实盘感，积累经验</p>
-                            <div class="sim-hub-card-rule" aria-hidden="true"></div>
-                            <div class="sim-hub-cost">
-                                <span class="jiu-price-badge jiu-price-paid sim-hub-cost-badge" data-jiu-price="10" aria-label="消耗 10 韭币"></span>
-                            </div>
-                            <button type="button" class="sim-hub-cta" onclick="startGame()">立即开始</button>
-                            <ul class="sim-hub-tips" aria-label="模拟盘要点">
-                                <li class="sim-hub-tip"><span class="sim-hub-tip-ico" aria-hidden="true">✓</span>成交方式</li>
-                                <li class="sim-hub-tip"><span class="sim-hub-tip-ico" aria-hidden="true">〰</span>三十日 K 线</li>
-                                <li class="sim-hub-tip"><span class="sim-hub-tip-ico" aria-hidden="true">★</span>终局揭晓</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <aside class="sim-hub-atmosphere" aria-label="市场氛围">
-                        <h3 class="sim-hub-atm-title">市场氛围</h3>
-                        <div class="sim-hub-atm-frame">
-                            <img class="day" src="images/sim-hub-cat-standing-day.jpg" alt="站立指着 K 线板的后悔猫">
-                            <img class="night" src="images/sim-hub-cat-standing-night.jpg" alt="夜间站立指着 K 线板的后悔猫">
-                            <svg class="scribble" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                                <path d="M4.2,9.5 C2.8,3.2 9.1,2.4 14,2.8 L86,3.6 C93.5,2.9 97.4,7.2 96.8,14 L96.2,86 C97.2,93.8 91.4,97.6 84,96.8 L14.5,96.1 C6.2,97.4 2.6,91.5 3.4,84 Z"/>
-                            </svg>
-                        </div>
-                    </aside>
                 </div>
             </div>
 
@@ -864,7 +841,7 @@
         // Still listen for later hashchange back to home/sim/etc.
         const bootHash = parseRouteHash();
         if (!bootHash) {
-            const home = document.getElementById('homePage') || document.getElementById('homeLanes');
+            const home = document.getElementById('homeLanes');
             const hub = document.getElementById('simHub');
             if (home) home.hidden = false;
             if (hub) hub.hidden = true;
