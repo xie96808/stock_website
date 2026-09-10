@@ -65,7 +65,9 @@ with tarfile.open(archive, "r:gz") as bundle:
         path = pathlib.PurePosixPath(member.name)
         if path.is_absolute() or ".." in path.parts:
             raise SystemExit(f"unsafe archive path: {member.name}")
-        if not (member.isfile() or member.isdir()):
+        # Allow hardlinks (versioned pack twins + shared .br/.gz); still reject
+        # symlinks and specials (fifo/device/etc.).
+        if not (member.isfile() or member.isdir() or member.islnk()):
             raise SystemExit(f"unsupported archive member: {member.name}")
 PY
 tar -xzf "$ROOT_ARCHIVE" -C "$TEMP" --no-same-owner --no-same-permissions

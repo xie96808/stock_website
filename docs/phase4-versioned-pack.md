@@ -1,6 +1,6 @@
 # Phase 4 residual — versioned pack URL
 
-更新：2026-09-10（`feat/versioned-pack-url`）
+更新：2026-09-10（`feat/versioned-pack-url`；`fix/deploy-allow-pack-hardlinks`）
 
 ## 目标（行为不变）
 
@@ -48,6 +48,12 @@
 | **静态** | merge → Actions `package-production` 自动产出版本化文件 + `.gz`/`.br` + `pack-meta.json` |
 | **nginx** | **需运维合并 conf**：版本化 location + `pack-meta` no-store；`nginx -t && reload`。不 reload 则版本化文件仍可下载，但可能吃到通用 `expires 7d` 而非 immutable |
 | **API** | 一般 **不必** redeploy；只要 API 读的数据集文件与静态包同一内容即可 |
+
+
+### Deploy / nginx 同步（server 29）
+
+- **`deploy/deploy-release.sh`**：解包校验允许 `member.islnk()`（hardlink）。版本化 pack 与未版本化 twin 以及共享的 `.br`/`.gz` 用 hardlink 省空间；仍拒绝 symlink 与特殊文件。
+- **`deploy/nginx-stockgame.xieyw.top.conf`**：版本化 pack 的 `location ~*` 正则需加引号（`"...{64}..."`），否则 nginx 把 `{64}` 当成配置块。
 
 验收：
 
