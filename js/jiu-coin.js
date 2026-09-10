@@ -30,7 +30,8 @@ function el(html) {
 function hydratePriceBadges() {
   document.querySelectorAll(".jiu-price-badge[data-jiu-price]").forEach((badge) => {
     const amount = badge.getAttribute("data-jiu-price");
-    badge.innerHTML = amountWithCoinHtml(amount, { size: 12 });
+    const size = Number(badge.getAttribute("data-jiu-icon-size") || 12) || 12;
+    badge.innerHTML = amountWithCoinHtml(amount, { size });
   });
 }
 
