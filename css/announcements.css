@@ -1,0 +1,174 @@
+/* ===== System announcements (paper / ink) ===== */
+.announcements-btn {
+  font: inherit;
+  cursor: pointer;
+  border: 1.5px solid var(--ink, #2a2a2a);
+  background: var(--paper, #f7f1e6);
+  color: var(--ink, #2a2a2a);
+  border-radius: 999px;
+  padding: 6px 12px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.12);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.announcements-btn:hover {
+  background: var(--chip-bg, #efe4c8);
+}
+.announcements-btn:focus-visible {
+  outline: 2px solid var(--ink, #2a2a2a);
+  outline-offset: 2px;
+}
+
+.announcements-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.45);
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.announcements-modal[hidden] {
+  display: none !important;
+}
+
+.announcements-dialog {
+  position: relative;
+  width: min(480px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--paper, #f7f1e6);
+  color: var(--ink, #222);
+  border: 2px solid var(--line, #2a2a2a);
+  border-radius: 16px;
+  padding: 22px 18px 16px;
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.18);
+}
+
+.announcements-dialog h2 {
+  margin: 0 28px 14px 0;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.announcements-close-x {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  border: none;
+  background: transparent;
+  color: var(--ink, #222);
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.announcements-item {
+  border: 1.5px dashed var(--line, #3a3530);
+  border-radius: 12px;
+  padding: 12px 12px 10px;
+  background: var(--paper-2, #efe4cc);
+}
+
+.announcements-item-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  letter-spacing: 0.06em;
+}
+
+.announcements-item-time {
+  display: block;
+  font-size: 12px;
+  color: var(--mute, #7a7064);
+  margin-bottom: 6px;
+}
+
+.announcements-item-body {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.announcements-empty {
+  color: var(--mute, #7a7064);
+  text-align: center;
+  padding: 18px 8px;
+  margin: 0 0 12px;
+}
+
+.announcements-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.announcements-primary,
+.announcements-secondary {
+  font: inherit;
+  cursor: pointer;
+  border: 1.5px solid var(--ink, #2a2a2a);
+  border-radius: 999px;
+  padding: 7px 14px;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+  color: var(--ink, #2a2a2a);
+}
+.announcements-primary {
+  background: var(--wash, #c4a07a);
+  color: var(--wash-ink, #3a3228);
+}
+.announcements-secondary {
+  background: var(--paper, #f7f1e6);
+}
+.announcements-primary:hover,
+.announcements-secondary:hover {
+  filter: brightness(0.97);
+}
+
+@media (max-width: 640px) {
+  .announcements-btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .announcements-actions {
+    justify-content: stretch;
+  }
+  .announcements-primary,
+  .announcements-secondary {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+[data-theme="dark"] .announcements-modal {
+  background: rgba(0, 0, 0, 0.55);
+}
+[data-theme="dark"] .announcements-dialog {
+  box-shadow: 6px 6px 0 rgba(0, 0, 0, 0.45);
+}
+[data-theme="dark"] .announcements-item {
+  background: var(--paper-2, #161410);
+}
+[data-theme="dark"] .announcements-btn,
+[data-theme="dark"] .announcements-secondary {
+  background: var(--paper, #1c1a16);
+  color: var(--ink, #efe6d4);
+  border-color: var(--line, #efe6d4);
+}
+[data-theme="dark"] .announcements-primary {
+  background: var(--wash, #c4a07a);
+  color: var(--wash-ink, #3a3228);
+}

@@ -18,6 +18,13 @@ import {
   getAdminOverview,
 } from "../lib/admin.js";
 import { listAuditLogs } from "../lib/audit.js";
+import {
+  listAdminAnnouncements,
+  getAdminAnnouncement,
+  createAnnouncement,
+  updateAnnouncement,
+  archiveAnnouncement,
+} from "../lib/announcements.js";
 import { ok, fail } from "../lib/http.js";
 import {
   requireAdminGate,
@@ -168,5 +175,70 @@ router.get("/admin/audit-logs", (req, res) => {
   });
   return ok(res, data);
 });
+
+router.get("/admin/announcements", (req, res) => {
+  const data = listAdminAnnouncements({
+    status: req.query.status,
+    limit: req.query.limit,
+    cursor: req.query.cursor,
+  });
+  return ok(res, data);
+});
+
+router.get("/admin/announcements/:id", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const data = getAdminAnnouncement(id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "公告不存在");
+  return ok(res, { announcement: data });
+});
+
+router.post("/admin/announcements", requireAdminVerified, (req, res) => {
+  const result = createAnnouncement({
+    actorId: req.user.id,
+    title: req.body?.title ?? null,
+    body: req.body?.body,
+    status: req.body?.status ?? "draft",
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.patch("/admin/announcements/:id", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const result = updateAnnouncement({
+    actorId: req.user.id,
+    id,
+    title: req.body?.title,
+    body: req.body?.body,
+    status: req.body?.status,
+    expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.post("/admin/announcements/:id/archive", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const result = archiveAnnouncement({
+    actorId: req.user.id,
+    id,
+    expectedUpdatedAt: req.body?.expectedUpdatedAt ?? null,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
 
 export default router;
