@@ -188,8 +188,9 @@ body {
     left: 14px;
     z-index: 100;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 6px;
     max-width: calc(100vw - 8px);
 }
@@ -371,49 +372,67 @@ html:not([data-theme="dark"]) .pill[data-mode="light"] {
         top: 8px;
         left: 8px;
         gap: 4px;
-        /* Keep clear of right auth chip */
-        max-width: min(9.5rem, calc(100vw - 42vw));
+        /* Same-row theme + zoom; leave room for right auth chip */
+        max-width: min(14.5rem, calc(100vw - 38vw));
     }
     .theme-toggle {
-        gap: 4px;
+        gap: 3px;
+        flex-shrink: 0;
     }
     .theme-toggle .pill,
     .pill {
         min-width: 0;
-        padding: 6px 10px 5px;
-        font-size: 13px;
-        letter-spacing: 0.1em;
-        min-height: 36px;
+        padding: 5px 8px 4px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        min-height: 32px;
+    }
+    .page-zoom {
+        flex: 0 1 auto;
+        min-width: 0;
     }
     .page-zoom-bar {
         max-width: 100%;
+        gap: 0;
+        padding: 1px;
     }
     .page-zoom-toggle {
-        padding: 4px 6px;
+        padding: 3px 5px;
         font-size: 11px;
-        letter-spacing: 0.04em;
-        min-height: 36px;
+        letter-spacing: 0;
+        min-height: 32px;
     }
     .page-zoom-step {
-        min-width: 36px;
-        min-height: 36px;
+        min-width: 30px;
+        min-height: 32px;
+        padding: 3px 4px;
     }
     .page-zoom-glyph {
-        display: none; /* show % only on narrow to save width */
+        display: none; /* % only — keep row compact */
     }
     .page-zoom-label {
-        font-size: 12px;
+        font-size: 11px;
     }
 }
 
 @media (max-width: 420px) {
     .top-left-chrome {
-        max-width: min(8.75rem, calc(100vw - 48vw));
+        max-width: min(13.25rem, calc(100vw - 42vw));
+        gap: 3px;
     }
     .theme-toggle .pill,
     .pill {
-        padding: 6px 8px 5px;
-        letter-spacing: 0.06em;
+        padding: 5px 7px 4px;
+        letter-spacing: 0.04em;
+        min-height: 30px;
+    }
+    .page-zoom-step {
+        min-width: 28px;
+        min-height: 30px;
+    }
+    .page-zoom-toggle {
+        min-height: 30px;
+        padding: 2px 4px;
     }
 }
 

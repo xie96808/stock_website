@@ -1,8 +1,8 @@
 /** Page zoom aid: optional CSS zoom with localStorage persistence (sketchbook control). */
 const STORAGE_KEY = 'pageZoom';
-const PRESETS = [0.8, 0.9, 1, 1.1, 1.25];
-const MIN = 0.8;
-const MAX = 1.25;
+const PRESETS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
+const MIN = 0.6;
+const MAX = 1.5;
 
 function clampZoom(n) {
   const x = Number(n);
