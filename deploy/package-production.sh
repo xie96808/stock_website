@@ -18,20 +18,26 @@ for path in index.html favicon.ico favicon.png css js data images shared admin; 
 done
 find "$STAGING/release" -name .DS_Store -delete
 
-# Precompress text assets for nginx gzip_static (11MB JS -> ~2.5MB).
-while IFS= read -r -d '' f; do
-  gzip -9 -n -c "$f" > "$f.gz"
-done < <(find "$STAGING/release" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.json' -o -name '*.svg' \) ! -name '*.gz' -print0)
+# Cache-bust local js/css references with ?v=<short-sha> (release tree only).
+if command -v node >/dev/null 2>&1; then
+  node "$ROOT_DIR/deploy/stamp-asset-revision.mjs" "$STAGING/release" "$REVISION"
+else
+  echo "node required for stamp-asset-revision.mjs" >&2
+  exit 1
+fi
 
-cat > "$STAGING/release/version.json" <<EOF
+cat > "$STAGING/release/version.json" <<VEOF
 {"revision":"$REVISION","builtAt":"$BUILD_TIME"}
-EOF
-cat > "$STAGING/release/release.env" <<EOF
+VEOF
+cat > "$STAGING/release/release.env" <<EEOF
 APP_GIT_SHA=$REVISION
 APP_BUILD_TIME=$BUILD_TIME
-EOF
-# version.json was written after the gzip pass
-gzip -9 -n -c "$STAGING/release/version.json" > "$STAGING/release/version.json.gz"
+EEOF
+
+# Precompress for nginx gzip_static + brotli_static (.gz + .br).
+# Includes data/stocks_data.json (~55MB); brotli q5 for large files.
+# Requires Node zlib (no system brotli package needed on CI/VPS pack host).
+node "$ROOT_DIR/deploy/precompress-assets.mjs" "$STAGING/release"
 
 ARCHIVE="$OUTPUT_DIR/stock-website-$REVISION.tar.gz"
 COPYFILE_DISABLE=1 tar -C "$STAGING/release" -czf "$ARCHIVE" .
