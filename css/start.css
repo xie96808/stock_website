@@ -539,9 +539,8 @@
 
 .sim-hub-cost {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 6px;
+    justify-content: center;
     margin: 4px 0 8px;
     position: relative;
 }
@@ -552,13 +551,6 @@
     padding: 5px 12px 5px 12px;
     transform: scale(1.15);
     transform-origin: center;
-}
-
-.sim-hub-cost-hint {
-    font-family: var(--kaiti);
-    font-size: 0.82rem;
-    letter-spacing: 0.16em;
-    color: var(--mute);
 }
 
 .sim-hub-cta {
