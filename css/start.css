@@ -292,7 +292,8 @@
 @media (max-width: 800px) {
     .start-screen {
         min-height: auto;
-        padding: 18px 16px 24px;
+        /* Extra top room for fixed 纸/墨 + zoom + wrapping auth chrome */
+        padding: 56px 16px 24px;
         justify-content: flex-start;
     }
     .start-screen .page {

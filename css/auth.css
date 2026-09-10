@@ -40,7 +40,42 @@
 .avatar-preview{width:64px;height:64px;border-radius:50%;border:1.5px solid #666;object-fit:cover;background:#111;pointer-events:none;display:block}
 .auth-danger{background:#f6d6d0}
 .auth-secondary{margin-top:6px}
-@media (max-width:640px){.auth-chip{right:12px;top:14px}}
+@media (max-width:640px){
+  .auth-chip{
+    top:8px;
+    right:8px;
+    left:auto;
+    max-width:min(72vw, calc(100vw - 7.5rem));
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    align-content:flex-start;
+    gap:4px;
+    row-gap:4px;
+  }
+  .auth-login-btn,.auth-user-btn{
+    padding:5px 10px;
+    font-size:12px;
+    min-height:36px;
+    box-shadow:1px 1px 0 rgba(0,0,0,.1);
+  }
+  .auth-user-btn{
+    padding:3px 8px 3px 3px;
+    max-width:100%;
+  }
+  .auth-avatar{width:26px;height:26px;flex-shrink:0}
+  #authNickname{
+    max-width:4.5em;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+@media (max-width:420px){
+  .auth-chip{max-width:min(68vw, calc(100vw - 6.75rem)); gap:3px}
+  #authNickname{display:none}
+  .auth-user-btn{padding:3px;border-radius:999px}
+  .auth-login-btn{padding:5px 8px;letter-spacing:0}
+}
 
 .auth-success{color:#1f6b3a;background:#e4f6ea;border:1px solid #8dcaa3;padding:8px 10px;border-radius:8px;font-size:13px}
 .avatar-actions{display:flex;flex-direction:column;gap:8px;align-items:flex-start}

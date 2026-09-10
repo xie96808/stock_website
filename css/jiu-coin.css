@@ -69,6 +69,10 @@
   box-shadow: none;
 }
 
+
+.jiu-daily-short { display: none; }
+.jiu-daily-full { display: inline; }
+
 [data-theme="dark"] .jiu-coin-balance {
   color: #7dcea0;
   border-color: #3d8f5f;
@@ -262,11 +266,23 @@
 }
 
 @media (max-width: 640px) {
-  .jiu-coin-daily-btn {
-    padding: 5px 8px;
+  .jiu-coin-chrome {
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
+  .jiu-coin-daily-btn {
+    padding: 6px 8px;
+    font-size: 12px;
+    min-height: 36px;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.08);
+  }
+  .jiu-daily-full { display: none; }
+  .jiu-daily-short { display: inline; }
   .jiu-coin-balance {
-    padding: 4px 7px 4px 5px;
+    padding: 5px 7px 5px 5px;
+    font-size: 12px;
+    min-height: 36px;
   }
   .jiu-coin-modal-actions {
     justify-content: stretch;
@@ -279,5 +295,14 @@
   .jiu-price-badge {
     font-size: 10px;
     padding: 2px 7px;
+  }
+}
+@media (max-width: 420px) {
+  .jiu-coin-daily-btn {
+    padding: 6px 7px;
+    letter-spacing: 0;
+  }
+  .jiu-coin-balance {
+    padding: 5px 6px;
   }
 }
