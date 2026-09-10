@@ -10,7 +10,14 @@ import {
   gzipSync,
   constants as zc,
 } from "node:zlib";
-import { readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  statSync,
+  existsSync,
+  linkSync,
+} from "node:fs";
 import { join, extname } from "node:path";
 
 const ROOT = process.argv[2];
@@ -41,14 +48,41 @@ function shouldCompress(path) {
 const files = walk(ROOT).filter(shouldCompress);
 let gzCount = 0;
 let brCount = 0;
+let linkCount = 0;
 const t0 = Date.now();
+/** @type {Map<number, { gz: string, br: string }>} */
+const byInode = new Map();
 
 for (const file of files) {
+  const st = statSync(file);
+  if (st.size < 32) continue; // not worth it
+
+  const gzPath = `${file}.gz`;
+  const brPath = `${file}.br`;
+  const prior = byInode.get(st.ino);
+  if (prior) {
+    // Same bytes as an already-compressed hardlink twin (versioned pack).
+    for (const [src, dest] of [
+      [prior.gz, gzPath],
+      [prior.br, brPath],
+    ]) {
+      if (existsSync(dest)) continue;
+      try {
+        linkSync(src, dest);
+        linkCount++;
+      } catch {
+        writeFileSync(dest, readFileSync(src));
+      }
+    }
+    gzCount++;
+    brCount++;
+    continue;
+  }
+
   const buf = readFileSync(file);
-  if (buf.length < 32) continue; // not worth it
 
   const gz = gzipSync(buf, { level: 9 });
-  writeFileSync(`${file}.gz`, gz);
+  writeFileSync(gzPath, gz);
   gzCount++;
 
   const quality = buf.length > 1_048_576 ? 5 : 11;
@@ -58,8 +92,9 @@ for (const file of files) {
       [zc.BROTLI_PARAM_MODE]: zc.BROTLI_MODE_TEXT,
     },
   });
-  writeFileSync(`${file}.br`, br);
+  writeFileSync(brPath, br);
   brCount++;
+  byInode.set(st.ino, { gz: gzPath, br: brPath });
 
   if (buf.length > 1_048_576) {
     const ratio = (br.length / buf.length * 100).toFixed(1);
@@ -70,5 +105,5 @@ for (const file of files) {
 }
 
 console.log(
-  `precompress done: ${gzCount} .gz, ${brCount} .br in ${((Date.now() - t0) / 1000).toFixed(1)}s`
+  `precompress done: ${gzCount} .gz, ${brCount} .br, ${linkCount} hardlink-reuse in ${((Date.now() - t0) / 1000).toFixed(1)}s`
 );

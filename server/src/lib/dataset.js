@@ -23,6 +23,7 @@ function resolveDatasetPath() {
   throw new Error("stocks_data.json not found; set STOCKGAME_DATASET_PATH");
 }
 
+/** Content sha256 — same value as static `pack-meta.datasetSha` / versioned pack filename. */
 function sha256File(filePath) {
   const buf = fs.readFileSync(filePath);
   return crypto.createHash("sha256").update(buf).digest("hex");
