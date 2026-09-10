@@ -1,5 +1,6 @@
 // ========== GAME FUNCTIONS ==========
 import { gameState, chartRefs } from './state.js';
+import { resetSession, applyEngineResult, patchSession } from './game-session.js';
 import { applyChartTheme } from './utils.js';
 import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
@@ -36,69 +37,55 @@ function syncMobileIntelDefaults() {
 }
 
 export async function startGame(options = {}) {
-    // Reset state
-    gameState.currentDay = 1;
-    gameState.position = 'empty';
-    gameState.costBasis = 0;
-    gameState.totalReturn = 1;
-    gameState.tradeHistory = [];
-    gameState.pendingAction = null;
-    gameState.holdingDays = 0;
-    gameState.tradeGains = [];
-    gameState.historyLength = 0;
-    gameState.bsScore = null;
-    gameState.bestPoints = null;
-    gameState.fillMode = readFillModeFromUi();
-    gameState.lastBuyFillDay = null;
-    gameState.actions = [];
-    gameState.valuation = null;
-    gameState.returnPpm = null;
-    gameState.returnPct = null;
-    gameState.ruleVersion = 'sim30-mtm-v1';
-    gameState.cloudMode = false;
-    gameState.cloudGameId = null;
-    gameState.datasetVersion = null;
-    gameState.saveStatus = null;
-    gameState.saveError = null;
-    gameState.practiceOnly = !!options.practiceOnly;
+    // Reset session fields through the game-session seam (preserves stocksData).
+    resetSession({
+        practiceOnly: !!options.practiceOnly,
+        fillMode: readFillModeFromUi(),
+    });
 
     const cloud = options.cloud || null;
     const gameDays = 30;
 
     if (cloud && Number.isInteger(cloud.stockIndex) && gameState.stocksData[cloud.stockIndex]) {
-        gameState.cloudMode = true;
-        gameState.cloudGameId = cloud.gameId;
-        gameState.datasetVersion = cloud.datasetVersion || null;
-        gameState.ruleVersion = cloud.ruleVersion || gameState.ruleVersion;
-        gameState.fillMode = cloud.fillMode || gameState.fillMode;
-        gameState.currentStock = gameState.stocksData[cloud.stockIndex];
+        const currentStock = gameState.stocksData[cloud.stockIndex];
         const historyDays = Number.isInteger(cloud.historyLength)
             ? cloud.historyLength
-            : Math.min(30, gameState.currentStock.kline.length - gameDays);
+            : Math.min(30, currentStock.kline.length - gameDays);
         const gameStartIndex = Number.isInteger(cloud.windowStartIndex)
             ? cloud.windowStartIndex
             : historyDays;
-        gameState.historyLength = historyDays;
-        gameState.gameKline = gameState.currentStock.kline.slice(
-            gameStartIndex - historyDays,
-            gameStartIndex + gameDays
-        );
+        patchSession({
+            cloudMode: true,
+            cloudGameId: cloud.gameId,
+            datasetVersion: cloud.datasetVersion || null,
+            ruleVersion: cloud.ruleVersion || gameState.ruleVersion,
+            fillMode: cloud.fillMode || gameState.fillMode,
+            currentStock,
+            historyLength: historyDays,
+            gameKline: currentStock.kline.slice(
+                gameStartIndex - historyDays,
+                gameStartIndex + gameDays
+            ),
+        });
     } else {
         // Local practice: pick random stock and window (30 game days).
         const stockIndex = Math.floor(Math.random() * gameState.stocksData.length);
-        gameState.currentStock = gameState.stocksData[stockIndex];
-        const klineLen = gameState.currentStock.kline.length;
+        const currentStock = gameState.stocksData[stockIndex];
+        const klineLen = currentStock.kline.length;
         const historyDays = Math.min(30, klineLen - gameDays);
         const minStart = historyDays;
         const maxStart = klineLen - gameDays; // inclusive
         const span = Math.max(1, maxStart - minStart + 1);
         const gameStartIndex = minStart + Math.floor(Math.random() * span);
-        gameState.historyLength = historyDays;
-        gameState.gameKline = gameState.currentStock.kline.slice(
-            gameStartIndex - historyDays,
-            gameStartIndex + gameDays
-        );
-        gameState.practiceOnly = true;
+        patchSession({
+            currentStock,
+            historyLength: historyDays,
+            gameKline: currentStock.kline.slice(
+                gameStartIndex - historyDays,
+                gameStartIndex + gameDays
+            ),
+            practiceOnly: true,
+        });
     }
 
     // Switch screens first so the fill-mode modal can close over a painted shell.
@@ -167,9 +154,9 @@ export function applyCloudResume(actions) {
         renderWaveAnalysis();
         return false;
     }
-    gameState.actions = clipped.slice();
+    patchSession({ actions: clipped.slice() });
     syncFromEngine(r, { finished: false, bars });
-    gameState.currentDay = Math.min(clipped.length + 1, 30);
+    patchSession({ currentDay: Math.min(clipped.length + 1, 30) });
     updateUI();
     updateChart();
     resetOHLCToToday();
@@ -283,41 +270,7 @@ export function getGameBars() {
 }
 
 function syncFromEngine(r, { finished = false, bars = null } = {}) {
-    gameState.tradeHistory = r.trades.map((t) => ({
-        type: t.type,
-        day: t.day,
-        price: t.price,
-        return: t.return != null ? t.return : null
-    }));
-    gameState.valuation = r.valuation;
-    gameState.tradeGains = r.tradeGains.slice();
-    gameState.holdingDays = r.holdingDays;
-    gameState.ruleVersion = r.ruleVersion;
-
-    if (finished) {
-        gameState.totalReturn = r.equityMultiple;
-        gameState.position = 'empty';
-        gameState.costBasis = 0;
-        gameState.lastBuyFillDay = null;
-        gameState.returnPpm = r.returnPpm;
-        gameState.returnPct = r.returnPct;
-        return;
-    }
-
-    gameState.position = r.rawPosition;
-    gameState.costBasis = r.costBasis || 0;
-    gameState.lastBuyFillDay = r.buyFillDay;
-    gameState.returnPpm = null;
-    gameState.returnPct = null;
-
-    // After N decisions, UI shows day N+1 (capped at 30). MTM at that close.
-    let equity = r.closedMultiple;
-    if (r.rawPosition !== 'empty' && r.buyPrice > 0 && bars) {
-        const asOfDay = Math.min(gameState.actions.length + 1, 30);
-        const mark = bars[asOfDay - 1];
-        if (mark) equity = r.closedMultiple * (mark.close / r.buyPrice);
-    }
-    gameState.totalReturn = equity;
+    applyEngineResult(r, { finished, bars });
 }
 
 export function handleAction(action) {
@@ -336,10 +289,9 @@ export function handleAction(action) {
     });
     if (!r.ok) return;
 
-    gameState.actions = nextActions;
-    gameState.pendingAction = null;
+    patchSession({ actions: nextActions, pendingAction: null });
     syncFromEngine(r, { finished: false, bars });
-    gameState.currentDay = nextActions.length + 1;
+    patchSession({ currentDay: nextActions.length + 1 });
     persistCurrentCloudDraft();
 
     updateUI();

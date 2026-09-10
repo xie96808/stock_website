@@ -1,4 +1,5 @@
 import { gameState } from './state.js';
+import { clearShareMeta, setShareMeta } from './game-session.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 
@@ -7,9 +8,7 @@ const SHARE_SITE_HOST = 'stockgame.xieyw.top';
 const SHARE_SITE_URL = 'https://stockgame.xieyw.top';
 
 export function clearShareRankMeta() {
-    gameState.shareRank = null;
-    gameState.shareBoardTotal = null;
-    gameState.shareBeatPct = null;
+    clearShareMeta();
 }
 
 function fillModeBoardLabel(mode) {
@@ -149,9 +148,7 @@ export async function refreshShareRankMeta() {
         const myRank = data && data.myRank;
         if (myRank == null || !(total >= 2)) return null;
         const beat = Math.max(0, Math.min(99, Math.round(((total - myRank) / total) * 100)));
-        gameState.shareRank = myRank;
-        gameState.shareBoardTotal = total;
-        gameState.shareBeatPct = beat;
+        setShareMeta({ rank: myRank, boardTotal: total, beatPct: beat });
         return { myRank: myRank, total: total, beat: beat };
     } catch (e) {
         return null;

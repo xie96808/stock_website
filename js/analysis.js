@@ -1,5 +1,6 @@
 // ========== TECHNICAL ANALYSIS (DOM adapters over analysis-pure) ==========
 import { gameState } from './state.js';
+import { patchSession } from './game-session.js';
 import {
     computeBestPoints,
     computeBSReport,
@@ -46,10 +47,10 @@ export function generateKlineAnalysis() {
 }
 
 export function generateBestPoints() {
-    gameState.bestPoints = computeBestPoints({
+    patchSession({ bestPoints: computeBestPoints({
         kline: gameState.gameKline,
         historyLength: gameState.historyLength,
-    });
+    }) });
 }
 
 export function generateBSReport() {
@@ -62,7 +63,7 @@ export function generateBSReport() {
         tradeGains: gameState.tradeGains,
     });
 
-    gameState.bsScore = report.score;
+    patchSession({ bsScore: report.score });
 
     const el = document.getElementById('bsReport');
     el.innerHTML = `
