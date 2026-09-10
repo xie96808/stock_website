@@ -443,7 +443,7 @@ deploy/stockgame-api.service     # systemd
 - session 使用 32 字节密码学随机 token，DB 存 SHA256 摘要；这与密码的慢哈希用途不同。登录轮换 token；登出、改密、找回、禁用、注销立即撤销。
 - Cookie：`__Host-stockgame_session; HttpOnly; Secure; SameSite=Lax; Path=/`，不设置 Domain。普通会话 7 天空闲过期、30 天绝对过期；last_seen 更新节流至每 5 分钟，避免每次读取都写库。
 - 前端同域 `credentials:'same-origin'`；凭证不存 localStorage。开发环境单独 cookie 名，通过本地同域开发服务代理，生产 Secure 规则不随开发设置降低。
-- 已认证写请求检查会话绑定 CSRF token，同时精确核对 Origin（含 scheme、host、port）；无 Origin 的浏览器写请求默认失败。登录、注册、找回也核对 Origin，防 login CSRF；跨域默认不开放。机制参考 [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)。
+- 已认证写请求检查会话绑定 CSRF token，同时精确核对 Origin（含 scheme、host、port）；无 Origin 的浏览器写请求默认失败。登录、注册本身在已有 session cookie 时仍免 CSRF（便于 admin/主站重登），但须核对 Origin；登出等其余写操作在有会话时仍要 CSRF。找回也核对 Origin，防 login CSRF；跨域默认不开放。机制参考 [OWASP CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)。
 - CSRF token 由独立 CSRF_SECRET 对 session 原始随机 token 做带用途前缀的 HMAC 派生，数据库只存摘要；GET /me 可利用请求 cookie 重新派生返回，不通过读取摘要还原 token。凭证轮换后 CSRF token 同步变化，校验采用恒定时间比较；密钥置于服务端环境文件。
 - 只信任来自 loopback nginx 的转发头，不用无条件 trust proxy；nginx 覆盖 X-Forwarded-For 为实际 remote_addr，避免伪造 IP 绕过限流。
 - 昵称等用户内容使用 textContent；禁止插入用户 HTML。所有客户端错误只返回白名单字段，不回传堆栈／SQL／目录／密钥。

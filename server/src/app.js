@@ -6,7 +6,7 @@ import { config } from "./lib/config.js";
 import { migrate } from "./db/migrate.js";
 import { ok, fail } from "./lib/http.js";
 import {
-  attachRequestId, loadSession, checkOrigin, requireCsrf,
+  attachRequestId, loadSession, checkOrigin, requireCsrf, isCsrfExemptAuthWrite,
 } from "./middleware/request.js";
 import authRoutes from "./routes/auth.js";
 import gamesRoutes, { gamesConfigPayload, warmDataset } from "./routes/games.js";
@@ -56,7 +56,12 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   app.get("/api/v1/config", (req, res) => ok(res, gamesConfigPayload()));
 
   app.use("/api/v1", (req, res, next) => {
-    if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method) && req.sessionToken) {
+    // Exempt login/register so an existing cookie does not block re-auth (logout still needs CSRF).
+    if (
+      ["POST", "PATCH", "PUT", "DELETE"].includes(req.method)
+      && req.sessionToken
+      && !isCsrfExemptAuthWrite(req)
+    ) {
       return requireCsrf(req, res, next);
     }
     next();

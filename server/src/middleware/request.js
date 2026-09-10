@@ -49,9 +49,16 @@ export function checkOrigin(req, res, next) {
   next();
 }
 
+/** POST login/register must work even if an old session cookie is present (admin/main login omit CSRF). Logout and other writes still require CSRF when a session exists. */
+export function isCsrfExemptAuthWrite(req) {
+  const p = req.path || "";
+  return req.method === "POST" && (p.endsWith("/auth/login") || p.endsWith("/auth/register"));
+}
+
 export function requireCsrf(req, res, next) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
-  if (!req.sessionToken) return next(); // login/register path may not have session
+  if (!req.sessionToken) return next(); // no session → nothing to bind CSRF to
+  if (isCsrfExemptAuthWrite(req)) return next();
   const header = req.get("x-csrf-token") || "";
   if (!timingSafeEqualStr(header, req.csrfToken || "")) {
     return fail(res, 403, "CSRF_FAILED", "CSRF 校验失败");

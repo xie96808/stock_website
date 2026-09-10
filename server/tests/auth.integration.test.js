@@ -165,3 +165,20 @@ test("avatar upload png + serve", async () => {
   assert.ok(got.length >= 8);
   assert.equal(got[0], 0x89);
 });
+
+test("re-login without CSRF header succeeds when session cookie already present", async () => {
+  const auth = await register(`relgn${Date.now().toString(36)}`);
+  assert.ok(jar.stockgame_session || Object.keys(jar).length > 0);
+
+  // Keep existing session cookie; intentionally omit X-CSRF-Token (admin/main login do this).
+  const again = await api("/api/v1/auth/login", {
+    method: "POST",
+    body: { username: auth.username, password: auth.password },
+  });
+  assert.equal(again.status, 200, JSON.stringify(again.json));
+  assert.notEqual(again.json?.error?.code, "CSRF_FAILED");
+  assert.ok(again.json.data.csrfToken);
+  assert.ok(again.json.data.user?.id);
+  // Login rotates session — cookie / CSRF should be refreshed.
+  assert.notEqual(again.json.data.csrfToken, auth.csrfToken);
+});
