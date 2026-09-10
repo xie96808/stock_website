@@ -1,25 +1,14 @@
 /** Stage 3: my games list + basic stats */
 import { getAuthState, openAuthModal } from "./auth.js";
 import { fetchMyGames, fetchMyStats } from "./game-sync.js";
+import {
+  Route,
+  prepareScreen,
+  activateScreen,
+  deactivateScreen,
+  setHeaderChrome,
+} from "./screen-router.js";
 
-function hideOtherScreens() {
-  const hdr = document.querySelector(".header");
-  if (hdr) {
-    hdr.style.display = "block";
-    hdr.classList.add("compact");
-  }
-  const start = document.getElementById("startScreen");
-  if (start) start.style.display = "none";
-  document.getElementById("gameScreen")?.classList.remove("active");
-  document.getElementById("resultScreen")?.classList.remove("active");
-  document.getElementById("academyScreen")?.classList.remove("active");
-  document.getElementById("hindsightScreen")?.classList.remove("active");
-  const lb = document.getElementById("leaderboardScreen");
-  if (lb) {
-    lb.classList.remove("active");
-    lb.style.display = "none";
-  }
-}
 
 function fmtPct(ppm) {
   if (ppm == null) return "—";
@@ -33,7 +22,7 @@ export async function showMyGames() {
     openAuthModal("login");
     return;
   }
-  hideOtherScreens();
+  prepareScreen(Route.MY_GAMES);
   let screen = document.getElementById("myGamesScreen");
   if (!screen) {
     screen = document.createElement("section");
@@ -63,28 +52,19 @@ export async function showMyGames() {
     screen.querySelector("#myGamesRefreshBtn").onclick = () => loadMyGamesPanel();
     screen.querySelector("#myGamesFillMode").onchange = () => loadMyGamesPanel();
   }
-  screen.classList.add("active");
-  screen.style.display = "block";
+  activateScreen(Route.MY_GAMES);
   await loadMyGamesPanel();
 }
 
 export function hideMyGames() {
-  const screen = document.getElementById("myGamesScreen");
-  if (screen) {
-    screen.classList.remove("active");
-    screen.style.display = "none";
-  }
+  deactivateScreen(Route.MY_GAMES);
   if (typeof window.restoreSimShell === "function") {
     window.restoreSimShell();
     return;
   }
+  setHeaderChrome("hidden");
   const start = document.getElementById("startScreen");
   if (start) start.style.display = "flex";
-  const hdr = document.querySelector(".header");
-  if (hdr) {
-    hdr.style.display = "none";
-    hdr.classList.remove("compact");
-  }
 }
 
 async function loadMyGamesPanel() {

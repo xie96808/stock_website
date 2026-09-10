@@ -4,6 +4,7 @@ import { calculateMA, applyChartTheme, buildDayIndexLabels, MA_DAY_LABELS, MA_DA
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import { persistCurrentCloudDraft, clearCloudGameDraft } from './game-sync.js';
+import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -100,12 +101,8 @@ export async function startGame(options = {}) {
     }
 
     // Switch screens first so the fill-mode modal can close over a painted shell.
-    const hdr = document.querySelector('.header');
-    hdr.style.display = 'block';
-    hdr.classList.add('compact');
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('gameScreen').classList.add('active');
-    document.getElementById('resultScreen').classList.remove('active');
+    prepareScreen(Route.GAME);
+    activateScreen(Route.GAME);
     syncMobileIntelDefaults();
 
     // Clear leftover 波段分析 from a previous run
@@ -131,8 +128,7 @@ export async function startGame(options = {}) {
 
     if (!initChart()) {
         document.getElementById('gameScreen').classList.remove('active');
-        hdr.style.display = 'none';
-        hdr.classList.remove('compact');
+        setHeaderChrome('hidden');
         if (typeof window.restoreSimShell === 'function') {
             window.restoreSimShell();
         } else {

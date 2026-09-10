@@ -2,7 +2,8 @@
 import { disposeQuizCharts, startQuiz } from './quiz.js';
 import { QUIZ_PATTERNS } from './patterns.js';
 import { gameState } from './state.js';
-import { ensureStocksLoaded } from './load-stocks.js';
+import { ensureStocksLoaded } from './pack-store.js';
+import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
 
 let patternsRendered = false;
 
@@ -35,9 +36,11 @@ function renderKnowledgePatterns() {
     patternsRendered = true;
 }
 
-export function showAcademy() {
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('academyScreen').classList.add('active');
+export function showAcademy(opts = {}) {
+    const { updateHash = false } = opts;
+    prepareScreen(Route.ACADEMY);
+    activateScreen(Route.ACADEMY);
+    if (updateHash) setRouteHash(Route.ACADEMY);
     // Always start at landing
     document.getElementById('academyLanding').style.display = 'block';
     document.getElementById('knowledgeZone').style.display = 'none';

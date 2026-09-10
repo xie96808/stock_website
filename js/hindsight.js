@@ -1,15 +1,18 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
 import { gameState } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
-import { ensureStocksLoaded } from './load-stocks.js';
+import { ensureStocksLoaded } from './pack-store.js';
+import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
 let filteredKline  = [];
 
-export function showHindsight() {
-    document.getElementById('startScreen').style.display = 'none';
-    document.getElementById('hindsightScreen').classList.add('active');
+export function showHindsight(opts = {}) {
+    const { updateHash = false } = opts;
+    prepareScreen(Route.HINDSIGHT);
+    activateScreen(Route.HINDSIGHT);
+    if (updateHash) setRouteHash(Route.HINDSIGHT);
     _resetToFormState();
     if (!gameState.stocksData || gameState.stocksData.length === 0) {
         _setHint('hindsightStockHint', '行情数据加载中…', 'info');

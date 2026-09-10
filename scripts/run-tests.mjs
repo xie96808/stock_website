@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 
 const runs = [
-  ["node", ["--test", "tests/engine/engine.test.js", "tests/cloud-draft.test.js"]],
+  ["node", ["--test", "tests/engine/engine.test.js", "tests/cloud-draft.test.js", "tests/screen-router.test.js"]],
   // Separate processes so in-memory rate-limit / config mutations do not leak across suites.
   ["node", ["--test", "server/tests/auth.integration.test.js"]],
   ["node", ["--test", "server/tests/games.integration.test.js"]],
