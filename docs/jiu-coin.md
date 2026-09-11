@@ -18,6 +18,7 @@
 
 - `server/migrations/008_jiu_coin.sql`：`users.jiu_coin_balance`、`jiu_coin_ledger`、`jiu_coin_daily_claims` + active 用户回填
 - 库逻辑：`server/src/lib/jiuCoin.js`
+- 通用奖励幂等（B0-PR3，尚无用户入口）：`server/migrations/011_reward_claims.sql` + `server/src/lib/rewardClaims.js` — 见 `docs/reward-claims-b0-pr3.md`
 
 ## API
 
