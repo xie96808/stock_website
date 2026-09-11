@@ -4,6 +4,8 @@ import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js"
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { deductGameCreate } from "./jiuCoin.js";
+import { config } from "./config.js";
+import { eventV1CreateColumns } from "./gameProtocol.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -218,31 +220,67 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
         err.activeGame = sessionPublic(active);
         throw err;
       }
-      db.prepare(
-        `INSERT INTO game_sessions (
-          id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
-          fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
-          game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`
-      ).run(
-        id,
-        userId,
-        createKey,
-        payloadHash,
-        picked.ruleVersion,
-        picked.datasetVersion,
-        fillMode,
-        picked.stockCode,
-        picked.stockName,
-        picked.stockIndex,
-        picked.windowStartIndex,
-        picked.historyLength,
-        picked.gameDays,
-        picked.snapshotJson,
-        picked.snapshotSha256,
-        now,
-        expiresAt
-      );
+      const proto = config.protocolEventV1Enabled ? eventV1CreateColumns() : null;
+      if (proto) {
+        db.prepare(
+          `INSERT INTO game_sessions (
+            id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
+            fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
+            game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at,
+            game_kind, protocol_version, revision, undo_count, assist_class, canonical_actions_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(
+          id,
+          userId,
+          createKey,
+          payloadHash,
+          picked.ruleVersion,
+          picked.datasetVersion,
+          fillMode,
+          picked.stockCode,
+          picked.stockName,
+          picked.stockIndex,
+          picked.windowStartIndex,
+          picked.historyLength,
+          picked.gameDays,
+          picked.snapshotJson,
+          picked.snapshotSha256,
+          now,
+          expiresAt,
+          proto.game_kind,
+          proto.protocol_version,
+          proto.revision,
+          proto.undo_count,
+          proto.assist_class,
+          proto.canonical_actions_json
+        );
+      } else {
+        db.prepare(
+          `INSERT INTO game_sessions (
+            id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
+            fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
+            game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)`
+        ).run(
+          id,
+          userId,
+          createKey,
+          payloadHash,
+          picked.ruleVersion,
+          picked.datasetVersion,
+          fillMode,
+          picked.stockCode,
+          picked.stockName,
+          picked.stockIndex,
+          picked.windowStartIndex,
+          picked.historyLength,
+          picked.gameDays,
+          picked.snapshotJson,
+          picked.snapshotSha256,
+          now,
+          expiresAt
+        );
+      }
       // Same TX: −10 韭币 on successful CREATE only (no refund on abandon).
       deductGameCreate(userId, id, db);
     });
