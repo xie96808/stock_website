@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 
 const runs = [
-  ["node", ["--test", "tests/engine/engine.test.js", "tests/engine/equity-curve.test.js", "tests/cloud-draft.test.js", "tests/screen-router.test.js", "tests/analysis-pure.test.js", "tests/kline-option.test.js", "tests/game-session.test.js", "tests/pack-url.test.js"]],
+  ["node", ["--test", "tests/engine/engine.test.js", "tests/engine/equity-curve.test.js", "tests/engine/puzzle-engine.test.js", "tests/cloud-draft.test.js", "tests/screen-router.test.js", "tests/analysis-pure.test.js", "tests/kline-option.test.js", "tests/game-session.test.js", "tests/pack-url.test.js"]],
   // Separate processes so in-memory rate-limit / config mutations do not leak across suites.
   ["node", ["--test", "server/tests/auth.integration.test.js"]],
   ["node", ["--test", "server/tests/games.integration.test.js"]],
@@ -17,6 +17,8 @@ const runs = [
   ["node", ["--test", "server/tests/event-protocol.integration.test.js"]],
   ["node", ["--test", "server/tests/game-rewind.integration.test.js"]],
   ["node", ["--test", "server/tests/game-rewind-off.integration.test.js"]],
+  ["node", ["--test", "server/tests/puzzle-chapter.integration.test.js"]],
+  ["node", ["--test", "server/tests/puzzle-chapter-off.integration.test.js"]],
   ["node", ["--test", "server/tests/backup.integration.test.js"]],
   ["node", ["--test", "server/tests/ops-flags.integration.test.js"]],
   ["node", ["--test", "server/tests/phase0.integration.test.js"]],

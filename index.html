@@ -144,6 +144,23 @@
                             </div>
                             <div id="dailyChallengeBoardBody"></div>
                         </div>
+                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
+                            <span class="mark">残</span>
+                            <span class="copy">
+                                <small>残局挑战</small>
+                                <strong>第一章 · 六关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
+                                <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
+                                <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
+                            </span>
+                            <span class="cta cta-wash" id="puzzleChapterCardCta">进入残局</span>
+                        </button>
+                        <div class="puzzle-chapter-panel" id="puzzleChapterPanel" hidden>
+                            <div class="puzzle-chapter-panel-head">
+                                <strong>残局挑战 · 第一章</strong>
+                                <button type="button" class="hub-back" onclick="hidePuzzlePanel()">收起</button>
+                            </div>
+                            <div id="puzzleChapterPanelBody"></div>
+                        </div>
                         <button type="button" class="lane" onclick="startGame()">
                             <span class="mark">一</span>
                             <span class="copy">
@@ -843,6 +860,12 @@
           showDailyChallengeBoard,
           hideDailyChallengeBoard,
         } from './js/daily-challenge.js';
+        import {
+            refreshPuzzleChapterFlag,
+            refreshPuzzleChapterCard,
+            onPuzzleChapterCardClick,
+            hidePuzzlePanel,
+        } from './js/puzzle-chapter.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -907,6 +930,8 @@
         window.onDailyChallengeCardClick = onDailyChallengeCardClick;
         window.showDailyChallengeBoard = showDailyChallengeBoard;
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
+        window.onPuzzleChapterCardClick = onPuzzleChapterCardClick;
+        window.hidePuzzlePanel = hidePuzzlePanel;
         window.__dailyStartGame = startGame;
         initPageZoom();
         initAuth()

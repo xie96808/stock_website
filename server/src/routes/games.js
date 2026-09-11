@@ -153,6 +153,7 @@ export function gamesConfigPayload() {
       quizRewards: !!config.quizRewardsEnabled,
       dailyChallenge: !!config.dailyChallengeEnabled,
       gameRewind: !!config.gameRewindEnabled,
+      puzzleChapter: !!config.puzzleChapterEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },
