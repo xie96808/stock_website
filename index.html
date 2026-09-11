@@ -99,7 +99,7 @@
                             <span class="mark">一</span>
                             <span class="copy">
                                 <small>模拟盘</small>
-                                <strong>练习与战绩<span class="jiu-price-badge jiu-price-paid" data-jiu-price="10" aria-label="消耗 10 韭币"></span></strong>
+                                <strong>练习与战绩<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>开始游戏、查看战绩与双模式练习榜，均从这里进入。</p>
                             </span>
                             <span class="cta cta-fill">进入模拟盘</span>
@@ -109,7 +109,7 @@
                             <span class="copy">
                                 <small>知识馆</small>
                                 <strong>韭菜修炼基地<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p>K 线形态、知识卡片、理论与实操题，答题即时解析。</p>
+                                <p>每日答题赚韭币；形态与题库免费练。</p>
                             </span>
                             <span class="cta cta-wash">进入基地</span>
                         </button>
@@ -131,7 +131,7 @@
                             <span class="mark">日</span>
                             <span class="copy">
                                 <small>每日同题</small>
-                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="10" aria-label="消耗 10 韭币"></span></strong>
+                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p id="dailyChallengeCardMeta">次日开盘 · 全站同题 · 一日一次</p>
                                 <p class="daily-challenge-card-state" id="dailyChallengeCardState">加载中…</p>
                             </span>
@@ -165,7 +165,7 @@
                             <span class="mark">一</span>
                             <span class="copy">
                                 <small>开始练习</small>
-                                <strong>开始游戏<span class="jiu-price-badge jiu-price-paid" data-jiu-price="10" aria-label="消耗 10 韭币"></span></strong>
+                                <strong>开始游戏<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
                             </span>
                             <span class="cta cta-fill">立即开始</span>
@@ -197,7 +197,10 @@
         <!-- Academy Screen -->
         <section class="academy-screen" id="academyScreen">
             <div class="academy-header">
-                <span class="academy-title">韭菜修炼基地</span>
+                <div class="academy-heading">
+                    <span class="academy-title">韭菜修炼基地</span>
+                    <p class="academy-subtitle">答题可赚韭币 · 训练免费</p>
+                </div>
                 <button class="academy-back" onclick="hideAcademy()">← 返回首页</button>
             </div>
 
@@ -214,13 +217,13 @@
                     <div class="academy-zone-card training" onclick="enterTrainingZone()">
                         <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="20" stroke="#e05252" stroke-width="2" opacity="0.3"/><circle cx="24" cy="24" r="13" stroke="#e05252" stroke-width="2" opacity="0.5"/><circle cx="24" cy="24" r="6" fill="#e05252" opacity="0.8"/><line x1="24" y1="0" x2="24" y2="8" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="24" y1="40" x2="24" y2="48" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="0" y1="24" x2="8" y2="24" stroke="#e05252" stroke-width="1.5" opacity="0.4"/><line x1="40" y1="24" x2="48" y2="24" stroke="#e05252" stroke-width="1.5" opacity="0.4"/></svg></div>
                         <h3 class="zone-title">训练区</h3>
-                        <p class="zone-desc">10道随机题目，理论与实操结合<br>免费练习 · 不计奖</p>
+                        <p class="zone-desc">10 道随机题 · 免费练习 · 不计奖</p>
                         <span class="zone-enter-hint">点击进入 &rarr;</span>
                     </div>
                     <div class="academy-zone-card knowledge" onclick="enterKnowledgeZone()">
                         <div class="zone-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M8 38V14a4 4 0 014-4h24a4 4 0 014 4v24" stroke="var(--accent-cyan)" stroke-width="2" opacity="0.5"/><path d="M12 42h24" stroke="var(--accent-cyan)" stroke-width="2" opacity="0.3"/><path d="M16 18h16M16 24h12M16 30h8" stroke="var(--accent-cyan)" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/></svg></div>
                         <h3 class="zone-title">知识区</h3>
-                        <p class="zone-desc">K线形态、成交量形态、走势形态<br>系统学习炒股基础知识</p>
+                        <p class="zone-desc">K 线 / 量能 / 走势形态速览</p>
                         <span class="zone-enter-hint">点击进入 &rarr;</span>
                     </div>
                 </div>
@@ -798,7 +801,7 @@
                         </span>
                     </label>
                 </div>
-                <p class="fill-mode-dialog-note" id="playModeGuestNote">云端对局每次新建消耗 10<span data-jiu-coin-icon data-size="14"></span>；继续未完成对局不扣费。放弃不退款。</p>
+                <p class="fill-mode-dialog-note" id="playModeGuestNote">云端对局每次新建消耗 20<span data-jiu-coin-icon data-size="14"></span>；继续未完成对局不扣费。放弃不退款。</p>
                 <div class="fill-mode-actions">
                     <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
                     <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始游戏</button>

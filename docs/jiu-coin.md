@@ -1,14 +1,14 @@
 # 韭币经济
 
-登录用户的锁定货币：注册赠送、云端开局扣费、每日领取、管理端调整。游客可浏览模拟盘 hub / 知识馆 / 悔棋局 / 练习榜；「开始游戏」「我的战绩」需登录（打开右上角登录模态）。**无首页 1000 币宣传文案。**
+登录用户的锁定货币：注册赠送、云端开局扣费、每日领取、管理端调整。游客可浏览模拟盘 hub / 知识馆 / 悔棋局 / 练习榜；「开始游戏」「我的战绩」需登录（打开右上角登录模态）。**无首页注册赠币宣传文案。**
 
 ## 规则（冻结）
 
 | 动作 | 变化 | 说明 |
 |------|------|------|
-| 注册成功 | +1000 | 与建号同事务；ledger `register_grant` |
+| 注册成功 | +500 | 与建号同事务；ledger `register_grant` |
 | 迁移回填 | +1000 一次 | 仅对当时 `status=active` 用户；ledger `backfill_grant`（幂等唯一索引） |
-| 云端 CREATE 成功 | −10 | 与 `game_sessions` INSERT 同事务；放弃不退；继续同一局不扣；幂等键重放不扣 |
+| 云端 CREATE 成功 | −20 | 与 `game_sessions` INSERT 同事务；放弃不退；继续同一局不扣；幂等键重放不扣 |
 | 每日领取 | +50～200（含端点，均匀） | 仅按钮；Asia/Shanghai 自然日一次；唯一 `(user_id, yyyy-mm-dd)` |
 | 管理调整 | add / sub / set | 必填原因 + 审计 `jiu_coin.*` |
 
@@ -27,7 +27,7 @@
 | GET | `/api/v1/me` | `user.jiuCoinBalance` |
 | GET | `/api/v1/me/jiu-coin` | `{ balance, date, claimedToday, amount? }` |
 | POST | `/api/v1/me/jiu-coin/daily` | 每日领取 |
-| POST | `/api/v1/games` | 成功 CREATE 扣 10；不足返回 `INSUFFICIENT_FUNDS` |
+| POST | `/api/v1/games` | 成功 CREATE 扣 20；不足返回 `INSUFFICIENT_FUNDS` |
 | GET | `/api/v1/admin/users/:id` | 含余额 |
 | POST | `/api/v1/admin/users/:id/jiu-coin` | body `{ op, amount, reason }`（需 admin + reauth） |
 
@@ -59,4 +59,4 @@ npm test                 # 根目录：前端单测 + 会跑 scripts/run-tests.m
 npm run test:server      # 含 server/tests/jiu-coin.integration.test.js
 ```
 
-覆盖：注册赠送、回填幂等、CREATE 扣 10、再开再扣、resume/active 不扣、每日一次、管理调整、未登录 CREATE 拒绝。
+覆盖：注册赠送、回填幂等、CREATE 扣 20、再开再扣、resume/active 不扣、每日一次、管理调整、未登录 CREATE 拒绝。

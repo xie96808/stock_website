@@ -33,7 +33,7 @@ DAILY_CHALLENGE_ENABLED=1 npm --prefix server start
 1. Asia/Shanghai 自然日；周末开放；`opensAt` / `closesAt`（截止=次日 00:00:00 上海）。
 2. 仅 `next_open`、初始资金 100000、30 日窗口。
 3. 快照含行情段、规则版本、`market_hash`；数据集切换不改已发布日。
-4. 成功创建：占机会 + 扣 10 韭币 + 建局 **同事务**；余额不足 / 已有活动局 / 失败 → 不占不扣。
+4. 成功创建：占机会 + 扣 20 韭币（`JIU_COIN_GAME_CREATE_COST`）+ 建局 **同事务**；余额不足 / 已有活动局 / 失败 → 不占不扣。
 5. 恢复不扣；放弃/过期保留已用机会不退。经典活动局冲突时由用户选择继续或放弃。
 6. 正式局 `game_kind=daily`、`legacy-batch`、无反悔；仅首次准时结算进当日榜；V1 **不做**次日归档练习（follow-up）。
 7. 截止前结算进榜；截止后结算记 `settle_late`；幂等重试返回原结果。

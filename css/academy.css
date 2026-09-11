@@ -36,6 +36,19 @@
     gap: 12px;
     padding-right: 118px;
 }
+.academy-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.academy-subtitle {
+    margin: 0;
+    font-family: var(--kaiti);
+    font-size: 0.82rem;
+    color: var(--muted, #8b949e);
+    letter-spacing: 0.08em;
+}
 .academy-title {
     font-family: var(--kaiti);
     font-size: 1.45rem;
