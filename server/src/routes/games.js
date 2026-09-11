@@ -10,6 +10,7 @@ import {
   listMyGames,
   myStats,
 } from "../lib/games.js";
+import { getGameState, appendDecision } from "../lib/gameProtocol.js";
 import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import { config } from "../lib/config.js";
@@ -60,6 +61,23 @@ router.post("/games/:id/finish", requireUser, (req, res) => {
     finish: req.body?.finish,
   };
   const result = finishGame(req.user.id, req.params.id, body);
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.get("/games/:id/state", requireUser, (req, res) => {
+  const result = getGameState(req.user.id, req.params.id);
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.post("/games/:id/decisions", requireUser, (req, res) => {
+  const commandKey = req.get("idempotency-key") || req.get("Idempotency-Key");
+  const result = appendDecision(req.user.id, req.params.id, req.body || {}, commandKey);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
   }
@@ -117,6 +135,7 @@ export function gamesConfigPayload() {
       registration: !!config.registrationEnabled,
       cloudGames: !!config.cloudGamesEnabled,
       leaderboard: !!config.leaderboardEnabled,
+      protocolEventV1: !!config.protocolEventV1Enabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

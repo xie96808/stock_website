@@ -57,6 +57,13 @@ export const config = {
   cloudGamesEnabled: process.env.CLOUD_GAMES_ENABLED !== "0" && process.env.CLOUD_GAMES_ENABLED !== "false",
   leaderboardEnabled: process.env.LEADERBOARD_ENABLED !== "0" && process.env.LEADERBOARD_ENABLED !== "false",
   /**
+   * B0 event-v1 protocol (stepwise decisions). Default OFF.
+   * When false, create/finish behave exactly as legacy batch.
+   * Set EVENT_PROTOCOL_ENABLED=1 to issue event-v1 on create and enable decisions.
+   */
+  protocolEventV1Enabled:
+    process.env.EVENT_PROTOCOL_ENABLED === "1" || process.env.EVENT_PROTOCOL_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {
