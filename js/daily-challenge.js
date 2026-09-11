@@ -96,7 +96,7 @@ export async function refreshDailyChallengeCard() {
   }
 
   const d = statusCache;
-  const costHtml = amountWithCoinHtml(d.cost || 10, { size: 14 });
+  const costHtml = amountWithCoinHtml(d.cost || 20, { size: 14 });
   if (meta) {
     meta.innerHTML = `${d.date || '今日'} · 次日开盘 · 耗 ${costHtml}`;
   }

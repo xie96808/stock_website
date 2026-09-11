@@ -5,7 +5,7 @@ import { prepareTestEnv, startTestServer } from "./helpers.js";
 prepareTestEnv();
 
 const { openDb } = await import("../src/db/connection.js");
-const { getJiuCoinBalance, JIU_COIN_REGISTER_GRANT } = await import("../src/lib/jiuCoin.js");
+const { getJiuCoinBalance, JIU_COIN_REGISTER_GRANT, JIU_COIN_GAME_CREATE_COST } = await import("../src/lib/jiuCoin.js");
 const {
   ECONOMY_VERSION,
   grantRewardClaim,
@@ -212,7 +212,7 @@ test("existing register / daily_claim / game_create paths still work", async () 
     },
   });
   assert.equal(create.status, 201, JSON.stringify(create.json));
-  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT + amt - 10);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT + amt - JIU_COIN_GAME_CREATE_COST);
 
   // No accidental reward_claims rows for legacy paths
   const n = openDb()

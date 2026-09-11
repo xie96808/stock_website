@@ -10,7 +10,7 @@ import {
   pickRandomWindow,
   sha256Text,
 } from "./dataset.js";
-import { deductGameCreate, shanghaiYmd, getJiuCoinBalance } from "./jiuCoin.js";
+import { deductGameCreate, shanghaiYmd, getJiuCoinBalance, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
 import { settleCurveMetrics } from "../../../shared/equityCurve.js";
 import { RULE_VERSION, INITIAL_CASH, GAME_DAYS } from "../../../shared/rules.js";
 import {
@@ -44,7 +44,7 @@ function sessionPublicFromRow(row) {
   };
 }
 
-export const DAILY_CHALLENGE_COST = 10;
+export const DAILY_CHALLENGE_COST = JIU_COIN_GAME_CREATE_COST;
 export const DAILY_FILL_MODE = "next_open";
 
 /** Inject wall clock for tests via STOCKGAME_NOW_MS (epoch ms). */

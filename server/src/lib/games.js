@@ -277,7 +277,7 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
           expiresAt
         );
       }
-      // Same TX: −10 韭币 on successful CREATE only (no refund on abandon).
+      // Same TX: −20 韭币 on successful CREATE only (no refund on abandon).
       deductGameCreate(userId, id, db);
     });
     tx();

@@ -10,6 +10,7 @@ const {
   backfillActiveUsersOnce,
   getJiuCoinBalance,
   JIU_COIN_REGISTER_GRANT,
+  JIU_COIN_GAME_CREATE_COST,
 } = await import("../src/lib/jiuCoin.js");
 
 const ctx = await startTestServer();
@@ -32,7 +33,7 @@ async function createGame(csrf, key, pick = { stockIndex: 0, windowStartIndex: 3
   });
 }
 
-test("register grant +1000 韭币", async () => {
+test("register grant +500 韭币", async () => {
   const auth = await register(`jc${Date.now().toString(36)}`);
   assert.equal(auth.user.jiuCoinBalance, JIU_COIN_REGISTER_GRANT);
   const me = await api("/api/v1/me");
@@ -73,30 +74,30 @@ test("create / resume / second create coin rules", async () => {
   const key1 = `ck-${Date.now()}-a`;
   const c1 = await createGame(auth.csrfToken, key1);
   assert.equal(c1.status, 201, JSON.stringify(c1.json));
-  assert.equal(getJiuCoinBalance(auth.user.id), 990);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT - JIU_COIN_GAME_CREATE_COST);
 
   const c1again = await createGame(auth.csrfToken, key1);
   assert.equal(c1again.status, 200);
   assert.equal(c1again.json.data.gameId, c1.json.data.gameId);
-  assert.equal(getJiuCoinBalance(auth.user.id), 990);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT - JIU_COIN_GAME_CREATE_COST);
 
   // Active game exists → conflict, no deduct
   const cBusy = await createGame(auth.csrfToken, `ck-${Date.now()}-busy`);
   assert.equal(cBusy.status, 409);
   assert.equal(cBusy.json.error.code, "ACTIVE_GAME_EXISTS");
-  assert.equal(getJiuCoinBalance(auth.user.id), 990);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT - JIU_COIN_GAME_CREATE_COST);
 
-  // Abandon (no refund), then create again → deduct another 10
+  // Abandon (no refund), then create again → deduct another create cost
   const ab = await api(`/api/v1/games/${c1.json.data.gameId}/abandon`, {
     method: "POST",
     csrf: auth.csrfToken,
   });
   assert.equal(ab.status, 204);
-  assert.equal(getJiuCoinBalance(auth.user.id), 990);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT - JIU_COIN_GAME_CREATE_COST);
 
   const c2 = await createGame(auth.csrfToken, `ck-${Date.now()}-b`);
   assert.equal(c2.status, 201, JSON.stringify(c2.json));
-  assert.equal(getJiuCoinBalance(auth.user.id), 980);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT - 2 * JIU_COIN_GAME_CREATE_COST);
 });
 
 test("daily claim once per Asia/Shanghai date", async () => {
@@ -105,13 +106,13 @@ test("daily claim once per Asia/Shanghai date", async () => {
   assert.equal(d1.status, 200, JSON.stringify(d1.json));
   const amt = d1.json.data.amount;
   assert.ok(amt >= 50 && amt <= 200);
-  assert.equal(d1.json.data.balance, 1000 + amt);
+  assert.equal(d1.json.data.balance, JIU_COIN_REGISTER_GRANT + amt);
   assert.equal(d1.json.data.claimedToday, true);
 
   const d2 = await api("/api/v1/me/jiu-coin/daily", { method: "POST", csrf: auth.csrfToken });
   assert.equal(d2.status, 409);
   assert.equal(d2.json.error.code, "ALREADY_CLAIMED_TODAY");
-  assert.equal(getJiuCoinBalance(auth.user.id), 1000 + amt);
+  assert.equal(getJiuCoinBalance(auth.user.id), JIU_COIN_REGISTER_GRANT + amt);
 });
 
 test("admin adjust add/sub/set with reason + audit", async () => {
@@ -119,7 +120,7 @@ test("admin adjust add/sub/set with reason + audit", async () => {
   await promoteAdmin(auth.user.id);
 
   const target = await register(`tg${Date.now().toString(36)}`);
-  assert.equal(target.user.jiuCoinBalance, 1000);
+  assert.equal(target.user.jiuCoinBalance, JIU_COIN_REGISTER_GRANT);
 
   // Re-login as admin after target register (jar holds latest session).
   for (const k of Object.keys(jar)) delete jar[k];
@@ -143,7 +144,7 @@ test("admin adjust add/sub/set with reason + audit", async () => {
     body: { op: "add", amount: 50, reason: "测试加币" },
   });
   assert.equal(add.status, 200, JSON.stringify(add.json));
-  assert.equal(add.json.data.balance, 1050);
+  assert.equal(add.json.data.balance, JIU_COIN_REGISTER_GRANT + 50);
 
   const sub = await api(`/api/v1/admin/users/${target.user.id}/jiu-coin`, {
     method: "POST",
@@ -151,7 +152,7 @@ test("admin adjust add/sub/set with reason + audit", async () => {
     body: { op: "sub", amount: 20, reason: "测试扣币" },
   });
   assert.equal(sub.status, 200);
-  assert.equal(sub.json.data.balance, 1030);
+  assert.equal(sub.json.data.balance, JIU_COIN_REGISTER_GRANT + 30);
 
   const set = await api(`/api/v1/admin/users/${target.user.id}/jiu-coin`, {
     method: "POST",
