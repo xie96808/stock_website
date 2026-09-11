@@ -80,6 +80,14 @@ export const config = {
   dailyChallengeEnabled:
     process.env.DAILY_CHALLENGE_ENABLED === "1" || process.env.DAILY_CHALLENGE_ENABLED === "true",
   /**
+   * F03 classic once-per-game rewind + assist boards. Default OFF.
+   * When false: rewind API/UI off; classic leaderboard unchanged (no assist filter).
+   * Rewind only applies to sessions already issued as event-v1 (EVENT_PROTOCOL_ENABLED).
+   * Set GAME_REWIND_ENABLED=1 to enable. QA needs both flags for the full path.
+   */
+  gameRewindEnabled:
+    process.env.GAME_REWIND_ENABLED === "1" || process.env.GAME_REWIND_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

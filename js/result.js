@@ -44,6 +44,24 @@ export function endGame() {
             : '成交：次日开盘';
     }
 
+    const assistEl = document.getElementById('assistClassLabel');
+    if (assistEl) {
+        const a = view.assistClass;
+        if (a === 'undo') {
+            assistEl.hidden = false;
+            assistEl.textContent = '辅助：反悔局';
+        } else if (a === 'clean') {
+            assistEl.hidden = false;
+            assistEl.textContent = '辅助：纯净局';
+        } else if (a === 'legacy') {
+            assistEl.hidden = false;
+            assistEl.textContent = '历史练习记录';
+        } else {
+            assistEl.hidden = true;
+            assistEl.textContent = '';
+        }
+    }
+
     const finalReturnPercent = view.returnPct != null
         ? parseFloat(view.returnPct)
         : (view.totalReturn - 1) * 100;

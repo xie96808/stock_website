@@ -4,6 +4,7 @@ import { writeAuditLog } from "./audit.js";
 
 export const JIU_COIN_REGISTER_GRANT = 1000;
 export const JIU_COIN_GAME_CREATE_COST = 10;
+export const JIU_COIN_GAME_REWIND_COST = 50;
 export const JIU_COIN_DAILY_MIN = 50;
 export const JIU_COIN_DAILY_MAX = 200;
 

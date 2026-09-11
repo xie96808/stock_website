@@ -638,3 +638,73 @@
 .status-value.loss    { color: var(--loss-color); text-shadow: none; }
 .status-value.neutral { color: var(--ink); }
 .status-value.locked  { color: var(--terra); }
+
+/* F03 rewind */
+.action-btn.rewind {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--ink, #2b2118) 35%, transparent);
+  color: var(--ink, #2b2118);
+  font-size: 0.85rem;
+}
+.action-btn.rewind:disabled {
+  opacity: 0.45;
+}
+.rewind-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rewind-modal[hidden] { display: none !important; }
+.rewind-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 16, 12, 0.45);
+}
+.rewind-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 92vw);
+  background: var(--paper, #f7f1e6);
+  color: var(--ink, #2b2118);
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem 1.1rem;
+  box-shadow: 0 18px 50px rgba(0,0,0,.28);
+}
+.rewind-dialog h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+.rewind-body p { margin: 0.45rem 0; line-height: 1.5; }
+.rewind-warn { color: #b42318; font-weight: 600; }
+.rewind-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.rewind-btn-secondary,
+.rewind-btn-primary {
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink, #2b2118) 25%, transparent);
+  background: transparent;
+  cursor: pointer;
+}
+.rewind-btn-primary {
+  background: var(--ink, #2b2118);
+  color: var(--paper, #f7f1e6);
+  border-color: transparent;
+}
+.rewind-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+[data-theme="dark"] .rewind-dialog {
+  background: #1c1915;
+  color: #f3ebe0;
+}
+.result-assist-label {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}

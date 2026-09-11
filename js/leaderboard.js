@@ -27,13 +27,16 @@ const panelCache = new Map();
 const inflight = new Map();
 
 let activeLoadToken = 0;
+/** @type {"clean"|"undo"|"legacy"|null} */
+let activeAssist = "clean";
+let gameRewindEnabled = false;
 /** @type {"best"|"average"} */
 let activeMetric = "best";
 /** @type {"next_open"|"same_close"} */
 let activeFillMode = "next_open";
 
-function panelKey(metric, fillMode) {
-  return `${metric}|${fillMode}`;
+function panelKey(metric, fillMode, assistClass = activeAssist) {
+  return `${metric}|${fillMode}|${assistClass || "_all"}`;
 }
 
 
@@ -114,7 +117,16 @@ function renderPanel(data) {
   syncMetricNote(metric);
   if (metaEl) {
     const metricLabel = metric === "average" ? "平均收益" : "最佳单局";
-    metaEl.innerHTML = `${escapeHtml(metricLabel)} · 规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
+    const assistLabel =
+      data.assistClass === "undo"
+        ? "反悔"
+        : data.assistClass === "legacy"
+          ? "历史练习记录"
+          : data.assistClass === "clean"
+            ? "纯净"
+            : null;
+    const assistBit = assistLabel ? ` · ${escapeHtml(assistLabel)}` : "";
+    metaEl.innerHTML = `${escapeHtml(metricLabel)}${assistBit} · 规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
       String(data.datasetVersion || "").slice(0, 12)
     )}…</code> · 更新于 ${fmtFinished(data.asOf)}`;
   }
@@ -161,11 +173,12 @@ function renderPanel(data) {
     .join("");
 }
 
-async function fetchLeaderboard(metric, fillMode) {
-  const key = panelKey(metric, fillMode);
+async function fetchLeaderboard(metric, fillMode, assistClass = activeAssist) {
+  const key = panelKey(metric, fillMode, assistClass);
   if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
     const qs = new URLSearchParams({ fillMode, metric });
+    if (gameRewindEnabled && assistClass) qs.set("assistClass", assistClass);
     const { data } = await api(`/leaderboard?${qs.toString()}`);
     panelCache.set(key, { data, fetchedAt: Date.now() });
     return data;
@@ -180,9 +193,9 @@ function prefetchOtherPanels(metric, fillMode) {
   for (const m of METRICS) {
     for (const mode of MODES) {
       if (m === metric && mode === fillMode) continue;
-      const key = panelKey(m, mode);
+      const key = panelKey(m, mode, activeAssist);
       if (panelCache.has(key) || inflight.has(key)) continue;
-      fetchLeaderboard(m, mode).catch(() => {});
+      fetchLeaderboard(m, mode, activeAssist).catch(() => {});
     }
   }
 }
@@ -203,6 +216,18 @@ function bindTabHandlers(screen) {
     btn.onclick = () => {
       screen.querySelectorAll(".leaderboard-tab").forEach((b) => b.classList.toggle("active", b === btn));
       activeFillMode = btn.dataset.mode === "same_close" ? "same_close" : "next_open";
+      loadLeaderboardPanel(activeMetric, activeFillMode);
+    };
+  });
+  screen.querySelectorAll(".leaderboard-assist-tab").forEach((btn) => {
+    btn.onclick = () => {
+      screen.querySelectorAll(".leaderboard-assist-tab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      const a = btn.dataset.assist;
+      activeAssist = a === "undo" || a === "legacy" ? a : "clean";
       loadLeaderboardPanel(activeMetric, activeFillMode);
     };
   });
@@ -227,6 +252,11 @@ export async function showLeaderboard(preferredFillMode) {
           <button type="button" class="leaderboard-metric-tab active" data-metric="best" role="tab" aria-selected="true">最佳单局</button>
           <button type="button" class="leaderboard-metric-tab" data-metric="average" role="tab" aria-selected="false">平均收益</button>
         </div>
+        <div class="leaderboard-assist-tabs" id="leaderboardAssistTabs" role="tablist" aria-label="辅助分类" hidden>
+          <button type="button" class="leaderboard-assist-tab active" data-assist="clean" role="tab" aria-selected="true">纯净</button>
+          <button type="button" class="leaderboard-assist-tab" data-assist="undo" role="tab" aria-selected="false">反悔</button>
+          <button type="button" class="leaderboard-assist-tab" data-assist="legacy" role="tab" aria-selected="false">历史练习记录</button>
+        </div>
         <div class="leaderboard-tabs" role="tablist" aria-label="成交模式">
           <button type="button" class="leaderboard-tab active" data-mode="next_open" role="tab">次日开盘榜</button>
           <button type="button" class="leaderboard-tab" data-mode="same_close" role="tab">当日收盘榜</button>
@@ -242,6 +272,22 @@ export async function showLeaderboard(preferredFillMode) {
     bindTabHandlers(screen);
   }
   activateScreen(Route.LEADERBOARD);
+  try {
+    const res = await fetch("/api/v1/config", { credentials: "same-origin", headers: { Accept: "application/json" } });
+    const json = await res.json().catch(() => ({}));
+    gameRewindEnabled = !!(json?.data?.features?.gameRewind);
+  } catch {
+    gameRewindEnabled = false;
+  }
+  const assistTabs = screen.querySelector("#leaderboardAssistTabs");
+  if (assistTabs) assistTabs.hidden = !gameRewindEnabled;
+  if (!gameRewindEnabled) activeAssist = null;
+  else if (!activeAssist) activeAssist = "clean";
+  screen.querySelectorAll(".leaderboard-assist-tab").forEach((b) => {
+    const on = b.dataset.assist === (activeAssist || "clean");
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
   const want = preferredFillMode === "same_close" || preferredFillMode === "next_open"
     ? preferredFillMode
     : null;

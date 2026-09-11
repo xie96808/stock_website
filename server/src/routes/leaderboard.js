@@ -16,6 +16,7 @@ router.get("/leaderboard", (req, res) => {
       metric: req.query.metric,
       ruleVersion: req.query.ruleVersion,
       datasetVersion: req.query.datasetVersion,
+      assistClass: req.query.assistClass,
     },
     req.user || null
   );
