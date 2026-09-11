@@ -189,22 +189,32 @@ export async function selectDailyQuizAnswer(optionId) {
   const q = flow.questions[flow.index];
   if (!q || q.yourOptionId) return;
   flow.submitting = true;
+  // Keep next disabled while the request is in flight.
+  const nextBtn = document.getElementById('dailyQuizNextBtn');
+  if (nextBtn) nextBtn.disabled = true;
   try {
     const res = await api('/quiz/attempts/' + encodeURIComponent(flow.attemptId) + '/answers', {
       method: 'POST',
       body: { questionId: q.id, optionId },
     });
     q.yourOptionId = res.data.optionId || optionId;
-    renderDailyQuestion();
     if (res.data.status === 'settled' && res.data.settled) {
       flow.settled = res.data.settled;
+      flow.submitting = false;
       try { await refreshMe(); } catch (_) {}
       await showDailyQuizResults(flow.attemptId, res.data.settled);
+      return;
     }
   } catch (e) {
     showToast(e.message || '提交失败', 'error');
   } finally {
+    // Clear before re-render — otherwise nextBtn stays disabled forever
+    // (renderDailyQuestion used to run while submitting===true).
     flow.submitting = false;
+    if (document.getElementById('dailyQuizZone')?.style.display !== 'none' &&
+        document.getElementById('dailyQuizResults')?.style.display !== 'block') {
+      renderDailyQuestion();
+    }
   }
 }
 
