@@ -5,7 +5,9 @@ import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../sh
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { deductGameCreate } from "./jiuCoin.js";
 import { config } from "./config.js";
-import { eventV1CreateColumns } from "./gameProtocol.js";
+import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
+import { resultDto } from "./gameResultDto.js";
+import { PROTOCOL_EVENT_V1 } from "../../../shared/protocol.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -119,31 +121,7 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
   return base;
 }
 
-export function resultDto(resultRow, sessionRow) {
-  const valuation = resultRow.valuation_json
-    ? JSON.parse(resultRow.valuation_json)
-    : null;
-  const returnPpm = resultRow.return_ppm;
-  const returnPct = (returnPpm / 10000).toFixed(2);
-  return {
-    gameId: resultRow.game_id,
-    ruleVersion: sessionRow?.rule_version || RULE_VERSION,
-    datasetVersion: sessionRow?.dataset_version,
-    fillMode: sessionRow?.fill_mode,
-    returnPpm,
-    returnPct,
-    tradeCount: resultRow.trade_count,
-    equityMultiple: resultRow.equity_multiple_decimal,
-    valuation,
-    validationStatus: resultRow.validity,
-    savedAt: resultRow.created_at,
-    finishedAt: sessionRow?.finished_at || resultRow.created_at,
-    stockCode: sessionRow?.stock_code,
-    stockName: sessionRow?.stock_name,
-    actions: JSON.parse(resultRow.actions_json),
-    trades: JSON.parse(resultRow.trades_json),
-  };
-}
+export { resultDto };
 
 function expireStaleActive(db, userId, now = nowIso()) {
   db.prepare(
@@ -360,7 +338,16 @@ export function abandonGame(userId, gameId) {
   return { status: 204 };
 }
 
-export function finishGame(userId, gameId, body) {
+export function finishGame(userId, gameId, body, commandKey) {
+  // event-v1: settle from server canonical actions (client PnL not trusted).
+  {
+    const dbPeek = openDb();
+    const peek = dbPeek.prepare(`SELECT protocol_version FROM game_sessions WHERE id = ?`).get(gameId);
+    if (peek?.protocol_version === PROTOCOL_EVENT_V1) {
+      return finishEventV1(userId, gameId, body, commandKey);
+    }
+  }
+
   const norm = normalizeActions(body?.actions);
   if (!norm.ok) {
     return {

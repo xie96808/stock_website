@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { prepareTestEnv, startTestServer } from "./helpers.js";
+import { prepareTestEnv, startTestServer, holds, actionsObj } from "./helpers.js";
 
 prepareTestEnv();
 // Explicitly ensure flag off (default).
@@ -48,4 +48,29 @@ test("flag off: config false, create stays legacy-batch, decisions 403", async (
   });
   assert.equal(dec.status, 403);
   assert.equal(dec.json.error.code, "EVENT_PROTOCOL_DISABLED");
+});
+
+test("flag off: legacy finish leaves curve metrics null", async () => {
+  const auth = await register(`leg${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `leg-create-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+  const finish = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    body: { actions: actionsObj(holds(29)), finish: true },
+  });
+  assert.equal(finish.status, 201, JSON.stringify(finish.json));
+  assert.equal(finish.json.data.mddPpm, null);
+  assert.equal(finish.json.data.benchmarkReturnPpm, null);
+  assert.equal(finish.json.data.equityCurve, null);
+  assert.equal(finish.json.data.scoreVersion, null);
 });

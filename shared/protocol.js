@@ -30,3 +30,6 @@ export const GAME_KIND_SET = new Set(GAME_KINDS);
 export const PROTOCOL_SET = new Set(PROTOCOL_VERSIONS);
 export const ASSIST_SET = new Set(ASSIST_CLASSES);
 export const DECISION_ACTION_SET = new Set(DECISION_ACTIONS);
+
+/** Settle metrics schema version written on event-v1 results (B0-PR2). */
+export const SCORE_VERSION_CURVE_V1 = 'sim30-mtm-curve-v1';

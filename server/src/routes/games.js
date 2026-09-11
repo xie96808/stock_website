@@ -59,8 +59,10 @@ router.post("/games/:id/finish", requireUser, (req, res) => {
   const body = {
     actions: req.body?.actions,
     finish: req.body?.finish,
+    expectedRevision: req.body?.expectedRevision,
   };
-  const result = finishGame(req.user.id, req.params.id, body);
+  const commandKey = req.get("idempotency-key") || req.get("Idempotency-Key");
+  const result = finishGame(req.user.id, req.params.id, body, commandKey);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
   }
