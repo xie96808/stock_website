@@ -15,9 +15,11 @@ import adminRoutes from "./routes/admin.js";
 import announcementsRoutes from "./routes/announcements.js";
 import quizRoutes from "./routes/quiz.js";
 import dailyChallengeRoutes from "./routes/dailyChallenge.js";
+import puzzleRoutes from "./routes/puzzles.js";
 import { openDb } from "./db/connection.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 import { seedNearDailyChallenges } from "./lib/dailyChallenge.js";
+import { seedPuzzleChapter1 } from "./lib/puzzleChapter.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -30,6 +32,13 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       seedNearDailyChallenges();
     } catch (e) {
       console.warn("daily challenge seed failed:", e.message || e);
+    }
+  }
+  if (config.puzzleChapterEnabled) {
+    try {
+      seedPuzzleChapter1();
+    } catch (e) {
+      console.warn("puzzle chapter seed failed:", e.message || e);
     }
   }
 
@@ -75,7 +84,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       return requireCsrf(req, res, next);
     }
     next();
-  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, adminRoutes);
+  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, adminRoutes);
 
   app.use("/api", (req, res) => fail(res, 404, "NOT_FOUND", "接口不存在"));
 

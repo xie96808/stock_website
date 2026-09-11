@@ -4,6 +4,10 @@ import {
   refreshDailyChallengeFlag,
   refreshDailyChallengeCard,
 } from "./daily-challenge.js";
+import {
+  refreshPuzzleChapterFlag,
+  refreshPuzzleChapterCard,
+} from "./puzzle-chapter.js";
 
 import { prefetchStocksPack } from "./pack-store.js";
 import { gameState } from "./state.js";
@@ -37,6 +41,9 @@ export function showSimHub(opts = {}) {
   prefetchStocksPack(gameState);
   refreshDailyChallengeFlag()
     .then(() => refreshDailyChallengeCard())
+    .catch(() => {});
+  refreshPuzzleChapterFlag()
+    .then(() => refreshPuzzleChapterCard())
     .catch(() => {});
 }
 

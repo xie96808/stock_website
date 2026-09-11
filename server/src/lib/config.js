@@ -88,6 +88,13 @@ export const config = {
   gameRewindEnabled:
     process.env.GAME_REWIND_ENABLED === "1" || process.env.GAME_REWIND_ENABLED === "true",
   /**
+   * F02 puzzle chapter-1. Default OFF.
+   * When false, /puzzles* returns 404 and hub card stays hidden.
+   * Set PUZZLE_CHAPTER_ENABLED=1 to enable.
+   */
+  puzzleChapterEnabled:
+    process.env.PUZZLE_CHAPTER_ENABLED === "1" || process.env.PUZZLE_CHAPTER_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {
