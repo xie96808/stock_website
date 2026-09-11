@@ -8,6 +8,7 @@ process.env.EVENT_PROTOCOL_ENABLED = "1";
 
 const { getSessionRow } = await import("../src/lib/games.js");
 const { openDb } = await import("../src/db/connection.js");
+const { SCORE_VERSION_CURVE_V1 } = await import("../../shared/equityCurve.js");
 
 const ctx = await startTestServer();
 const { api, register, stop } = ctx;
@@ -23,13 +24,10 @@ test("config exposes protocolEventV1 when enabled", async () => {
 });
 
 test("migration defaults on legacy-shaped insert remain safe", async () => {
-  // Row written only with pre-009 columns still gets CHECK-compatible defaults when
-  // inserting via explicit column list that omits new fields (simulate old writer).
   const db = openDb();
   const ds = db.prepare("SELECT version FROM datasets LIMIT 1").get();
   assert.ok(ds?.version);
   const user = db.prepare("SELECT id FROM users LIMIT 1").get();
-  // Ensure a user exists via register path in other tests; create one if needed.
   let userId = user?.id;
   if (!userId) {
     const auth = await register(`mig${Date.now().toString(36)}`);
@@ -53,7 +51,7 @@ test("migration defaults on legacy-shaped insert remain safe", async () => {
   assert.equal(row.challenge_id, null);
 });
 
-test("create with flag on issues event-v1; state + thin advance + idempotency", async () => {
+test("create + state hides identity/future bars; thin advance + idempotency", async () => {
   const auth = await register(`ev${Date.now().toString(36)}`);
   const create = await api("/api/v1/games", {
     method: "POST",
@@ -74,10 +72,18 @@ test("create with flag on issues event-v1; state + thin advance + idempotency", 
 
   const state0 = await api(`/api/v1/games/${gameId}/state`);
   assert.equal(state0.status, 200);
-  assert.equal(state0.json.data.protocolVersion, "event-v1");
-  assert.equal(state0.json.data.revision, 0);
-  assert.deepEqual(state0.json.data.actions, []);
-  assert.equal(state0.json.data.nextDecisionDay, 1);
+  const s0 = state0.json.data;
+  assert.equal(s0.protocolVersion, "event-v1");
+  assert.equal(s0.revision, 0);
+  assert.deepEqual(s0.actions, []);
+  assert.equal(s0.nextDecisionDay, 1);
+  assert.equal(s0.revealedDay, 1);
+  assert.ok(s0.visible);
+  assert.equal(s0.visible.revealedDay, 1);
+  assert.equal(s0.visible.bars.length, 1);
+  assert.equal(s0.stockCode, undefined);
+  assert.equal(s0.stockName, undefined);
+  assert.equal(s0.stockIndex, undefined);
 
   const key = `dec-${Date.now()}`;
   const d1 = await api(`/api/v1/games/${gameId}/decisions`, {
@@ -90,6 +96,9 @@ test("create with flag on issues event-v1; state + thin advance + idempotency", 
   assert.equal(d1.json.data.revision, 1);
   assert.deepEqual(d1.json.data.actions, ["hold"]);
   assert.equal(d1.json.data.nextDecisionDay, 2);
+  assert.equal(d1.json.data.revealedDay, 2);
+  assert.equal(d1.json.data.visible.bars.length, 2);
+  assert.equal(d1.json.data.stockCode, undefined);
 
   const replay = await api(`/api/v1/games/${gameId}/decisions`, {
     method: "POST",
@@ -117,10 +126,38 @@ test("create with flag on issues event-v1; state + thin advance + idempotency", 
   });
   assert.equal(revConflict.status, 409);
   assert.equal(revConflict.json.error.code, "REVISION_CONFLICT");
+});
 
-  // Legacy batch finish still works on event-v1 rows (unchanged path).
-  const actions = ["hold", ...holds(28)];
-  const finish = await api(`/api/v1/games/${gameId}/finish`, {
+test("event-v1 finish from canonical actions with curve metrics; client actions conflict", async () => {
+  const auth = await register(`fin${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `fin-create-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+
+  // Seed 29 holds via DB for speed (engine-valid), keep revision in sync.
+  const db = openDb();
+  const actions = holds(29);
+  db.prepare(
+    `UPDATE game_sessions SET canonical_actions_json = ?, revision = 29 WHERE id = ?`
+  ).run(JSON.stringify(actions), gameId);
+
+  const state = await api(`/api/v1/games/${gameId}/state`);
+  assert.equal(state.status, 200);
+  assert.equal(state.json.data.readyToSettle, true);
+  assert.equal(state.json.data.revealedDay, 30);
+  assert.equal(state.json.data.visible.bars.length, 30);
+  assert.equal(state.json.data.stockCode, undefined);
+
+  // Legacy-shaped finish without expectedRevision must fail on event-v1.
+  const legacyFinish = await api(`/api/v1/games/${gameId}/finish`, {
     method: "POST",
     csrf: auth.csrfToken,
     body: {
@@ -128,7 +165,68 @@ test("create with flag on issues event-v1; state + thin advance + idempotency", 
       finish: true,
     },
   });
+  assert.equal(legacyFinish.status, 400);
+  assert.equal(legacyFinish.json.error.code, "INVALID_REVISION");
+
+  // Conflicting client actions rejected.
+  const badActions = ["buy", ...holds(28)];
+  const conflict = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `fin-bad-${Date.now()}` },
+    body: {
+      expectedRevision: 29,
+      finish: true,
+      actions: badActions.map((action, i) => ({ day: i + 1, action })),
+    },
+  });
+  assert.equal(conflict.status, 409);
+  assert.equal(conflict.json.error.code, "SUBMISSION_CONFLICT");
+
+  const finishKey = `fin-ok-${Date.now()}`;
+  const finish = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": finishKey },
+    body: { expectedRevision: 29, finish: true },
+  });
   assert.equal(finish.status, 201, JSON.stringify(finish.json));
+  const data = finish.json.data;
+  assert.equal(typeof data.returnPpm, "number");
+  assert.equal(typeof data.mddPpm, "number");
+  assert.equal(typeof data.benchmarkReturnPpm, "number");
+  assert.ok(Array.isArray(data.equityCurve));
+  assert.equal(data.equityCurve.length, 31);
+  assert.equal(data.scoreVersion, SCORE_VERSION_CURVE_V1);
+  assert.equal(data.assistClass, "clean");
+  assert.ok(data.stockCode);
+  assert.ok(data.stockName);
+
+  const resultRow = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
+  assert.ok(resultRow.mdd_ppm != null);
+  assert.ok(resultRow.benchmark_return_ppm != null);
+  assert.ok(resultRow.equity_curve_json);
+  assert.equal(resultRow.score_version, SCORE_VERSION_CURVE_V1);
+  assert.equal(resultRow.assist_class, "clean");
+
+  const sess = getSessionRow(gameId);
+  assert.equal(sess.status, "settled");
+  assert.equal(sess.revision, 30);
+
+  // Idempotent retry
+  const retry = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": finishKey },
+    body: { expectedRevision: 29, finish: true },
+  });
+  assert.equal(retry.status, 200);
+  assert.equal(retry.json.data.mddPpm, data.mddPpm);
+
+  const stateDone = await api(`/api/v1/games/${gameId}/state`);
+  assert.equal(stateDone.status, 200);
+  assert.equal(stateDone.json.data.status, "settled");
+  assert.equal(stateDone.json.data.stockCode, data.stockCode);
 });
 
 test("decisions require auth", async () => {
