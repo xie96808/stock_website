@@ -138,6 +138,7 @@ export function gamesConfigPayload() {
       cloudGames: !!config.cloudGamesEnabled,
       leaderboard: !!config.leaderboardEnabled,
       protocolEventV1: !!config.protocolEventV1Enabled,
+      quizRewards: !!config.quizRewardsEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

@@ -64,6 +64,14 @@ export const config = {
   protocolEventV1Enabled:
     process.env.EVENT_PROTOCOL_ENABLED === "1" || process.env.EVENT_PROTOCOL_ENABLED === "true",
   /**
+   * F11 daily quiz rewards. Default OFF.
+   * When false, rewarded quiz API returns 404 and client hides the card.
+   * Free academy training is unchanged either way.
+   * Set QUIZ_REWARDS_ENABLED=1 to enable.
+   */
+  quizRewardsEnabled:
+    process.env.QUIZ_REWARDS_ENABLED === "1" || process.env.QUIZ_REWARDS_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

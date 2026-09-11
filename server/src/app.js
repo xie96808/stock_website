@@ -13,6 +13,7 @@ import gamesRoutes, { gamesConfigPayload, warmDataset } from "./routes/games.js"
 import leaderboardRoutes from "./routes/leaderboard.js";
 import adminRoutes from "./routes/admin.js";
 import announcementsRoutes from "./routes/announcements.js";
+import quizRoutes from "./routes/quiz.js";
 import { openDb } from "./db/connection.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 
@@ -65,7 +66,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       return requireCsrf(req, res, next);
     }
     next();
-  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, adminRoutes);
+  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, adminRoutes);
 
   app.use("/api", (req, res) => fail(res, 404, "NOT_FOUND", "接口不存在"));
 

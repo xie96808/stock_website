@@ -457,3 +457,75 @@
     transform: translate(-1px, -2px);
     box-shadow: 3px 4px 0 var(--line);
 }
+
+
+/* ===== F11 今日赚韭币 ===== */
+.academy-zone-cards {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 980px;
+}
+.academy-zone-card.daily-quiz {
+    border-color: var(--terra);
+    background: linear-gradient(165deg, var(--card) 0%, color-mix(in srgb, var(--terra) 8%, var(--card)) 100%);
+}
+.academy-zone-card.daily-quiz .zone-enter-hint { color: var(--terra); }
+.academy-zone-card.daily-quiz.is-disabled {
+    opacity: 0.72;
+    cursor: default;
+}
+.academy-zone-card.daily-quiz[hidden] { display: none !important; }
+.daily-quiz-card-state {
+    font-family: var(--kaiti);
+    font-size: 0.9rem !important;
+    color: var(--ink) !important;
+    margin-bottom: 10px !important;
+}
+.daily-quiz-banner {
+    font-family: var(--kaiti);
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+    margin: 0 0 14px;
+}
+.daily-quiz-result-title {
+    font-family: var(--kaiti);
+    font-size: 1.2rem;
+    color: var(--ink);
+    letter-spacing: 0.12em;
+    margin: 0 0 8px;
+}
+.daily-quiz-reward-breakdown {
+    margin-top: 14px;
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    line-height: 1.8;
+}
+.daily-quiz-reward-total {
+    margin-top: 8px;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 1.05rem;
+}
+.daily-quiz-reward-note {
+    margin: 10px 0 0;
+    font-size: 0.8rem;
+    color: var(--mute);
+}
+.daily-quiz-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 8px;
+}
+.daily-quiz-soft-cta {
+    opacity: 0.85;
+}
+.quiz-option.selected {
+    border-color: var(--terra);
+    box-shadow: 2px 2px 0 var(--line);
+}
+
+@media (max-width: 900px) {
+    .academy-zone-cards { grid-template-columns: 1fr !important; }
+}
