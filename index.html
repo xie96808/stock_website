@@ -127,6 +127,23 @@
                     <!-- Scheme A: 模拟盘二级 hub -->
                     <div class="lanes sim-hub-lanes" id="simHub" hidden>
                         <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                        <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
+                            <span class="mark">日</span>
+                            <span class="copy">
+                                <small>每日同题</small>
+                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="10" aria-label="消耗 10 韭币"></span></strong>
+                                <p id="dailyChallengeCardMeta">次日开盘 · 全站同题 · 一日一次</p>
+                                <p class="daily-challenge-card-state" id="dailyChallengeCardState">加载中…</p>
+                            </span>
+                            <span class="cta cta-fill" id="dailyChallengeCardCta">开始今日挑战</span>
+                        </button>
+                        <div class="daily-challenge-board" id="dailyChallengeBoard" hidden>
+                            <div class="daily-challenge-board-head">
+                                <strong id="dailyChallengeBoardTitle">今日挑战榜</strong>
+                                <button type="button" class="hub-back" onclick="hideDailyChallengeBoard()">收起</button>
+                            </div>
+                            <div id="dailyChallengeBoardBody"></div>
+                        </div>
                         <button type="button" class="lane" onclick="startGame()">
                             <span class="mark">一</span>
                             <span class="copy">
@@ -815,6 +832,13 @@
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, restoreSimShell } from './js/home-ia.js';
+        import {
+          refreshDailyChallengeFlag,
+          refreshDailyChallengeCard,
+          onDailyChallengeCardClick,
+          showDailyChallengeBoard,
+          hideDailyChallengeBoard,
+        } from './js/daily-challenge.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
 
         // Bridge functions to window for onclick attributes
@@ -875,6 +899,10 @@
         window.showHome = showHome;
         window.showSimHub = showSimHub;
         window.restoreSimShell = restoreSimShell;
+        window.onDailyChallengeCardClick = onDailyChallengeCardClick;
+        window.showDailyChallengeBoard = showDailyChallengeBoard;
+        window.hideDailyChallengeBoard = hideDailyChallengeBoard;
+        window.__dailyStartGame = startGame;
         initPageZoom();
         initAuth()
           .then(() => initJiuCoin())

@@ -1,5 +1,10 @@
 /** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub */
 
+import {
+  refreshDailyChallengeFlag,
+  refreshDailyChallengeCard,
+} from "./daily-challenge.js";
+
 import { prefetchStocksPack } from "./pack-store.js";
 import { gameState } from "./state.js";
 import {
@@ -30,6 +35,9 @@ export function showSimHub(opts = {}) {
   if (updateHash) setRouteHash(Route.SIM);
   // Intent to play: warm pack immediately (don't wait for Start / idle timer).
   prefetchStocksPack(gameState);
+  refreshDailyChallengeFlag()
+    .then(() => refreshDailyChallengeCard())
+    .catch(() => {});
 }
 
 /**

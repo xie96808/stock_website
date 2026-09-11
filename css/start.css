@@ -364,3 +364,59 @@
 .start-screen #homeLanes[hidden] {
     display: none !important;
 }
+
+
+/* F01 今日挑战 */
+.start-screen .daily-challenge-lane {
+    border-color: color-mix(in srgb, var(--terra) 35%, var(--line));
+    background: color-mix(in srgb, var(--terra) 6%, var(--panel));
+}
+.start-screen .daily-challenge-lane.is-disabled {
+    opacity: 0.72;
+    cursor: default;
+}
+.start-screen .daily-challenge-lane[hidden] {
+    display: none !important;
+}
+.daily-challenge-card-state {
+    margin: 4px 0 0;
+    font-size: 12px;
+    opacity: 0.85;
+}
+.daily-challenge-board {
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+}
+.daily-challenge-board[hidden] {
+    display: none !important;
+}
+.daily-challenge-board-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.daily-challenge-board-meta {
+    font-size: 12px;
+    opacity: 0.8;
+    margin: 0 0 8px;
+}
+.daily-challenge-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.daily-challenge-table th,
+.daily-challenge-table td {
+    padding: 6px 4px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+.daily-challenge-table th:first-child,
+.daily-challenge-table td:first-child {
+    width: 3em;
+}
