@@ -22,21 +22,27 @@ export function getJiuCoinBalance(userId, db = openDb()) {
   return row ? Number(row.bal) || 0 : 0;
 }
 
-function insertLedger(db, { userId, delta, balanceAfter, reason, refType = null, refId = null, meta = null }) {
-  db.prepare(
-    `INSERT INTO jiu_coin_ledger (
-      user_id, delta, balance_after, reason, ref_type, ref_id, meta_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    userId,
-    delta,
-    balanceAfter,
-    reason,
-    refType,
-    refId,
-    meta != null ? JSON.stringify(meta) : null
-  );
+/** @returns {number} ledger row id */
+export function insertJiuCoinLedger(db, { userId, delta, balanceAfter, reason, refType = null, refId = null, meta = null }) {
+  const info = db
+    .prepare(
+      `INSERT INTO jiu_coin_ledger (
+        user_id, delta, balance_after, reason, ref_type, ref_id, meta_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      userId,
+      delta,
+      balanceAfter,
+      reason,
+      refType,
+      refId,
+      meta != null ? JSON.stringify(meta) : null
+    );
+  return Number(info.lastInsertRowid);
 }
+
+const insertLedger = insertJiuCoinLedger;
 
 /**
  * Grant register bonus inside an existing transaction (db required).
