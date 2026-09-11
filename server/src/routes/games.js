@@ -139,6 +139,7 @@ export function gamesConfigPayload() {
       leaderboard: !!config.leaderboardEnabled,
       protocolEventV1: !!config.protocolEventV1Enabled,
       quizRewards: !!config.quizRewardsEnabled,
+      dailyChallenge: !!config.dailyChallengeEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

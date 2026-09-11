@@ -72,6 +72,14 @@ export const config = {
   quizRewardsEnabled:
     process.env.QUIZ_REWARDS_ENABLED === "1" || process.env.QUIZ_REWARDS_ENABLED === "true",
   /**
+   * F01 daily same-question challenge. Default OFF.
+   * When false, daily-challenge API returns 404 and hub card stays hidden.
+   * Classic create/resume/leaderboard unchanged.
+   * Set DAILY_CHALLENGE_ENABLED=1 to enable.
+   */
+  dailyChallengeEnabled:
+    process.env.DAILY_CHALLENGE_ENABLED === "1" || process.env.DAILY_CHALLENGE_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

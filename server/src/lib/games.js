@@ -7,7 +7,8 @@ import { deductGameCreate } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
-import { PROTOCOL_EVENT_V1 } from "../../../shared/protocol.js";
+import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY } from "../../../shared/protocol.js";
+import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -114,6 +115,10 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
     startedAt: row.started_at,
     expiresAt: row.expires_at,
     finishedAt: row.finished_at || null,
+    gameKind: row.game_kind || "classic",
+    challengeId: row.challenge_id || null,
+    protocolVersion: row.protocol_version || "legacy-batch",
+    undoCount: row.undo_count ?? 0,
   };
   if (includeResult && result) {
     return { ...base, ...resultDto(result, row) };
@@ -124,10 +129,21 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
 export { resultDto };
 
 function expireStaleActive(db, userId, now = nowIso()) {
-  db.prepare(
-    `UPDATE game_sessions SET status = 'expired'
-     WHERE user_id = ? AND status = 'active' AND expires_at < ?`
-  ).run(userId, now);
+  const stale = db
+    .prepare(
+      `SELECT * FROM game_sessions
+       WHERE user_id = ? AND status = 'active' AND expires_at < ?`
+    )
+    .all(userId, now);
+  if (stale.length) {
+    db.prepare(
+      `UPDATE game_sessions SET status = 'expired'
+       WHERE user_id = ? AND status = 'active' AND expires_at < ?`
+    ).run(userId, now);
+    for (const row of stale) {
+      onDailyGameClosed(db, row, "expired");
+    }
+  }
 }
 
 export function getActiveGame(userId) {
@@ -335,6 +351,7 @@ export function abandonGame(userId, gameId) {
   db.prepare(
     `UPDATE game_sessions SET status = 'abandoned', finished_at = ? WHERE id = ? AND status = 'active'`
   ).run(now, gameId);
+  onDailyGameClosed(db, row, "abandoned");
   return { status: 204 };
 }
 
@@ -416,6 +433,7 @@ export function finishGame(userId, gameId, body, commandKey) {
     db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ? AND status = 'active'`).run(
       gameId
     );
+    onDailyGameClosed(db, row, "expired");
     return {
       error: { status: 410, code: "GAME_EXPIRED", message: "对局已过期，无法结算" },
     };
@@ -445,6 +463,11 @@ export function finishGame(userId, gameId, body, commandKey) {
       ? String(replay.equityMultiple)
       : String(replay.equityMultiple);
 
+  const isDaily = row.game_kind === GAME_KIND_DAILY;
+  const curveMetrics = isDaily
+    ? dailySettleMetrics(row, actions)
+    : null;
+
   try {
     const tx = db.transaction(() => {
       const fresh = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
@@ -473,29 +496,57 @@ export function finishGame(userId, gameId, body, commandKey) {
       }
       if (Date.parse(fresh.expires_at) <= Date.now()) {
         db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ?`).run(gameId);
+        onDailyGameClosed(db, fresh, "expired");
         const err = new Error("GAME_EXPIRED");
         err.code = "GAME_EXPIRED";
         throw err;
       }
 
-      db.prepare(
-        `INSERT INTO game_results (
-          game_id, submission_hash, actions_json, trades_json, return_ppm,
-          equity_multiple_decimal, trade_count, valuation_json, validity
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'valid')`
-      ).run(
-        gameId,
-        submissionHash,
-        JSON.stringify(actions),
-        JSON.stringify(replay.trades),
-        replay.returnPpm,
-        equityStr,
-        replay.tradeCount,
-        replay.valuation ? JSON.stringify(replay.valuation) : null
-      );
+      if (curveMetrics) {
+        db.prepare(
+          `INSERT INTO game_results (
+            game_id, submission_hash, actions_json, trades_json, return_ppm,
+            equity_multiple_decimal, trade_count, valuation_json, validity,
+            mdd_ppm, benchmark_return_ppm, equity_curve_json, score_version, assist_class
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'valid', ?, ?, ?, ?, ?)`
+        ).run(
+          gameId,
+          submissionHash,
+          JSON.stringify(actions),
+          JSON.stringify(replay.trades),
+          replay.returnPpm,
+          equityStr,
+          replay.tradeCount,
+          replay.valuation ? JSON.stringify(replay.valuation) : null,
+          curveMetrics.mddPpm,
+          curveMetrics.benchmarkReturnPpm,
+          JSON.stringify(curveMetrics.equityCurve),
+          curveMetrics.scoreVersion,
+          row.assist_class || "legacy"
+        );
+      } else {
+        db.prepare(
+          `INSERT INTO game_results (
+            game_id, submission_hash, actions_json, trades_json, return_ppm,
+            equity_multiple_decimal, trade_count, valuation_json, validity
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'valid')`
+        ).run(
+          gameId,
+          submissionHash,
+          JSON.stringify(actions),
+          JSON.stringify(replay.trades),
+          replay.returnPpm,
+          equityStr,
+          replay.tradeCount,
+          replay.valuation ? JSON.stringify(replay.valuation) : null
+        );
+      }
       db.prepare(
         `UPDATE game_sessions SET status = 'settled', finished_at = ? WHERE id = ?`
       ).run(now, gameId);
+      const settledSession = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+      const settledResult = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
+      onDailyGameSettled(db, settledSession, settledResult, now);
     });
     tx();
   } catch (e) {
