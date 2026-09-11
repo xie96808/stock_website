@@ -21,6 +21,7 @@ import {
 } from "../../../shared/equityCurve.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { resultDto } from "./gameResultDto.js";
+import { JIU_COIN_GAME_REWIND_COST } from "./jiuCoin.js";
 
 function hashPayload(obj) {
   return sha256Text(JSON.stringify(obj));
@@ -64,6 +65,17 @@ export function buildVisibleMarket(snapshot, actionCount, gameDays = GAME_DAYS) 
   };
 }
 
+
+function sessionCanRewind(row) {
+  if (!config.gameRewindEnabled) return false;
+  if (!row || row.status !== "active") return false;
+  if (row.protocol_version !== PROTOCOL_EVENT_V1) return false;
+  if ((row.game_kind || GAME_KIND_CLASSIC) !== GAME_KIND_CLASSIC) return false;
+  if ((row.undo_count ?? 0) >= 1) return false;
+  const actions = parseActionsJson(row.canonical_actions_json);
+  return actions.length >= 1 && actions.length <= DECISION_DAYS;
+}
+
 /**
  * State DTO for owners. event-v1 omits identity / future bars.
  */
@@ -94,6 +106,8 @@ export function buildStateDto(row) {
     startedAt: row.started_at,
     expiresAt: row.expires_at,
     finishedAt: row.finished_at || null,
+    canRewind: sessionCanRewind(row),
+    rewindCost: JIU_COIN_GAME_REWIND_COST,
   };
 
   if (protocolVersion === PROTOCOL_EVENT_V1) {

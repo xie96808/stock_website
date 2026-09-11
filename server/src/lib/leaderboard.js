@@ -1,6 +1,8 @@
 import { openDb } from "../db/connection.js";
 import { ensureDatasetLoaded } from "./dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
+import { ASSIST_SET, ASSIST_CLEAN } from "../../../shared/protocol.js";
+import { config } from "./config.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const METRIC_SET = new Set(["best", "average"]);
@@ -49,11 +51,32 @@ export function resolveBoardKey(query = {}) {
     typeof query.datasetVersion === "string" && query.datasetVersion.trim()
       ? query.datasetVersion.trim()
       : meta.version;
-  return { fillMode, metric, ruleVersion, datasetVersion };
+
+  // F03: assist boards only when GAME_REWIND_ENABLED. Flag off → null (legacy aggregate).
+  let assistClass = null;
+  if (config.gameRewindEnabled) {
+    const raw = query.assistClass;
+    if (raw == null || raw === "") {
+      assistClass = ASSIST_CLEAN;
+    } else if (ASSIST_SET.has(String(raw))) {
+      assistClass = String(raw);
+    } else {
+      return {
+        error: {
+          status: 400,
+          code: "INVALID_ASSIST_CLASS",
+          message: "assistClass 必须为 clean、undo 或 legacy",
+        },
+      };
+    }
+  }
+
+  return { fillMode, metric, ruleVersion, datasetVersion, assistClass };
 }
 
 function boardCacheKey(board) {
-  return `${board.fillMode}\0${board.metric}\0${board.ruleVersion}\0${board.datasetVersion}`;
+  const assist = board.assistClass || "_all";
+  return `${board.fillMode}\0${board.metric}\0${board.ruleVersion}\0${board.datasetVersion}\0${assist}`;
 }
 
 /**
@@ -118,7 +141,7 @@ const BEST_SEATS_CTE = `
     WHERE s.status = 'settled'
       AND s.rule_version = ?
       AND s.dataset_version = ?
-      AND s.fill_mode = ?
+      AND s.fill_mode = ?__ASSIST__
       AND r.validity = 'valid'
       AND r.leaderboard_hidden = 0
       AND r.trade_count >= 1
@@ -150,7 +173,7 @@ const AVG_SEATS_CTE = `
     WHERE s.status = 'settled'
       AND s.rule_version = ?
       AND s.dataset_version = ?
-      AND s.fill_mode = ?
+      AND s.fill_mode = ?__ASSIST__
       AND r.validity = 'valid'
       AND r.leaderboard_hidden = 0
       AND r.trade_count >= 1
@@ -173,12 +196,21 @@ const AVG_SEATS_CTE = `
   )
 `;
 
-function seatsCte(metric) {
-  return metric === "average" ? AVG_SEATS_CTE : BEST_SEATS_CTE;
+function seatsCte(metric, board) {
+  const base = metric === "average" ? AVG_SEATS_CTE : BEST_SEATS_CTE;
+  return base.replaceAll("__ASSIST__", assistSql(board));
+}
+
+function assistSql(board) {
+  if (!board.assistClass) return "";
+  // Per-game assist classification; classic only on assist boards.
+  return " AND s.assist_class = ? AND s.game_kind = 'classic'";
 }
 
 function boardBinds(board) {
-  return [board.ruleVersion, board.datasetVersion, board.fillMode];
+  const binds = [board.ruleVersion, board.datasetVersion, board.fillMode];
+  if (board.assistClass) binds.push(board.assistClass);
+  return binds;
 }
 
 function loadUserStatsMap(db, userIds, board) {
@@ -197,7 +229,7 @@ function loadUserStatsMap(db, userIds, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?
+         AND s.fill_mode = ?${assistSql(board)}
          AND r.validity = 'valid'
        GROUP BY s.user_id`
     )
@@ -221,7 +253,7 @@ function loadUserStatsMap(db, userIds, board) {
  */
 function computeSharedBoard(db, board) {
   const binds = boardBinds(board);
-  const cte = seatsCte(board.metric);
+  const cte = seatsCte(board.metric, board);
   const orderExpr =
     board.metric === "average"
       ? "return_avg DESC, finished_at ASC, user_id ASC"
@@ -267,6 +299,7 @@ function computeSharedBoard(db, board) {
     metric: board.metric,
     ruleVersion: board.ruleVersion,
     datasetVersion: board.datasetVersion,
+    assistClass: board.assistClass,
     asOf: new Date().toISOString(),
     top10: topRows.map(publicEntry),
     total,
@@ -315,13 +348,13 @@ function userIneligibility(db, user, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?
+         AND s.fill_mode = ?${assistSql(board)}
          AND r.validity = 'valid'
          AND r.leaderboard_hidden = 0
          AND r.trade_count >= 1
        LIMIT 1`
     )
-    .get(user.id, board.ruleVersion, board.datasetVersion, board.fillMode);
+    .get(user.id, ...boardBinds(board));
   if (!row) {
     return "no_eligible_game";
   }
@@ -340,10 +373,10 @@ function loadUserBoardStats(db, userId, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?
+         AND s.fill_mode = ?${assistSql(board)}
          AND r.validity = 'valid'`
     )
-    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+    .get(userId, ...boardBinds(board));
   const gameCount = Number(row?.game_count || 0);
   if (!gameCount) return { gameCount: 0, winRate: null };
   const winCount = Number(row.win_count || 0);
@@ -367,7 +400,7 @@ function loadViewerBestSeat(db, userId, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?
+         AND s.fill_mode = ?${assistSql(board)}
          AND r.validity = 'valid'
          AND r.leaderboard_hidden = 0
          AND r.trade_count >= 1
@@ -377,7 +410,7 @@ function loadViewerBestSeat(db, userId, board) {
        ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
        LIMIT 1`
     )
-    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+    .get(userId, ...boardBinds(board));
 }
 
 /**
@@ -398,7 +431,7 @@ function loadViewerAverageSeat(db, userId, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?
+         AND s.fill_mode = ?${assistSql(board)}
          AND r.validity = 'valid'
          AND r.leaderboard_hidden = 0
          AND r.trade_count >= 1
@@ -407,7 +440,7 @@ function loadViewerAverageSeat(db, userId, board) {
          AND u.leaderboard_opt_in = 1
        GROUP BY s.user_id`
     )
-    .get(userId, board.ruleVersion, board.datasetVersion, board.fillMode);
+    .get(userId, ...boardBinds(board));
 }
 
 function loadViewerSeat(db, userId, board) {
@@ -423,7 +456,7 @@ function loadViewerSeat(db, userId, board) {
  */
 function rankForSeat(db, board, seat) {
   const binds = boardBinds(board);
-  const cte = seatsCte(board.metric);
+  const cte = seatsCte(board.metric, board);
   if (board.metric === "average") {
     const row = db
       .prepare(
@@ -516,6 +549,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       metric: shared.metric,
       ruleVersion: shared.ruleVersion,
       datasetVersion: shared.datasetVersion,
+      assistClass: shared.assistClass,
       asOf: shared.asOf,
       top10: shared.top10,
       total: shared.total,

@@ -44,6 +44,11 @@ export const SESSION_KEYS = Object.freeze([
   'saveStatus',
   'saveError',
   'practiceOnly',
+  'rewindBusy',
+  'assistClass',
+  'undoCount',
+  'revision',
+  'protocolVersion',
   'shareRank',
   'shareBoardTotal',
   'shareBeatPct',
@@ -99,6 +104,11 @@ export function buildFreshSessionFields({
     saveStatus: null,
     saveError: null,
     practiceOnly: !!practiceOnly,
+    protocolVersion: null,
+    revision: 0,
+    undoCount: 0,
+    assistClass: null,
+    rewindBusy: false,
   };
 }
 
@@ -253,6 +263,8 @@ export function selectSettleView(s = getSession()) {
     cloudMode: s.cloudMode,
     cloudGameId: s.cloudGameId,
     saveStatus: s.saveStatus,
+    assistClass: s.assistClass,
+    undoCount: s.undoCount,
   };
 }
 

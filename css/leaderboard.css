@@ -203,3 +203,27 @@
   padding-left: 0.65rem;
   margin-top: 0.55rem;
 }
+
+.leaderboard-assist-tabs {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0.55rem 0 0.35rem;
+}
+.leaderboard-assist-tab {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ink, #2b2118) 22%, transparent);
+  background: transparent;
+  padding: 0.28rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.leaderboard-assist-tab.active {
+  background: var(--ink, #2b2118);
+  color: var(--paper, #f7f1e6);
+  border-color: transparent;
+}
+[data-theme="dark"] .leaderboard-assist-tab.active {
+  background: #f3ebe0;
+  color: #1c1915;
+}

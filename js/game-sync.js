@@ -102,7 +102,11 @@ export async function finishCloudGame() {
     return null;
   }
   const gameId = gameState.cloudGameId;
-  const body = { actions: actionsPayload(gameState.actions), finish: true };
+  const isEventV1 = gameState.protocolVersion === "event-v1";
+  const finishKey = newIdempotencyKey();
+  const body = isEventV1
+    ? { finish: true, expectedRevision: gameState.revision ?? 0 }
+    : { actions: actionsPayload(gameState.actions), finish: true };
   const delays = [1000, 3000, 10000];
   patchSession({ saveStatus: "saving", saveError: null });
   updateSaveStatusUi();
@@ -110,15 +114,23 @@ export async function finishCloudGame() {
   let lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
-      const { data, status } = await api(`/games/${gameId}/finish`, {
-        method: "POST",
-        body,
-      });
+      const { data, status } = isEventV1
+        ? await apiWithHeaders(`/games/${gameId}/finish`, {
+            method: "POST",
+            body,
+            headers: { "Idempotency-Key": finishKey },
+          })
+        : await api(`/games/${gameId}/finish`, {
+            method: "POST",
+            body,
+          });
       const savedPatch = { saveStatus: "saved", saveError: null };
       if (data?.returnPpm != null) {
         savedPatch.returnPpm = data.returnPpm;
         savedPatch.returnPct = data.returnPct;
       }
+      if (data?.assistClass) savedPatch.assistClass = data.assistClass;
+      if (data?.undoCount != null) savedPatch.undoCount = data.undoCount;
       patchSession(savedPatch);
       clearCloudGameDraft(gameId);
       updateSaveStatusUi();
@@ -194,4 +206,53 @@ export function persistCurrentCloudDraft() {
     ruleVersion: gameState.ruleVersion,
     datasetVersion: gameState.datasetVersion,
   });
+}
+
+function newIdempotencyKeyLocal() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** event-v1: append one decision; returns state DTO */
+export async function appendCloudDecision(action, expectedRevision) {
+  const gameId = gameState.cloudGameId;
+  if (!gameId) throw new Error("无云端对局");
+  const key = newIdempotencyKeyLocal();
+  const { data } = await apiWithHeaders(`/games/${gameId}/decisions`, {
+    method: "POST",
+    body: { action, expectedRevision },
+    headers: { "Idempotency-Key": key },
+  });
+  return data;
+}
+
+/** F03 rewind */
+export async function rewindCloudGame(expectedRevision, { idempotencyKey } = {}) {
+  const gameId = gameState.cloudGameId;
+  if (!gameId) throw new Error("无云端对局");
+  const key = idempotencyKey || newIdempotencyKeyLocal();
+  const { data } = await apiWithHeaders(`/games/${gameId}/rewind`, {
+    method: "POST",
+    body: { expectedRevision },
+    headers: { "Idempotency-Key": key },
+  });
+  return { data, idempotencyKey: key };
+}
+
+export async function fetchGameState(gameId) {
+  const { data } = await api(`/games/${gameId}/state`);
+  return data;
+}
+
+export async function fetchServerConfigFeatures() {
+  try {
+    const res = await fetch("/api/v1/config", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const json = await res.json().catch(() => ({}));
+    return json?.data?.features || {};
+  } catch {
+    return {};
+  }
 }

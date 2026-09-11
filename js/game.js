@@ -14,7 +14,14 @@ import { applyChartTheme } from './utils.js';
 import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
-import { persistCurrentCloudDraft, clearCloudGameDraft } from './game-sync.js';
+import {
+    persistCurrentCloudDraft,
+    appendCloudDecision,
+    rewindCloudGame,
+    fetchServerConfigFeatures,
+} from './game-sync.js';
+import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
+import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 
 const MOODS = [
@@ -70,6 +77,10 @@ export async function startGame(options = {}) {
             datasetVersion: cloud.datasetVersion || null,
             ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
             fillMode: cloud.fillMode || getSession().fillMode,
+            protocolVersion: cloud.protocolVersion || null,
+            revision: cloud.revision ?? 0,
+            undoCount: cloud.undoCount ?? 0,
+            assistClass: cloud.assistClass || null,
             currentStock,
             historyLength: historyDays,
             gameKline: currentStock.kline.slice(
@@ -283,14 +294,10 @@ function syncFromEngine(r, { finished = false, bars = null } = {}) {
     applyEngineResult(r, { finished, bars });
 }
 
-export function handleAction(action) {
+function applyLocalAction(action) {
     const session = getSession();
-    if (session.currentDay >= 30) return;
-    if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
-
     const bars = getGameBars();
-    if (bars.length < 30) return;
-
+    if (bars.length < 30) return false;
     const nextActions = session.actions.concat(action);
     const r = replayGame({
         fillMode: session.fillMode,
@@ -298,16 +305,195 @@ export function handleAction(action) {
         actions: nextActions,
         finish: false
     });
-    if (!r.ok) return;
-
+    if (!r.ok) return false;
     patchSession({ actions: nextActions, pendingAction: null });
     syncFromEngine(r, { finished: false, bars });
     patchSession({ currentDay: nextActions.length + 1 });
     persistCurrentCloudDraft();
-
     updateUI();
     updateChart();
     renderWaveAnalysis();
+    return true;
+}
+
+function applyServerStateActions(state) {
+    const bars = getGameBars();
+    const actions = Array.isArray(state.actions) ? state.actions.slice() : [];
+    const r = replayGame({
+        fillMode: getSession().fillMode,
+        bars,
+        actions,
+        finish: false
+    });
+    if (!r.ok) return false;
+    patchSession({
+        actions,
+        pendingAction: null,
+        revision: state.revision ?? getSession().revision,
+        undoCount: state.undoCount ?? getSession().undoCount,
+        assistClass: state.assistClass ?? getSession().assistClass,
+        protocolVersion: state.protocolVersion || getSession().protocolVersion,
+        currentDay: Math.min(actions.length + 1, 30),
+    });
+    syncFromEngine(r, { finished: false, bars });
+    persistCurrentCloudDraft();
+    updateUI();
+    updateChart();
+    renderWaveAnalysis();
+    return true;
+}
+
+export async function handleAction(action) {
+    const session = getSession();
+    if (session.rewindBusy) return;
+    if (session.currentDay >= 30) return;
+    if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
+
+    const bars = getGameBars();
+    if (bars.length < 30) return;
+
+    if (session.cloudMode && session.protocolVersion === 'event-v1') {
+        try {
+            setActionControlsLocked(true);
+            const state = await appendCloudDecision(action, session.revision ?? 0);
+            applyServerStateActions(state);
+        } catch (e) {
+            showToast(e.message || '决策同步失败', 'error');
+        } finally {
+            setActionControlsLocked(false);
+            updateUI();
+        }
+        return;
+    }
+
+    applyLocalAction(action);
+}
+
+function setActionControlsLocked(locked) {
+    ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !!locked || (id === 'rewindBtn' && !el.dataset.eligible);
+    });
+}
+
+let rewindFeatures = null;
+async function ensureRewindFeatures() {
+    if (rewindFeatures) return rewindFeatures;
+    rewindFeatures = await fetchServerConfigFeatures();
+    return rewindFeatures;
+}
+
+export async function openRewindConfirm() {
+    const session = getSession();
+    if (!session.cloudMode || session.protocolVersion !== 'event-v1') return;
+    if (session.undoCount >= 1 || session.rewindBusy) return;
+    if (!session.actions || session.actions.length < 1) return;
+    const feats = await ensureRewindFeatures();
+    if (!feats.gameRewind) return;
+
+    const auth = getAuthState();
+    const bal = Number(auth.user?.jiuCoinBalance ?? 0);
+    const cost = 50;
+    const after = bal - cost;
+    const targetDay = session.actions.length; // back to day n submit cursor → display day n
+
+    ensureRewindModal();
+    const body = document.getElementById('rewindConfirmBody');
+    if (body) {
+        body.innerHTML =
+            `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
+            `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
+            `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
+            (after < 0 ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '');
+    }
+    const confirmBtn = document.getElementById('rewindConfirmBtn');
+    if (confirmBtn) confirmBtn.disabled = after < 0;
+    const modal = document.getElementById('rewindConfirmModal');
+    if (modal) {
+        modal.hidden = false;
+        modal.setAttribute('aria-hidden', 'false');
+    }
+}
+
+function closeRewindConfirm() {
+    const modal = document.getElementById('rewindConfirmModal');
+    if (modal) {
+        modal.hidden = true;
+        modal.setAttribute('aria-hidden', 'true');
+    }
+}
+
+function ensureRewindModal() {
+    if (document.getElementById('rewindConfirmModal')) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'rewindConfirmModal';
+    wrap.className = 'rewind-modal';
+    wrap.hidden = true;
+    wrap.setAttribute('aria-hidden', 'true');
+    wrap.innerHTML = `
+      <div class="rewind-backdrop" data-rewind-dismiss="1"></div>
+      <div class="rewind-dialog" role="dialog" aria-modal="true" aria-labelledby="rewindConfirmTitle">
+        <h2 id="rewindConfirmTitle">确认反悔</h2>
+        <div id="rewindConfirmBody" class="rewind-body"></div>
+        <div class="rewind-actions">
+          <button type="button" class="rewind-btn-secondary" id="rewindCancelBtn">取消</button>
+          <button type="button" class="rewind-btn-primary" id="rewindConfirmBtn">确认反悔</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', (e) => {
+        if (e.target?.dataset?.rewindDismiss) closeRewindConfirm();
+    });
+    document.getElementById('rewindCancelBtn').onclick = closeRewindConfirm;
+    document.getElementById('rewindConfirmBtn').onclick = () => confirmRewind();
+}
+
+let rewindIdempotencyKey = null;
+export async function confirmRewind() {
+    const session = getSession();
+    if (session.rewindBusy) return;
+    const confirmBtn = document.getElementById('rewindConfirmBtn');
+    if (!rewindIdempotencyKey) {
+        rewindIdempotencyKey =
+            (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+            `rw-${Date.now()}`;
+    }
+    patchSession({ rewindBusy: true });
+    setActionControlsLocked(true);
+    if (confirmBtn) confirmBtn.disabled = true;
+    try {
+        const { data } = await rewindCloudGame(session.revision ?? 0, {
+            idempotencyKey: rewindIdempotencyKey,
+        });
+        applyServerStateActions(data);
+        patchSession({
+            undoCount: data.undoCount ?? 1,
+            assistClass: data.assistClass || 'undo',
+            revision: data.revision,
+        });
+        if (data.balanceAfter != null) {
+            const auth = getAuthState();
+            if (auth.user) auth.user.jiuCoinBalance = data.balanceAfter;
+        }
+        await refreshJiuCoinStatus().catch(() => {});
+        await refreshMe().catch(() => {});
+        showToast('已回到上一决策日（本局记为反悔）', 'success');
+        closeRewindConfirm();
+        rewindIdempotencyKey = null;
+    } catch (e) {
+        showToast(e.message || '反悔失败', 'error');
+        if (e.code === 'INSUFFICIENT_FUNDS' || e.status === 402) {
+            rewindIdempotencyKey = null;
+        }
+        // keep key on timeout/5xx for retry same result
+        if (e.status && e.status < 500 && e.status !== 429) {
+            rewindIdempotencyKey = null;
+        }
+    } finally {
+        patchSession({ rewindBusy: false });
+        setActionControlsLocked(false);
+        updateUI();
+    }
 }
 
 /** Day-30 only: settle with valuation (not a fake sell). */
@@ -449,33 +635,59 @@ export function updateUI() {
     const holdBtn = document.getElementById('holdBtn');
     const finishBtn = document.getElementById('finishBtn');
 
+    const rewindBtn = document.getElementById('rewindBtn');
+    const busy = !!session.rewindBusy;
+
     if (settleDay) {
         if (buyBtn) { buyBtn.disabled = true; buyBtn.hidden = true; }
         if (sellBtn) { sellBtn.disabled = true; sellBtn.hidden = true; }
         if (holdBtn) { holdBtn.disabled = true; holdBtn.hidden = true; }
         if (finishBtn) {
             finishBtn.hidden = false;
-            finishBtn.disabled = false;
+            finishBtn.disabled = busy;
         }
     } else {
         if (buyBtn) {
             buyBtn.hidden = false;
-            buyBtn.disabled = session.position !== 'empty';
+            buyBtn.disabled = busy || session.position !== 'empty';
         }
         if (sellBtn) {
             sellBtn.hidden = false;
             // locked: may queue sell for next open (T+1)
-            sellBtn.disabled = session.position === 'empty';
+            sellBtn.disabled = busy || session.position === 'empty';
         }
         if (holdBtn) {
             holdBtn.hidden = false;
-            holdBtn.disabled = false;
+            holdBtn.disabled = busy;
         }
         if (finishBtn) {
             finishBtn.hidden = true;
             finishBtn.disabled = true;
         }
     }
+
+    // F03 rewind: only event-v1 classic cloud, flag on, once, ≥1 decision (incl. day-30 pending settle)
+    void (async () => {
+        const feats = await ensureRewindFeatures();
+        const eligible =
+            !!feats.gameRewind &&
+            session.cloudMode &&
+            session.protocolVersion === 'event-v1' &&
+            (session.undoCount ?? 0) < 1 &&
+            Array.isArray(session.actions) &&
+            session.actions.length >= 1 &&
+            session.actions.length <= 29;
+        if (rewindBtn) {
+            rewindBtn.hidden = !eligible;
+            rewindBtn.dataset.eligible = eligible ? '1' : '';
+            rewindBtn.disabled = !eligible || busy;
+            const label = rewindBtn.querySelector('.rewind-btn-label');
+            if (label && !label.dataset.hydrated) {
+                label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 12 })}`;
+                label.dataset.hydrated = '1';
+            }
+        }
+    })();
 
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {

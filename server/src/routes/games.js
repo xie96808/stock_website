@@ -11,6 +11,7 @@ import {
   myStats,
 } from "../lib/games.js";
 import { getGameState, appendDecision } from "../lib/gameProtocol.js";
+import { rewindGame } from "../lib/gameRewind.js";
 import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import { config } from "../lib/config.js";
@@ -69,6 +70,16 @@ router.post("/games/:id/finish", requireUser, (req, res) => {
   return ok(res, result.data, result.status);
 });
 
+
+router.post("/games/:id/rewind", requireUser, (req, res) => {
+  const commandKey = req.get("idempotency-key") || req.get("Idempotency-Key");
+  const result = rewindGame(req.user.id, req.params.id, req.body || {}, commandKey);
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
+});
+
 router.get("/games/:id/state", requireUser, (req, res) => {
   const result = getGameState(req.user.id, req.params.id);
   if (result.error) {
@@ -113,6 +124,7 @@ router.get("/me/stats", requireUser, (req, res) => {
     fillMode: req.query.fillMode,
     ruleVersion: req.query.ruleVersion,
     datasetVersion: req.query.datasetVersion,
+    assistClass: req.query.assistClass,
   });
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message);
@@ -140,6 +152,7 @@ export function gamesConfigPayload() {
       protocolEventV1: !!config.protocolEventV1Enabled,
       quizRewards: !!config.quizRewardsEnabled,
       dailyChallenge: !!config.dailyChallengeEnabled,
+      gameRewind: !!config.gameRewindEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

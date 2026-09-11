@@ -7,7 +7,7 @@ import { deductGameCreate } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
-import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY } from "../../../shared/protocol.js";
+import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, ASSIST_SET, ASSIST_CLEAN } from "../../../shared/protocol.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
 
 const FILL_SET = new Set(FILL_MODES);
@@ -119,6 +119,8 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
     challengeId: row.challenge_id || null,
     protocolVersion: row.protocol_version || "legacy-batch",
     undoCount: row.undo_count ?? 0,
+    assistClass: row.assist_class || "legacy",
+    revision: row.revision ?? 0,
   };
   if (includeResult && result) {
     return { ...base, ...resultDto(result, row) };
@@ -709,6 +711,18 @@ export function myStats(userId, query = {}) {
   const ruleVersion = query.ruleVersion || RULE_VERSION;
   const datasetVersion = query.datasetVersion || meta.version;
 
+  let assistClass = null;
+  if (config.gameRewindEnabled) {
+    const raw = query.assistClass;
+    if (raw == null || raw === "") assistClass = ASSIST_CLEAN;
+    else if (ASSIST_SET.has(String(raw))) assistClass = String(raw);
+    else {
+      return {
+        error: { status: 400, code: "INVALID_ASSIST_CLASS", message: "assistClass 无效" },
+      };
+    }
+  }
+
   const params = [userId, ruleVersion, datasetVersion];
   let sql = `
     SELECT r.return_ppm
@@ -727,6 +741,10 @@ export function myStats(userId, query = {}) {
     sql += ` AND s.fill_mode = ?`;
     params.push(fillMode);
   }
+  if (assistClass) {
+    sql += ` AND s.assist_class = ? AND s.game_kind = 'classic'`;
+    params.push(assistClass);
+  }
 
   const rows = db.prepare(sql).all(...params);
   const count = rows.length;
@@ -741,7 +759,7 @@ export function myStats(userId, query = {}) {
         avgReturnPct: null,
         winCount: 0,
         winRate: null,
-        filters: { fillMode: fillMode || null, ruleVersion, datasetVersion },
+        filters: { fillMode: fillMode || null, ruleVersion, datasetVersion, assistClass },
       },
     };
   }
@@ -768,7 +786,7 @@ export function myStats(userId, query = {}) {
       avgReturnPct: (avgPpm / 10000).toFixed(2),
       winCount: wins,
       winRate: Number(((wins / count) * 100).toFixed(2)),
-      filters: { fillMode: fillMode || null, ruleVersion, datasetVersion },
+      filters: { fillMode: fillMode || null, ruleVersion, datasetVersion, assistClass },
     },
   };
 }
