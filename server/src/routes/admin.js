@@ -215,9 +215,16 @@ router.get("/admin/announcements", (req, res) => {
   return ok(res, data);
 });
 
+function parseAnnouncementId(raw) {
+  const id = Number(raw);
+  // Number("") === 0; reject non-positive so empty/0/-1 never look like a real row.
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return id;
+}
+
 router.get("/admin/announcements/:id", (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const id = parseAnnouncementId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
   const data = getAdminAnnouncement(id);
   if (!data) return fail(res, 404, "NOT_FOUND", "公告不存在");
   return ok(res, { announcement: data });
@@ -238,8 +245,8 @@ router.post("/admin/announcements", requireAdminVerified, (req, res) => {
 });
 
 router.patch("/admin/announcements/:id", requireAdminVerified, (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const id = parseAnnouncementId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
   const result = updateAnnouncement({
     actorId: req.user.id,
     id,
@@ -256,8 +263,8 @@ router.patch("/admin/announcements/:id", requireAdminVerified, (req, res) => {
 });
 
 router.post("/admin/announcements/:id/archive", requireAdminVerified, (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  const id = parseAnnouncementId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
   const result = archiveAnnouncement({
     actorId: req.user.id,
     id,
