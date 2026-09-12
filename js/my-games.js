@@ -8,6 +8,7 @@ import {
   deactivateScreen,
   setHeaderChrome,
 } from "./screen-router.js";
+import { formatShanghaiDateTime } from "./time.js";
 
 
 function fmtPct(ppm) {
@@ -102,7 +103,7 @@ async function loadMyGamesPanel() {
                 <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}" title="收益率">${fmtPct(g.returnPpm)}</span>
               </div>
               <div class="my-game-meta">
-                ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml((g.finishedAt || g.savedAt || "").slice(0, 19).replace("T", " "))} UTC
+                ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml(formatShanghaiDateTime(g.finishedAt || g.savedAt) || "—")}
               </div>
             </article>`
           )
