@@ -542,3 +542,39 @@
 @media (max-width: 900px) {
     .academy-zone-cards { grid-template-columns: 1fr !important; }
 }
+
+
+/* F11 settlement modal (reuses jiu-coin paper shell) */
+.daily-quiz-result-dialog {
+    width: min(520px, 100%);
+}
+.daily-quiz-modal-card {
+    text-align: center;
+    padding: 8px 4px 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+.daily-quiz-modal-card .quiz-score {
+    font-size: 2.2rem;
+    margin: 8px 0 4px;
+}
+.daily-quiz-modal-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 8px 0 14px;
+    max-height: 42vh;
+    overflow: auto;
+    text-align: left;
+}
+.daily-quiz-modal-details[hidden] {
+    display: none !important;
+}
+.daily-quiz-modal-actions {
+    justify-content: center;
+}
+.daily-quiz-modal-actions .daily-quiz-soft-cta {
+    opacity: 0.9;
+}

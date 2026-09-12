@@ -11,6 +11,8 @@ import {
   enterDailyQuizZone,
   selectDailyQuizAnswer,
   dailyQuizNext,
+  closeDailyQuizResultModal,
+  goSimFromDailyQuizResult,
 } from './daily-quiz.js';
 
 let patternsRendered = false;
@@ -53,6 +55,8 @@ function hideAllAcademyZones() {
     if (dq) dq.style.display = 'none';
     const dr = document.getElementById('dailyQuizResults');
     if (dr) dr.style.display = 'none';
+    const dm = document.getElementById('dailyQuizResultModal');
+    if (dm) dm.hidden = true;
 }
 
 export function showAcademy(opts = {}) {
@@ -109,4 +113,6 @@ export {
   enterDailyQuizZone,
   selectDailyQuizAnswer,
   dailyQuizNext,
+  closeDailyQuizResultModal,
+  goSimFromDailyQuizResult,
 };
