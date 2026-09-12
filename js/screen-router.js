@@ -9,6 +9,7 @@ export const Route = {
   HINDSIGHT: "hindsight",
   LEADERBOARD: "leaderboard",
   MY_GAMES: "my-games",
+  PUZZLE: "puzzle",
   GAME: "game",
   RESULT: "result",
 };
@@ -43,6 +44,7 @@ const ACTIVE_SCREEN_IDS = {
   [Route.HINDSIGHT]: "hindsightScreen",
   [Route.LEADERBOARD]: "leaderboardScreen",
   [Route.MY_GAMES]: "myGamesScreen",
+  [Route.PUZZLE]: "puzzleScreen",
 };
 
 /** LB / my-games historically also set inline display (keep for safety). */
@@ -145,6 +147,7 @@ export function prepareScreen(route) {
       break;
     case Route.LEADERBOARD:
     case Route.MY_GAMES:
+    case Route.PUZZLE:
     case Route.GAME:
     case Route.RESULT:
       hideTopLevelScreens(route);
