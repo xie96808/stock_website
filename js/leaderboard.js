@@ -28,7 +28,7 @@ const panelCache = new Map();
 const inflight = new Map();
 
 let activeLoadToken = 0;
-/** @type {"clean"|"undo"|"legacy"|null} */
+/** @type {"clean"|"undo"|"all"|null} */
 let activeAssist = "clean";
 let gameRewindEnabled = false;
 /** @type {"best"|"average"} */
@@ -118,8 +118,8 @@ function renderPanel(data) {
     const assistLabel =
       data.assistClass === "undo"
         ? "反悔"
-        : data.assistClass === "legacy"
-          ? "历史练习记录"
+        : data.assistClass === "all"
+          ? "总榜"
           : data.assistClass === "clean"
             ? "纯净"
             : null;
@@ -225,7 +225,7 @@ function bindTabHandlers(screen) {
         b.setAttribute("aria-selected", on ? "true" : "false");
       });
       const a = btn.dataset.assist;
-      activeAssist = a === "undo" || a === "legacy" ? a : "clean";
+      activeAssist = a === "undo" || a === "all" ? a : "clean";
       loadLeaderboardPanel(activeMetric, activeFillMode);
     };
   });
@@ -253,7 +253,7 @@ export async function showLeaderboard(preferredFillMode) {
         <div class="leaderboard-assist-tabs" id="leaderboardAssistTabs" role="tablist" aria-label="辅助分类" hidden>
           <button type="button" class="leaderboard-assist-tab active" data-assist="clean" role="tab" aria-selected="true">纯净</button>
           <button type="button" class="leaderboard-assist-tab" data-assist="undo" role="tab" aria-selected="false">反悔</button>
-          <button type="button" class="leaderboard-assist-tab" data-assist="legacy" role="tab" aria-selected="false">历史练习记录</button>
+          <button type="button" class="leaderboard-assist-tab" data-assist="all" role="tab" aria-selected="false">总榜</button>
         </div>
         <div class="leaderboard-tabs" role="tablist" aria-label="成交模式">
           <button type="button" class="leaderboard-tab active" data-mode="next_open" role="tab">次日开盘榜</button>
