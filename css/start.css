@@ -1,1 +1,513 @@
-FILE:/workspace/stock_website_f03/css/start.css
+/* ============================================================
+   START SCREEN — 手绘 notebook split (compact, centered)
+   ============================================================ */
+
+.start-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    margin-top: -10px;
+    margin-bottom: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 36px 28px 32px;
+    box-sizing: border-box;
+}
+
+/* Only animate first paint; returning home must not replay fade (layout flicker). */
+.start-screen.animate-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.start-screen .page {
+    display: grid;
+    grid-template-columns: auto minmax(400px, 460px);
+    gap: 28px;
+    align-items: start;
+    width: auto;
+    max-width: min(920px, 100%);
+    height: auto;
+    min-height: 0;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+/* LEFT — notebook frame + mascot; natural 3:4 aspect (do not stretch with tall hub) */
+.start-screen .art {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    align-self: start;
+}
+
+.start-screen .frame {
+    position: relative;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    width: auto;
+    max-width: 340px;
+    min-height: 0;
+    border-radius: 18px 24px 16px 22px;
+    background: #e8dcc4;
+    overflow: hidden;
+    box-shadow:
+        0 0 0 2px var(--line),
+        2px 3px 0 var(--line),
+        inset 0 0 0 6px var(--paper);
+}
+
+[data-theme="dark"] .start-screen .frame {
+    background: #2a241c;
+}
+
+.start-screen .frame img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 36px);
+    max-height: calc(100% - 40px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    border-radius: 8px 12px 8px 10px;
+}
+
+.start-screen .frame img.night {
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .start-screen .frame img.day {
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .start-screen .frame img.night {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.start-screen .frame svg.scribble {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.start-screen .frame svg.scribble path {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 2.2;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+/* RIGHT — title + compact lanes */
+.start-screen .right {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    padding: 2px 0 0;
+    justify-content: center;
+}
+
+.start-screen .head {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 14px;
+    flex-shrink: 0;
+    margin-bottom: 14px;
+    padding-right: 0;
+}
+
+.start-screen .kicker {
+    font-family: var(--kaiti);
+    font-size: 13px;
+    letter-spacing: 0.32em;
+    color: var(--mute);
+    margin-bottom: 4px;
+}
+
+.start-screen h1 {
+    font-family: var(--kaiti);
+    font-size: clamp(1.55rem, 2.2vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    line-height: 1.25;
+    color: var(--ink);
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    text-shadow: none;
+    margin: 0;
+}
+
+.start-screen .sub {
+    margin-top: 6px;
+    font-size: 0.84rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.06em;
+    max-width: 26em;
+}
+
+.start-screen .title-swoosh {
+    display: block;
+    width: 168px;
+    height: 10px;
+    margin-top: 4px;
+    color: var(--ink);
+}
+
+.start-screen .lanes {
+    flex: 0 0 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.start-screen .lane {
+    flex: 0 0 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px 10px 12px;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border: 1.6px solid var(--line);
+    background: var(--card);
+    border-radius: 18px 24px 16px 22px;
+    box-shadow: 2px 2px 0 var(--line);
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+    appearance: none;
+}
+
+.start-screen .lane:nth-child(2) { border-radius: 22px 16px 24px 18px; }
+.start-screen .lane:nth-child(3) { border-radius: 16px 22px 18px 24px; }
+
+.start-screen .lane:hover {
+    transform: translate(-1px, -2px);
+    box-shadow: 3px 4px 0 var(--line);
+}
+
+.start-screen .lane:active {
+    transform: translate(1px, 1px);
+    box-shadow: 1px 1px 0 var(--line);
+}
+
+.start-screen .mark {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--kaiti);
+    font-size: 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 50% 42% 50% 46%;
+    color: var(--ink);
+}
+
+.start-screen .copy { min-width: 0; }
+
+.start-screen .copy small {
+    display: block;
+    font-family: var(--kaiti);
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    color: var(--mute);
+    margin-bottom: 1px;
+}
+
+.start-screen .copy strong {
+    display: block;
+    font-family: var(--kaiti);
+    font-size: 1.12rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+}
+
+.start-screen .copy p {
+    margin-top: 2px;
+    font-size: 0.74rem;
+    color: var(--ink-soft);
+    line-height: 1.4;
+}
+
+.start-screen .cta {
+    flex-shrink: 0;
+    min-width: 118px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    font-family: var(--kaiti);
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    border: 1.6px solid var(--line);
+    position: relative;
+}
+
+.start-screen .cta::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0.18;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+}
+
+.start-screen .cta-fill {
+    color: var(--terra-ink);
+    background: var(--terra);
+    border-radius: 22px 16px 24px 18px;
+    box-shadow: 2px 2px 0 var(--line);
+}
+
+.start-screen .cta-wash {
+    color: var(--wash-ink);
+    background: var(--wash);
+    border-radius: 18px 24px 16px 22px;
+    box-shadow: 1px 1px 0 var(--line);
+}
+
+@media (max-width: 800px) {
+    .start-screen {
+        min-height: auto;
+        /* Extra top room for fixed 纸/墨 + zoom + wrapping auth chrome */
+        padding: 56px 16px 24px;
+        justify-content: flex-start;
+    }
+    .start-screen .page {
+        grid-template-columns: 1fr;
+        width: 100%;
+        max-width: 520px;
+        gap: 12px;
+    }
+    .start-screen .art {
+        justify-content: center;
+        max-height: 240px;
+    }
+    .start-screen .frame {
+        height: 240px;
+        max-width: none;
+        width: 100%;
+        aspect-ratio: auto;
+    }
+    .start-screen .right {
+        padding: 4px 0 0;
+    }
+    .start-screen .head {
+        padding-right: 0;
+        padding-top: 4px;
+    }
+    .start-screen .lane {
+        grid-template-columns: auto 1fr;
+    }
+    .start-screen .cta {
+        width: 100%;
+        grid-column: 1 / -1;
+    }
+}
+
+
+/* ============================================================
+   Scheme A — 模拟盘 hub back
+   ============================================================ */
+
+.start-screen .hub-back {
+    align-self: flex-start;
+    margin: 0 0 2px 2px;
+    padding: 4px 2px;
+    border: none;
+    background: transparent;
+    font-family: var(--kaiti);
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+    color: var(--mute);
+    cursor: pointer;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.start-screen .hub-back:hover {
+    color: var(--ink);
+    transform: none;
+    box-shadow: none;
+}
+
+.start-screen .sim-hub-lanes {
+    gap: 10px;
+}
+
+/* HTML hidden must beat .lanes { display:flex } (UA [hidden] loses to author CSS) */
+.start-screen .lanes[hidden],
+.start-screen #simHub[hidden],
+.start-screen #homeLanes[hidden] {
+    display: none !important;
+}
+
+
+/* F01 今日挑战 — visually distinct from classic「开始游戏」lane */
+.start-screen .daily-challenge-lane {
+    position: relative;
+    overflow: hidden;
+    border-width: 2.5px;
+    border-color: color-mix(in srgb, var(--challenge) 78%, var(--line));
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--challenge) 16%, var(--panel)) 0%,
+        color-mix(in srgb, var(--challenge) 5%, var(--card)) 55%,
+        var(--card) 100%
+      );
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--challenge) 52%, var(--line));
+}
+.start-screen .daily-challenge-lane:hover {
+    box-shadow: 5px 6px 0 color-mix(in srgb, var(--challenge) 58%, var(--line));
+}
+.start-screen .daily-challenge-lane.is-disabled {
+    opacity: 0.72;
+    cursor: default;
+}
+.start-screen .daily-challenge-lane[hidden] {
+    display: none !important;
+}
+.start-screen .daily-challenge-ribbon {
+    position: absolute;
+    top: 10px;
+    right: -28px;
+    z-index: 1;
+    padding: 3px 34px;
+    font-family: var(--kaiti);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--challenge-ink);
+    background: color-mix(in srgb, var(--challenge) 88%, #1a2a40);
+    border: 1px solid color-mix(in srgb, var(--challenge) 60%, var(--line));
+    transform: rotate(32deg);
+    pointer-events: none;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+.start-screen .daily-challenge-mark {
+    border-color: color-mix(in srgb, var(--challenge) 70%, var(--line));
+    background: color-mix(in srgb, var(--challenge) 18%, transparent);
+    color: color-mix(in srgb, var(--challenge) 80%, var(--ink));
+}
+.start-screen .daily-challenge-lane .copy strong {
+    font-size: 1.2rem;
+    letter-spacing: 0.16em;
+}
+.start-screen .daily-challenge-cta {
+    min-width: 132px;
+    height: 46px;
+    font-size: 1.05rem;
+    letter-spacing: 0.2em;
+    border-width: 2px;
+    border-color: color-mix(in srgb, var(--challenge) 70%, var(--line));
+    /* Solid challenge + light ink (same lesson as terra-ink: no wash-on-cream). */
+    background: var(--challenge);
+    color: var(--challenge-ink);
+}
+.daily-challenge-card-state {
+    margin: 4px 0 0;
+    font-size: 12px;
+    opacity: 0.85;
+}
+.daily-challenge-confirm-cost {
+    margin: 0 0 4px;
+    font-size: 0.92rem;
+    color: var(--ink-soft, #5a5348);
+}
+.daily-challenge-board {
+    margin-top: 4px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+}
+.daily-challenge-board[hidden] {
+    display: none !important;
+}
+.daily-challenge-board-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.daily-challenge-board-meta {
+    font-size: 12px;
+    opacity: 0.8;
+    margin: 0 0 8px;
+}
+.daily-challenge-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.daily-challenge-table th,
+.daily-challenge-table td {
+    padding: 6px 4px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+}
+.daily-challenge-table th:first-child,
+.daily-challenge-table td:first-child {
+    width: 3em;
+}
+.daily-challenge-nick-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.daily-challenge-nick-cell span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dc-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+@media (max-width: 640px) {
+    .start-screen .daily-challenge-ribbon {
+        top: 8px;
+        right: -34px;
+        font-size: 10px;
+        padding: 2px 30px;
+    }
+    .start-screen .daily-challenge-cta {
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+    }
+    .start-screen .daily-challenge-lane .copy {
+        padding-right: 8px;
+    }
+}
