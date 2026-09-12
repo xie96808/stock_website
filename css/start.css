@@ -370,19 +370,19 @@
 .start-screen .daily-challenge-lane {
     position: relative;
     overflow: hidden;
-    border-width: 2px;
-    border-color: color-mix(in srgb, var(--terra) 72%, var(--line));
+    border-width: 2.5px;
+    border-color: color-mix(in srgb, var(--challenge) 78%, var(--line));
     background:
       linear-gradient(
         135deg,
-        color-mix(in srgb, var(--terra) 16%, var(--panel)) 0%,
-        color-mix(in srgb, var(--terra) 5%, var(--card)) 55%,
+        color-mix(in srgb, var(--challenge) 16%, var(--panel)) 0%,
+        color-mix(in srgb, var(--challenge) 5%, var(--card)) 55%,
         var(--card) 100%
       );
-    box-shadow: 3px 3px 0 color-mix(in srgb, var(--terra) 45%, var(--line));
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--challenge) 52%, var(--line));
 }
 .start-screen .daily-challenge-lane:hover {
-    box-shadow: 4px 5px 0 color-mix(in srgb, var(--terra) 50%, var(--line));
+    box-shadow: 5px 6px 0 color-mix(in srgb, var(--challenge) 58%, var(--line));
 }
 .start-screen .daily-challenge-lane.is-disabled {
     opacity: 0.72;
@@ -400,17 +400,17 @@
     font-family: var(--kaiti);
     font-size: 11px;
     letter-spacing: 0.18em;
-    color: #fff8ef;
-    background: color-mix(in srgb, var(--terra) 88%, #5a2a12);
-    border: 1px solid color-mix(in srgb, var(--terra) 60%, var(--line));
+    color: var(--challenge-ink);
+    background: color-mix(in srgb, var(--challenge) 88%, #1a2a40);
+    border: 1px solid color-mix(in srgb, var(--challenge) 60%, var(--line));
     transform: rotate(32deg);
     pointer-events: none;
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
 }
 .start-screen .daily-challenge-mark {
-    border-color: color-mix(in srgb, var(--terra) 70%, var(--line));
-    background: color-mix(in srgb, var(--terra) 18%, transparent);
-    color: color-mix(in srgb, var(--terra) 80%, var(--ink));
+    border-color: color-mix(in srgb, var(--challenge) 70%, var(--line));
+    background: color-mix(in srgb, var(--challenge) 18%, transparent);
+    color: color-mix(in srgb, var(--challenge) 80%, var(--ink));
 }
 .start-screen .daily-challenge-lane .copy strong {
     font-size: 1.2rem;
@@ -422,10 +422,10 @@
     font-size: 1.05rem;
     letter-spacing: 0.2em;
     border-width: 2px;
-    border-color: color-mix(in srgb, var(--terra) 70%, var(--line));
-    /* Solid terra: cta-fill uses terra-ink; wash bg made cream text disappear. */
-    background: var(--terra);
-    color: var(--terra-ink);
+    border-color: color-mix(in srgb, var(--challenge) 70%, var(--line));
+    /* Solid challenge + light ink (same lesson as terra-ink: no wash-on-cream). */
+    background: var(--challenge);
+    color: var(--challenge-ink);
 }
 .daily-challenge-card-state {
     margin: 4px 0 0;
