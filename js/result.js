@@ -30,12 +30,13 @@ export function endGame() {
     document.getElementById('stockReveal').textContent =
         `${view.currentStock.name} (${view.currentStock.code})`;
 
-    // Date range covers the 30 game days only (day-1 … day-30).
+    // Date range covers the game window only (classic 30 / puzzle short).
     const histLen = view.historyLength;
+    const gameDays = view.gameDays || 30;
     const startBar = view.gameKline[histLen];
-    const endBar = view.gameKline[histLen + 29];
+    const endBar = view.gameKline[histLen + gameDays - 1];
     document.getElementById('dateRange').textContent =
-        `${startBar.date} ~ ${endBar.date}`;
+        `${startBar?.date || '--'} ~ ${endBar?.date || '--'}`;
 
     const fillModeEl = document.getElementById('fillModeLabel');
     if (fillModeEl) {
@@ -62,7 +63,52 @@ export function endGame() {
         }
     }
 
-    const finalReturnPercent = view.returnPct != null
+    // F02 puzzle: show stars instead of classic letter grade when available.
+    if (view.gameKind === 'puzzle') {
+        const stars = view.puzzleResult?.stars;
+        const medalElEarly = document.getElementById('gradeMedal');
+        const titleElEarly = document.getElementById('gradeTitle');
+        const verdictElEarly = document.getElementById('gradeVerdict');
+        const starN = Math.max(0, Math.min(3, Number(stars) || 0));
+        const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
+        if (medalElEarly) {
+            medalElEarly.className = 'grade-medal';
+            const letter = document.getElementById('gradeLetter');
+            if (letter) letter.textContent = starN ? String(starN) : '★';
+        }
+        if (titleElEarly) {
+            titleElEarly.textContent = stars != null
+                ? `残局结算 · ${starText}`
+                : '残局结算';
+        }
+        if (verdictElEarly) {
+            const reward = view.puzzleResult?.reward;
+            if (reward?.grantedThisTime) {
+                verdictElEarly.textContent = `首通奖励 +${reward.amount} 韭币`;
+            } else if (reward?.alreadyClaimed) {
+                verdictElEarly.textContent = '本关首通奖励已领取';
+            } else if (stars != null && stars < 2) {
+                verdictElEarly.textContent = '未达二星，无首通奖励';
+            } else {
+                verdictElEarly.textContent = '短窗残局 · 不计入经典榜';
+            }
+        }
+        const lbBtn = document.getElementById('resultLeaderboardBtn');
+        if (lbBtn) lbBtn.hidden = true;
+        const playBtn = document.querySelector('#resultScreen .play-again-btn');
+        if (playBtn && playBtn.getAttribute('onclick') === 'playAgain()') {
+            playBtn.textContent = '返回残局列表';
+        }
+    } else {
+        const lbBtn = document.getElementById('resultLeaderboardBtn');
+        if (lbBtn) lbBtn.hidden = false;
+        const playBtn = document.querySelector('#resultScreen .play-again-btn');
+        if (playBtn && playBtn.textContent.includes('残局')) {
+            playBtn.textContent = '再来一局';
+        }
+    }
+
+        const finalReturnPercent = view.returnPct != null
         ? parseFloat(view.returnPct)
         : (view.totalReturn - 1) * 100;
     const finalReturnEl = document.getElementById('finalReturn');
@@ -120,8 +166,30 @@ export function endGame() {
                 finalReturnEl.className = 'final-return ' +
                     (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
             }
+            if (live.gameKind === 'puzzle' && live.puzzleResult) {
+                const stars = live.puzzleResult.stars;
+                const starN = Math.max(0, Math.min(3, Number(stars) || 0));
+                const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
+                const titleEl = document.getElementById('gradeTitle');
+                if (titleEl) titleEl.textContent = `残局结算 · ${starText}`;
+                const verdictEl = document.getElementById('gradeVerdict');
+                const reward = live.puzzleResult.reward;
+                if (verdictEl) {
+                    if (reward?.grantedThisTime) {
+                        verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
+                    } else if (reward?.alreadyClaimed) {
+                        verdictEl.textContent = '本关首通奖励已领取';
+                    } else if (stars != null && stars < 2) {
+                        verdictEl.textContent = '未达二星，无首通奖励';
+                    } else {
+                        verdictEl.textContent = '短窗残局 · 不计入经典榜';
+                    }
+                }
+                const letter = document.getElementById('gradeLetter');
+                if (letter) letter.textContent = starN ? String(starN) : '★';
+            }
             updateSaveStatusUi();
-            if (res) await refreshShareRankMeta();
+            if (res && live.gameKind !== 'puzzle') await refreshShareRankMeta();
             updateShareRankHint();
         }).catch(() => {
             updateSaveStatusUi();
@@ -139,7 +207,7 @@ export function drawResultChart() {
 
     const view = selectSettleView();
     const histLen = view.historyLength;
-    const fullData = view.gameKline.slice(0, histLen + 30); // history + day-1…day-30
+    const fullData = view.gameKline.slice(0, histLen + (view.gameDays || 30)); // history + game window
 
     const option = buildKlineOption({
         bars: fullData,
@@ -277,6 +345,19 @@ export function resetGame() {
 }
 
 export function playAgain() {
+    const session = getSession();
+    if (session.gameKind === 'puzzle') {
+        if (typeof window.restoreSimShell === 'function') {
+            window.restoreSimShell();
+        } else {
+            resetGame();
+        }
+        if (typeof window.onPuzzleChapterCardClick === 'function') {
+            // Re-open level list after returning to hub.
+            setTimeout(() => window.onPuzzleChapterCardClick(), 0);
+        }
+        return;
+    }
     if (typeof window.startGame === "function") {
         window.startGame();
         return;

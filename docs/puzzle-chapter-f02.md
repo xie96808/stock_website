@@ -45,9 +45,15 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 
 ## 前端
 
-- 模拟盘 hub「残局挑战」卡（`index.html` + `js/puzzle-chapter.js`）
+- 模拟盘 hub「残局挑战」卡（`index.html` + `js/puzzle-chapter.js` + `css/puzzle-chapter.css`）
 - 读 `features.puzzleChapter`；关闭则隐藏
-- 关卡列表星级；局内短窗买卖观望；结果星级与韭币提示
+- **关卡列表**留在 hub 面板（主题 token：`--card` / `--paper` 底 + `--ink` 字色，亮/暗可读）
+- **开局后进入完整 `#gameScreen` 模拟盘**（与经典云局同一套 K 线 / 买卖观望 / 结算按钮），**不是** hub 内联展开条
+  - `POST /puzzles/:levelKey/entries` 成功后调用 `startGame({ cloud })`（`window.__puzzleStartGame`）
+  - 行情来自条目响应里的 **snapshot `bars` + `history`**（短合成窗口），**不是** pack 30 日切片；`gameDays` / `initialState`（含初始持仓、`firstSellableDay`）写入 session
+  - **无反悔**（`gameKind===puzzle` 隐藏 rewind）
+  - 结算走 `POST /puzzles/games/:gameId/finish`（`finishCloudGame` 按 `gameKind` 分流），结果屏展示星级 / 首通韭币
+- 非法动作：客户端禁用「已有持仓再买 / 空仓或 T+1 未到就卖」；服务端错误文案中文化（如「已有持仓，不能再买入」）
 - **不**改动首页「悔棋局」hindsight 入口
 
 ## 测试
@@ -64,6 +70,6 @@ node scripts/run-tests.mjs
 ## 内容缺口 / 风险（刻意延期）
 
 - 六关均为合成窗口，**非**生产 pack 实盘选段与教研解析。
-- 未做逐步 event-v1 / K 线复用经典局 UI；局内为轻量决策条。
+- 局内已复用经典 `#gameScreen` + K 线（snapshot bars）；尚未做逐步 event-v1 服务端决策协议。
 - 未做章节付费解锁、反悔、成就墙（F12）。
 - 实盘可解性审计与「显然占优」筛查跟进。

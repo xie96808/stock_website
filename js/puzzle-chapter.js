@@ -1,9 +1,9 @@
-/** F02 残局挑战首章 — hub card + level list + short play + result */
+/** F02 残局挑战首章 — hub card + level list; play enters full #gameScreen */
 import { getAuthState, openAuthModal, showToast } from './auth.js';
+import { loadCloudGameDraft } from './cloud-draft.js';
 
 let puzzleEnabled = false;
 let chapterCache = null;
-let playState = null; // { game, level, actions, revealedDay }
 
 export function isPuzzleChapterEnabled() {
   return puzzleEnabled;
@@ -115,7 +115,6 @@ async function openPuzzlePanel() {
 export function hidePuzzlePanel() {
   const panel = panelEl();
   if (panel) panel.hidden = true;
-  playState = null;
 }
 
 function starsText(n) {
@@ -146,7 +145,7 @@ function renderLevelList(body, data) {
     .join('');
   body.innerHTML = `
     <div class="puzzle-list-head">
-      <p>免费重玩 · 无反悔 · 达二星首次 +20 韭币（本章最多 120）</p>
+      <p>免费重玩 · 无反悔 · 达二星首次 +20 韭币（本章最多 120）· 开局进入完整模拟盘 K 线</p>
     </div>
     <div class="puzzle-level-list">${rows}</div>`;
   body.querySelectorAll('.puzzle-level-row').forEach((btn) => {
@@ -160,6 +159,39 @@ function escapeHtml(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function resolveStartGame() {
+  if (typeof window.__puzzleStartGame === 'function') return window.__puzzleStartGame;
+  if (typeof window.__dailyStartGame === 'function') return window.__dailyStartGame;
+  return null;
+}
+
+/**
+ * Enter classic #gameScreen with puzzle snapshot bars (not hub inline strip).
+ */
+async function enterPuzzleGameScreen(game) {
+  const startGame = resolveStartGame();
+  if (!startGame) {
+    showToast('开局函数未就绪', 'error');
+    return;
+  }
+  if (!Array.isArray(game?.bars) || !game.bars.length) {
+    showToast('残局行情快照缺失，无法进入模拟盘', 'error');
+    return;
+  }
+  hidePuzzlePanel();
+  const auth = getAuthState();
+  const draft = loadCloudGameDraft({
+    gameId: game.gameId,
+    userId: auth?.user?.id,
+  });
+  const resumeActions = draft && Array.isArray(draft.actions) ? draft.actions : null;
+  await startGame({ cloud: game, resumeActions });
+  const gameEl = document.getElementById('gameScreen');
+  if (!(gameEl && gameEl.classList.contains('active'))) {
+    throw new Error('未能进入模拟盘');
+  }
 }
 
 async function startPuzzleLevel(levelKey) {
@@ -178,6 +210,14 @@ async function startPuzzleLevel(levelKey) {
     });
     const json = await res.json().catch(() => ({}));
     if (res.status === 409 && json?.error?.code === 'ACTIVE_GAME_EXISTS') {
+      const active = json?.error?.details?.game;
+      if (active?.gameKind === 'puzzle' && Array.isArray(active.bars) && active.bars.length) {
+        const ok = window.confirm('已有进行中的残局对局。确定：继续原局');
+        if (ok) {
+          await enterPuzzleGameScreen(active);
+          return;
+        }
+      }
       showToast(json.error.message || '已有进行中的对局', 'error');
       renderLevelList(body, chapterCache);
       return;
@@ -188,111 +228,12 @@ async function startPuzzleLevel(levelKey) {
       return;
     }
     const game = json.data.game;
-    playState = {
-      game,
-      levelKey,
-      actions: [],
-      revealedDay: 1,
-    };
-    renderPlay(body);
-  } catch (e) {
-    showToast(e.message || '开局失败', 'error');
-  }
-}
-
-function renderPlay(body) {
-  if (!playState || !body) return;
-  const g = playState.game;
-  const day = playState.actions.length + 1;
-  const decisionDays = g.decisionDays || g.gameDays - 1;
-  const doneDeciding = playState.actions.length >= decisionDays;
-  const init = g.initialState || {};
-  const pos =
-    init.qty > 0
-      ? `持仓中 · 成本 ${Number(init.cost).toFixed(2)} · 首可卖日 D${init.firstSellableDay}`
-      : `空仓 · 现金 ${Math.round(init.cash || 0)}`;
-  const budget =
-    g.maxOrders != null ? `订单预算 ${g.maxOrders}` : '订单不限';
-  const acts = playState.actions.map((a, i) => `D${i + 1}:${a}`).join(' · ') || '尚无';
-  body.innerHTML = `
-    <div class="puzzle-play">
-      <button type="button" class="hub-back" id="puzzleBackToList">← 关卡列表</button>
-      <h3 class="puzzle-play-title">${escapeHtml(g.stockName || playState.levelKey)}</h3>
-      <p class="puzzle-play-meta">${pos} · ${budget} · ${g.gameDays} 日窗口</p>
-      <p class="puzzle-play-day">${doneDeciding ? `决策完成，可结算（末日仅估值）` : `决策日 D${day} / ${decisionDays}`}</p>
-      <p class="puzzle-play-acts">已选：${escapeHtml(acts)}</p>
-      <div class="puzzle-play-actions" ${doneDeciding ? 'hidden' : ''}>
-        <button type="button" class="puzzle-act-btn" data-act="buy">买入</button>
-        <button type="button" class="puzzle-act-btn" data-act="sell">卖出</button>
-        <button type="button" class="puzzle-act-btn" data-act="hold">观望</button>
-      </div>
-      <div class="puzzle-play-footer">
-        <button type="button" class="cta cta-fill" id="puzzleSettleBtn" ${doneDeciding ? '' : 'disabled'}>结算残局</button>
-      </div>
-    </div>`;
-  body.querySelector('#puzzleBackToList')?.addEventListener('click', () => {
-    playState = null;
-    openPuzzlePanel();
-  });
-  body.querySelectorAll('.puzzle-act-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      if (playState.actions.length >= decisionDays) return;
-      playState.actions.push(btn.getAttribute('data-act'));
-      renderPlay(body);
-    });
-  });
-  body.querySelector('#puzzleSettleBtn')?.addEventListener('click', () => settlePuzzlePlay());
-}
-
-async function settlePuzzlePlay() {
-  if (!playState) return;
-  const body = document.getElementById('puzzleChapterPanelBody');
-  const gameId = playState.game.gameId;
-  const actions = playState.actions;
-  try {
-    const res = await fetch(`/api/v1/puzzles/games/${encodeURIComponent(gameId)}/finish`, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        actions: actions.map((action, i) => ({ day: i + 1, action })),
-        finish: true,
-      }),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      showToast(json?.error?.message || '结算失败', 'error');
-      return;
-    }
-    renderResult(body, json.data);
+    // Ensure levelKey available for result / replay UX.
+    if (!game.levelKey) game.levelKey = levelKey;
+    await enterPuzzleGameScreen(game);
     refreshPuzzleChapterCard().catch(() => {});
   } catch (e) {
-    showToast(e.message || '结算失败', 'error');
+    showToast(e.message || '开局失败', 'error');
+    if (body) renderLevelList(body, chapterCache);
   }
-}
-
-function renderResult(body, data) {
-  if (!body) return;
-  const rewardLine = data.reward?.grantedThisTime
-    ? `首通奖励 +${data.reward.amount} 韭币`
-    : data.reward?.alreadyClaimed
-      ? '本关首通奖励已领取'
-      : data.stars >= 2
-        ? '已达二星（奖励状态见上）'
-        : '未达二星，无首通奖励';
-  body.innerHTML = `
-    <div class="puzzle-result">
-      <button type="button" class="hub-back" id="puzzleBackToList2">← 关卡列表</button>
-      <h3>结算 · ${starsText(data.stars)}</h3>
-      <p>收益 ${(data.returnPpm / 10000).toFixed(2)}% · 回撤 ${((data.mddPpm || 0) / 10000).toFixed(2)}% · 基准 ${(data.benchmarkReturnPpm / 10000).toFixed(2)}%</p>
-      <p>成交 ${data.tradeCount} · 历史最佳 ${starsText(data.bestStars)}</p>
-      <p class="puzzle-reward">${rewardLine}</p>
-      <button type="button" class="cta cta-fill" id="puzzleReplayBtn">再玩本关</button>
-    </div>`;
-  const levelKey = data.levelKey || playState?.levelKey;
-  playState = null;
-  body.querySelector('#puzzleBackToList2')?.addEventListener('click', () => openPuzzlePanel());
-  body.querySelector('#puzzleReplayBtn')?.addEventListener('click', () => {
-    if (levelKey) startPuzzleLevel(levelKey);
-  });
 }

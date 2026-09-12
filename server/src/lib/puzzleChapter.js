@@ -18,6 +18,8 @@ import {
   settlePuzzle,
   puzzleBuyHoldBenchmarkPpm,
   scorePuzzleStars,
+  puzzleActionErrorZh,
+  formatReturnPct,
   PUZZLE_ACTIONS,
 } from "../../../shared/puzzleEngine.js";
 import {
@@ -66,11 +68,18 @@ function sessionPublicFromRow(row) {
   let initialState = null;
   let goals = null;
   let maxOrders = null;
+  let bars = null;
+  let history = null;
+  let snapHistoryLength = null;
   try {
     const snap = JSON.parse(row.snapshot_json);
     initialState = snap.initialState || (row.initial_state_json ? JSON.parse(row.initial_state_json) : null);
     goals = snap.goals || null;
     maxOrders = snap.maxOrders ?? null;
+    bars = Array.isArray(snap.bars) ? snap.bars : null;
+    history = Array.isArray(snap.history) ? snap.history : [];
+    snapHistoryLength =
+      Number.isInteger(snap.historyLength) ? snap.historyLength : (history ? history.length : 0);
   } catch {
     /* ignore */
   }
@@ -81,6 +90,8 @@ function sessionPublicFromRow(row) {
       /* ignore */
     }
   }
+  const historyLength =
+    snapHistoryLength != null ? snapHistoryLength : (row.history_length ?? 0);
   return {
     gameId: row.id,
     ruleVersion: row.rule_version,
@@ -88,7 +99,7 @@ function sessionPublicFromRow(row) {
     fillMode: row.fill_mode,
     stockIndex: row.stock_index,
     windowStartIndex: row.window_start,
-    historyLength: row.history_length,
+    historyLength,
     gameDays: row.game_days,
     stockCode: row.stock_code,
     stockName: row.stock_name,
@@ -105,6 +116,9 @@ function sessionPublicFromRow(row) {
     goals,
     maxOrders,
     decisionDays: (row.game_days || 0) - 1,
+    // Client feeds #gameScreen K-line from snapshot (short synthetic window; not pack slice).
+    bars,
+    history: history || [],
   };
 }
 
@@ -597,11 +611,12 @@ export function finishPuzzleGame(userId, gameId, body) {
       error: {
         status: 422,
         code: "INVALID_ACTION_SEQUENCE",
-        message: replay.message || "动作序列非法",
+        message: puzzleActionErrorZh(replay.message) || "动作序列非法",
         details: {
           day: replay.day,
           rejected: !!replay.rejected,
           stateUnchanged: !!replay.stateUnchanged,
+          engineMessage: replay.message || null,
         },
       },
     };
@@ -879,6 +894,7 @@ function buildPuzzleResultDto(db, resultRow, sessionRow, extra = null) {
     puzzleVersionId: sessionRow.puzzle_version_id,
     rewardFamilyId: level?.reward_family_id || null,
     returnPpm: resultRow.return_ppm,
+    returnPct: formatReturnPct(resultRow.return_ppm),
     mddPpm: resultRow.mdd_ppm,
     benchmarkReturnPpm: resultRow.benchmark_return_ppm,
     tradeCount: resultRow.trade_count,

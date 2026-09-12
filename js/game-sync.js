@@ -102,7 +102,8 @@ export async function finishCloudGame() {
     return null;
   }
   const gameId = gameState.cloudGameId;
-  const isEventV1 = gameState.protocolVersion === "event-v1";
+  const isPuzzle = gameState.gameKind === "puzzle";
+  const isEventV1 = !isPuzzle && gameState.protocolVersion === "event-v1";
   const finishKey = newIdempotencyKey();
   const body = isEventV1
     ? { finish: true, expectedRevision: gameState.revision ?? 0 }
@@ -114,16 +115,25 @@ export async function finishCloudGame() {
   let lastErr = null;
   for (let attempt = 0; attempt <= delays.length; attempt++) {
     try {
-      const { data, status } = isEventV1
-        ? await apiWithHeaders(`/games/${gameId}/finish`, {
-            method: "POST",
-            body,
-            headers: { "Idempotency-Key": finishKey },
-          })
-        : await api(`/games/${gameId}/finish`, {
-            method: "POST",
-            body,
-          });
+      let data;
+      let status;
+      if (isPuzzle) {
+        ({ data, status } = await apiWithHeaders(`/puzzles/games/${gameId}/finish`, {
+          method: "POST",
+          body,
+        }));
+      } else if (isEventV1) {
+        ({ data, status } = await apiWithHeaders(`/games/${gameId}/finish`, {
+          method: "POST",
+          body,
+          headers: { "Idempotency-Key": finishKey },
+        }));
+      } else {
+        ({ data, status } = await api(`/games/${gameId}/finish`, {
+          method: "POST",
+          body,
+        }));
+      }
       const savedPatch = { saveStatus: "saved", saveError: null };
       if (data?.returnPpm != null) {
         savedPatch.returnPpm = data.returnPpm;
@@ -131,12 +141,18 @@ export async function finishCloudGame() {
       }
       if (data?.assistClass) savedPatch.assistClass = data.assistClass;
       if (data?.undoCount != null) savedPatch.undoCount = data.undoCount;
+      if (isPuzzle) {
+        savedPatch.puzzleResult = data;
+        if (data?.levelKey) savedPatch.puzzleLevelKey = data.levelKey;
+      }
       patchSession(savedPatch);
       clearCloudGameDraft(gameId);
       updateSaveStatusUi();
-      import("./leaderboard.js")
-        .then((m) => m.invalidateLeaderboardClientCache?.())
-        .catch(() => {});
+      if (!isPuzzle) {
+        import("./leaderboard.js")
+          .then((m) => m.invalidateLeaderboardClientCache?.())
+          .catch(() => {});
+      }
       return { data, status };
     } catch (e) {
       lastErr = e;

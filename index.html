@@ -292,7 +292,7 @@
             <!-- 顶部进度条 -->
             <div class="game-progress-shell">
                 <div class="game-progress-meta">
-                    <span class="game-progress-label">第 <span id="currentDay">1</span> / 30 天</span>
+                    <span class="game-progress-label">第 <span id="currentDay">1</span> / <span id="gameDaysTotal">30</span> 天</span>
                     <span class="game-progress-mood" id="progressMood">市场在等待你的判断…</span>
                     <span class="stage-subtitle" id="chartSubtitle">股票代码: ******</span>
                 </div>
@@ -947,6 +947,7 @@
         window.onPuzzleChapterCardClick = onPuzzleChapterCardClick;
         window.hidePuzzlePanel = hidePuzzlePanel;
         window.__dailyStartGame = startGame;
+        window.__puzzleStartGame = startGame;
         initPageZoom();
         initAuth()
           .then(() => initJiuCoin())

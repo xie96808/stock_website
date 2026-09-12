@@ -50,6 +50,13 @@ export const SESSION_KEYS = Object.freeze([
   'revision',
   'protocolVersion',
   'gameKind',
+  'gameDays',
+  'initialState',
+  'firstSellableDay',
+  'maxOrders',
+  'puzzleLevelKey',
+  'puzzleResult',
+  'takeoverNav',
   'shareRank',
   'shareBoardTotal',
   'shareBeatPct',
@@ -107,6 +114,13 @@ export function buildFreshSessionFields({
     practiceOnly: !!practiceOnly,
     protocolVersion: null,
     gameKind: null,
+    gameDays: 30,
+    initialState: null,
+    firstSellableDay: 1,
+    maxOrders: null,
+    puzzleLevelKey: null,
+    puzzleResult: null,
+    takeoverNav: null,
     revision: 0,
     undoCount: 0,
     assistClass: null,
@@ -181,7 +195,7 @@ export function applyEngineResult(r, { finished = false, bars = null, actionsLen
   const actionCount =
     typeof actionsLength === 'number' ? actionsLength : gameState.actions.length;
   if (r.rawPosition !== 'empty' && r.buyPrice > 0 && bars) {
-    const asOfDay = Math.min(actionCount + 1, 30);
+    const asOfDay = Math.min(actionCount + 1, gameState.gameDays || 30);
     const mark = bars[asOfDay - 1];
     if (mark) equity = r.closedMultiple * (mark.close / r.buyPrice);
   }
@@ -220,11 +234,12 @@ export function selectVisibleKline(s = getSession()) {
   return kline.slice(0, histLen + day);
 }
 
-/** The 30 decision-window bars (day 1..30). */
+/** The decision-window bars (day 1..gameDays; classic = 30). */
 export function selectGameWindow(s = getSession()) {
   const histLen = s.historyLength || 0;
   const kline = s.gameKline || [];
-  return kline.slice(histLen, histLen + 30);
+  const days = s.gameDays || 30;
+  return kline.slice(histLen, histLen + days);
 }
 
 /** Bar for the currently shown game day (1-based currentDay). */
@@ -239,6 +254,7 @@ export function selectAnalysisInput(s = getSession()) {
   return {
     kline: s.gameKline,
     historyLength: s.historyLength,
+    gameDays: s.gameDays || 30,
     trades: s.tradeHistory,
     fillMode: s.fillMode,
     totalReturn: s.totalReturn,
@@ -253,6 +269,8 @@ export function selectSettleView(s = getSession()) {
     currentStock: s.currentStock,
     historyLength: s.historyLength,
     gameKline: s.gameKline,
+    gameDays: s.gameDays || 30,
+    gameKind: s.gameKind || null,
     fillMode: s.fillMode,
     returnPct: s.returnPct,
     totalReturn: s.totalReturn,
@@ -267,6 +285,8 @@ export function selectSettleView(s = getSession()) {
     saveStatus: s.saveStatus,
     assistClass: s.assistClass,
     undoCount: s.undoCount,
+    puzzleResult: s.puzzleResult || null,
+    puzzleLevelKey: s.puzzleLevelKey || null,
   };
 }
 
