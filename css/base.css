@@ -8,6 +8,9 @@
     --mute: #7a7064;
     --terra: #c45c3a;
     --terra-ink: #f3ead8;
+    /* F01 今日挑战 accent — cooler indigo/slate, distinct from classic CTA terra */
+    --challenge: #3d5a80;
+    --challenge-ink: #f3ead8;
     --wash: #c4a07a;
     --wash-ink: #3a3228;
     --line: #3a3530;
@@ -49,6 +52,9 @@
     --mute: #9a8e7c;
     --terra: #c45c3a;
     --terra-ink: #f3ead8;
+    /* F01 今日挑战 accent — cooler slate readable on dark paper */
+    --challenge: #6b8fb5;
+    --challenge-ink: #f3ead8;
     --wash: #8a6e4e;
     --wash-ink: #f0e6d4;
     --line: #c8bca8;
