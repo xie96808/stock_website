@@ -52,6 +52,18 @@ function hideSurfaces() {
   if (board) board.hidden = true;
 }
 
+
+/** Toggle day board when CTA is「查看日榜」and board already open. */
+async function toggleOrShowDailyChallengeBoard() {
+  const board = boardEl();
+  if (board && !board.hidden) {
+    hideDailyChallengeBoard();
+    return;
+  }
+  await showDailyChallengeBoard();
+}
+
+
 function newIdempotencyKey() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `daily-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -370,7 +382,7 @@ export async function onDailyChallengeCardClick() {
 
   // Settled / late → day board only (CTA is「查看日榜」); do not fall through to start.
   if (d.attempt && (d.attempt.status === 'settled' || d.attempt.status === 'settle_late')) {
-    await showDailyChallengeBoard();
+    await toggleOrShowDailyChallengeBoard();
     return;
   }
 
@@ -381,7 +393,7 @@ export async function onDailyChallengeCardClick() {
   }
 
   if (d.remainingChance === 0) {
-    await showDailyChallengeBoard();
+    await toggleOrShowDailyChallengeBoard();
     return;
   }
 
@@ -405,7 +417,7 @@ export async function onDailyChallengeCardClick() {
     }
     if (e.code === 'DAILY_CHANCE_USED') {
       showToast(e.message || '今日机会已用完', 'error');
-      await showDailyChallengeBoard();
+      await toggleOrShowDailyChallengeBoard();
       return;
     }
     showToast(e.message || '开局失败', 'error');

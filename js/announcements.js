@@ -3,6 +3,7 @@
  * Auto-opens unless localStorage says dismissed for today's local calendar day.
  */
 
+import { formatShanghaiDateTime } from "./time.js";
 const API = "/api/v1";
 const STORAGE_KEY = "stockgame_announcements_dismissed_day";
 
@@ -74,21 +75,8 @@ function ensureDom() {
 
 function formatPublishedAt(iso) {
   if (!iso) return "";
-  try {
-    const d = new Date(iso.includes("T") ? iso : iso.replace(" ", "T") + "Z");
-    if (Number.isNaN(d.getTime())) return escapeHtml(iso);
-    return escapeHtml(
-      d.toLocaleString("zh-CN", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
-  } catch {
-    return escapeHtml(iso);
-  }
+  const formatted = formatShanghaiDateTime(iso);
+  return escapeHtml(formatted || iso);
 }
 
 function renderList(items) {

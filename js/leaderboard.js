@@ -9,6 +9,7 @@ import {
   setHeaderChrome,
   parseRouteHash,
 } from "./screen-router.js";
+import { formatShanghaiDateTime } from "./time.js";
 
 const REASON_TEXT = {
   not_opted_in: "尚未开启排行榜参与，可在设置中打开",
@@ -76,13 +77,10 @@ function escapeHtml(s) {
 
 function fmtFinished(iso) {
   if (!iso) return "—";
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return escapeHtml(String(iso).slice(0, 19));
-    return d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
-  } catch {
-    return escapeHtml(String(iso).slice(0, 19));
-  }
+  const formatted = formatShanghaiDateTime(iso);
+  if (!formatted) return "—";
+  // Helper echoes raw on hard failure; escape that path for HTML safety.
+  return formatted === String(iso) ? escapeHtml(formatted) : formatted;
 }
 
 function setBusy(screen, busy) {
