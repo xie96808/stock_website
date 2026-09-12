@@ -15,6 +15,11 @@ import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import {
+    replayPuzzle,
+    settlePuzzle,
+    puzzleActionErrorZh,
+} from '../shared/puzzleEngine.js';
+import {
     persistCurrentCloudDraft,
     appendCloudDecision,
     rewindCloudGame,
@@ -52,6 +57,143 @@ function syncMobileIntelDefaults() {
     });
 }
 
+
+function sessionGameDays(session = getSession()) {
+    return session.gameDays || 30;
+}
+
+function isPuzzleSession(session = getSession()) {
+    return session.gameKind === 'puzzle';
+}
+
+/** Feed #gameScreen from puzzle snapshot bars (short window + optional history). */
+function seedPuzzleSession(cloud) {
+    const bars = Array.isArray(cloud.bars) ? cloud.bars : [];
+    const history = Array.isArray(cloud.history) ? cloud.history : [];
+    const gameDays = Number.isInteger(cloud.gameDays) ? cloud.gameDays : bars.length;
+    const historyDays = Number.isInteger(cloud.historyLength)
+        ? cloud.historyLength
+        : history.length;
+    if (!bars.length || bars.length !== gameDays) {
+        throw new Error('残局行情快照无效');
+    }
+    const init = cloud.initialState || {
+        cash: 100000,
+        qty: 0,
+        cost: 0,
+        buyFillDay: null,
+        firstSellableDay: 1,
+    };
+    const takeoverMark = bars[0].open;
+    const takeoverNav = Number(init.cash) + Number(init.qty || 0) * takeoverMark;
+    const day1Close = bars[0].close;
+    const equity0 = Number(init.cash) + Number(init.qty || 0) * day1Close;
+    const qty = Number(init.qty) || 0;
+    const firstSellable = Number(init.firstSellableDay) || 1;
+    let position = 'empty';
+    if (qty > 0) {
+        position = firstSellable > 1 ? 'locked' : 'holding';
+    }
+    const currentStock = {
+        code: cloud.stockCode || 'PUZZLE',
+        name: cloud.stockName || '残局挑战',
+        kline: history.concat(bars),
+    };
+    patchSession({
+        cloudMode: true,
+        cloudGameId: cloud.gameId,
+        datasetVersion: cloud.datasetVersion || null,
+        ruleVersion: cloud.ruleVersion || 'puzzle-mtm-v1',
+        fillMode: cloud.fillMode || 'next_open',
+        protocolVersion: cloud.protocolVersion || 'legacy-batch',
+        gameKind: 'puzzle',
+        gameDays,
+        initialState: init,
+        firstSellableDay: firstSellable,
+        maxOrders: cloud.maxOrders ?? null,
+        puzzleLevelKey: cloud.levelKey || cloud.puzzleLevelKey || null,
+        puzzleResult: null,
+        takeoverNav,
+        revision: cloud.revision ?? 0,
+        undoCount: 0,
+        assistClass: cloud.assistClass || 'legacy',
+        currentStock,
+        historyLength: historyDays,
+        gameKline: history.concat(bars),
+        position,
+        costBasis: qty > 0 ? Number(init.cost) || 0 : 0,
+        lastBuyFillDay: init.buyFillDay != null ? init.buyFillDay : null,
+        totalReturn: takeoverNav > 0 ? equity0 / takeoverNav : 1,
+        practiceOnly: false,
+    });
+}
+
+function puzzlePositionFromState(qty, decisionDay, buyFillDay, firstSellableDay) {
+    if (!(qty > 0)) return 'empty';
+    const fillDayIfSell = decisionDay + 1; // next_open
+    if (decisionDay < firstSellableDay) return 'locked';
+    if (buyFillDay != null && fillDayIfSell <= buyFillDay) return 'locked';
+    return 'holding';
+}
+
+function syncFromPuzzleEngine(r, { finished = false, bars = null } = {}) {
+    const session = getSession();
+    const gameDays = sessionGameDays(session);
+    const init = session.initialState || {};
+    const firstSellable = Number(session.firstSellableDay || init.firstSellableDay || 1);
+    const trades = (r.trades || []).map((t) => ({
+        type: t.type,
+        day: t.day,
+        price: t.price,
+        return: t.return != null ? t.return : null,
+    }));
+    const tradeGains = trades
+        .filter((t) => t.type === 'sell' && t.return != null)
+        .map((t) => (t.return - 1) * 100);
+    let holdingDays = 0;
+    for (const t of trades) {
+        if (t.type === 'buy') holdingDays = 0;
+        // approximate; engine owns truth on settle
+    }
+    if (finished) {
+        patchSession({
+            tradeHistory: trades,
+            valuation: r.valuation,
+            tradeGains,
+            holdingDays: r.holdingDays != null ? r.holdingDays : holdingDays,
+            ruleVersion: r.ruleVersion,
+            totalReturn: r.takeoverNav > 0 ? r.finalEquity / r.takeoverNav : 1,
+            position: 'empty',
+            costBasis: 0,
+            lastBuyFillDay: null,
+            returnPpm: r.returnPpm,
+            returnPct: r.returnPct,
+            takeoverNav: r.takeoverNav,
+        });
+        return;
+    }
+    const actionCount = session.actions.length;
+    const asOfDay = Math.min(Math.max(actionCount + 1, 1), gameDays);
+    const mark = bars && bars[asOfDay - 1] ? bars[asOfDay - 1].close : null;
+    const equity =
+        mark != null ? r.cash + r.qty * mark : r.finalEquity;
+    const decisionDay = Math.min(actionCount + 1, gameDays);
+    patchSession({
+        tradeHistory: trades,
+        valuation: null,
+        tradeGains,
+        holdingDays,
+        ruleVersion: r.ruleVersion,
+        position: puzzlePositionFromState(r.qty, decisionDay, r.buyFillDay, firstSellable),
+        costBasis: r.qty > 0 ? r.cost || 0 : 0,
+        lastBuyFillDay: r.buyFillDay,
+        totalReturn: r.takeoverNav > 0 ? equity / r.takeoverNav : 1,
+        returnPpm: null,
+        returnPct: null,
+        takeoverNav: r.takeoverNav,
+    });
+}
+
 export async function startGame(options = {}) {
     // Reset session fields through the game-session seam (preserves stocksData).
     resetSession({
@@ -60,54 +202,64 @@ export async function startGame(options = {}) {
     });
 
     const cloud = options.cloud || null;
-    const gameDays = 30;
-
     const catalog = getStocksCatalog();
-    if (cloud && Number.isInteger(cloud.stockIndex) && catalog[cloud.stockIndex]) {
-        const currentStock = catalog[cloud.stockIndex];
-        const historyDays = Number.isInteger(cloud.historyLength)
-            ? cloud.historyLength
-            : Math.min(30, currentStock.kline.length - gameDays);
-        const gameStartIndex = Number.isInteger(cloud.windowStartIndex)
-            ? cloud.windowStartIndex
-            : historyDays;
-        patchSession({
-            cloudMode: true,
-            cloudGameId: cloud.gameId,
-            datasetVersion: cloud.datasetVersion || null,
-            ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
-            fillMode: cloud.fillMode || getSession().fillMode,
-            protocolVersion: cloud.protocolVersion || null,
-            gameKind: cloud.gameKind || null,
-            revision: cloud.revision ?? 0,
-            undoCount: cloud.undoCount ?? 0,
-            assistClass: cloud.assistClass || null,
-            currentStock,
-            historyLength: historyDays,
-            gameKline: currentStock.kline.slice(
-                gameStartIndex - historyDays,
-                gameStartIndex + gameDays
-            ),
-        });
+    const isPuzzle =
+        !!cloud &&
+        (cloud.gameKind === 'puzzle' ||
+            (Array.isArray(cloud.bars) && cloud.bars.length >= 6));
+
+    if (isPuzzle) {
+        seedPuzzleSession(cloud);
     } else {
-        // Local practice: pick random stock and window (30 game days).
-        const stockIndex = Math.floor(Math.random() * catalog.length);
-        const currentStock = catalog[stockIndex];
-        const klineLen = currentStock.kline.length;
-        const historyDays = Math.min(30, klineLen - gameDays);
-        const minStart = historyDays;
-        const maxStart = klineLen - gameDays; // inclusive
-        const span = Math.max(1, maxStart - minStart + 1);
-        const gameStartIndex = minStart + Math.floor(Math.random() * span);
-        patchSession({
-            currentStock,
-            historyLength: historyDays,
-            gameKline: currentStock.kline.slice(
-                gameStartIndex - historyDays,
-                gameStartIndex + gameDays
-            ),
-            practiceOnly: true,
-        });
+        const gameDays = 30;
+        if (cloud && Number.isInteger(cloud.stockIndex) && catalog[cloud.stockIndex]) {
+            const currentStock = catalog[cloud.stockIndex];
+            const historyDays = Number.isInteger(cloud.historyLength)
+                ? cloud.historyLength
+                : Math.min(30, currentStock.kline.length - gameDays);
+            const gameStartIndex = Number.isInteger(cloud.windowStartIndex)
+                ? cloud.windowStartIndex
+                : historyDays;
+            patchSession({
+                cloudMode: true,
+                cloudGameId: cloud.gameId,
+                datasetVersion: cloud.datasetVersion || null,
+                ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
+                fillMode: cloud.fillMode || getSession().fillMode,
+                protocolVersion: cloud.protocolVersion || null,
+                gameKind: cloud.gameKind || null,
+                gameDays: 30,
+                revision: cloud.revision ?? 0,
+                undoCount: cloud.undoCount ?? 0,
+                assistClass: cloud.assistClass || null,
+                currentStock,
+                historyLength: historyDays,
+                gameKline: currentStock.kline.slice(
+                    gameStartIndex - historyDays,
+                    gameStartIndex + gameDays
+                ),
+            });
+        } else {
+            // Local practice: pick random stock and window (30 game days).
+            const stockIndex = Math.floor(Math.random() * catalog.length);
+            const currentStock = catalog[stockIndex];
+            const klineLen = currentStock.kline.length;
+            const historyDays = Math.min(30, klineLen - gameDays);
+            const minStart = historyDays;
+            const maxStart = klineLen - gameDays; // inclusive
+            const span = Math.max(1, maxStart - minStart + 1);
+            const gameStartIndex = minStart + Math.floor(Math.random() * span);
+            patchSession({
+                currentStock,
+                historyLength: historyDays,
+                gameDays: 30,
+                gameKline: currentStock.kline.slice(
+                    gameStartIndex - historyDays,
+                    gameStartIndex + gameDays
+                ),
+                practiceOnly: true,
+            });
+        }
     }
 
     // Switch screens first so the fill-mode modal can close over a painted shell.
@@ -160,25 +312,49 @@ export async function startGame(options = {}) {
  */
 export function applyCloudResume(actions) {
     if (!Array.isArray(actions) || !actions.length) return false;
+    const session = getSession();
     const bars = getGameBars();
-    if (bars.length < 30) return false;
-    const clipped = actions.slice(0, 29);
-    const r = replayGame({
-        fillMode: getSession().fillMode,
-        bars,
-        actions: clipped,
-        finish: false
-    });
-    if (!r.ok) {
-        console.warn('cloud resume draft invalid, starting day 1', r);
-        updateUI();
-        resetOHLCToToday();
-        renderWaveAnalysis();
-        return false;
+    const gameDays = sessionGameDays(session);
+    const decisionDays = gameDays - 1;
+    if (bars.length < gameDays) return false;
+    const clipped = actions.slice(0, decisionDays);
+    if (isPuzzleSession(session)) {
+        const r = replayPuzzle({
+            fillMode: session.fillMode,
+            bars,
+            actions: clipped,
+            finish: false,
+            initialState: session.initialState,
+            maxOrders: session.maxOrders,
+        });
+        if (!r.ok) {
+            console.warn('puzzle resume draft invalid, starting day 1', r);
+            updateUI();
+            resetOHLCToToday();
+            renderWaveAnalysis();
+            return false;
+        }
+        patchSession({ actions: clipped.slice() });
+        syncFromPuzzleEngine(r, { finished: false, bars });
+        patchSession({ currentDay: Math.min(clipped.length + 1, gameDays) });
+    } else {
+        const r = replayGame({
+            fillMode: session.fillMode,
+            bars,
+            actions: clipped,
+            finish: false
+        });
+        if (!r.ok) {
+            console.warn('cloud resume draft invalid, starting day 1', r);
+            updateUI();
+            resetOHLCToToday();
+            renderWaveAnalysis();
+            return false;
+        }
+        patchSession({ actions: clipped.slice() });
+        syncFromEngine(r, { finished: false, bars });
+        patchSession({ currentDay: Math.min(clipped.length + 1, gameDays) });
     }
-    patchSession({ actions: clipped.slice() });
-    syncFromEngine(r, { finished: false, bars });
-    patchSession({ currentDay: Math.min(clipped.length + 1, 30) });
     updateUI();
     updateChart();
     resetOHLCToToday();
@@ -298,18 +474,40 @@ function syncFromEngine(r, { finished = false, bars = null } = {}) {
 function applyLocalAction(action) {
     const session = getSession();
     const bars = getGameBars();
-    if (bars.length < 30) return false;
+    const gameDays = sessionGameDays(session);
+    if (bars.length < gameDays) return false;
     const nextActions = session.actions.concat(action);
-    const r = replayGame({
-        fillMode: session.fillMode,
-        bars,
-        actions: nextActions,
-        finish: false
-    });
-    if (!r.ok) return false;
-    patchSession({ actions: nextActions, pendingAction: null });
-    syncFromEngine(r, { finished: false, bars });
-    patchSession({ currentDay: nextActions.length + 1 });
+    if (isPuzzleSession(session)) {
+        const r = replayPuzzle({
+            fillMode: session.fillMode,
+            bars,
+            actions: nextActions,
+            finish: false,
+            initialState: session.initialState,
+            maxOrders: session.maxOrders,
+        });
+        if (!r.ok) {
+            showToast(puzzleActionErrorZh(r.message), 'error');
+            return false;
+        }
+        patchSession({ actions: nextActions, pendingAction: null });
+        syncFromPuzzleEngine(r, { finished: false, bars });
+        patchSession({ currentDay: Math.min(nextActions.length + 1, gameDays) });
+    } else {
+        const r = replayGame({
+            fillMode: session.fillMode,
+            bars,
+            actions: nextActions,
+            finish: false
+        });
+        if (!r.ok) {
+            showToast(puzzleActionErrorZh(r.message) || r.message || '操作不合法', 'error');
+            return false;
+        }
+        patchSession({ actions: nextActions, pendingAction: null });
+        syncFromEngine(r, { finished: false, bars });
+        patchSession({ currentDay: nextActions.length + 1 });
+    }
     persistCurrentCloudDraft();
     updateUI();
     updateChart();
@@ -334,7 +532,7 @@ function applyServerStateActions(state) {
         undoCount: state.undoCount ?? getSession().undoCount,
         assistClass: state.assistClass ?? getSession().assistClass,
         protocolVersion: state.protocolVersion || getSession().protocolVersion,
-        currentDay: Math.min(actions.length + 1, 30),
+        currentDay: Math.min(actions.length + 1, sessionGameDays()),
     });
     syncFromEngine(r, { finished: false, bars });
     persistCurrentCloudDraft();
@@ -347,13 +545,34 @@ function applyServerStateActions(state) {
 export async function handleAction(action) {
     const session = getSession();
     if (session.rewindBusy) return;
-    if (session.currentDay >= 30) return;
+    const gameDays = sessionGameDays(session);
+    if (session.currentDay >= gameDays) return;
     if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
 
     const bars = getGameBars();
-    if (bars.length < 30) return;
+    if (bars.length < gameDays) return;
 
-    if (session.cloudMode && session.protocolVersion === 'event-v1') {
+    // Client-side illegal-action guards (puzzle often starts long).
+    if (action === 'buy' && session.position !== 'empty') {
+        showToast('已有持仓，不能再买入', 'error');
+        return;
+    }
+    if (action === 'sell') {
+        if (session.position === 'empty') {
+            showToast('空仓无法卖出', 'error');
+            return;
+        }
+        if (isPuzzleSession(session) && session.currentDay < (session.firstSellableDay || 1)) {
+            showToast('尚未到可卖日（T+1）', 'error');
+            return;
+        }
+        if (session.position === 'locked') {
+            showToast('受 T+1 限制，今日不可卖出', 'error');
+            return;
+        }
+    }
+
+    if (session.cloudMode && session.protocolVersion === 'event-v1' && !isPuzzleSession(session)) {
         try {
             setActionControlsLocked(true);
             const state = await appendCloudDecision(action, session.revision ?? 0);
@@ -386,7 +605,7 @@ async function ensureRewindFeatures() {
 
 export async function openRewindConfirm() {
     const session = getSession();
-    if (!session.cloudMode || session.protocolVersion !== 'event-v1' || session.gameKind === 'daily') return;
+    if (!session.cloudMode || session.protocolVersion !== 'event-v1' || session.gameKind === 'daily' || session.gameKind === 'puzzle') return;
     if (session.undoCount >= 1 || session.rewindBusy) return;
     if (!session.actions || session.actions.length < 1) return;
     const feats = await ensureRewindFeatures();
@@ -497,11 +716,30 @@ export async function confirmRewind() {
     }
 }
 
-/** Day-30 only: settle with valuation (not a fake sell). */
+/** Last day only: settle with valuation (not a fake sell). */
 export function finishSettle() {
     const session = getSession();
-    if (session.currentDay < 30 || session.actions.length !== 29) return;
+    const gameDays = sessionGameDays(session);
+    const decisionDays = gameDays - 1;
+    if (session.currentDay < gameDays || session.actions.length !== decisionDays) return;
     const bars = getGameBars();
+    if (isPuzzleSession(session)) {
+        const r = settlePuzzle({
+            fillMode: session.fillMode,
+            bars,
+            actions: session.actions,
+            initialState: session.initialState,
+            maxOrders: session.maxOrders,
+        });
+        if (!r.ok) {
+            showToast(puzzleActionErrorZh(r.message), 'error');
+            console.error('puzzle settle failed', r);
+            return;
+        }
+        syncFromPuzzleEngine(r, { finished: true, bars });
+        endGame();
+        return;
+    }
     const r = settleGame({
         fillMode: session.fillMode,
         bars,
@@ -530,13 +768,16 @@ export function updateUI() {
     const histLen = session.historyLength;
     const todayData = selectTodayBar(session);
 
+    const gameDays = sessionGameDays(session);
     // Progress bar
-    const pct = ((session.currentDay - 1) / 30 * 100).toFixed(1);
+    const pct = ((session.currentDay - 1) / gameDays * 100).toFixed(1);
     const fillEl = document.getElementById('dayProgressFill');
     if (fillEl) fillEl.style.width = pct + '%';
 
     // Day counter & mood
     document.getElementById('currentDay').textContent = session.currentDay;
+    const totalDaysEl = document.getElementById('gameDaysTotal');
+    if (totalDaysEl) totalDaysEl.textContent = String(gameDays);
     const moodEl = document.getElementById('progressMood');
     if (moodEl) {
         const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
@@ -630,7 +871,7 @@ export function updateUI() {
     resetOHLCToToday();
 
     // Day 30: only「结束并结算」— no buy/sell pretending to liquidate.
-    const settleDay = session.currentDay >= 30;
+    const settleDay = session.currentDay >= gameDays;
     const buyBtn = document.getElementById('buyBtn');
     const sellBtn = document.getElementById('sellBtn');
     const holdBtn = document.getElementById('holdBtn');
@@ -654,8 +895,11 @@ export function updateUI() {
         }
         if (sellBtn) {
             sellBtn.hidden = false;
-            // locked: may queue sell for next open (T+1)
-            sellBtn.disabled = busy || session.position === 'empty';
+            // Classic next_open may queue sell while locked; puzzle forbids sell until firstSellableDay / T+1.
+            const sellBlocked = isPuzzleSession(session)
+                ? session.position === 'empty' || session.position === 'locked'
+                : session.position === 'empty';
+            sellBtn.disabled = busy || sellBlocked;
         }
         if (holdBtn) {
             holdBtn.hidden = false;
@@ -675,11 +919,12 @@ export function updateUI() {
             !!feats.gameRewind &&
             session.cloudMode &&
             session.gameKind !== 'daily' &&
+            session.gameKind !== 'puzzle' &&
             session.protocolVersion === 'event-v1' &&
             (session.undoCount ?? 0) < 1 &&
             Array.isArray(session.actions) &&
             session.actions.length >= 1 &&
-            session.actions.length <= 29;
+            session.actions.length <= (sessionGameDays(session) - 1);
         if (rewindBtn) {
             rewindBtn.hidden = !eligible;
             rewindBtn.dataset.eligible = eligible ? '1' : '';
@@ -697,10 +942,10 @@ export function updateUI() {
         const sameClose = session.fillMode === 'same_close';
         if (settleDay) {
             if (session.position === 'empty') {
-                hintEl.textContent = '第 30 日 · 空仓可直接结束并结算';
+                hintEl.textContent = `第 ${gameDays} 日 · 空仓可直接结束并结算`;
                 hintEl.className = 'action-hint';
             } else {
-                hintEl.textContent = '第 30 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）';
+                hintEl.textContent = `第 ${gameDays} 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）`;
                 hintEl.className = 'action-hint warning';
             }
         } else if (session.position === 'locked') {

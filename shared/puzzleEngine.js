@@ -6,6 +6,7 @@
  * Returns / MDD measured vs takeover NAV (open mark on day 1).
  */
 import { roundHalfUp, formatReturnPct } from './engine.js';
+export { roundHalfUp, formatReturnPct };
 
 export const PUZZLE_RULE_VERSION = 'puzzle-mtm-v1';
 export const PUZZLE_FILL_MODE = 'next_open';
@@ -421,6 +422,21 @@ export function scorePuzzleStars({ returnPpm, mddPpm, orderCount, benchmarkRetur
   };
 }
 
+
+/** Map engine English reject messages to Chinese UI copy. */
+export function puzzleActionErrorZh(message) {
+  const m = String(message || '');
+  if (m.includes('buy while not flat')) return '已有持仓，不能再买入';
+  if (m.includes('sell while flat')) return '空仓无法卖出';
+  if (m.includes('sell before firstSellableDay')) return '尚未到可卖日（T+1）';
+  if (m.includes('T+1 violation')) return '受 T+1 限制，今日不可卖出';
+  if (m.includes('order budget exceeded')) return '超过本关订单上限';
+  if (m.includes('fill day beyond window')) return '成交日超出残局窗口';
+  if (m.includes('actions length')) return '决策天数不完整或过多';
+  if (m.includes('finish requires')) return '请完成全部决策日后再结算';
+  return m || '操作不合法';
+}
+
 export const PuzzleEngine = {
   PUZZLE_RULE_VERSION,
   PUZZLE_FILL_MODE,
@@ -432,6 +448,7 @@ export const PuzzleEngine = {
   settlePuzzle,
   puzzleBuyHoldBenchmarkPpm,
   scorePuzzleStars,
+  puzzleActionErrorZh,
   roundHalfUp,
   formatReturnPct,
 };

@@ -11,6 +11,7 @@ export function generateKlineAnalysis() {
     const model = computeKlineAnalysisModel({
         kline: input.kline,
         historyLength: input.historyLength,
+        gameDays: input.gameDays || 30,
     });
 
     document.getElementById('klineAnalysis').innerHTML = `
@@ -51,6 +52,7 @@ export function generateBestPoints() {
     patchSession({ bestPoints: computeBestPoints({
         kline: input.kline,
         historyLength: input.historyLength,
+        gameDays: input.gameDays || 30,
     }) });
 }
 
@@ -59,6 +61,7 @@ export function generateBSReport() {
     const report = computeBSReport({
         kline: input.kline,
         historyLength: input.historyLength,
+        gameDays: input.gameDays || 30,
         trades: input.trades,
         fillMode: input.fillMode,
         totalReturn: input.totalReturn,
