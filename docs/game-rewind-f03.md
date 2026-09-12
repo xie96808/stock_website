@@ -41,20 +41,39 @@ EVENT_PROTOCOL_ENABLED=1 GAME_REWIND_ENABLED=1 npm --prefix server start
 
 | `assist_class` | 含义 | 展示 |
 |----------------|------|------|
-| `clean` | 新协议且 `undo_count=0` | 纯净 |
-| `undo` | 新协议且用过反悔 | 反悔 |
-| `legacy` | 旧协议 | 历史练习记录 |
+| `clean` | 未用过反悔（含迁入的旧局） | 纯净 |
+| `undo` | 用过反悔 | 反悔 |
+| `legacy` | 历史残留值；迁移后经典未反悔局应已改为 `clean` | （不再单独做「历史练习」分榜） |
 
-经典榜在 `GAME_REWIND` ON 时增加纯净 / 反悔 / 历史切换；默认 **纯净 + 最佳**；保留两成交模式与 best/avg。反悔局不进入纯净平均值。`GET /leaderboard?assistClass=clean|undo|legacy`；`GET /me/stats` 同样接受 `assistClass`（flag ON 时默认 clean）。
+经典榜在 `GAME_REWIND` ON 时增加 **纯净 / 反悔 / 总榜** 切换；默认 **纯净 + 最佳**；保留两成交模式与 best/avg。反悔局不进入纯净平均值。
+
+| Query | 含义 |
+|-------|------|
+| `assistClass=clean`（默认，flag ON 且省略时） | 仅 `clean` |
+| `assistClass=undo` | 仅 `undo` |
+| `assistClass=all` | **总榜** = 经典 `clean ∪ undo`（迁移后等价于全部可上榜经典辅助成绩） |
+| `assistClass=legacy` | 仍可查询残留 `legacy` 行，UI 不再广告此 tab |
+
+`GET /leaderboard?assistClass=clean|undo|all|legacy`；`GET /me/stats` 同样接受上述值（flag ON 时默认 clean）。
+
+## 旧局迁入纯净
+
+`server/migrations/015_assist_legacy_to_clean.sql`：
+
+- `game_sessions`：`game_kind=classic` 且 `coalesce(undo_count,0)=0` 且 `assist_class IS NULL OR 'legacy'` → `clean`
+- `game_results`：对应 `game_id` 上 `null/legacy` → `clean`
+- **不**改 `undo_count=1` / `assist_class=undo` 行
+
+部署后在 server 29 跑既有 migrate 流程即可（merge 后再迁 prod）。
 
 ## 实现位置
 
 - `server/src/lib/gameRewind.js` — rewind 事务
 - `server/src/lib/gameProtocol.js` — state `canRewind` / `rewindCost`
-- `server/src/lib/leaderboard.js` — assist 过滤
+- `server/src/lib/leaderboard.js` — assist 过滤（含 `all`）
 - `server/src/routes/games.js` — `POST .../rewind`、`features.gameRewind`
-- 客户端：局内反悔按钮 + 确认弹窗；榜单辅助 tab；结果页辅助标记
-- 无新 migration（复用 `009` 列 + `game_commands` + `reward_claims`）
+- 客户端：局内反悔按钮（琥珀黄）+ 确认弹窗；榜单辅助 tab；结果页辅助标记
+- Migration：`015_assist_legacy_to_clean.sql`
 
 ## 测试
 
@@ -64,8 +83,8 @@ node --test server/tests/game-rewind-off.integration.test.js
 node scripts/run-tests.mjs
 ```
 
-覆盖：余额 49 保留 / 50→0、双击幂等、第 1 / 第 29 决策回退、与 settle 竞态、T+1 再决策、分榜隔离、flag OFF 行为。
+覆盖：余额 49 保留 / 50→0、双击幂等、第 1 / 第 29 决策回退、与 settle 竞态、T+1 再决策、分榜隔离（纯净 / 反悔 / 总榜）、flag OFF 行为。
 
 ## 明确不做
 
-VPS 部署；强制打开 EVENT_PROTOCOL；旧局迁入纯净榜；虚构「原路线最终收益」复盘；每日局 / 残局反悔。
+VPS 部署；强制打开 EVENT_PROTOCOL；虚构「原路线最终收益」复盘；每日局 / 残局反悔。旧局迁入纯净已由 `015` 完成（本条相对初版 F03 已收回）。

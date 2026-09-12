@@ -55,7 +55,7 @@ export function endGame() {
             assistEl.textContent = '辅助：纯净局';
         } else if (a === 'legacy') {
             assistEl.hidden = false;
-            assistEl.textContent = '历史练习记录';
+            assistEl.textContent = '辅助：旧协议局';
         } else {
             assistEl.hidden = true;
             assistEl.textContent = '';

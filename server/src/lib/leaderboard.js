@@ -1,7 +1,7 @@
 import { openDb } from "../db/connection.js";
 import { ensureDatasetLoaded } from "./dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
-import { ASSIST_SET, ASSIST_CLEAN } from "../../../shared/protocol.js";
+import { ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { config } from "./config.js";
 
 const FILL_SET = new Set(FILL_MODES);
@@ -52,20 +52,21 @@ export function resolveBoardKey(query = {}) {
       ? query.datasetVersion.trim()
       : meta.version;
 
-  // F03: assist boards only when GAME_REWIND_ENABLED. Flag off → null (legacy aggregate).
+  // F03: assist boards only when GAME_REWIND_ENABLED. Flag off → null (unfiltered aggregate).
+  // assistClass=all → 总榜 = classic clean ∪ undo (after legacy→clean migration).
   let assistClass = null;
   if (config.gameRewindEnabled) {
     const raw = query.assistClass;
     if (raw == null || raw === "") {
       assistClass = ASSIST_CLEAN;
-    } else if (ASSIST_SET.has(String(raw))) {
+    } else if (ASSIST_QUERY_SET.has(String(raw))) {
       assistClass = String(raw);
     } else {
       return {
         error: {
           status: 400,
           code: "INVALID_ASSIST_CLASS",
-          message: "assistClass 必须为 clean、undo 或 legacy",
+          message: "assistClass 必须为 clean、undo、legacy 或 all",
         },
       };
     }
@@ -204,12 +205,16 @@ function seatsCte(metric, board) {
 function assistSql(board) {
   if (!board.assistClass) return "";
   // Per-game assist classification; classic only on assist boards.
+  if (board.assistClass === ASSIST_ALL) {
+    // 总榜: clean ∪ undo (post-migration; no legacy population advertised).
+    return " AND s.game_kind = 'classic' AND s.assist_class IN ('clean', 'undo')";
+  }
   return " AND s.assist_class = ? AND s.game_kind = 'classic'";
 }
 
 function boardBinds(board) {
   const binds = [board.ruleVersion, board.datasetVersion, board.fillMode];
-  if (board.assistClass) binds.push(board.assistClass);
+  if (board.assistClass && board.assistClass !== ASSIST_ALL) binds.push(board.assistClass);
   return binds;
 }
 

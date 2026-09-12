@@ -384,7 +384,8 @@
                         <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
                         <button class="action-btn hold" id="holdBtn" onclick="handleAction('hold')">观望</button>
                         <button class="action-btn hold" id="finishBtn" onclick="finishSettle()" hidden>结束并结算</button>
-                        <button type="button" class="action-btn rewind" id="rewindBtn" onclick="openRewindConfirm()" hidden>
+                        <button type="button" class="action-btn rewind" id="rewindBtn" onclick="openRewindConfirm()" hidden aria-label="反悔">
+                            <span class="rewind-btn-icon" aria-hidden="true">↩</span>
                             <span class="rewind-btn-label">反悔</span>
                         </button>
                         <span class="action-hint" id="actionHint">选择你的操作，将在明日开盘时执行</span>

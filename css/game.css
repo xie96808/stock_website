@@ -639,15 +639,37 @@
 .status-value.neutral { color: var(--ink); }
 .status-value.locked  { color: var(--terra); }
 
-/* F03 rewind */
+/* F03 rewind — paper/ink friendly amber-gold */
 .action-btn.rewind {
-  background: transparent;
-  border: 1px dashed color-mix(in srgb, var(--ink, #2b2118) 35%, transparent);
-  color: var(--ink, #2b2118);
+  color: #3a2e14;
+  background: #e6bf3c;
+  border: 1.6px solid color-mix(in srgb, #8a6a12 55%, var(--line, #3a3530));
+  border-radius: 18px 22px 16px 20px;
+  box-shadow: 2px 2px 0 var(--line, #3a3530);
   font-size: 0.85rem;
+  font-weight: 600;
+}
+.action-btn.rewind:hover:not(:disabled) {
+  background: #f0cb4a;
+  box-shadow: 3px 3px 0 var(--line, #3a3530);
 }
 .action-btn.rewind:disabled {
   opacity: 0.45;
+}
+[data-theme="dark"] .action-btn.rewind {
+  color: #1c1608;
+  background: #d4a82e;
+  border-color: #f0d878;
+}
+[data-theme="dark"] .action-btn.rewind:hover:not(:disabled) {
+  background: #e6bf3c;
+}
+.action-btn.rewind .rewind-btn-icon {
+  margin-right: 0.2em;
+  font-weight: 700;
+}
+.action-btn.rewind .rewind-btn-label {
+  color: inherit;
 }
 .rewind-modal {
   position: fixed;

@@ -7,7 +7,7 @@ import { deductGameCreate } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
-import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, ASSIST_SET, ASSIST_CLEAN } from "../../../shared/protocol.js";
+import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
 
 const FILL_SET = new Set(FILL_MODES);
@@ -715,7 +715,7 @@ export function myStats(userId, query = {}) {
   if (config.gameRewindEnabled) {
     const raw = query.assistClass;
     if (raw == null || raw === "") assistClass = ASSIST_CLEAN;
-    else if (ASSIST_SET.has(String(raw))) assistClass = String(raw);
+    else if (ASSIST_QUERY_SET.has(String(raw))) assistClass = String(raw);
     else {
       return {
         error: { status: 400, code: "INVALID_ASSIST_CLASS", message: "assistClass 无效" },
@@ -741,7 +741,9 @@ export function myStats(userId, query = {}) {
     sql += ` AND s.fill_mode = ?`;
     params.push(fillMode);
   }
-  if (assistClass) {
+  if (assistClass === ASSIST_ALL) {
+    sql += ` AND s.game_kind = 'classic' AND s.assist_class IN ('clean', 'undo')`;
+  } else if (assistClass) {
     sql += ` AND s.assist_class = ? AND s.game_kind = 'classic'`;
     params.push(assistClass);
   }

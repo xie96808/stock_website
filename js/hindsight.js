@@ -597,6 +597,12 @@ function _loadHtml2canvas() {
     });
 }
 
+const HINDSIGHT_SITE_URL = 'https://stockgame.xieyw.top';
+
+function _hindsightShareFooter() {
+    return `你要不要也来回溯一下？\n${HINDSIGHT_SITE_URL}\n「股海沉浮·治愈档案馆」`;
+}
+
 export async function hindsightShare() {
     if (!_lastResultCache) return;
     await _loadHtml2canvas();
@@ -631,7 +637,8 @@ export async function hindsightShare() {
                         await navigator.share({
                             files: [file],
                             title: `${c.stockName} 回溯`,
-                            text: `${c.stockName} 理论${c.earnedAmt >= 0 ? '最多赚' : '最少亏'}`,
+                            text: `${c.stockName} 理论${c.earnedAmt >= 0 ? '最多赚' : '最少亏'} · 来玩：${HINDSIGHT_SITE_URL}`,
+                            url: HINDSIGHT_SITE_URL,
                         });
                         return;
                     } catch (err) {
@@ -650,8 +657,7 @@ export async function hindsightShare() {
     const text =
         `在平行宇宙里，我在 ${c.buyDate} 以 ¥${c.buyPrice} 买入了 ${c.stockName}（${c.buyShares.toLocaleString()} 股），` +
         `若在 ${c.peakDate} 以最高价 ¥${c.peakPrice} 卖出，理论${verb} ¥${absAmt}。\n\n` +
-        `你要不要也来回溯一下？\n` +
-        `「股海沉浮·治愈档案馆」—— 治愈每一个错过大牛股的遗憾灵魂`;
+        `${_hindsightShareFooter()}\n—— 治愈每一个错过大牛股的遗憾灵魂`;
     _copyText(text, null);
     alert('已复制分享文案（当前环境无法生成图片）');
 }
@@ -666,7 +672,7 @@ export function hindsightCopy() {
         `在平行宇宙里，我在 ${c.buyDate} 以 ¥${c.buyPrice} 买入了 ${c.stockName}（${c.buyShares.toLocaleString()} 股），\n` +
         `若在 ${c.peakDate} 以最高价 ¥${c.peakPrice} 卖出，理论${verb} ¥${absAmt}。\n\n` +
         `区间最大涨幅 ${retSign}${(c.bestReturn * 100).toFixed(2)}%，区间持有 ${(c.periodReturn >= 0 ? '+' : '') + c.periodReturn.toFixed(2)}%。\n` +
-        `你要不要也来回溯一下？`;
+        `${_hindsightShareFooter()}`;
     _copyText(text, 'hindsightCopyBtn');
 }
 

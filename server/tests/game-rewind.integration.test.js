@@ -9,7 +9,7 @@ process.env.GAME_REWIND_ENABLED = "1";
 const { getSessionRow } = await import("../src/lib/games.js");
 const { openDb } = await import("../src/db/connection.js");
 const { REWIND_COST } = await import("../src/lib/gameRewind.js");
-const { ASSIST_CLEAN, ASSIST_UNDO } = await import("../../shared/protocol.js");
+const { ASSIST_CLEAN, ASSIST_UNDO, ASSIST_ALL } = await import("../../shared/protocol.js");
 
 const ctx = await startTestServer();
 const { api, register, stop } = ctx;
@@ -258,7 +258,7 @@ test("rewind vs settle race: only one wins", async () => {
   }
 });
 
-test("assist boards: clean default excludes undo; undo board isolated", async () => {
+test("assist boards: clean default excludes undo; undo isolated; all = clean∪undo", async () => {
   const auth = await register(`board${Date.now().toString(36)}`);
   // Opt in for boards
   openDb()
@@ -332,7 +332,22 @@ test("assist boards: clean default excludes undo; undo board isolated", async ()
   // Undo board should see the high ppm seat
   assert.ok(undo.json.data.total >= 1);
 
+  // 总榜 = clean ∪ undo
+  const allBoard = await api("/api/v1/leaderboard?fillMode=next_open&metric=best&assistClass=all");
+  assert.equal(allBoard.status, 200);
+  assert.equal(allBoard.json.data.assistClass, ASSIST_ALL);
+  assert.ok(allBoard.json.data.total >= 1);
+  assert.ok(
+    allBoard.json.data.total >= Math.max(clean.json.data.total, undo.json.data.total),
+    JSON.stringify({ all: allBoard.json.data.total, clean: clean.json.data.total, undo: undo.json.data.total })
+  );
+
   const statsClean = await api("/api/v1/me/stats?fillMode=next_open");
   assert.equal(statsClean.status, 200);
   assert.equal(statsClean.json.data.filters.assistClass, ASSIST_CLEAN);
+
+  const statsAll = await api("/api/v1/me/stats?fillMode=next_open&assistClass=all");
+  assert.equal(statsAll.status, 200);
+  assert.equal(statsAll.json.data.filters.assistClass, ASSIST_ALL);
+  assert.ok(statsAll.json.data.count >= statsClean.json.data.count);
 });
