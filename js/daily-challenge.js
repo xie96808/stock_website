@@ -1,4 +1,4 @@
-/** F01 每日同题挑战 — hub card + start/resume/leaderboard */
+/** F01 每日同题挑战 — hub card + confirm + start/resume/leaderboard */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 import {
@@ -6,8 +6,18 @@ import {
   loadCloudGameDraft,
 } from './game-sync.js';
 
+/** Must match server DAILY_CHALLENGE_COST (classic create stays 20). */
+export const DAILY_CHALLENGE_COST_UI = 50;
+
+const MARKETING_LINE = '用完全相同的个股进行游戏！考验你的操作';
+
+const CONFIRM_BODY =
+  '你将正式进入今日的挑战。所有玩家将会针对同一个股、同一时间段进行操作。每日排行前三的玩家将会获得丰厚的奖励！特别提醒：每日挑战每天只能进行一次。请珍惜你的机会！';
+
 let dailyChallengeEnabled = false;
 let statusCache = null;
+let confirmResolver = null;
+let startLocked = false;
 
 export function isDailyChallengeEnabled() {
   return dailyChallengeEnabled;
@@ -71,6 +81,19 @@ async function dailyApi(path, { method = 'GET', body, headers = {} } = {}) {
   return { ok: true, status: res.status, data: json.data };
 }
 
+function challengeCost(d) {
+  const n = Number(d?.cost);
+  return Number.isFinite(n) && n > 0 ? n : DAILY_CHALLENGE_COST_UI;
+}
+
+function syncCardBadge(cost) {
+  const badge = document.querySelector('#dailyChallengeCard .jiu-price-badge');
+  if (!badge) return;
+  badge.setAttribute('data-jiu-price', String(cost));
+  badge.setAttribute('aria-label', `消耗 ${cost} 韭币`);
+  badge.innerHTML = amountWithCoinHtml(cost, { size: 12 });
+}
+
 export async function refreshDailyChallengeCard() {
   const card = cardEl();
   if (!card) return;
@@ -96,9 +119,10 @@ export async function refreshDailyChallengeCard() {
   }
 
   const d = statusCache;
-  const costHtml = amountWithCoinHtml(d.cost || 20, { size: 14 });
+  const cost = challengeCost(d);
+  syncCardBadge(cost);
   if (meta) {
-    meta.innerHTML = `${d.date || '今日'} · 次日开盘 · 耗 ${costHtml}`;
+    meta.textContent = MARKETING_LINE;
   }
 
   if (!d.ready) {
@@ -126,9 +150,122 @@ export async function refreshDailyChallengeCard() {
   }
 }
 
+function ensureConfirmModal() {
+  if (document.getElementById('dailyChallengeConfirmModal')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'dailyChallengeConfirmModal';
+  wrap.className = 'jiu-coin-modal daily-challenge-confirm-modal';
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="dailyChallengeConfirmTitle">
+      <button type="button" class="jiu-coin-close-x" id="dailyChallengeConfirmCloseX" aria-label="关闭">×</button>
+      <h2 id="dailyChallengeConfirmTitle">开始今日挑战</h2>
+      <p class="jiu-coin-modal-body" id="dailyChallengeConfirmBody"></p>
+      <p class="daily-challenge-confirm-cost" id="dailyChallengeConfirmCost"></p>
+      <div class="jiu-coin-modal-actions">
+        <button type="button" class="jiu-coin-secondary" id="dailyChallengeConfirmCancel">取消</button>
+        <button type="button" class="jiu-coin-primary" id="dailyChallengeConfirmOk">开始游戏</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  const close = () => resolveConfirm(false);
+  document.getElementById('dailyChallengeConfirmCancel')?.addEventListener('click', close);
+  document.getElementById('dailyChallengeConfirmCloseX')?.addEventListener('click', close);
+  document.getElementById('dailyChallengeConfirmOk')?.addEventListener('click', () => resolveConfirm(true));
+  wrap.addEventListener('click', (e) => {
+    if (e.target === wrap) close();
+  });
+}
+
+function resolveConfirm(ok) {
+  const modal = document.getElementById('dailyChallengeConfirmModal');
+  if (modal) modal.hidden = true;
+  if (!confirmResolver) return;
+  const r = confirmResolver;
+  confirmResolver = null;
+  r(ok);
+}
+
+function askFreshStartConfirm(cost) {
+  ensureConfirmModal();
+  const modal = document.getElementById('dailyChallengeConfirmModal');
+  const body = document.getElementById('dailyChallengeConfirmBody');
+  const costEl = document.getElementById('dailyChallengeConfirmCost');
+  if (body) body.textContent = CONFIRM_BODY;
+  const auth = getAuthState();
+  const bal = auth?.user?.jiuCoinBalance;
+  const balBit =
+    bal == null || Number.isNaN(Number(bal))
+      ? ''
+      : ` · 当前余额 ${amountWithCoinHtml(bal, { size: 14 })}`;
+  if (costEl) {
+    costEl.innerHTML = `本次消耗 ${amountWithCoinHtml(cost, { size: 14 })}${balBit}`;
+  }
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    if (modal) {
+      modal.hidden = false;
+      document.getElementById('dailyChallengeConfirmOk')?.focus();
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+function fillModalEl() {
+  return document.getElementById('fillModeModal');
+}
+
+function setFillProgress(pct, tip) {
+  const p = Math.max(0, Math.min(100, Math.round(pct)));
+  const fill = document.getElementById('fillLoadFill');
+  const bar = document.getElementById('fillLoadBar');
+  const pctEl = document.getElementById('fillLoadPct');
+  const tipEl = document.getElementById('fillLoadTip');
+  if (fill) fill.style.width = p + '%';
+  if (bar) bar.setAttribute('aria-valuenow', String(p));
+  if (pctEl) pctEl.textContent = p + '%';
+  if (tipEl && tip) tipEl.textContent = tip;
+}
+
+function showFillLoadingOnly() {
+  const modal = fillModalEl();
+  if (!modal) return;
+  const choose = document.getElementById('fillModeChoosePane');
+  const loading = document.getElementById('fillModeLoadingPane');
+  const conflict = document.getElementById('fillModeConflictPane');
+  const title = document.getElementById('fillModeDialogTitle');
+  if (choose) choose.hidden = true;
+  if (conflict) conflict.hidden = true;
+  if (loading) loading.hidden = false;
+  if (title) title.textContent = '正在开局';
+  modal.classList.add('is-loading');
+  modal.hidden = false;
+  modal.setAttribute('aria-hidden', 'false');
+  setFillProgress(6, '准备今日挑战…');
+}
+
+function closeFillModal() {
+  const modal = fillModalEl();
+  if (!modal) return;
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+  modal.classList.remove('is-loading');
+  const choose = document.getElementById('fillModeChoosePane');
+  const loading = document.getElementById('fillModeLoadingPane');
+  const conflict = document.getElementById('fillModeConflictPane');
+  if (choose) choose.hidden = false;
+  if (loading) loading.hidden = true;
+  if (conflict) conflict.hidden = true;
+  setFillProgress(0, '股票资源加载中…');
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function startCloudFromMeta(cloud) {
-  const startGame = window.__stockStartGameInner || null;
-  // Prefer raw startGame from module binding set at boot; fall back to wrapped window.startGame.
   const runner =
     typeof window.__dailyStartGame === 'function'
       ? window.__dailyStartGame
@@ -148,11 +285,9 @@ async function startCloudFromMeta(cloud) {
     userId: auth?.user?.id,
   });
   const resumeActions = draft && Array.isArray(draft.actions) ? draft.actions : null;
-  // start-flow wraps window.startGame as modal; __dailyStartGame is the real engine entry.
   if (typeof window.__dailyStartGame === 'function') {
     await window.__dailyStartGame({ cloud, resumeActions });
   } else {
-    // If only the modal wrapper exists, it ignores options — call after ensuring pack.
     await runner({ cloud, resumeActions });
   }
 }
@@ -169,6 +304,35 @@ async function createOrResumeDaily() {
   return data.game;
 }
 
+/** Fresh start: confirm → progress bar → create → enter game. */
+async function runFreshDailyStart() {
+  const cost = challengeCost(statusCache);
+  const ok = await askFreshStartConfirm(cost);
+  if (!ok) return;
+
+  showFillLoadingOnly();
+  try {
+    setFillProgress(18, '创建今日挑战…');
+    const { ensureStocksLoaded, packReady } = await import('./pack-store.js');
+    const { gameState } = await import('./state.js');
+    const packPromise = ensureStocksLoaded(gameState, (ratio) => {
+      setFillProgress(18 + Math.max(0, Math.min(1, ratio)) * 50, '股票资源加载中…');
+    });
+    const createPromise = createOrResumeDaily();
+    const [game] = await Promise.all([createPromise, packPromise]);
+    setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+    await refreshMe().catch(() => {});
+    await startCloudFromMeta(game);
+    setFillProgress(100, '即将进入…');
+    await delay(60);
+    closeFillModal();
+    await refreshDailyChallengeCard();
+  } catch (e) {
+    closeFillModal();
+    throw e;
+  }
+}
+
 async function handleActiveConflict(activeGame) {
   const kind = activeGame.gameKind === 'daily' ? '今日挑战' : '经典练习';
   const okContinue = window.confirm(
@@ -183,12 +347,11 @@ async function handleActiveConflict(activeGame) {
   );
   if (!okAbandon) return;
   await abandonActiveCloudGame();
-  const game = await createOrResumeDaily();
-  await startCloudFromMeta(game);
+  await runFreshDailyStart();
 }
 
 export async function onDailyChallengeCardClick() {
-  if (!dailyChallengeEnabled) return;
+  if (!dailyChallengeEnabled || startLocked) return;
   const auth = getAuthState();
   if (!auth?.user) {
     showToast('登录后才能参加今日挑战', 'error');
@@ -205,6 +368,7 @@ export async function onDailyChallengeCardClick() {
     return;
   }
 
+  // Resume: no first-time confirm (chance already consumed).
   if (d.activeGame) {
     await startCloudFromMeta(d.activeGame);
     return;
@@ -215,6 +379,7 @@ export async function onDailyChallengeCardClick() {
     return;
   }
 
+  startLocked = true;
   try {
     if (d.cloudActiveGame && d.cloudActiveGame.gameKind !== 'daily') {
       await handleActiveConflict(d.cloudActiveGame);
@@ -222,9 +387,7 @@ export async function onDailyChallengeCardClick() {
       await refreshDailyChallengeCard();
       return;
     }
-    const game = await createOrResumeDaily();
-    await refreshMe().catch(() => {});
-    await startCloudFromMeta(game);
+    await runFreshDailyStart();
   } catch (e) {
     if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.game) {
       await handleActiveConflict(e.details.game);
@@ -240,7 +403,16 @@ export async function onDailyChallengeCardClick() {
       return;
     }
     showToast(e.message || '开局失败', 'error');
+  } finally {
+    startLocked = false;
   }
+}
+
+function avatarUrl(row) {
+  if (!row) return 'images/avatars/01.png';
+  if (row.avatarUrl) return row.avatarUrl;
+  const n = String(row.avatarId || 1).padStart(2, '0');
+  return `images/avatars/${n}.png`;
 }
 
 export async function showDailyChallengeBoard() {
@@ -273,7 +445,10 @@ export async function showDailyChallengeBoard() {
         const mdd = e.mddPpm == null ? '—' : (e.mddPpm / 10000).toFixed(2) + '%';
         return `<tr>
           <td>${e.rank}</td>
-          <td>${escapeHtml(e.nickname || '玩家')}</td>
+          <td class="daily-challenge-nick-cell">
+            <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28">
+            <span>${escapeHtml(e.nickname || '玩家')}</span>
+          </td>
           <td>${e.returnPct}%</td>
           <td>${mdd}</td>
         </tr>`;
@@ -303,4 +478,8 @@ function escapeHtml(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/'/g, '&#39;');
 }

@@ -78,6 +78,7 @@ export async function startGame(options = {}) {
             ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
             fillMode: cloud.fillMode || getSession().fillMode,
             protocolVersion: cloud.protocolVersion || null,
+            gameKind: cloud.gameKind || null,
             revision: cloud.revision ?? 0,
             undoCount: cloud.undoCount ?? 0,
             assistClass: cloud.assistClass || null,
@@ -385,7 +386,7 @@ async function ensureRewindFeatures() {
 
 export async function openRewindConfirm() {
     const session = getSession();
-    if (!session.cloudMode || session.protocolVersion !== 'event-v1') return;
+    if (!session.cloudMode || session.protocolVersion !== 'event-v1' || session.gameKind === 'daily') return;
     if (session.undoCount >= 1 || session.rewindBusy) return;
     if (!session.actions || session.actions.length < 1) return;
     const feats = await ensureRewindFeatures();
@@ -666,12 +667,14 @@ export function updateUI() {
         }
     }
 
-    // F03 rewind: only event-v1 classic cloud, flag on, once, ≥1 decision (incl. day-30 pending settle)
+    // F03 rewind: only event-v1 classic cloud, flag on, once, ≥1 decision (incl. day-30 pending settle).
+    // Daily challenge (game_kind=daily) never shows rewind UI.
     void (async () => {
         const feats = await ensureRewindFeatures();
         const eligible =
             !!feats.gameRewind &&
             session.cloudMode &&
+            session.gameKind !== 'daily' &&
             session.protocolVersion === 'event-v1' &&
             (session.undoCount ?? 0) < 1 &&
             Array.isArray(session.actions) &&

@@ -366,10 +366,23 @@
 }
 
 
-/* F01 今日挑战 */
+/* F01 今日挑战 — visually distinct from classic「开始游戏」lane */
 .start-screen .daily-challenge-lane {
-    border-color: color-mix(in srgb, var(--terra) 35%, var(--line));
-    background: color-mix(in srgb, var(--terra) 6%, var(--panel));
+    position: relative;
+    overflow: hidden;
+    border-width: 2px;
+    border-color: color-mix(in srgb, var(--terra) 72%, var(--line));
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--terra) 16%, var(--panel)) 0%,
+        color-mix(in srgb, var(--terra) 5%, var(--card)) 55%,
+        var(--card) 100%
+      );
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--terra) 45%, var(--line));
+}
+.start-screen .daily-challenge-lane:hover {
+    box-shadow: 4px 5px 0 color-mix(in srgb, var(--terra) 50%, var(--line));
 }
 .start-screen .daily-challenge-lane.is-disabled {
     opacity: 0.72;
@@ -378,10 +391,49 @@
 .start-screen .daily-challenge-lane[hidden] {
     display: none !important;
 }
+.start-screen .daily-challenge-ribbon {
+    position: absolute;
+    top: 10px;
+    right: -28px;
+    z-index: 1;
+    padding: 3px 34px;
+    font-family: var(--kaiti);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: #fff8ef;
+    background: color-mix(in srgb, var(--terra) 88%, #5a2a12);
+    border: 1px solid color-mix(in srgb, var(--terra) 60%, var(--line));
+    transform: rotate(32deg);
+    pointer-events: none;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+.start-screen .daily-challenge-mark {
+    border-color: color-mix(in srgb, var(--terra) 70%, var(--line));
+    background: color-mix(in srgb, var(--terra) 18%, transparent);
+    color: color-mix(in srgb, var(--terra) 80%, var(--ink));
+}
+.start-screen .daily-challenge-lane .copy strong {
+    font-size: 1.2rem;
+    letter-spacing: 0.16em;
+}
+.start-screen .daily-challenge-cta {
+    min-width: 132px;
+    height: 46px;
+    font-size: 1.05rem;
+    letter-spacing: 0.2em;
+    border-width: 2px;
+    border-color: color-mix(in srgb, var(--terra) 55%, var(--line));
+    background: color-mix(in srgb, var(--terra) 22%, var(--panel));
+}
 .daily-challenge-card-state {
     margin: 4px 0 0;
     font-size: 12px;
     opacity: 0.85;
+}
+.daily-challenge-confirm-cost {
+    margin: 0 0 4px;
+    font-size: 0.92rem;
+    color: var(--ink-soft, #5a5348);
 }
 .daily-challenge-board {
     margin-top: 4px;
@@ -419,4 +471,40 @@
 .daily-challenge-table th:first-child,
 .daily-challenge-table td:first-child {
     width: 3em;
+}
+.daily-challenge-nick-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.daily-challenge-nick-cell span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dc-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+}
+
+@media (max-width: 640px) {
+    .start-screen .daily-challenge-ribbon {
+        top: 8px;
+        right: -34px;
+        font-size: 10px;
+        padding: 2px 30px;
+    }
+    .start-screen .daily-challenge-cta {
+        min-width: 0;
+        width: 100%;
+        height: 44px;
+    }
+    .start-screen .daily-challenge-lane .copy {
+        padding-right: 8px;
+    }
 }

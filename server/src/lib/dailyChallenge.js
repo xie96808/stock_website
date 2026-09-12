@@ -10,7 +10,7 @@ import {
   pickRandomWindow,
   sha256Text,
 } from "./dataset.js";
-import { deductGameCreate, shanghaiYmd, getJiuCoinBalance, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
+import { deductGameCreateCost, shanghaiYmd, getJiuCoinBalance } from "./jiuCoin.js";
 import { settleCurveMetrics } from "../../../shared/equityCurve.js";
 import { RULE_VERSION, INITIAL_CASH, GAME_DAYS } from "../../../shared/rules.js";
 import {
@@ -44,7 +44,8 @@ function sessionPublicFromRow(row) {
   };
 }
 
-export const DAILY_CHALLENGE_COST = JIU_COIN_GAME_CREATE_COST;
+/** Decoupled from classic create cost (20). Challenge-only fee. */
+export const DAILY_CHALLENGE_COST = 50;
 export const DAILY_FILL_MODE = "next_open";
 
 /** Inject wall clock for tests via STOCKGAME_NOW_MS (epoch ms). */
@@ -492,7 +493,7 @@ export function startDailyChallenge(userId, { createKey: clientKey } = {}) {
         challenge.id
       );
 
-      deductGameCreate(userId, id, db);
+      deductGameCreateCost(userId, id, db, DAILY_CHALLENGE_COST);
 
       db.prepare(
         `INSERT INTO daily_challenge_attempts (
@@ -507,7 +508,7 @@ export function startDailyChallenge(userId, { createKey: clientKey } = {}) {
         error: {
           status: 402,
           code: "INSUFFICIENT_FUNDS",
-          message: e.message || "韭币不足，无法创建今日挑战",
+          message: "韭币不足，无法创建今日挑战",
           details: { balance: e.balance ?? null, required: e.required ?? DAILY_CHALLENGE_COST },
         },
       };
@@ -688,12 +689,15 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
     .get(challenge.id);
 
   const entries = rows.map((r) => {
+    const custom = r.avatar_custom_path || null;
     const entry = {
       rank: r.rank,
       userId: r.user_id,
       nickname: r.nickname,
       avatarId: r.avatar_id,
-      avatarCustomPath: r.avatar_custom_path || null,
+      avatarCustomPath: custom,
+      // Same pattern as classic leaderboard: custom CDN path or null (client falls back to preset).
+      avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
       returnPpm: r.return_ppm,
       returnPct: (r.return_ppm / 10000).toFixed(2),
       mddPpm: r.mdd_ppm,

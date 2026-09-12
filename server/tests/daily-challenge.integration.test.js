@@ -16,6 +16,7 @@ const {
   shanghaiYmdAt,
   challengeNow,
   getChallengeByDate,
+  DAILY_CHALLENGE_COST,
 } = await import("../src/lib/dailyChallenge.js");
 
 const ctx = await startTestServer();
@@ -83,14 +84,16 @@ test("double-create same day: one charge and one chance; resume no charge", asyn
   const first = await startDaily(auth, key);
   assert.equal(first.status, 201, JSON.stringify(first.json));
   assert.equal(first.json.data.charged, true);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - JIU_COIN_GAME_CREATE_COST);
+  assert.equal(DAILY_CHALLENGE_COST, 50);
+  assert.notEqual(DAILY_CHALLENGE_COST, JIU_COIN_GAME_CREATE_COST);
+  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - DAILY_CHALLENGE_COST);
 
   const again = await startDaily(auth, key);
   assert.equal(again.status, 200, JSON.stringify(again.json));
   assert.equal(again.json.data.resumed, true);
   assert.equal(again.json.data.charged, false);
   assert.equal(again.json.data.game.gameId, first.json.data.game.gameId);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - JIU_COIN_GAME_CREATE_COST);
+  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - DAILY_CHALLENGE_COST);
 
   const otherKey = await startDaily(auth, `other-${auth.user.id}`);
   assert.ok([200, 201].includes(otherKey.status) || otherKey.status === 409);
@@ -98,7 +101,7 @@ test("double-create same day: one charge and one chance; resume no charge", asyn
   if (otherKey.status === 200) {
     assert.equal(otherKey.json.data.charged, false);
   }
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - JIU_COIN_GAME_CREATE_COST);
+  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - DAILY_CHALLENGE_COST);
 
   const st = await api("/api/v1/daily-challenge");
   assert.equal(st.status, 200);
@@ -106,20 +109,47 @@ test("double-create same day: one charge and one chance; resume no charge", asyn
   assert.ok(st.json.data.activeGame?.gameId);
 });
 
-test("insufficient balance: no occupancy and no charge", async () => {
-  const auth = await register(`dci${Date.now().toString(36)}`);
-  openDb().prepare(`UPDATE users SET jiu_coin_balance = 0 WHERE id = ?`).run(auth.user.id);
-  const r = await startDaily(auth, `poor-${auth.user.id}`);
-  assert.equal(r.status, 402);
-  assert.equal(r.json.error.code, "INSUFFICIENT_FUNDS");
+test("insufficient balance thresholds: 0 and cost-1 fail; cost succeeds", async () => {
   const ymd = shanghaiYmdAt(challengeNow());
   const ch = getChallengeByDate(ymd);
   assert.ok(ch);
-  const att = openDb()
-    .prepare(`SELECT * FROM daily_challenge_attempts WHERE user_id = ? AND challenge_id = ?`)
-    .get(auth.user.id, ch.id);
-  assert.equal(att, undefined);
-  assert.equal(getJiuCoinBalance(auth.user.id), 0);
+
+  async function assertNoAttempt(userId) {
+    const att = openDb()
+      .prepare(`SELECT * FROM daily_challenge_attempts WHERE user_id = ? AND challenge_id = ?`)
+      .get(userId, ch.id);
+    assert.equal(att, undefined);
+  }
+
+  const poor0 = await register(`dci0${Date.now().toString(36)}`);
+  openDb().prepare(`UPDATE users SET jiu_coin_balance = 0 WHERE id = ?`).run(poor0.user.id);
+  const r0 = await startDaily(poor0, `poor0-${poor0.user.id}`);
+  assert.equal(r0.status, 402);
+  assert.equal(r0.json.error.code, "INSUFFICIENT_FUNDS");
+  assert.equal(r0.json.error.details.required, DAILY_CHALLENGE_COST);
+  await assertNoAttempt(poor0.user.id);
+  assert.equal(getJiuCoinBalance(poor0.user.id), 0);
+
+  const poor49 = await register(`dci49${Date.now().toString(36)}`);
+  openDb()
+    .prepare(`UPDATE users SET jiu_coin_balance = ? WHERE id = ?`)
+    .run(DAILY_CHALLENGE_COST - 1, poor49.user.id);
+  const r49 = await startDaily(poor49, `poor49-${poor49.user.id}`);
+  assert.equal(r49.status, 402);
+  assert.equal(r49.json.error.code, "INSUFFICIENT_FUNDS");
+  assert.equal(r49.json.error.details.required, DAILY_CHALLENGE_COST);
+  assert.equal(r49.json.error.details.balance, DAILY_CHALLENGE_COST - 1);
+  await assertNoAttempt(poor49.user.id);
+  assert.equal(getJiuCoinBalance(poor49.user.id), DAILY_CHALLENGE_COST - 1);
+
+  const ok50 = await register(`dci50${Date.now().toString(36)}`);
+  openDb()
+    .prepare(`UPDATE users SET jiu_coin_balance = ? WHERE id = ?`)
+    .run(DAILY_CHALLENGE_COST, ok50.user.id);
+  const r50 = await startDaily(ok50, `ok50-${ok50.user.id}`);
+  assert.equal(r50.status, 201, JSON.stringify(r50.json));
+  assert.equal(r50.json.data.charged, true);
+  assert.equal(getJiuCoinBalance(ok50.user.id), 0);
 });
 
 test("settle before cutoff enters board; late settle excluded; idempotent retry", async () => {
@@ -176,4 +206,46 @@ test("flag off returns 404", async () => {
   const cfg = await api("/api/v1/config");
   assert.equal(cfg.json.data.features.dailyChallenge, false);
   config.dailyChallengeEnabled = true;
+});
+
+test("daily board entries include avatar fields in one payload", async () => {
+  const auth = await register(`dcav${Date.now().toString(36)}`);
+  const started = await startDaily(auth, `avatar-${auth.user.id}`);
+  assert.equal(started.status, 201, JSON.stringify(started.json));
+  const fin = await finishHold(auth, started.json.data.game.gameId);
+  assert.ok([200, 201].includes(fin.status), JSON.stringify(fin.json));
+  const board = await api("/api/v1/daily-challenge/leaderboard");
+  assert.equal(board.status, 200);
+  const mine = board.json.data.entries.find((e) => e.userId === auth.user.id);
+  assert.ok(mine, "should be on board");
+  assert.ok("avatarId" in mine);
+  assert.ok("avatarUrl" in mine);
+  assert.ok("avatarCustomPath" in mine);
+  // No N+1: fields ride the list response (null URL falls back to preset on client).
+  assert.equal(mine.avatarUrl, null);
+});
+
+test("daily game cannot rewind (kind/protocol unsupported)", async () => {
+  const { config: cfg } = await import("../src/lib/config.js");
+  cfg.gameRewindEnabled = true;
+
+  const auth = await register(`dcrw${Date.now().toString(36)}`);
+  const started = await startDaily(auth, `rewind-${auth.user.id}`);
+  assert.equal(started.status, 201, JSON.stringify(started.json));
+  const gameId = started.json.data.game.gameId;
+  assert.equal(started.json.data.game.gameKind, "daily");
+  assert.equal(started.json.data.game.protocolVersion, "legacy-batch");
+
+  const rw = await api(`/api/v1/games/${gameId}/rewind`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `rw-daily-${gameId}` },
+    body: { expectedRevision: started.json.data.game.revision ?? 0 },
+  });
+  assert.ok(rw.status >= 400, JSON.stringify(rw.json));
+  const code = rw.json?.error?.code;
+  assert.ok(
+    code === "GAME_KIND_UNSUPPORTED" || code === "PROTOCOL_UNSUPPORTED",
+    `expected kind/protocol reject, got ${code}: ${JSON.stringify(rw.json)}`
+  );
 });

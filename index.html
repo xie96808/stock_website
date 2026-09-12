@@ -128,14 +128,15 @@
                     <div class="lanes sim-hub-lanes" id="simHub" hidden>
                         <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
                         <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
-                            <span class="mark">日</span>
+                            <span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span>
+                            <span class="mark daily-challenge-mark">日</span>
                             <span class="copy">
-                                <small>每日同题</small>
-                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
-                                <p id="dailyChallengeCardMeta">次日开盘 · 全站同题 · 一日一次</p>
+                                <small>全站同题挑战</small>
+                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="50" aria-label="消耗 50 韭币"></span></strong>
+                                <p id="dailyChallengeCardMeta">用完全相同的个股进行游戏！考验你的操作</p>
                                 <p class="daily-challenge-card-state" id="dailyChallengeCardState">加载中…</p>
                             </span>
-                            <span class="cta cta-fill" id="dailyChallengeCardCta">开始今日挑战</span>
+                            <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
                         </button>
                         <div class="daily-challenge-board" id="dailyChallengeBoard" hidden>
                             <div class="daily-challenge-board-head">

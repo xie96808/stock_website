@@ -74,11 +74,15 @@ export function grantRegisterBonus(userId, db) {
 }
 
 /**
- * Deduct create cost in the same TX as game_sessions INSERT.
+ * Deduct a create-cost amount in the same TX as game_sessions INSERT.
  * Throws Error with .code = INSUFFICIENT_FUNDS when balance too low.
- * Idempotent per game id (unique partial index).
+ * Idempotent per game id (unique partial index on game_create).
  */
-export function deductGameCreate(userId, gameId, db) {
+export function deductGameCreateCost(userId, gameId, db, cost) {
+  const amount = Number(cost);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error("invalid game create cost");
+  }
   const existing = db
     .prepare(
       `SELECT id FROM jiu_coin_ledger
@@ -90,17 +94,17 @@ export function deductGameCreate(userId, gameId, db) {
   }
 
   const cur = getJiuCoinBalance(userId, db);
-  if (cur < JIU_COIN_GAME_CREATE_COST) {
+  if (cur < amount) {
     const err = new Error("韭币不足，无法创建云端对局");
     err.code = "INSUFFICIENT_FUNDS";
     err.balance = cur;
-    err.required = JIU_COIN_GAME_CREATE_COST;
+    err.required = amount;
     throw err;
   }
-  const next = cur - JIU_COIN_GAME_CREATE_COST;
+  const next = cur - amount;
   insertLedger(db, {
     userId,
-    delta: -JIU_COIN_GAME_CREATE_COST,
+    delta: -amount,
     balanceAfter: next,
     reason: "game_create",
     refType: "game",
@@ -110,6 +114,13 @@ export function deductGameCreate(userId, gameId, db) {
     `UPDATE users SET jiu_coin_balance = ?, updated_at = datetime('now') WHERE id = ?`
   ).run(next, userId);
   return { unchanged: false, balance: next };
+}
+
+/**
+ * Classic practice create cost (20). Daily challenge uses DAILY_CHALLENGE_COST via deductGameCreateCost.
+ */
+export function deductGameCreate(userId, gameId, db) {
+  return deductGameCreateCost(userId, gameId, db, JIU_COIN_GAME_CREATE_COST);
 }
 
 export function dailyClaimStatus(userId, db = openDb()) {

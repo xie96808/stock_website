@@ -1,6 +1,6 @@
 # F01 每日同题挑战（daily challenge）
 
-PRD §4.1。模拟盘 hub「今日挑战」：全站同日同题、每日一次正式机会、次日开盘成交、禁用反悔；首期**不发名次韭币**（发币走 F11 知识挑战）。
+PRD §4.1。模拟盘 hub「今日挑战」：全站同日同题、每日一次正式机会、次日开盘成交、禁用反悔；首期**不发名次韭币**（发币走 F11 知识挑战）。卡片文案中「排行前三丰厚奖励」目前为**文案预告**，V1 **未实现**名次发币。
 
 ## Feature flag（默认关闭）
 
@@ -33,28 +33,41 @@ DAILY_CHALLENGE_ENABLED=1 npm --prefix server start
 1. Asia/Shanghai 自然日；周末开放；`opensAt` / `closesAt`（截止=次日 00:00:00 上海）。
 2. 仅 `next_open`、初始资金 100000、30 日窗口。
 3. 快照含行情段、规则版本、`market_hash`；数据集切换不改已发布日。
-4. 成功创建：占机会 + 扣 20 韭币（`JIU_COIN_GAME_CREATE_COST`）+ 建局 **同事务**；余额不足 / 已有活动局 / 失败 → 不占不扣。
+4. 成功创建：占机会 + 扣 **50** 韭币（`DAILY_CHALLENGE_COST`，**与经典开局 `JIU_COIN_GAME_CREATE_COST=20` 解耦**）+ 建局 **同事务**；余额不足 / 已有活动局 / 失败 → 不占不扣。
 5. 恢复不扣；放弃/过期保留已用机会不退。经典活动局冲突时由用户选择继续或放弃。
-6. 正式局 `game_kind=daily`、`legacy-batch`、无反悔；仅首次准时结算进当日榜；V1 **不做**次日归档练习（follow-up）。
+6. 正式局 `game_kind=daily`、`legacy-batch`、**无反悔**（rewind API 拒绝；局内反悔按钮隐藏）；仅首次准时结算进当日榜；V1 **不做**次日归档练习（follow-up）。
 7. 截止前结算进榜；截止后结算记 `settle_late`；幂等重试返回原结果。
-8. 无排名发币。
+8. **无排名发币**（前三奖励文案仅营销，不落账）。
 9. 截止前公共榜仅摘要；个人结算页可完整复盘。
 
 计分：`return_ppm` 降序 → `mdd_ppm` 升序 → `DENSE_RANK`；买入持有基准同 `next_open` 口径；MDD 复用 `shared/equityCurve.js`。
+
+## 费用常量
+
+| 玩法 | 常量 | 金额 |
+|------|------|------|
+| 经典开局 | `JIU_COIN_GAME_CREATE_COST` | 20 |
+| 今日挑战 | `DAILY_CHALLENGE_COST` | **50** |
+
+扣费走 `deductGameCreateCost(..., DAILY_CHALLENGE_COST)`，勿误用经典 20。
 
 ## API（需 flag ON）
 
 | Method | Path | Auth | Notes |
 |--------|------|------|-------|
-| GET | `/daily-challenge` | 可选 | 当日状态、剩余机会、活动局 |
+| GET | `/daily-challenge` | 可选 | 当日状态、剩余机会、活动局、`cost` |
 | POST | `/daily-challenge/games` | 是 | 开局/恢复；Idempotency-Key 可选 |
-| GET | `/daily-challenge/leaderboard` | 否 | 日榜；截止前脱敏 |
+| GET | `/daily-challenge/leaderboard` | 否 | 日榜；截止前脱敏；条目含 `avatarId` / `avatarUrl`（单次 payload，无 N+1） |
 
 ## 前端
 
-- 模拟盘 hub「今日挑战」卡（`index.html` + `js/daily-challenge.js`）
+- 模拟盘 hub「今日挑战」卡（`index.html` + `js/daily-challenge.js` + `css/start.css`）
+  - 视觉与经典「开始游戏」明显区分：terra 描边/底洗、「每日同题」ribbon、更大 CTA
+  - 说明字段：营销句「用完全相同的个股进行游戏！考验你的操作」；**不**在次要字段展示日期 / `次日开盘` / `耗 20|50`（费用保留在标题徽章与确认弹窗）
 - 读 `features.dailyChallenge`；关闭则隐藏
-- 费用展示：数字 + 硬币图标（`amountWithCoinHtml`）
+- **首次开局确认弹窗**（消耗机会前）：正文说明同题规则、前三奖励预告（文案）、一日一次；展示消耗 50 + 余额；主按钮「开始游戏」/「取消」。确认后才出现 fill/load 进度条并创建局。
+- **继续挑战**（已有活动局）不弹该确认。
+- 日榜行渲染玩家头像（复用经典榜 URL 模式：`avatarUrl` 或 `images/avatars/{id}.png`）
 
 ## 测试
 
@@ -63,8 +76,11 @@ DAILY_CHALLENGE_ENABLED=1 node --test server/tests/daily-challenge.integration.t
 node scripts/run-tests.mjs
 ```
 
+覆盖：扣 50、不足阈值（0 / 49）、双开幂等只扣一次、日榜头像字段、daily 局不可 rewind。
+
 ## Follow-ups（本 PR 刻意不做）
 
+- 名次发币 / 前三真实奖励结算
 - 次日归档练习开局（仍耗 10、不改成绩）
 - 分享图深度脱敏与专用分享卡
 - event-v1 逐步决策协议（正式局不依赖 EVENT_PROTOCOL）
