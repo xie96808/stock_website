@@ -204,3 +204,14 @@
     gap: 0.35rem 0.75rem;
   }
 }
+
+/* F02 hub cat: natural 3:4 — do not stretch with tall hub content */
+.start-screen .page {
+    align-items: start;
+}
+.start-screen .art {
+    align-self: start;
+}
+.start-screen .frame {
+    height: auto;
+}
