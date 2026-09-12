@@ -10,7 +10,9 @@ let flow = {
   index: 0,
   submitting: false,
   settled: null,
+  pendingOptionId: null,
 };
+let reviewExpanded = false;
 
 export function isQuizRewardsEnabled() {
   return quizRewardsEnabled;
@@ -32,6 +34,10 @@ function cardEl() {
   return document.getElementById('dailyQuizCard');
 }
 
+function resultModalEl() {
+  return document.getElementById('dailyQuizResultModal');
+}
+
 function hideRewardedSurfaces() {
   const card = cardEl();
   if (card) card.hidden = true;
@@ -39,6 +45,8 @@ function hideRewardedSurfaces() {
   if (zone) zone.style.display = 'none';
   const results = document.getElementById('dailyQuizResults');
   if (results) results.style.display = 'none';
+  const modal = resultModalEl();
+  if (modal) modal.hidden = true;
 }
 
 export async function refreshDailyQuizCard() {
@@ -127,6 +135,8 @@ export async function enterDailyQuizZone() {
     }
     flow.questions = daily.questions || [];
     flow.settled = daily.status === 'settled' ? daily : null;
+    flow.pendingOptionId = null;
+    flow.submitting = false;
     // Resume at first unanswered
     const answeredIds = new Set(flow.questions.filter((q) => q.yourOptionId).map((q) => q.id));
     let idx = flow.questions.findIndex((q) => !answeredIds.has(q.id));
@@ -139,6 +149,8 @@ export async function enterDailyQuizZone() {
     document.getElementById('trainingResults').style.display = 'none';
     const results = document.getElementById('dailyQuizResults');
     if (results) results.style.display = 'none';
+    const modal = resultModalEl();
+    if (modal) modal.hidden = true;
     document.getElementById('dailyQuizZone').style.display = 'block';
 
     if (daily.status === 'settled') {
@@ -158,12 +170,13 @@ function renderDailyQuestion() {
   if (!q || !container) return;
 
   const locked = !!q.yourOptionId;
+  const highlightId = locked ? q.yourOptionId : flow.pendingOptionId;
   let html =
     '<span class="quiz-question-type theory">今日计奖</span>' +
     '<div class="quiz-question-text">第 ' + (flow.index + 1) + ' 题：' + escapeHtml(q.stem) + '</div>' +
     '<div class="quiz-options">';
   (q.options || []).forEach((opt, i) => {
-    const selected = locked && q.yourOptionId === opt.id;
+    const selected = !!highlightId && highlightId === opt.id;
     html +=
       '<div class="quiz-option' + (selected ? ' selected' : '') + '" data-option-id="' + escapeAttr(opt.id) + '"' +
       (locked ? ' style="pointer-events:none"' : ' onclick="selectDailyQuizAnswer(\'' + escapeAttr(opt.id) + '\')"') + '>' +
@@ -171,7 +184,8 @@ function renderDailyQuestion() {
       '<div class="quiz-option-text">' + escapeHtml(opt.text) + '</div></div>';
   });
   html += '</div>';
-  if (locked) {
+  // Lock tip only on first question (after lock / showing locked state).
+  if (locked && flow.index === 0) {
     html += '<div class="quiz-explanation"><strong>已锁定首次答案。</strong>全部提交后统一看解析，结算前不公布对错。</div>';
   }
   container.innerHTML = html;
@@ -180,63 +194,133 @@ function renderDailyQuestion() {
   document.getElementById('dailyQuizProgressBar').style.width = ((flow.index + 1) / total * 100) + '%';
   document.getElementById('dailyQuizProgressText').textContent = (flow.index + 1) + ' / ' + total;
   const nextBtn = document.getElementById('dailyQuizNextBtn');
-  nextBtn.disabled = !locked || flow.submitting;
-  nextBtn.textContent = flow.index >= total - 1 ? (locked ? '查看结果' : '请先作答') : '下一题';
+  const canAdvance = locked || !!flow.pendingOptionId;
+  nextBtn.disabled = !canAdvance || flow.submitting;
+  nextBtn.textContent = flow.index >= total - 1
+    ? (canAdvance ? '查看结果' : '请先作答')
+    : '下一题';
 }
 
-export async function selectDailyQuizAnswer(optionId) {
+/** Local pending selection only — does not POST until「下一题」/「查看结果」. */
+export function selectDailyQuizAnswer(optionId) {
   if (flow.submitting) return;
   const q = flow.questions[flow.index];
   if (!q || q.yourOptionId) return;
+  flow.pendingOptionId = optionId;
+  renderDailyQuestion();
+}
+
+/** POST pending selection to lock permanently. Returns settled payload or null on failure/no-op. */
+async function lockPendingSelection() {
+  const q = flow.questions[flow.index];
+  if (!q || q.yourOptionId) return { ok: true, alreadyLocked: true };
+  if (!flow.pendingOptionId) return { ok: false };
+  if (flow.submitting) return { ok: false };
+
   flow.submitting = true;
-  // Keep next disabled while the request is in flight.
   const nextBtn = document.getElementById('dailyQuizNextBtn');
   if (nextBtn) nextBtn.disabled = true;
+
+  const optionId = flow.pendingOptionId;
   try {
     const res = await api('/quiz/attempts/' + encodeURIComponent(flow.attemptId) + '/answers', {
       method: 'POST',
       body: { questionId: q.id, optionId },
     });
     q.yourOptionId = res.data.optionId || optionId;
+    flow.pendingOptionId = null;
     if (res.data.status === 'settled' && res.data.settled) {
       flow.settled = res.data.settled;
-      flow.submitting = false;
       try { await refreshMe(); } catch (_) {}
-      await showDailyQuizResults(flow.attemptId, res.data.settled);
-      return;
+      return { ok: true, settled: res.data.settled };
     }
+    return { ok: true };
   } catch (e) {
     showToast(e.message || '提交失败', 'error');
+    return { ok: false };
   } finally {
-    // Clear before re-render — otherwise nextBtn stays disabled forever
-    // (renderDailyQuestion used to run while submitting===true).
+    // Clear before any re-render — otherwise nextBtn stays disabled forever.
     flow.submitting = false;
-    if (document.getElementById('dailyQuizZone')?.style.display !== 'none' &&
-        document.getElementById('dailyQuizResults')?.style.display !== 'block') {
-      renderDailyQuestion();
-    }
   }
 }
 
 export async function dailyQuizNext() {
+  if (flow.submitting) return;
   const q = flow.questions[flow.index];
-  if (!q?.yourOptionId) return;
+  if (!q) return;
+  if (!q.yourOptionId && !flow.pendingOptionId) return;
+
+  if (!q.yourOptionId) {
+    const locked = await lockPendingSelection();
+    if (!locked.ok) {
+      if (document.getElementById('dailyQuizZone')?.style.display !== 'none') {
+        renderDailyQuestion();
+      }
+      return;
+    }
+    if (locked.settled) {
+      await showDailyQuizResults(flow.attemptId, locked.settled);
+      return;
+    }
+  }
+
   if (flow.index >= flow.questions.length - 1) {
-    // Last already submitted via select; if somehow pending, no-op
-    if (flow.settled) await showDailyQuizResults(flow.attemptId, flow.settled);
+    if (flow.settled) {
+      await showDailyQuizResults(flow.attemptId, flow.settled);
+      return;
+    }
+    await showDailyQuizResults(flow.attemptId);
     return;
   }
+
   flow.index += 1;
+  flow.pendingOptionId = null;
   renderDailyQuestion();
 }
 
+function ensureResultModalBound() {
+  const modal = resultModalEl();
+  if (!modal || modal.dataset.bound === '1') return;
+  modal.dataset.bound = '1';
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeDailyQuizResultModal();
+  });
+  const reviewBtn = document.getElementById('dailyQuizResultReviewBtn');
+  if (reviewBtn) {
+    reviewBtn.addEventListener('click', () => {
+      reviewExpanded = !reviewExpanded;
+      const details = document.getElementById('dailyQuizResultDetails');
+      if (details) {
+        details.hidden = !reviewExpanded;
+        if (reviewExpanded) details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      reviewBtn.textContent = reviewExpanded ? '收起解析' : '看解析';
+    });
+  }
+}
+
 export async function showDailyQuizResults(attemptId, settledHint) {
-  document.getElementById('dailyQuizZone').style.display = 'none';
-  document.getElementById('academyLanding').style.display = 'none';
-  document.getElementById('trainingZone').style.display = 'none';
-  document.getElementById('trainingResults').style.display = 'none';
+  const zone = document.getElementById('dailyQuizZone');
+  if (zone) zone.style.display = 'none';
   const panel = document.getElementById('dailyQuizResults');
-  panel.style.display = 'block';
+  if (panel) panel.style.display = 'none';
+
+  // Keep academy landing under the modal so close returns naturally.
+  const landing = document.getElementById('academyLanding');
+  if (landing) landing.style.display = 'block';
+  const kz = document.getElementById('knowledgeZone');
+  if (kz) kz.style.display = 'none';
+  const tz = document.getElementById('trainingZone');
+  if (tz) tz.style.display = 'none';
+  const tr = document.getElementById('trainingResults');
+  if (tr) tr.style.display = 'none';
+
+  ensureResultModalBound();
+  reviewExpanded = false;
+  const detailsEl = document.getElementById('dailyQuizResultDetails');
+  if (detailsEl) detailsEl.hidden = true;
+  const reviewBtn = document.getElementById('dailyQuizResultReviewBtn');
+  if (reviewBtn) reviewBtn.textContent = '看解析';
 
   let review = null;
   try {
@@ -250,18 +334,20 @@ export async function showDailyQuizResults(attemptId, settledHint) {
   const complete = 10;
   const bonus = rewardAmount > complete ? rewardAmount - complete : 0;
 
-  document.getElementById('dailyQuizResultCard').innerHTML =
-    '<h2 class="daily-quiz-result-title">今日题组结算</h2>' +
-    '<div class="quiz-score ' + (firstCorrect >= 4 ? 'high' : firstCorrect >= 3 ? 'medium' : 'low') + '">' +
-    firstCorrect + ' / 5 首次答对</div>' +
-    '<div class="daily-quiz-reward-breakdown">' +
-    '<div>完成 5 题　+' + amountWithCoinHtml(complete, { size: 14 }) + '</div>' +
-    '<div>首次正确 ≥4　+' + amountWithCoinHtml(bonus, { size: 14 }) + (bonus ? '' : '（未达成）') + '</div>' +
-    '<div class="daily-quiz-reward-total">合计　+' + amountWithCoinHtml(rewardAmount, { size: 16 }) + '</div>' +
-    '<p class="daily-quiz-reward-note">与每日领取互不影响；重练不改分、不重发。</p>' +
-    '</div>';
+  const card = document.getElementById('dailyQuizResultCard');
+  if (card) {
+    card.innerHTML =
+      '<h2 class="daily-quiz-result-title" id="dailyQuizResultTitle">今日题组结算</h2>' +
+      '<div class="quiz-score ' + (firstCorrect >= 4 ? 'high' : firstCorrect >= 3 ? 'medium' : 'low') + '">' +
+      firstCorrect + ' / 5 首次答对</div>' +
+      '<div class="daily-quiz-reward-breakdown">' +
+      '<div>完成 5 题　+' + amountWithCoinHtml(complete, { size: 14 }) + '</div>' +
+      '<div>首次正确 ≥4　+' + amountWithCoinHtml(bonus, { size: 14 }) + (bonus ? '' : '（未达成）') + '</div>' +
+      '<div class="daily-quiz-reward-total">合计　+' + amountWithCoinHtml(rewardAmount, { size: 16 }) + '</div>' +
+      '<p class="daily-quiz-reward-note">与每日领取互不影响；重练不改分、不重发。</p>' +
+      '</div>';
+  }
 
-  const labels = ['A', 'B', 'C', 'D'];
   let details = '';
   (review?.questions || []).forEach((q, i) => {
     const optMap = Object.fromEntries((q.options || []).map((o) => [o.id, o.text]));
@@ -282,8 +368,33 @@ export async function showDailyQuizResults(attemptId, settledHint) {
       '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-top:6px">' + escapeHtml(q.explanation || '') + '</div>' +
       '</div>';
   });
-  document.getElementById('dailyQuizResultDetails').innerHTML = details || '<p>暂无解析</p>';
+  if (detailsEl) detailsEl.innerHTML = details || '<p>暂无解析</p>';
+
+  const modal = resultModalEl();
+  if (modal) modal.hidden = false;
+
   await refreshDailyQuizCard();
+}
+
+export function closeDailyQuizResultModal() {
+  const modal = resultModalEl();
+  if (modal) modal.hidden = true;
+  reviewExpanded = false;
+  // Return to academy landing and refresh card state.
+  const landing = document.getElementById('academyLanding');
+  if (landing) landing.style.display = 'block';
+  const zone = document.getElementById('dailyQuizZone');
+  if (zone) zone.style.display = 'none';
+  const panel = document.getElementById('dailyQuizResults');
+  if (panel) panel.style.display = 'none';
+  refreshDailyQuizCard().catch(() => {});
+}
+
+export function goSimFromDailyQuizResult() {
+  const modal = resultModalEl();
+  if (modal) modal.hidden = true;
+  if (typeof window.hideAcademy === 'function') window.hideAcademy();
+  if (typeof window.showSimHub === 'function') window.showSimHub();
 }
 
 function escapeHtml(s) {

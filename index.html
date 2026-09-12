@@ -281,15 +281,8 @@
                 </div>
             </div>
 
-            <div class="training-results daily-quiz-results" id="dailyQuizResults" style="display:none;">
-                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
-                <div class="quiz-result-card" id="dailyQuizResultCard"></div>
-                <div class="quiz-result-details" id="dailyQuizResultDetails"></div>
-                <div class="daily-quiz-result-actions">
-                    <button class="quiz-retry-btn" onclick="backToAcademyLanding()">回知识馆</button>
-                    <button class="quiz-retry-btn daily-quiz-soft-cta" onclick="hideAcademy(); if (typeof showSimHub==='function') showSimHub();">去模拟盘（可选）</button>
-                </div>
-            </div>
+            <!-- Legacy full-page results kept hidden; settlement uses modal below. -->
+            <div class="training-results daily-quiz-results" id="dailyQuizResults" style="display:none;" hidden aria-hidden="true"></div>
         </section>
 
         <!-- Game Screen -->
@@ -777,6 +770,20 @@
     </div>
 
 
+    <!-- F11 daily quiz settlement modal (纸墨, mirrors jiu-coin claim) -->
+    <div class="jiu-coin-modal daily-quiz-result-modal" id="dailyQuizResultModal" hidden>
+        <div class="jiu-coin-dialog daily-quiz-result-dialog" role="dialog" aria-modal="true" aria-labelledby="dailyQuizResultTitle">
+            <button type="button" class="jiu-coin-close-x" onclick="closeDailyQuizResultModal()" aria-label="关闭">×</button>
+            <div class="quiz-result-card daily-quiz-modal-card" id="dailyQuizResultCard"></div>
+            <div class="quiz-result-details daily-quiz-modal-details" id="dailyQuizResultDetails" hidden></div>
+            <div class="jiu-coin-modal-actions daily-quiz-modal-actions">
+                <button type="button" class="jiu-coin-secondary" id="dailyQuizResultReviewBtn">看解析</button>
+                <button type="button" class="jiu-coin-primary" onclick="closeDailyQuizResultModal()">回知识馆</button>
+                <button type="button" class="jiu-coin-secondary daily-quiz-soft-cta" onclick="goSimFromDailyQuizResult()">去模拟盘</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fill mode modal (shown after 开始游戏) -->
     <div id="fillModeModal" class="fill-mode-modal" hidden aria-hidden="true">
         <div class="fill-mode-backdrop" onclick="cancelFillModeModal()"></div>
@@ -846,7 +853,7 @@
             parseRouteHash,
         } from './js/screen-router.js';
         import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
-        import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext } from './js/academy.js';
+        import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext, closeDailyQuizResultModal, goSimFromDailyQuizResult } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
@@ -914,6 +921,8 @@
         window.onDailyQuizCardClick = onDailyQuizCardClick;
         window.selectDailyQuizAnswer = selectDailyQuizAnswer;
         window.dailyQuizNext = dailyQuizNext;
+        window.closeDailyQuizResultModal = closeDailyQuizResultModal;
+        window.goSimFromDailyQuizResult = goSimFromDailyQuizResult;
         window.selectAnswer = selectAnswer;
         window.quizNext = quizNext;
         window.showKBPopup = showKBPopup;
