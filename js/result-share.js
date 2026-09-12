@@ -1,6 +1,8 @@
-import { clearShareMeta, setShareMeta, selectShareView } from './game-session.js';
+import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
+import { showDailyChallengeBoard } from './daily-challenge.js';
+import { showSimHub } from './home-ia.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -300,6 +302,12 @@ export async function saveResultShareImage() {
 }
 
 export function openResultLeaderboard() {
+    const session = getSession();
+    if (session?.gameKind === 'daily') {
+        showSimHub();
+        void showDailyChallengeBoard();
+        return;
+    }
     const mode = selectShareView().fillMode === 'same_close' ? 'same_close' : 'next_open';
     showLeaderboard(mode);
 }

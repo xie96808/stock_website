@@ -697,7 +697,7 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
       avatarId: r.avatar_id,
       avatarCustomPath: custom,
       // Same pattern as classic leaderboard: custom CDN path or null (client falls back to preset).
-      avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
+      avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
       returnPpm: r.return_ppm,
       returnPct: (r.return_ppm / 10000).toFixed(2),
       mddPpm: r.mdd_ppm,

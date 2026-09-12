@@ -11,7 +11,7 @@ export function publicUser(row) {
     username: row.username_normalized,
     nickname: row.nickname,
     avatarId: row.avatar_id,
-    avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
+    avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,
