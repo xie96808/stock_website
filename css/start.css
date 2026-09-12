@@ -422,8 +422,10 @@
     font-size: 1.05rem;
     letter-spacing: 0.2em;
     border-width: 2px;
-    border-color: color-mix(in srgb, var(--terra) 55%, var(--line));
-    background: color-mix(in srgb, var(--terra) 22%, var(--panel));
+    border-color: color-mix(in srgb, var(--terra) 70%, var(--line));
+    /* Solid terra: cta-fill uses terra-ink; wash bg made cream text disappear. */
+    background: var(--terra);
+    color: var(--terra-ink);
 }
 .daily-challenge-card-state {
     margin: 4px 0 0;

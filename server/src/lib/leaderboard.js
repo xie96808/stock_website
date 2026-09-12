@@ -108,7 +108,7 @@ function publicEntry(row) {
     rank: row.rank,
     nickname: row.nickname,
     avatarId: row.avatar_id,
-    avatarUrl: custom ? `/api/v1/avatars/${custom}` : null,
+    avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
     returnPpm: row.return_ppm,
     returnPct: ppmToPct(row.return_ppm),
     finishedAt: row.finished_at,

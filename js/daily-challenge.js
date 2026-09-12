@@ -368,6 +368,12 @@ export async function onDailyChallengeCardClick() {
     return;
   }
 
+  // Settled / late → day board only (CTA is「查看日榜」); do not fall through to start.
+  if (d.attempt && (d.attempt.status === 'settled' || d.attempt.status === 'settle_late')) {
+    await showDailyChallengeBoard();
+    return;
+  }
+
   // Resume: no first-time confirm (chance already consumed).
   if (d.activeGame) {
     await startCloudFromMeta(d.activeGame);
@@ -408,11 +414,15 @@ export async function onDailyChallengeCardClick() {
   }
 }
 
-function avatarUrl(row) {
-  if (!row) return 'images/avatars/01.png';
-  if (row.avatarUrl) return row.avatarUrl;
-  const n = String(row.avatarId || 1).padStart(2, '0');
+function presetAvatarUrl(row) {
+  const n = String(row?.avatarId || 1).padStart(2, '0');
   return `images/avatars/${n}.png`;
+}
+
+function avatarUrl(row) {
+  if (!row) return presetAvatarUrl(null);
+  if (row.avatarUrl) return row.avatarUrl;
+  return presetAvatarUrl(row);
 }
 
 export async function showDailyChallengeBoard() {
@@ -446,7 +456,7 @@ export async function showDailyChallengeBoard() {
         return `<tr>
           <td>${e.rank}</td>
           <td class="daily-challenge-nick-cell">
-            <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28">
+            <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
             <span>${escapeHtml(e.nickname || '玩家')}</span>
           </td>
           <td>${e.returnPct}%</td>
