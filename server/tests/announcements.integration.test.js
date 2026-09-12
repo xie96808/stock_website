@@ -180,3 +180,42 @@ test("admin list can filter by status", async () => {
   assert.ok(list.json.data.items.every((a) => a.status === "published"));
   assert.ok(list.json.data.items.some((a) => a.body === SEED_BODY));
 });
+
+test("admin announcement routes reject empty/0/negative ids as INVALID_ID", async () => {
+  const stamp = Date.now().toString(36);
+  const adminReg = await register(`anid${stamp}`);
+  promoteToAdmin(adminReg.user.id);
+  const admin = await loginAs(adminReg.username, adminReg.password);
+  await reauth(admin.csrfToken, adminReg.password);
+
+  for (const bad of ["0", "-1", "abc"]) {
+    const get = await api(`/api/v1/admin/announcements/${bad}`);
+    assert.equal(get.status, 400, `GET ${bad}: ${JSON.stringify(get.json)}`);
+    assert.equal(get.json?.error?.code, "INVALID_ID");
+
+    const patch = await api(`/api/v1/admin/announcements/${bad}`, {
+      method: "PATCH",
+      csrf: admin.csrfToken,
+      body: { status: "published" },
+    });
+    assert.equal(patch.status, 400, `PATCH ${bad}: ${JSON.stringify(patch.json)}`);
+    assert.equal(patch.json?.error?.code, "INVALID_ID");
+
+    const arch = await api(`/api/v1/admin/announcements/${bad}/archive`, {
+      method: "POST",
+      csrf: admin.csrfToken,
+      body: {},
+    });
+    assert.equal(arch.status, 400, `ARCHIVE ${bad}: ${JSON.stringify(arch.json)}`);
+    assert.equal(arch.json?.error?.code, "INVALID_ID");
+  }
+
+  const created = await api("/api/v1/admin/announcements", {
+    method: "POST",
+    csrf: admin.csrfToken,
+    body: { title: "直接发布", body: "无草稿一步 published", status: "published" },
+  });
+  assertOk(created.status, created.json, 201);
+  assert.equal(created.json.data.announcement.status, "published");
+  assert.ok(created.json.data.announcement.publishedAt);
+});

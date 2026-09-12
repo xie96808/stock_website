@@ -20,6 +20,12 @@
 
 Schema：`server/migrations/007_announcements.sql`（含欢迎语种子）。
 
+## 后台发布流程
+
+1. 先二次验证管理员密码，否则写操作返回 `ADMIN_REAUTH_REQUIRED`。
+2. **新建可直接 published**：填正文后点「新建」（状态下拉选 published），或无 ID 时点「发布」（POST `status=published`）。
+3. 也可先存 draft，列表「填入」ID 后再点「发布」。
+
 ## 部署（server 29）
 
 1. 拉代码 / 发静态（`index.html`、`js/announcements.js`、`css/announcements.css`、`admin/`）。
