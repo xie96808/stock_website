@@ -47,10 +47,11 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 
 - 模拟盘 hub「残局挑战」**入口卡**（`index.html` + `js/puzzle-chapter.js` + `css/puzzle-chapter.css`）；flag 关闭则隐藏
 - **关卡列表在独立全屏 `#puzzleScreen`**（返回模拟盘 hub），**不**在 hub 内联展开；章节进度条用 `GET /puzzles` 的 levels/stars
-- Hub 左侧猫插画保持自然 3:4，不随右侧内容被拉高（`css/start.css` `align-items: start`）
+- Hub 左侧猫插画：左栏 `minmax(200px,340px)` + `.frame` 定宽 `min(100%,340px)` + `aspect-ratio: 3/4`（避免 absolute 图把左轨塌成 0）
 - **开局后进入完整 `#gameScreen` 模拟盘**（与经典云局同一套 K 线 / 买卖观望 / 结算按钮）
   - `POST /puzzles/:levelKey/entries` 成功后调用 `startGame({ cloud })`（`window.__puzzleStartGame`）
-  - 行情来自条目响应里的 **snapshot `bars` + `history`**；缺 `bars` 时抛错并恢复关卡列表 + toast（避免卡在「开局中…」）
+  - 行情来自条目响应里的 **snapshot `bars` + `history`**（合成关带约 30 根前置 K，避免开局只剩 1 根）；缺 `bars` 时抛错并恢复关卡列表 + toast
+  - `ACTIVE_GAME_EXISTS`：确认框可选 **继续原局** 或 **放弃并开新局**；本地已走到末日的草稿会丢弃以免只能「结束并结算」
   - **无反悔**（`gameKind===puzzle` 隐藏 rewind）
   - 结算走 `POST /puzzles/games/:gameId/finish`，结果屏展示星级 / 首通韭币
 - 非法动作：客户端禁用「已有持仓再买 / 空仓或 T+1 未到就卖」；服务端错误文案中文化（如「已有持仓，不能再买入」）
