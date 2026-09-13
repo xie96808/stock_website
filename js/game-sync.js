@@ -198,14 +198,20 @@ export async function fetchActiveCloudGame() {
   return data?.gameId ? data : null;
 }
 
+export async function abandonCloudGame(gameId) {
+  const auth = getAuthState();
+  if (!auth.user || !gameId) return null;
+  await api(`/games/${gameId}/abandon`, { method: "POST" });
+  clearCloudGameDraft(gameId);
+  return gameId;
+}
+
 export async function abandonActiveCloudGame() {
   const auth = getAuthState();
   if (!auth.user) return null;
   const data = await fetchActiveCloudGame();
   if (!data?.gameId) return null;
-  await api(`/games/${data.gameId}/abandon`, { method: "POST" });
-  clearCloudGameDraft(data.gameId);
-  return data.gameId;
+  return abandonCloudGame(data.gameId);
 }
 
 
