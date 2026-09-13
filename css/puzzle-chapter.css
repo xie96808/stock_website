@@ -205,36 +205,38 @@
   }
 }
 
-/* F02 hub cat: keep natural 3:4 on desktop; do NOT force two columns on mobile */
+/* F02 hub: PC art stretches with tall 5-lane hub; mobile stays single column */
 @media (min-width: 801px) {
   .start-screen .page {
-    align-items: start;
-    /* PC: left-right notebook split (same as start.css) */
-    grid-template-columns: minmax(200px, 340px) minmax(400px, 460px);
+    align-items: stretch;
+    grid-template-columns: auto minmax(400px, 460px);
   }
   .start-screen .art {
-    align-self: start;
-    width: 100%;
+    align-self: stretch;
   }
   .start-screen .frame {
-    width: min(100%, 340px);
-    height: auto;
+    height: 100%;
+    min-height: 280px;
+    width: auto;
+    max-width: 340px;
     aspect-ratio: 3 / 4;
   }
 }
 @media (max-width: 800px) {
   .start-screen .page {
-    /* Mobile: single column — cat above, controls below */
     grid-template-columns: 1fr !important;
+    align-items: start;
   }
   .start-screen .art {
     justify-content: center;
     width: 100%;
+    align-self: center;
   }
   .start-screen .frame {
     width: 100%;
     max-width: none;
     height: 240px;
+    min-height: 0;
     aspect-ratio: auto;
   }
 }
