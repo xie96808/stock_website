@@ -1,1 +1,1 @@
-PLACEHOLDER_LOAD_FROM_FILE
+@/workspace/stock_website_f03/.pr-payload/puzzleChapter.js
