@@ -36,7 +36,7 @@ test('T+1 lock: day1 sell rejected on locked lot (ch1-04)', () => {
   const def = CHAPTER1_LEVEL_DEFS[3];
   const r = settlePuzzle({
     bars: def.bars,
-    actions: ['sell', ...holds(4)],
+    actions: ['sell', ...holds(def.gameDays - 2)],
     initialState: def.initialState,
   });
   assert.equal(r.ok, false);

@@ -240,3 +240,17 @@
     aspect-ratio: auto;
   }
 }
+
+.puzzle-level-teaching {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-secondary, #c8d0dc);
+}
+.puzzle-level-hint {
+  margin-top: 0.25rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--accent, #7dd3fc);
+  font-weight: 500;
+}

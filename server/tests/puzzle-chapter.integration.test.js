@@ -68,6 +68,10 @@ test("seed publishes 6 chapter-1 levels", async () => {
   assert.equal(list.json.data.status, "ready");
   assert.equal(list.json.data.levels.length, 6);
   assert.equal(list.json.data.createFee, 0);
+  const lv0 = list.json.data.levels[0];
+  assert.equal(lv0.version, 3);
+  assert.ok(lv0.teachingBrief);
+  assert.ok(lv0.openStateHint);
 });
 
 test("free create does not deduct jiu coin; resume idempotent", async () => {
@@ -166,7 +170,9 @@ test("order budget rejection does not settle", async () => {
   const def = CHAPTER1_LEVEL_DEFS[2];
   const st = await startLevel(auth, def.levelKey, `budget-${auth.user.id}`);
   assert.equal(st.status, 201);
-  const bad = ["buy", "sell", "buy", "hold", "hold", "hold"];
+  const decisionDays = def.gameDays - 1;
+  const bad = ["buy", "sell", "buy", ...Array.from({ length: Math.max(0, decisionDays - 3) }, () => "hold")];
+  assert.equal(bad.length, decisionDays);
   const fin = await finishLevel(auth, st.json.data.game.gameId, bad);
   assert.equal(fin.status, 422);
   assert.equal(fin.json.error.code, "INVALID_ACTION_SEQUENCE");
