@@ -208,6 +208,7 @@
 /* F02 hub cat: keep natural 3:4; never collapse left track / override mobile height away */
 .start-screen .page {
     align-items: start;
+    grid-template-columns: minmax(200px, 340px) minmax(400px, 460px);
 }
 .start-screen .art {
     align-self: start;
