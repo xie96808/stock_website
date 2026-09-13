@@ -28,7 +28,7 @@
     display: grid;
     grid-template-columns: auto minmax(400px, 460px);
     gap: 28px;
-    align-items: stretch;
+    align-items: start;
     width: auto;
     max-width: min(920px, 100%);
     height: auto;
@@ -38,17 +38,18 @@
     z-index: 1;
 }
 
-/* LEFT — notebook frame + mascot, height follows the right column */
+/* LEFT — notebook frame + mascot; natural 3:4 aspect (do not stretch with tall hub) */
 .start-screen .art {
     height: auto;
     min-height: 0;
     padding: 0;
     display: flex;
+    align-self: start;
 }
 
 .start-screen .frame {
     position: relative;
-    height: 100%;
+    height: auto;
     aspect-ratio: 3 / 4;
     width: auto;
     max-width: 340px;

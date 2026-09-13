@@ -15,6 +15,7 @@ test("resolveHashRoute maps home / sim / aliases / leaderboard", () => {
 
 test("resolveHashRoute ignores unknown and unhashed screens", () => {
   assert.equal(resolveHashRoute("my-games"), null);
+  assert.equal(resolveHashRoute("puzzle"), null);
   assert.equal(resolveHashRoute("game"), null);
   assert.equal(resolveHashRoute("nope"), null);
 });
