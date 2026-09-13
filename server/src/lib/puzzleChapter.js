@@ -28,9 +28,11 @@ import {
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
+  PUZZLE_PUBLIC_STOCK_CODE,
   buildLevelSnapshot,
   puzzleVersionId,
   firstClearRewardKey,
+  levelDefByKey,
 } from "./puzzleLevels.js";
 
 const ACTION_SET = new Set(PUZZLE_ACTIONS);
@@ -108,7 +110,7 @@ function sessionPublicFromRow(row) {
     windowStartIndex: row.window_start,
     historyLength,
     gameDays: row.game_days,
-    stockCode: row.stock_code,
+    stockCode: PUZZLE_PUBLIC_STOCK_CODE,
     stockName: row.stock_name,
     status: row.status,
     startedAt: row.started_at,
@@ -164,10 +166,10 @@ export function seedPuzzleChapter1(db = openDb()) {
         PUZZLE_FILL_MODE,
         def.gameDays,
         def.maxOrders,
-        def.stockCode,
+        def.stockCode || PUZZLE_PUBLIC_STOCK_CODE,
         def.stockName,
-        def.stockIndex ?? -1,
-        def.windowStart ?? -1,
+        snapshot.stockIndex ?? def.stockIndex ?? -1,
+        snapshot.windowStartIndex ?? def.windowStart ?? -1,
         histLen,
         snapshotJson,
         snapshotSha256,
@@ -254,6 +256,7 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
       } catch {
         goals = null;
       }
+      const authored = levelDefByKey(row.level_key);
       return {
         levelKey: row.level_key,
         levelIndex: row.level_index,
@@ -267,6 +270,8 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
         decisionDays: row.game_days - 1,
         maxOrders: row.max_orders,
         goals,
+        teachingBrief: authored?.teachingBrief || null,
+        openStateHint: authored?.openStateHint || null,
         contentNote: row.content_note,
         progress: p
           ? {

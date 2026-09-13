@@ -199,4 +199,83 @@ export function pickRandomWindow(opts = {}) {
   };
 }
 
+
+/**
+ * Puzzle-friendly fixed slice: custom gameDays (6..10) + historyLength.
+ * Requires stockIndex + windowStartIndex (authored pins). Classic pickRandomWindow stays GAME_DAYS=30.
+ * @param {{ stockIndex: number, windowStartIndex: number, gameDays: number, historyLength?: number }} opts
+ */
+export function pickPuzzleWindow(opts = {}) {
+  const { pack, version } = ensureDatasetLoaded();
+  const stockIndex = opts.stockIndex;
+  const windowStart = opts.windowStartIndex;
+  const gameDays = opts.gameDays;
+  const historyLength = Number.isInteger(opts.historyLength) ? opts.historyLength : DEFAULT_HISTORY;
+
+  if (!Number.isInteger(stockIndex) || stockIndex < 0 || stockIndex >= pack.length) {
+    throw new Error("pickPuzzleWindow: invalid stockIndex");
+  }
+  if (!Number.isInteger(gameDays) || gameDays < 6 || gameDays > 10) {
+    throw new Error("pickPuzzleWindow: gameDays must be 6..10");
+  }
+  if (!Number.isInteger(historyLength) || historyLength < 0) {
+    throw new Error("pickPuzzleWindow: invalid historyLength");
+  }
+  if (!Number.isInteger(windowStart)) {
+    throw new Error("pickPuzzleWindow: windowStartIndex required");
+  }
+
+  const stock = pack[stockIndex];
+  const kline = stock?.kline;
+  if (!Array.isArray(kline)) throw new Error("pickPuzzleWindow: stock has no kline");
+
+  const minStart = historyLength;
+  const maxStart = kline.length - gameDays;
+  if (maxStart < minStart) throw new Error("pickPuzzleWindow: series too short");
+  if (windowStart < minStart || windowStart > maxStart) {
+    throw new Error("pickPuzzleWindow: windowStartIndex out of range");
+  }
+
+  const historyBars = kline.slice(windowStart - historyLength, windowStart).map(normalizeBar);
+  const gameBars = kline.slice(windowStart, windowStart + gameDays).map(normalizeBar);
+  if (historyBars.length !== historyLength || gameBars.length !== gameDays) {
+    throw new Error("pickPuzzleWindow: slice length mismatch");
+  }
+  if (!gameBars.every(isValidBar) || (historyLength > 0 && !historyBars.every(isValidBar))) {
+    throw new Error("pickPuzzleWindow: invalid OHLC in slice");
+  }
+
+  const snapshot = {
+    v: 1,
+    stockCode: String(stock.code),
+    stockName: String(stock.name || stock.code),
+    stockIndex,
+    windowStartIndex: windowStart,
+    historyLength,
+    gameDays,
+    history: historyBars,
+    bars: gameBars.map(({ date, open, high, low, close }) => ({
+      date,
+      open,
+      high,
+      low,
+      close,
+    })),
+  };
+  const snapshotJson = JSON.stringify(snapshot);
+  return {
+    datasetVersion: version,
+    stockCode: snapshot.stockCode,
+    stockName: snapshot.stockName,
+    stockIndex,
+    windowStartIndex: windowStart,
+    historyLength,
+    gameDays,
+    snapshot,
+    snapshotJson,
+    snapshotSha256: sha256Text(snapshotJson),
+  };
+}
+
+
 export { sha256Text, DEFAULT_HISTORY, GAME_DAYS };

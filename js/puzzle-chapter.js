@@ -243,13 +243,19 @@ function renderLevelList(body, data) {
     .map((lv) => {
       const best = lv.progress?.bestStars || 0;
       const granted = lv.firstClearGranted ? '已领首通' : '首通二星 +20';
-      const note = lv.contentNote ? `<div class="puzzle-level-note">${escapeHtml(lv.contentNote)}</div>` : '';
+      const teaching = lv.teachingBrief
+        ? `<div class="puzzle-level-teaching">${escapeHtml(lv.teachingBrief)}</div>`
+        : '';
+      const hint = lv.openStateHint
+        ? `<div class="puzzle-level-hint">${escapeHtml(lv.openStateHint)}</div>`
+        : '';
       return `<button type="button" class="puzzle-level-row" data-level="${escapeHtml(lv.levelKey)}">
         <span class="puzzle-level-idx">${String(lv.levelIndex).padStart(2, '0')}</span>
         <span class="puzzle-level-copy">
           <strong>${escapeHtml(lv.title)}</strong>
           <small>${escapeHtml(lv.theme)} · ${lv.gameDays} 日 · ${granted}</small>
-          ${note}
+          ${teaching}
+          ${hint}
         </span>
         <span class="puzzle-level-stars" aria-label="${best}星">${starsText(best)}</span>
       </button>`;
@@ -257,7 +263,7 @@ function renderLevelList(body, data) {
     .join('');
   body.innerHTML = `
     <div class="puzzle-list-head">
-      <p>免费重玩 · 无反悔 · 达二星首次 +20 韭币（本章最多 120）· 开局进入完整模拟盘 K 线</p>
+      <p>免费重玩 · 无反悔 · 达二星首次 +20 韭币（本章最多 120）· 实盘短窗残局 · 开局持仓均为刻意设定</p>
     </div>
     <div class="puzzle-level-list">${rows}</div>`;
   body.querySelectorAll('.puzzle-level-row').forEach((btn) => {
