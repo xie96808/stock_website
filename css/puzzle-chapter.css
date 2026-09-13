@@ -205,21 +205,32 @@
   }
 }
 
-/* F02 hub cat: keep natural 3:4; never collapse left track / override mobile height away */
-.start-screen .page {
+/* F02 hub cat: keep natural 3:4 on desktop; do NOT force two columns on mobile */
+@media (min-width: 801px) {
+  .start-screen .page {
     align-items: start;
+    /* PC: left-right notebook split (same as start.css) */
     grid-template-columns: minmax(200px, 340px) minmax(400px, 460px);
-}
-.start-screen .art {
+  }
+  .start-screen .art {
     align-self: start;
     width: 100%;
-}
-.start-screen .frame {
+  }
+  .start-screen .frame {
     width: min(100%, 340px);
     height: auto;
     aspect-ratio: 3 / 4;
+  }
 }
 @media (max-width: 800px) {
+  .start-screen .page {
+    /* Mobile: single column — cat above, controls below */
+    grid-template-columns: 1fr !important;
+  }
+  .start-screen .art {
+    justify-content: center;
+    width: 100%;
+  }
   .start-screen .frame {
     width: 100%;
     max-width: none;
