@@ -792,6 +792,27 @@
         </div>
     </div>
 
+    <!-- F02 puzzle settle celebration modal (纸墨, mirrors F11 / jiu-coin) -->
+    <div class="jiu-coin-modal puzzle-settle-modal" id="puzzleSettleModal" hidden aria-hidden="true">
+        <div class="jiu-coin-dialog jiu-coin-dialog--celebrate puzzle-settle-dialog" role="dialog" aria-modal="true" aria-labelledby="puzzleSettleTitle">
+            <button type="button" class="jiu-coin-close-x" onclick="closePuzzleSettleModal()" aria-label="关闭">×</button>
+            <div class="puzzle-settle-body" id="puzzleSettleBody" data-status="pending">
+                <h2 class="puzzle-settle-title" id="puzzleSettleTitle">残局结算中</h2>
+                <div class="puzzle-settle-stars is-pending" id="puzzleSettleStars" aria-live="polite">…</div>
+                <p class="puzzle-settle-headline" id="puzzleSettleHeadline">正在保存进度…</p>
+                <div class="puzzle-settle-reward" id="puzzleSettleReward" hidden></div>
+                <ul class="puzzle-settle-goals" id="puzzleSettleGoals"></ul>
+                <p class="puzzle-settle-edge" id="puzzleSettleEdge" hidden></p>
+                <p class="puzzle-settle-hint" id="puzzleSettleHint" hidden></p>
+                <p class="puzzle-settle-fail" id="puzzleSettleFail" hidden></p>
+            </div>
+            <div class="jiu-coin-modal-actions puzzle-settle-actions">
+                <button type="button" class="jiu-coin-secondary" onclick="returnToPuzzleListFromSettleModal()">返回残局列表</button>
+                <button type="button" class="jiu-coin-primary" onclick="closePuzzleSettleModal()">继续复盘</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Fill mode modal (shown after 开始游戏) -->
     <div id="fillModeModal" class="fill-mode-modal" hidden aria-hidden="true">
         <div class="fill-mode-backdrop" onclick="cancelFillModeModal()"></div>
@@ -861,6 +882,7 @@
             parseRouteHash,
         } from './js/screen-router.js';
         import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
+        import { closePuzzleSettleModal, returnToPuzzleListFromSettleModal } from './js/puzzle-settle-modal.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext, closeDailyQuizResultModal, goSimFromDailyQuizResult } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup } from './js/patterns.js';
@@ -919,6 +941,8 @@
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
         window.playAgain = playAgain;
+        window.closePuzzleSettleModal = closePuzzleSettleModal;
+        window.returnToPuzzleListFromSettleModal = returnToPuzzleListFromSettleModal;
         window.saveResultShareImage = saveResultShareImage;
         window.copyResultShareText = copyResultShareText;
         window.openResultLeaderboard = openResultLeaderboard;
