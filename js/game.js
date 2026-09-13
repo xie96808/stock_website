@@ -108,6 +108,9 @@ function seedPuzzleSession(cloud) {
         protocolVersion: cloud.protocolVersion || 'legacy-batch',
         gameKind: 'puzzle',
         gameDays,
+        currentDay: 1,
+        actions: [],
+        tradeHistory: [],
         initialState: init,
         firstSellableDay: firstSellable,
         maxOrders: cloud.maxOrders ?? null,
@@ -835,14 +838,17 @@ export function updateUI() {
     }
 
     // Meta grid values
-    document.getElementById('currentPrice').textContent = todayData.close.toFixed(2);
+    const priceEl = document.getElementById('currentPrice');
+    if (priceEl) {
+        priceEl.textContent = todayData ? todayData.close.toFixed(2) : '--';
+    }
 
     const prevIdx = histLen + session.currentDay - 2;
     const prevData = prevIdx >= 0 ? session.gameKline[prevIdx] : null;
     let dailyPct = null;
-    if (prevData && prevData.close > 0) {
+    if (todayData && prevData && prevData.close > 0) {
         dailyPct = (todayData.close / prevData.close - 1) * 100;
-    } else if (todayData.open > 0) {
+    } else if (todayData && todayData.open > 0) {
         dailyPct = (todayData.close / todayData.open - 1) * 100;
     }
     const dailyEl = document.getElementById('dailyReturn');

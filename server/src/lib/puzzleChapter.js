@@ -71,6 +71,7 @@ function sessionPublicFromRow(row) {
   let bars = null;
   let history = null;
   let snapHistoryLength = null;
+  let snapLevelKey = null;
   try {
     const snap = JSON.parse(row.snapshot_json);
     initialState = snap.initialState || (row.initial_state_json ? JSON.parse(row.initial_state_json) : null);
@@ -80,6 +81,7 @@ function sessionPublicFromRow(row) {
     history = Array.isArray(snap.history) ? snap.history : [];
     snapHistoryLength =
       Number.isInteger(snap.historyLength) ? snap.historyLength : (history ? history.length : 0);
+    if (typeof snap.levelKey === "string") snapLevelKey = snap.levelKey;
   } catch {
     /* ignore */
   }
@@ -92,6 +94,11 @@ function sessionPublicFromRow(row) {
   }
   const historyLength =
     snapHistoryLength != null ? snapHistoryLength : (row.history_length ?? 0);
+  let levelKey = snapLevelKey;
+  if (!levelKey && row.puzzle_version_id) {
+    const m = String(row.puzzle_version_id).match(/^puzzle:([^:]+):/);
+    if (m) levelKey = m[1];
+  }
   return {
     gameId: row.id,
     ruleVersion: row.rule_version,
@@ -109,6 +116,7 @@ function sessionPublicFromRow(row) {
     finishedAt: row.finished_at || null,
     gameKind: row.game_kind || GAME_KIND_PUZZLE,
     puzzleVersionId: row.puzzle_version_id || null,
+    levelKey,
     protocolVersion: row.protocol_version || PROTOCOL_LEGACY_BATCH,
     undoCount: row.undo_count ?? 0,
     createFee: PUZZLE_CREATE_FEE,
@@ -138,7 +146,10 @@ export function seedPuzzleChapter1(db = openDb()) {
   const tx = db.transaction(() => {
     for (const def of CHAPTER1_LEVEL_DEFS) {
       const id = puzzleVersionId(def);
-      const { snapshotJson, snapshotSha256 } = buildLevelSnapshot(def);
+      const { snapshot, snapshotJson, snapshotSha256 } = buildLevelSnapshot(def);
+      const histLen = Number.isInteger(snapshot.historyLength)
+        ? snapshot.historyLength
+        : (Array.isArray(snapshot.history) ? snapshot.history.length : 0);
       const info = insert.run(
         id,
         PUZZLE_CHAPTER_ID,
@@ -157,7 +168,7 @@ export function seedPuzzleChapter1(db = openDb()) {
         def.stockName,
         def.stockIndex ?? -1,
         def.windowStart ?? -1,
-        0,
+        histLen,
         snapshotJson,
         snapshotSha256,
         JSON.stringify(def.initialState),

@@ -136,17 +136,20 @@ export function endGame() {
     generateKlineAnalysis();
 
     // BS score written by generateBSReport — re-read live session.
+    // Puzzle already painted 星级 copy above; do not overwrite with classic letter grade.
     const settled = selectSettleView();
-    const grade = calcGrade(finalReturnPercent, settled.bsScore);
-    const medalEl = document.getElementById('gradeMedal');
-    if (medalEl) {
-        medalEl.className = 'grade-medal ' + grade.cls;
-        document.getElementById('gradeLetter').textContent = grade.letter;
+    if (settled.gameKind !== 'puzzle') {
+        const grade = calcGrade(finalReturnPercent, settled.bsScore);
+        const medalEl = document.getElementById('gradeMedal');
+        if (medalEl) {
+            medalEl.className = 'grade-medal ' + grade.cls;
+            document.getElementById('gradeLetter').textContent = grade.letter;
+        }
+        const titleEl = document.getElementById('gradeTitle');
+        if (titleEl) titleEl.textContent = `${grade.letter}级 · ${grade.title}`;
+        const verdictEl = document.getElementById('gradeVerdict');
+        if (verdictEl) verdictEl.textContent = grade.verdict;
     }
-    const titleEl = document.getElementById('gradeTitle');
-    if (titleEl) titleEl.textContent = `${grade.letter}级 · ${grade.title}`;
-    const verdictEl = document.getElementById('gradeVerdict');
-    if (verdictEl) verdictEl.textContent = grade.verdict;
 
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
     if (bsDisplayEl) bsDisplayEl.textContent = settled.bsScore != null ? settled.bsScore : '--';

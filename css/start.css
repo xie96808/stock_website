@@ -26,7 +26,8 @@
 
 .start-screen .page {
     display: grid;
-    grid-template-columns: auto minmax(400px, 460px);
+    /* Left track needs a real min width: absolute imgs + height:auto would collapse `auto` to 0 */
+    grid-template-columns: minmax(200px, 340px) minmax(400px, 460px);
     gap: 28px;
     align-items: start;
     width: auto;
@@ -38,21 +39,24 @@
     z-index: 1;
 }
 
-/* LEFT — notebook frame + mascot; natural 3:4 aspect (do not stretch with tall hub) */
+/* LEFT — notebook frame + mascot; natural 3:4 (definite width so aspect-ratio yields height) */
 .start-screen .art {
+    width: 100%;
+    min-width: 0;
     height: auto;
     min-height: 0;
     padding: 0;
     display: flex;
+    justify-content: center;
     align-self: start;
 }
 
 .start-screen .frame {
     position: relative;
+    width: min(100%, 340px);
+    max-width: 340px;
     height: auto;
     aspect-ratio: 3 / 4;
-    width: auto;
-    max-width: 340px;
     min-height: 0;
     border-radius: 18px 24px 16px 22px;
     background: #e8dcc4;

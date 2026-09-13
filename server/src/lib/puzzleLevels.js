@@ -28,7 +28,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 1,
     levelKey: "ch1-01",
     rewardFamilyId: "ch1-01",
-    version: 1,
+    version: 2,
     title: "第一天站岗",
     theme: "买入后已有浮亏",
     gameDays: 6,
@@ -65,7 +65,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 2,
     levelKey: "ch1-02",
     rewardFamilyId: "ch1-02",
-    version: 1,
+    version: 2,
     title: "到手的利润",
     theme: "初始持仓处于浮盈",
     gameDays: 6,
@@ -100,7 +100,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 3,
     levelKey: "ch1-03",
     rewardFamilyId: "ch1-03",
-    version: 1,
+    version: 2,
     title: "两笔机会",
     theme: "空仓、最多两笔实际成交订单",
     gameDays: 7,
@@ -137,7 +137,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 4,
     levelKey: "ch1-04",
     rewardFamilyId: "ch1-04",
-    version: 1,
+    version: 2,
     title: "明天才好卖",
     theme: "刚买入的锁定持仓",
     gameDays: 6,
@@ -177,7 +177,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 5,
     levelKey: "ch1-05",
     rewardFamilyId: "ch1-05",
-    version: 1,
+    version: 2,
     title: "震荡磨人",
     theme: "已有持仓、窄幅行情",
     gameDays: 8,
@@ -214,7 +214,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 6,
     levelKey: "ch1-06",
     rewardFamilyId: "ch1-06",
-    version: 1,
+    version: 2,
     title: "最后几个交易日",
     theme: "带持仓进入短窗口",
     gameDays: 6,
@@ -248,8 +248,47 @@ export const CHAPTER1_LEVEL_DEFS = [
   },
 ];
 
+/** Synthetic pre-window context so #gameScreen / review K-line is not a bare 1-bar stub. */
+export function buildContextHistory(firstBar, count = 30) {
+  const out = [];
+  if (!firstBar || count <= 0) return out;
+  const anchor = Number(firstBar.open) || Number(firstBar.close) || 10;
+  // Walk backward from day-1 open with mild noise; last history close ≈ first open.
+  let px = anchor;
+  const vols = Number(firstBar.volume) || 1000;
+  for (let i = count; i >= 1; i -= 1) {
+    const drift = ((i % 7) - 3) * 0.015 * anchor;
+    const open = Math.max(0.5, +(px - drift * 0.3).toFixed(2));
+    const close = Math.max(0.5, +(px + drift * 0.2).toFixed(2));
+    const high = Math.max(open, close, +(Math.max(open, close) + 0.08 * anchor).toFixed(2));
+    const low = Math.min(open, close, +(Math.min(open, close) - 0.08 * anchor).toFixed(2));
+    const day = String(i).padStart(2, "0");
+    out.push({
+      date: `2024-04-${day}`,
+      open,
+      high,
+      low,
+      close,
+      volume: vols,
+    });
+    px = open;
+  }
+  out.reverse();
+  // Ease last history close toward firstBar.open for a clean takeover.
+  const last = out[out.length - 1];
+  if (last) {
+    last.close = +anchor.toFixed(2);
+    last.high = Math.max(last.high, last.open, last.close);
+    last.low = Math.min(last.low, last.open, last.close);
+  }
+  return out;
+}
+
 export function buildLevelSnapshot(def) {
-  const history = [];
+  const history =
+    Array.isArray(def.history) && def.history.length
+      ? def.history
+      : buildContextHistory(def.bars?.[0], 30);
   const snapshot = {
     ruleVersion: PUZZLE_RULE_VERSION,
     fillMode: PUZZLE_FILL_MODE,

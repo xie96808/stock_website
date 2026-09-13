@@ -81,6 +81,13 @@ test("free create does not deduct jiu coin; resume idempotent", async () => {
   assert.equal(first.json.data.createFee, 0);
   assert.equal(first.json.data.game.gameKind, "puzzle");
   assert.equal(first.json.data.game.createFee, 0);
+  assert.equal(first.json.data.game.levelKey, "ch1-01");
+  assert.ok(Array.isArray(first.json.data.game.bars) && first.json.data.game.bars.length >= 6);
+  assert.ok(
+    Array.isArray(first.json.data.game.history) && first.json.data.game.history.length >= 20,
+    "puzzle entry should include context history for K-line"
+  );
+  assert.equal(first.json.data.game.historyLength, first.json.data.game.history.length);
   assert.equal(getJiuCoinBalance(auth.user.id), bal0);
 
   const again = await startLevel(auth, "ch1-01", key);
@@ -129,7 +136,7 @@ test("3★ settle grants +20 once; repeat and version bump no double pay; 1★ n
   insertLevelVersionBump(def.levelKey);
   const s4 = await startLevel(auth, def.levelKey, `star-s4-${auth.user.id}`);
   assert.equal(s4.status, 201, JSON.stringify(s4.json));
-  assert.match(s4.json.data.game.puzzleVersionId, /:v2$/);
+  assert.match(s4.json.data.game.puzzleVersionId, new RegExp(`:v${def.version + 1}$`));
   const f4 = await finishLevel(auth, s4.json.data.game.gameId, def.validatedThreeStarActions);
   assert.equal(f4.status, 201, JSON.stringify(f4.json));
   assert.equal(f4.json.data.reward.grantedThisTime, false);
