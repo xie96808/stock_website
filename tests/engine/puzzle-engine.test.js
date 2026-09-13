@@ -131,3 +131,88 @@ test('1★ only when settle legal but miss two-star goal', () => {
   assert.equal(s.stars, 1);
   assert.equal(s.twoStarMet, false);
 });
+
+test('buy-hold benchmark: starting long holds to last close', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0]; // long initial
+  assert.ok(def.initialState.qty > 0);
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  // Starting long: hold-only settle must match buy-hold benchmark.
+  const hold = settlePuzzle({
+    bars: def.bars,
+    actions: holds(def.gameDays - 1),
+    initialState: def.initialState,
+  });
+  assert.equal(hold.ok, true);
+  assert.equal(hold.returnPpm, bh);
+  assert.ok(typeof bh === 'number');
+  assert.ok(bh < 0); // underwater window
+});
+
+test('buy-hold benchmark: starting flat buys day2 open', () => {
+  const def = CHAPTER1_LEVEL_DEFS[2]; // flat
+  assert.equal(def.initialState.qty, 0);
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const holdBuy = settlePuzzle({
+    bars: def.bars,
+    actions: ['buy', ...holds(def.gameDays - 2)],
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(holdBuy.ok, true);
+  assert.equal(holdBuy.returnPpm, bh);
+});
+
+test('ch1-01 v3 day1-sell validated route scores 3★', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  assert.deepEqual(def.validatedThreeStarActions, ['sell', 'hold', 'hold', 'hold', 'hold']);
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const best = settlePuzzle({
+    bars: def.bars,
+    actions: def.validatedThreeStarActions,
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(best.ok, true, best.message);
+  const s = scorePuzzleStars({
+    returnPpm: best.returnPpm,
+    mddPpm: best.mddPpm,
+    orderCount: best.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  assert.equal(s.stars, 3);
+  assert.equal(s.twoStarMet, true);
+  assert.equal(s.threeStarMet, true);
+  // ~ -10% vs buy-hold ~ -32% ⇒ beat by ≥3pp
+  assert.ok(s.edgePpm >= 3 * 10000);
+});
+
+test('2★ when beat buy-hold but fail three-star MDD/order caps', () => {
+  const s = scorePuzzleStars({
+    returnPpm: 50_000, // +5%
+    mddPpm: 400_000, // 40% MDD
+    orderCount: 3,
+    benchmarkReturnPpm: 0,
+    goals: {
+      twoStar: { beatBuyHoldPp: 3 },
+      threeStar: { maxMddPct: 30, maxOrders: 1 },
+    },
+  });
+  assert.equal(s.stars, 2);
+  assert.equal(s.twoStarMet, true);
+  assert.equal(s.threeStarMet, false);
+});
+
+test('3★ requires beat + MDD/order caps', () => {
+  const s = scorePuzzleStars({
+    returnPpm: 50_000,
+    mddPpm: 100_000,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals: {
+      twoStar: { beatBuyHoldPp: 3 },
+      threeStar: { maxMddPct: 30, maxOrders: 1 },
+    },
+  });
+  assert.equal(s.stars, 3);
+});

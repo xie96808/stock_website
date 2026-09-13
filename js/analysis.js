@@ -68,13 +68,15 @@ export function generateBSReport() {
         tradeGains: input.tradeGains,
     });
 
-    patchSession({ bsScore: report.score });
+    patchSession({ bsScore: report.score != null ? report.score : null });
 
     const el = document.getElementById('bsReport');
+    if (!el) return;
+    const scoreLabel = report.score != null ? `${report.score}分 · ${report.grade}` : '--';
     el.innerHTML = `
         <div class="bs-score-header">
             <span class="bs-score-title">BS 点评分</span>
-            <span class="bs-score-badge ${report.gradeCls}">${report.score}分 · ${report.grade}</span>
+            <span class="bs-score-badge ${report.gradeCls}">${scoreLabel}</span>
         </div>
         <div class="bs-report-items">
             ${report.details.map(d => `

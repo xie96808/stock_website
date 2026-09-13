@@ -195,3 +195,55 @@ test("flag off returns 404", async () => {
     config.puzzleChapterEnabled = prev;
   }
 });
+
+test("progress: 1★ recorded; higher stars update best_stars; list DTO surfaces fields", async () => {
+  const auth = await register(`pzprog${Date.now().toString(36)}`);
+  const def = CHAPTER1_LEVEL_DEFS[0]; // ch1-01
+  const s1 = await startLevel(auth, def.levelKey, `prog-1-${auth.user.id}`);
+  assert.equal(s1.status, 201, JSON.stringify(s1.json));
+  const hold = Array.from({ length: def.gameDays - 1 }, () => "hold");
+  const f1 = await finishLevel(auth, s1.json.data.game.gameId, hold);
+  assert.equal(f1.status, 201, JSON.stringify(f1.json));
+  assert.equal(f1.json.data.stars, 1);
+
+  let list = await api("/api/v1/puzzles");
+  assert.equal(list.status, 200);
+  let lv = list.json.data.levels.find((l) => l.levelKey === def.levelKey);
+  assert.ok(lv);
+  assert.ok(lv.teachingBrief);
+  assert.ok(lv.openStateHint);
+  assert.equal(lv.version, def.version); // MAX(version) published
+  assert.equal(lv.progress.bestStars, 1);
+
+  const row1 = openDb()
+    .prepare(`SELECT best_stars FROM puzzle_progress WHERE user_id=? AND level_key=?`)
+    .get(auth.user.id, def.levelKey);
+  assert.equal(row1.best_stars, 1);
+
+  const s2 = await startLevel(auth, def.levelKey, `prog-3-${auth.user.id}`);
+  assert.equal(s2.status, 201);
+  const f2 = await finishLevel(auth, s2.json.data.game.gameId, def.validatedThreeStarActions);
+  assert.equal(f2.status, 201, JSON.stringify(f2.json));
+  assert.equal(f2.json.data.stars, 3);
+  assert.equal(f2.json.data.reward.grantedThisTime, true);
+
+  const row3 = openDb()
+    .prepare(`SELECT best_stars FROM puzzle_progress WHERE user_id=? AND level_key=?`)
+    .get(auth.user.id, def.levelKey);
+  assert.equal(row3.best_stars, 3);
+
+  list = await api("/api/v1/puzzles");
+  lv = list.json.data.levels.find((l) => l.levelKey === def.levelKey);
+  assert.equal(lv.progress.bestStars, 3);
+});
+
+test("T+1 day1 sell illegal on ch1-04 via finish API", async () => {
+  const auth = await register(`pzt1${Date.now().toString(36)}`);
+  const def = CHAPTER1_LEVEL_DEFS[3];
+  const st = await startLevel(auth, def.levelKey, `t1-${auth.user.id}`);
+  assert.equal(st.status, 201);
+  const bad = ["sell", ...Array.from({ length: def.gameDays - 2 }, () => "hold")];
+  const fin = await finishLevel(auth, st.json.data.game.gameId, bad);
+  assert.equal(fin.status, 422);
+  assert.equal(fin.json.error.code, "INVALID_ACTION_SEQUENCE");
+});

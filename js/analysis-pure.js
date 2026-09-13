@@ -51,6 +51,7 @@ export function computeBestPoints({ kline, historyLength, gameDays = 30, pattern
     for (let i = 0; i < gameDays; i++) {
         const gi = histLen + i;
         const d = gameData[i];
+        if (!d) continue;
         let buyScore = 0;
         let sellScore = 0;
         const buyReasons = [];
@@ -235,9 +236,25 @@ export function computeBSReport({
     tradeGains,
     gameDays = 30,
 }) {
-    const histLen = historyLength;
-    
-    
+    const histLen = historyLength || 0;
+    const days = Math.max(0, Number(gameDays) || 0);
+    // Short / incomplete windows must never throw — puzzle settle depends on this.
+    if (!Array.isArray(kline) || days < 2) {
+        return {
+            score: null,
+            grade: '—',
+            gradeCls: 'neutral',
+            comment: '短窗局不提供经典 BS 评分。',
+            details: [],
+            bestBuyDay: 0,
+            bestSellDay: 0,
+            bestProfit: 0,
+            periodReturn: 0,
+            userReturn: ((Number(totalReturn) || 1) - 1) * 100,
+        };
+    }
+    gameDays = days;
+
     const sameClose = fillMode === 'same_close';
     let bestBuyDay = 0, bestSellDay = 0, bestProfit = 0;
     if (sameClose) {
@@ -263,13 +280,17 @@ export function computeBSReport({
             if (!buyBar) continue;
             const buyPrice = buyBar.open;
             for (let j = i + 1; j < gameDays; j++) {
-                // Sell fill: next open for decisions before day 30; day-30 settle uses close.
+                // Sell fill: next open for decisions before last day; last-day settle uses close.
                 let sellPrice;
                 if (j >= gameDays - 1) {
-                    sellPrice = kline[histLen + 29].close;
+                    const settleBar = kline[histLen + gameDays - 1];
+                    if (!settleBar) continue;
+                    sellPrice = settleBar.close;
                 } else {
                     const sellBar = kline[histLen + j + 1];
-                    sellPrice = sellBar ? sellBar.open : kline[histLen + j].close;
+                    const fallback = kline[histLen + j];
+                    if (!sellBar && !fallback) continue;
+                    sellPrice = sellBar ? sellBar.open : fallback.close;
                 }
                 const profit = (sellPrice - buyPrice) / buyPrice;
                 if (profit > bestProfit) {
@@ -282,41 +303,43 @@ export function computeBSReport({
     }
 
     // Buy-and-hold over the executable window for this fill mode.
+    const lastBar = kline[histLen + gameDays - 1];
     let periodReturn = 0;
     let bhNote = '';
     if (sameClose) {
         const bhBuy = kline[histLen];
-        const bhSell = kline[histLen + 29];
+        const bhSell = lastBar;
         periodReturn = (bhBuy && bhSell && bhBuy.close)
             ? (bhSell.close / bhBuy.close - 1) * 100
             : 0;
-        bhNote = `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（收盘→收盘）`;
+        bhNote = `持有至第${gameDays}日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（收盘→收盘）`;
     } else {
         const bhBuy = kline[histLen + 1];
-        const bhSell = kline[histLen + 29];
+        const bhSell = lastBar;
         periodReturn = (bhBuy && bhSell && bhBuy.open)
             ? (bhSell.close / bhBuy.open - 1) * 100
             : 0;
-        bhNote = `持有至第30日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→收盘）`;
+        bhNote = `持有至第${gameDays}日收盘 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（开盘→收盘）`;
     }
 
     const userReturn = (totalReturn - 1) * 100;
-    const buyTrades = trades.filter(t => t.type === 'buy');
-    const sellTrades = trades.filter(t => t.type === 'sell');
+    const buyTrades = (trades || []).filter(t => t.type === 'buy');
+    const sellTrades = (trades || []).filter(t => t.type === 'sell');
+    const gains = Array.isArray(tradeGains) ? tradeGains : [];
 
     // Tradeable price range for position scoring (matches fill prices).
     const tradeablePrices = [];
     if (sameClose) {
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < gameDays; i++) {
             const bar = kline[histLen + i];
             if (bar) tradeablePrices.push(bar.close);
         }
     } else {
-        for (let i = 1; i <= 29; i++) {
+        for (let i = 1; i <= gameDays - 1; i++) {
             const bar = kline[histLen + i];
             if (bar) tradeablePrices.push(bar.open);
         }
-        if (kline[histLen + 29]) tradeablePrices.push(kline[histLen + 29].close);
+        if (lastBar) tradeablePrices.push(lastBar.close);
     }
     const openMin = tradeablePrices.length ? Math.min(...tradeablePrices) : 0;
     const openMax = tradeablePrices.length ? Math.max(...tradeablePrices) : 1;
@@ -405,14 +428,14 @@ export function computeBSReport({
         details.push({ label: '交易频率', value: '频繁', cls: 'negative', note: `${tradeCount} 次买入` });
     }
 
-    if (tradeGains.length > 0) {
-        const losses = tradeGains.filter(g => g < 0);
+    if (gains.length > 0) {
+        const losses = gains.filter(g => g < 0);
         let stopLabel, stopCls, stopNote;
         if (losses.length === 0) {
             score += 4;
             stopLabel = '优秀';
             stopCls = 'positive';
-            const maxGain = Math.max(...tradeGains);
+            const maxGain = Math.max(...gains);
             stopNote = `本局无亏损单，最大单笔收益 +${maxGain.toFixed(2)}%`;
         } else {
             const maxLoss = Math.min(...losses);
@@ -519,14 +542,26 @@ export function calcGrade(finalReturnPercent, bsScore) {
 export function computeKlineAnalysisModel({ kline, historyLength, gameDays = 30 }) {
     const histLen = historyLength;
     
-    const gameData = kline.slice(histLen, histLen + gameDays);
+    const gameData = (kline || []).slice(histLen, histLen + gameDays).filter(Boolean);
+    const effectiveDays = gameData.length || 0;
+
+    if (effectiveDays === 0) {
+        return {
+            tags: [{ text: '数据不足', cls: 'neutral' }],
+            trend: '数据不足',
+            volatility: '数据不足',
+            maAlignment: '数据不足',
+            periodReturn: 0,
+            analysisHtml: '<p>本局 K 线数据不足，无法生成波段分析。</p>',
+        };
+    }
 
     const closes = gameData.map(d => d.close);
     const highs = gameData.map(d => d.high);
     const lows = gameData.map(d => d.low);
     const volumes = gameData.map(d => d.volume);
 
-    const allData = kline.slice(0, histLen + gameDays);
+    const allData = (kline || []).slice(0, histLen + gameDays);
     const ma5 = calcMANullPad(allData, 5);
     const ma10 = calcMANullPad(allData, 10);
     const ma20 = calcMANullPad(allData, 20);
@@ -537,26 +572,28 @@ export function computeKlineAnalysisModel({ kline, historyLength, gameDays = 30 
 
     // === Trend analysis ===
     const firstClose = closes[0];
-    const lastClose = closes[gameDays - 1];
-    const periodReturn = (lastClose - firstClose) / firstClose * 100;
+    const lastClose = closes[effectiveDays - 1];
+    const periodReturn = firstClose
+        ? (lastClose - firstClose) / firstClose * 100
+        : 0;
 
-    const slope = calcSlope(closes, 0, gameDays);
+    const slope = calcSlope(closes, 0, effectiveDays);
     let trend, trendCls;
     if (slope > 0.002) { trend = '上行趋势'; trendCls = 'up'; }
     else if (slope < -0.002) { trend = '下行趋势'; trendCls = 'down'; }
     else { trend = '横盘震荡'; trendCls = 'neutral'; }
 
     // === Volatility ===
-    const avgRange = gameData.reduce((s, d) => s + (d.high - d.low) / d.close, 0) / gameDays;
+    const avgRange = gameData.reduce((s, d) => s + (d.high - d.low) / d.close, 0) / effectiveDays;
     let volatility, volCls;
     if (avgRange > 0.04) { volatility = '高波动'; volCls = 'up'; }
     else if (avgRange > 0.02) { volatility = '中等波动'; volCls = 'info'; }
     else { volatility = '低波动'; volCls = 'neutral'; }
 
     // === MA alignment ===
-    const endMa5 = gma5[gameDays - 1];
-    const endMa10 = gma10[gameDays - 1];
-    const endMa20 = gma20[gameDays - 1];
+    const endMa5 = gma5[effectiveDays - 1];
+    const endMa10 = gma10[effectiveDays - 1];
+    const endMa20 = gma20[effectiveDays - 1];
     let maAlignment, maCls;
     if (endMa5 && endMa10 && endMa20) {
         if (endMa5 > endMa10 && endMa10 > endMa20) { maAlignment = '多头排列'; maCls = 'up'; }
@@ -565,8 +602,8 @@ export function computeKlineAnalysisModel({ kline, historyLength, gameDays = 30 
     } else { maAlignment = '数据不足'; maCls = 'neutral'; }
 
     // === Volume trend ===
-    const vol1 = volumes.slice(0, Math.floor(gameDays / 2));
-    const vol2 = volumes.slice(Math.floor(gameDays / 2));
+    const vol1 = volumes.slice(0, Math.floor(effectiveDays / 2));
+    const vol2 = volumes.slice(Math.floor(effectiveDays / 2));
     const avgVol1 = vol1.reduce((a, b) => a + b, 0) / vol1.length;
     const avgVol2 = vol2.reduce((a, b) => a + b, 0) / vol2.length;
     let volTrend;
@@ -576,7 +613,7 @@ export function computeKlineAnalysisModel({ kline, historyLength, gameDays = 30 
 
     // === T+0 suitability ===
     const dailySwings = gameData.map(d => (d.high - d.low) / d.close * 100);
-    const avgSwing = dailySwings.reduce((a, b) => a + b, 0) / gameDays;
+    const avgSwing = dailySwings.reduce((a, b) => a + b, 0) / effectiveDays;
     let tSuitability;
     if (avgSwing > 4 && trend === '横盘震荡') tSuitability = '适合做T';
     else if (avgSwing > 3) tSuitability = '可尝试做T';
