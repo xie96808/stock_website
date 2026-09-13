@@ -103,3 +103,64 @@ test('calcGrade snapshot', () => {
   assert.equal(calcGrade(-8, 50).letter, 'D');
   assert.equal(calcGrade(20, 95).letter, 'S');
 });
+
+test('computeBSReport short puzzle window (next_open) does not throw', () => {
+  const defHist = 8;
+  const gameDays = 6;
+  const kline = [];
+  for (let i = 0; i < defHist + gameDays; i++) {
+    const c = 100 - i * 0.5;
+    kline.push({
+      date: `2026-01-${String(i + 1).padStart(2, '0')}`,
+      open: c,
+      high: c + 1,
+      low: c - 1,
+      close: c - 0.2,
+      volume: 1000,
+    });
+  }
+  const report = computeBSReport({
+    kline,
+    historyLength: defHist,
+    gameDays,
+    trades: [{ type: 'sell', day: 2, price: kline[defHist + 1].open }],
+    fillMode: 'next_open',
+    totalReturn: 0.9,
+    tradeGains: [-10],
+  });
+  assert.equal(typeof report.score, 'number');
+  assert.ok(report.score >= 0 && report.score <= 100);
+  assert.match(report.details.find((d) => d.label === '相对区间涨跌')?.note || '', /第6日/);
+});
+
+test('computeBSReport ch1-01 embedded bars next_open never throws', async () => {
+  const { CHAPTER1_LEVEL_DEFS } = await import('../server/src/lib/puzzleLevels.js');
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  const kline = [...def.history, ...def.bars];
+  const report = computeBSReport({
+    kline,
+    historyLength: def.history.length,
+    gameDays: def.gameDays,
+    trades: [{ type: 'sell', day: 2, price: def.bars[1].open }],
+    fillMode: 'next_open',
+    totalReturn: 0.88,
+    tradeGains: [-12],
+  });
+  assert.notEqual(report.score, undefined);
+  assert.ok(report.score === null || (report.score >= 0 && report.score <= 100));
+});
+
+test('computeBSReport / kline model tolerate empty short input', () => {
+  const empty = computeBSReport({
+    kline: [],
+    historyLength: 0,
+    gameDays: 1,
+    trades: [],
+    fillMode: 'next_open',
+    totalReturn: 1,
+    tradeGains: [],
+  });
+  assert.equal(empty.score, null);
+  const model = computeKlineAnalysisModel({ kline: [], historyLength: 0, gameDays: 6 });
+  assert.equal(model.trend, '数据不足');
+});

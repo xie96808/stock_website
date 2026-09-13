@@ -64,26 +64,30 @@ export function endGame() {
     }
 
     // F02 puzzle: show stars instead of classic letter grade when available.
+    // Until server finish returns stars, avoid a fake single-★ medal (use … / 结算中).
     if (view.gameKind === 'puzzle') {
         const stars = view.puzzleResult?.stars;
+        const pendingStars = stars == null;
         const medalElEarly = document.getElementById('gradeMedal');
         const titleElEarly = document.getElementById('gradeTitle');
         const verdictElEarly = document.getElementById('gradeVerdict');
-        const starN = Math.max(0, Math.min(3, Number(stars) || 0));
+        const starN = pendingStars ? 0 : Math.max(0, Math.min(3, Number(stars) || 0));
         const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
         if (medalElEarly) {
             medalElEarly.className = 'grade-medal';
             const letter = document.getElementById('gradeLetter');
-            if (letter) letter.textContent = starN ? String(starN) : '★';
+            if (letter) letter.textContent = pendingStars ? '…' : String(starN);
         }
         if (titleElEarly) {
-            titleElEarly.textContent = stars != null
-                ? `残局结算 · ${starText}`
-                : '残局结算';
+            titleElEarly.textContent = pendingStars
+                ? '残局结算 · 结算中…'
+                : `残局结算 · ${starText}`;
         }
         if (verdictElEarly) {
             const reward = view.puzzleResult?.reward;
-            if (reward?.grantedThisTime) {
+            if (pendingStars) {
+                verdictElEarly.textContent = '正在保存进度…';
+            } else if (reward?.grantedThisTime) {
                 verdictElEarly.textContent = `首通奖励 +${reward.amount} 韭币`;
             } else if (reward?.alreadyClaimed) {
                 verdictElEarly.textContent = '本关首通奖励已领取';
@@ -130,10 +134,19 @@ export function endGame() {
     document.getElementById('resultChartSubtitle').textContent =
         `${view.currentStock.name} (${view.currentStock.code})`;
 
-    generateBSReport();
-    generateBestPoints();
-    drawResultChart();
-    generateKlineAnalysis();
+    // Isolate classic analysis so a short-window BS crash can never block
+    // chart draw / kline copy / cloud puzzle finish (progress + stars).
+    const runResultStep = (label, fn) => {
+        try {
+            fn();
+        } catch (err) {
+            console.error(`[endGame] ${label} failed`, err);
+        }
+    };
+    runResultStep('generateBSReport', () => generateBSReport());
+    runResultStep('generateBestPoints', () => generateBestPoints());
+    runResultStep('drawResultChart', () => drawResultChart());
+    runResultStep('generateKlineAnalysis', () => generateKlineAnalysis());
 
     // BS score written by generateBSReport — re-read live session.
     // Puzzle already painted 星级 copy above; do not overwrite with classic letter grade.
@@ -158,6 +171,7 @@ export function endGame() {
     clearShareRankMeta();
     updateShareRankHint();
     if (settled.cloudMode && settled.cloudGameId) {
+        // Always persist cloud / puzzle settle — even if analysis steps above threw.
         finishCloudGame().then(async (res) => {
             // Refresh return display from authoritative server result if present.
             const live = getSession();
@@ -189,7 +203,7 @@ export function endGame() {
                     }
                 }
                 const letter = document.getElementById('gradeLetter');
-                if (letter) letter.textContent = starN ? String(starN) : '★';
+                if (letter) letter.textContent = String(starN);
             }
             updateSaveStatusUi();
             if (res && live.gameKind !== 'puzzle') await refreshShareRankMeta();
