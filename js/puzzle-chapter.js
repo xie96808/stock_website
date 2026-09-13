@@ -1,6 +1,7 @@
 /** F02 残局挑战首章 — hub entry card + dedicated #puzzleScreen */
 import { getAuthState, openAuthModal, showToast } from './auth.js';
-import { loadCloudGameDraft } from './cloud-draft.js';
+import { loadCloudGameDraft, clearCloudGameDraft } from './cloud-draft.js';
+import { abandonCloudGame } from './game-sync.js';
 import {
   Route,
   prepareScreen,
@@ -307,7 +308,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = ENTRY_TIMEOUT_MS)
  * Enter classic #gameScreen with puzzle snapshot bars.
  * Throws on missing bars / start failure so callers always restore the level list.
  */
-async function enterPuzzleGameScreen(game) {
+async function enterPuzzleGameScreen(game, { forceFresh = false } = {}) {
   const startGame = resolveStartGame();
   if (!startGame) {
     throw new Error('开局函数未就绪');
@@ -316,11 +317,26 @@ async function enterPuzzleGameScreen(game) {
     throw new Error('残局行情快照缺失，无法进入模拟盘');
   }
   const auth = getAuthState();
-  const draft = loadCloudGameDraft({
-    gameId: game.gameId,
-    userId: auth?.user?.id,
-  });
-  const resumeActions = draft && Array.isArray(draft.actions) ? draft.actions : null;
+  const decisionDays = Number.isInteger(game.decisionDays)
+    ? game.decisionDays
+    : Math.max(1, (Number(game.gameDays) || game.bars.length) - 1);
+  let resumeActions = null;
+  if (!forceFresh) {
+    const draft = loadCloudGameDraft({
+      gameId: game.gameId,
+      userId: auth?.user?.id,
+    });
+    if (draft && Array.isArray(draft.actions) && draft.actions.length) {
+      // Terminal / hung local draft would leave only「结束并结算」— start day 1 instead.
+      if (draft.actions.length >= decisionDays) {
+        clearCloudGameDraft(game.gameId);
+      } else {
+        resumeActions = draft.actions;
+      }
+    }
+  } else if (game.gameId) {
+    clearCloudGameDraft(game.gameId);
+  }
   await startGame({ cloud: game, resumeActions });
   const gameEl = document.getElementById('gameScreen');
   if (!(gameEl && gameEl.classList.contains('active'))) {
@@ -328,7 +344,19 @@ async function enterPuzzleGameScreen(game) {
   }
 }
 
-async function startPuzzleLevel(levelKey) {
+async function abandonThenRetry(levelKey, activeGameId) {
+  if (activeGameId) {
+    try {
+      await abandonCloudGame(activeGameId);
+    } catch (e) {
+      // Still try a fresh entry; server may have already cleared the session.
+      console.warn('abandon before puzzle entry failed', e);
+    }
+  }
+  return startPuzzleLevel(levelKey, { afterAbandon: true });
+}
+
+async function startPuzzleLevel(levelKey, { afterAbandon = false } = {}) {
   const body = bodyEl();
   if (body) body.innerHTML = '<p class="puzzle-muted">开局中…</p>';
   const key = `puzzle-${levelKey}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -348,14 +376,32 @@ async function startPuzzleLevel(levelKey) {
     const json = await res.json().catch(() => ({}));
     if (res.status === 409 && json?.error?.code === 'ACTIVE_GAME_EXISTS') {
       const active = json?.error?.details?.game;
-      if (active?.gameKind === 'puzzle') {
-        const ok = window.confirm('已有进行中的残局对局。确定：继续原局');
-        if (ok) {
+      const activeId = json?.error?.details?.gameId || active?.gameId;
+      if (afterAbandon) {
+        showToast('放弃后仍有进行中的对局，请稍后重试', 'error');
+        restoreLevelListUi(body);
+        return;
+      }
+      if (active?.gameKind === 'puzzle' && Array.isArray(active?.bars) && active.bars.length) {
+        const cont = window.confirm(
+          '已有进行中的残局对局。\n\n确定：继续原局\n取消：放弃并开新局'
+        );
+        if (cont) {
+          if (!active.levelKey) active.levelKey = levelKey;
           await enterPuzzleGameScreen(active);
           return;
         }
+        await abandonThenRetry(levelKey, activeId);
+        return;
       }
-      showToast(json.error?.message || '已有进行中的对局', 'error');
+      const drop = window.confirm(
+        (json.error?.message || '已有进行中的云端对局') +
+          '\n\n确定：放弃原局并开新残局\n取消：返回关卡列表'
+      );
+      if (drop) {
+        await abandonThenRetry(levelKey, activeId);
+        return;
+      }
       restoreLevelListUi(body);
       return;
     }
