@@ -26,10 +26,10 @@
 
 .start-screen .page {
     display: grid;
-    /* Left track needs a real min width: absolute imgs + height:auto would collapse `auto` to 0 */
-    grid-template-columns: minmax(200px, 340px) minmax(400px, 460px);
+    /* PC: left art stretches with tall hub (5 lanes); mobile overrides to 1fr */
+    grid-template-columns: auto minmax(400px, 460px);
     gap: 28px;
-    align-items: start;
+    align-items: stretch;
     width: auto;
     max-width: min(920px, 100%);
     height: auto;
@@ -39,25 +39,24 @@
     z-index: 1;
 }
 
-/* LEFT — notebook frame + mascot; natural 3:4 (definite width so aspect-ratio yields height) */
+/* LEFT — notebook frame + mascot; height follows right column on PC */
 .start-screen .art {
-    width: 100%;
-    min-width: 0;
+    min-width: 200px;
     height: auto;
     min-height: 0;
     padding: 0;
     display: flex;
-    justify-content: center;
-    align-self: start;
+    align-self: stretch;
 }
 
 .start-screen .frame {
     position: relative;
-    width: min(100%, 340px);
+    /* Stretch with hub; aspect-ratio drives width from height so absolute imgs stay visible */
+    height: 100%;
+    min-height: 280px;
+    width: auto;
     max-width: 340px;
-    height: auto;
     aspect-ratio: 3 / 4;
-    min-height: 0;
     border-radius: 18px 24px 16px 22px;
     background: #e8dcc4;
     overflow: hidden;
