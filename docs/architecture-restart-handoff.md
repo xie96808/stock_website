@@ -60,7 +60,7 @@
 1. **R2**：tombstone 独立于 restore 的 ledger + 真实 backup 验收
 2. **R1**：不可变静态资源（immutable static assets）
 3. **R3**：auth 状态机
-4. **R4**：草稿单写者（single-writer drafts）
+4. **R4**：草稿单写者（single-writer drafts）— **本波实现**：见 `docs/r4-single-writer-drafts.md` + `js/cloud-draft.js`
 
 ### Wave B
 
