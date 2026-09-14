@@ -3,6 +3,12 @@ import { gameState } from './state.js';
 import { calculateMA, applyChartTheme } from './utils.js';
 import { ensureStocksLoaded } from './pack-store.js';
 import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
+import {
+    ensureEcharts,
+    markChartLoading,
+    clearChartLoading,
+    markChartFailed,
+} from './echarts-loader.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
@@ -346,7 +352,7 @@ function _renderResults(qtyHands = 10) {
         `${kline.length} 个交易日`;
     document.getElementById('hindsightFormPanel').style.display = 'none';
     document.getElementById('hindsightResultsPanel').classList.add('active');
-    _drawChart(kline, buyIdx, sellIdx, peakIdx);
+    void _drawChart(kline, buyIdx, sellIdx, peakIdx);
     setTimeout(() => _animateCounter(bestReturn * 100), 350);
     setTimeout(() => _animateEarned(earnedAmt), 350);
     _renderCommodities(earnedAmt);
@@ -399,10 +405,21 @@ function _animateEarned(targetAmt) {
     requestAnimationFrame(tick);
 }
 
-function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
+async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
     const chartDom = document.getElementById('hindsightChart');
+    if (!chartDom) return;
+    markChartLoading(chartDom);
+    let echartsApi;
+    try {
+        echartsApi = await ensureEcharts();
+    } catch (err) {
+        console.error('ECharts unavailable for hindsight chart', err);
+        markChartFailed(chartDom, '悔棋局图表加载失败，请检查网络后刷新');
+        return;
+    }
+    clearChartLoading(chartDom);
     if (hindsightChart && !hindsightChart.isDisposed()) hindsightChart.dispose();
-    hindsightChart = echarts.init(chartDom);
+    hindsightChart = echartsApi.init(chartDom);
     const isDark   = document.documentElement.getAttribute('data-theme') === 'dark';
     const axisClr  = isDark ? 'rgba(180,160,120,0.18)' : 'rgba(0,0,0,0.1)';
     const lblClr   = isDark ? '#7a7068' : '#AAAAAA';
@@ -522,8 +539,13 @@ function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
             }
         ]
     };
-    hindsightChart.setOption(option);
-    setTimeout(() => { if (hindsightChart && !hindsightChart.isDisposed()) hindsightChart.resize(); }, 60);
+    requestAnimationFrame(function () {
+        if (!hindsightChart || hindsightChart.isDisposed()) return;
+        hindsightChart.setOption(option);
+        setTimeout(function () {
+            if (hindsightChart && !hindsightChart.isDisposed()) hindsightChart.resize();
+        }, 60);
+    });
 }
 
 function _setHint(id, text, type) {

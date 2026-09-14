@@ -2,7 +2,7 @@
 
 ## 状态日期 / Status
 
-- **日期**：2026-09-14（R5 首片）
+- **日期**：2026-09-14（R6 非阻塞 ECharts）
 - **基线**：约 `0a84741`；`main` 在合并 [#66](https://github.com/xie96808/stock_website/pull/66) 之后（merge `c0dc52e`）
 - **服务器**：昵称 **29**（`121.199.33.29`），**不是** 39
 - **测试账号**：`aaaa` / `1111`
@@ -64,8 +64,8 @@
 
 ### Wave B
 
-1. **R5**：`SettlementSnapshot` vs `GameWindowDTO`（OHLCV）→ cloud create/active window → 云端去掉 full-pack — **本波实现（首片）**：见 `docs/r5-game-window-dto.md`；create/active/state 下发 `window`；经典云端 seed 优先 DTO，不再阻塞 full-pack
-2. **R6**：非阻塞 ECharts
+1. **R5**：`SettlementSnapshot` vs `GameWindowDTO`（OHLCV）→ cloud create/active window → 云端去掉 full-pack — **已实现**：见 `docs/r5-game-window-dto.md`；create/active/state 下发 `window`；经典云端 seed 优先 DTO，不再阻塞 full-pack
+2. **R6**：非阻塞 ECharts — **本波实现**：见 `docs/r6-nonblocking-echarts.md`；去 sync head 脚本；`js/echarts-loader.js` idle 预取 + 图表屏 `ensureEcharts`
 
 ### Wave C
 
@@ -101,4 +101,5 @@
 - 历史：交接文档曾「仅文档」。
 - **R2–R3 实现**（已合 main）：见各 `docs/ops-tombstone-ledger.md` / `r1-immutable-static-assets.md` / `r3-auth-state-machine.md`。
 - **R4 实现**（已合 main）：`docs/r4-single-writer-drafts.md` + `js/cloud-draft.js` 单写者草稿。
-- **R5 实现**（本分支首片）：`docs/r5-game-window-dto.md` + create/active/state `window` + classic cloud seed without full-pack gate。
+- **R5 实现**（已合 main [#108](https://github.com/xie96808/stock_website/pull/108)）：`docs/r5-game-window-dto.md` + create/active/state `window` + classic cloud seed without full-pack gate。
+- **R6 实现**（本分支）：`docs/r6-nonblocking-echarts.md` + `js/echarts-loader.js`；hub/start 不阻塞于 ECharts。

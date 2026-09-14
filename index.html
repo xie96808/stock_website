@@ -15,7 +15,8 @@
     <meta property="og:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <!-- R6: ECharts loaded async via js/echarts-loader.js (idle prefetch + ensure on chart screens). -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" as="script" crossorigin>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/jiu-coin.css">
@@ -914,32 +915,13 @@
             hidePuzzlePanel,
         } from './js/puzzle-chapter.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
+        import { scheduleIdleEchartsPrefetch } from './js/echarts-loader.js';
 
         // Bridge functions to window for onclick attributes
         window.toggleTheme = toggleTheme;
-        function waitForEcharts(timeoutMs = 4000) {
-            return new Promise((resolve) => {
-                if (window.echarts) { resolve(true); return; }
-                const start = Date.now();
-                const timer = setInterval(() => {
-                    if (window.echarts) {
-                        clearInterval(timer);
-                        resolve(true);
-                    } else if (Date.now() - start >= timeoutMs) {
-                        clearInterval(timer);
-                        resolve(false);
-                    }
-                }, 50);
-            });
-        }
-        attachDeferredStart(async (...args) => {
-            const ready = await waitForEcharts(4000);
-            if (!ready) {
-                alert('K 线图加载失败，请检查网络后刷新重试');
-                throw new Error('echarts unavailable');
-            }
-            return startGame(...args);
-        }, gameState);
+        // R6: do not gate start on ECharts — shell paints first; initChart awaits ensureEcharts.
+        attachDeferredStart(startGame, gameState);
+        scheduleIdleEchartsPrefetch();
         window.handleAction = handleAction;
         window.finishSettle = finishSettle;
         window.openRewindConfirm = openRewindConfirm;

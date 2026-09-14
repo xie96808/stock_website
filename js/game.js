@@ -30,6 +30,12 @@ import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip } from './puzzle-goals-copy.js';
 import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
+import {
+    ensureEcharts,
+    markChartLoading,
+    clearChartLoading,
+    markChartFailed,
+} from './echarts-loader.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -303,7 +309,7 @@ export async function startGame(options = {}) {
         });
     });
 
-    if (!initChart()) {
+    if (!(await initChart())) {
         document.getElementById('gameScreen').classList.remove('active');
         setHeaderChrome('hidden');
         if (typeof window.restoreSimShell === 'function') {
@@ -378,16 +384,29 @@ export function applyCloudResume(actions) {
     return true;
 }
 
-export function initChart() {
+export async function initChart() {
     const chartDom = document.getElementById('kline-chart');
-    if (!window.echarts || !chartDom) {
-        console.error('ECharts unavailable; cannot init K-line chart');
+    if (!chartDom) {
+        console.error('K-line chart DOM missing');
         return false;
     }
+
+    // Shell already painted; show fallback while CDN/async ECharts resolves.
+    markChartLoading(chartDom);
+    let echartsApi;
+    try {
+        echartsApi = await ensureEcharts();
+    } catch (err) {
+        console.error('ECharts unavailable; cannot init K-line chart', err);
+        markChartFailed(chartDom, 'K 线图加载失败，请检查网络后刷新');
+        return false;
+    }
+    clearChartLoading(chartDom);
+
     if (chartRefs.klineChart) {
         chartRefs.klineChart.dispose();
     }
-    chartRefs.klineChart = echarts.init(chartDom);
+    chartRefs.klineChart = echartsApi.init(chartDom);
 
     // Sync crosshair to OHLC panel
     chartRefs.klineChart.on('mousemove', function(params) {
@@ -411,9 +430,14 @@ export function initChart() {
     });
 
     bindMAToggles();
-    updateChart();
-    // Resize after flex layout settles
-    setTimeout(() => chartRefs.klineChart.resize(), 50);
+    // Defer first heavy setOption one frame so enter-game chrome stays responsive.
+    requestAnimationFrame(function () {
+        if (!chartRefs.klineChart) return;
+        updateChart();
+        setTimeout(function () {
+            if (chartRefs.klineChart) chartRefs.klineChart.resize();
+        }, 50);
+    });
     return true;
 }
 
