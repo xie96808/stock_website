@@ -162,7 +162,7 @@ test('buy-hold benchmark: starting flat buys day2 open', () => {
   assert.equal(holdBuy.returnPpm, bh);
 });
 
-test('ch1-01 v3 day1-sell validated route scores 3★', () => {
+test('ch1-01 v4 day1-sell validated route scores 3★', () => {
   const def = CHAPTER1_LEVEL_DEFS[0];
   assert.deepEqual(def.validatedThreeStarActions, ['sell', 'hold', 'hold', 'hold', 'hold']);
   const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
@@ -183,8 +183,59 @@ test('ch1-01 v3 day1-sell validated route scores 3★', () => {
   assert.equal(s.stars, 3);
   assert.equal(s.twoStarMet, true);
   assert.equal(s.threeStarMet, true);
-  // ~ -10% vs buy-hold ~ -32% ⇒ beat by ≥3pp
-  assert.ok(s.edgePpm >= 3 * 10000);
+  // ~ -10% vs buy-hold ~ -32% ⇒ beat by ≥8pp; MDD ~10% ≤15%
+  assert.ok(s.edgePpm >= 8 * 10000);
+  assert.ok(best.mddPpm <= 150_000);
+});
+
+test('ch1-01 day2-sell scores 2★ (edge≥8 but MDD>~15%)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 8);
+  assert.equal(def.goals.threeStar.maxMddPct, 15);
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const settled = settlePuzzle({
+    bars: def.bars,
+    actions: ['hold', 'sell', 'hold', 'hold', 'hold'],
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(settled.ok, true, settled.message);
+  const s = scorePuzzleStars({
+    returnPpm: settled.returnPpm,
+    mddPpm: settled.mddPpm,
+    orderCount: settled.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  assert.equal(s.stars, 2);
+  assert.equal(s.twoStarMet, true);
+  assert.equal(s.threeStarMet, false);
+  assert.ok(s.edgePpm >= 8 * 10000);
+  assert.ok(settled.mddPpm > 150_000);
+});
+
+test('ch1-01 day4-sell scores 1★ (edge ~3.7pp < 8pp → not 3★)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const settled = settlePuzzle({
+    bars: def.bars,
+    actions: ['hold', 'hold', 'hold', 'sell', 'hold'],
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(settled.ok, true, settled.message);
+  const s = scorePuzzleStars({
+    returnPpm: settled.returnPpm,
+    mddPpm: settled.mddPpm,
+    orderCount: settled.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  assert.equal(s.stars, 1);
+  assert.equal(s.twoStarMet, false);
+  assert.equal(s.threeStarMet, false);
+  assert.ok(s.edgePpm < 8 * 10000);
+  assert.ok(s.edgePpm > 0);
 });
 
 test('2★ when beat buy-hold but fail three-star MDD/order caps', () => {
@@ -292,7 +343,7 @@ test('returnPpm / edgePpm vs buy-hold: hold-only edge is ~0 for starting long', 
     goals: def.goals,
   });
   assert.equal(s.edgePpm, 0);
-  // beatBuyHoldPp is 3 → edge 0 fails 2★
+  // beatBuyHoldPp is 8 → edge 0 fails 2★
   assert.equal(s.stars, 1);
 });
 
@@ -333,8 +384,8 @@ test('ch1-01 sell-day1: next_open fill price, ~-10% return, 3★', () => {
   });
   assert.equal(s.stars, 3);
   assert.equal(s.edgePpm, best.returnPpm - bh);
-  assert.ok(s.edgePpm >= 3 * 10000);
-  assert.ok(best.mddPpm <= 300_000);
+  assert.ok(s.edgePpm >= 8 * 10000);
+  assert.ok(best.mddPpm <= 150_000);
   assert.equal(best.orderCount, 1);
 });
 

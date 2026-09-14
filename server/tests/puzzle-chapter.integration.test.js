@@ -69,7 +69,8 @@ test("seed publishes 6 chapter-1 levels", async () => {
   assert.equal(list.json.data.levels.length, 6);
   assert.equal(list.json.data.createFee, 0);
   const lv0 = list.json.data.levels[0];
-  assert.equal(lv0.version, 3);
+  assert.equal(lv0.levelKey, "ch1-01");
+  assert.equal(lv0.version, CHAPTER1_LEVEL_DEFS[0].version);
   assert.ok(lv0.teachingBrief);
   assert.ok(lv0.openStateHint);
 });
