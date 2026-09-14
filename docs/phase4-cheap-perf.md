@@ -9,6 +9,7 @@
 
 **刻意不做（本轮）**：紧凑 pack 编码；常驻 worker 窗口化；无整包云开局等。
 **后续已做**：版本化 pack URL + 长缓存 → 见 `docs/phase4-versioned-pack.md`。
+**R1 已做**：js/css 文件名 content-hash + nginx immutable → 见 `docs/r1-immutable-static-assets.md`（打包时取代 `?v=`）。
 
 ## 为什么
 

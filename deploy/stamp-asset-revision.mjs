@@ -1,4 +1,8 @@
 #!/usr/bin/env node
+// DEPRECATED for production packaging: prefer deploy/fingerprint-assets.mjs
+// (content-hash filenames + immutable nginx). Kept for reference / emergency
+// ?v= busting of an unfingerprinted tree.
+//
 // Inject ?v=<revision> into local JS/CSS references so 7-day browser caches
 // refresh after deploy without changing module behavior.
 //
