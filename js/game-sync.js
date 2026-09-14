@@ -9,6 +9,10 @@ import {
   loadCloudGameDraft,
   clearCloudGameDraft,
 } from "./cloud-draft.js";
+import {
+  buildCloudFinishBody,
+  sessionPatchFromCloudFinish,
+} from "./game-play-usecase.js";
 
 export {
   CLOUD_DRAFT_KEY,
@@ -65,10 +69,6 @@ export async function createCloudGame(fillMode) {
   return { ...data, httpStatus: status, createKey: key };
 }
 
-function actionsPayload(actions) {
-  return actions.map((action, i) => ({ day: i + 1, action }));
-}
-
 export function updateSaveStatusUi() {
   const el = document.getElementById("cloudSaveStatus");
   if (!el) return;
@@ -102,12 +102,8 @@ export async function finishCloudGame() {
     return null;
   }
   const gameId = gameState.cloudGameId;
-  const isPuzzle = gameState.gameKind === "puzzle";
-  const isEventV1 = !isPuzzle && gameState.protocolVersion === "event-v1";
   const finishKey = newIdempotencyKey();
-  const body = isEventV1
-    ? { finish: true, expectedRevision: gameState.revision ?? 0 }
-    : { actions: actionsPayload(gameState.actions), finish: true };
+  const { isPuzzle, isEventV1, body } = buildCloudFinishBody(gameState);
   const delays = [1000, 3000, 10000];
   patchSession({ saveStatus: "saving", saveError: null });
   updateSaveStatusUi();
@@ -134,18 +130,7 @@ export async function finishCloudGame() {
           body,
         }));
       }
-      const savedPatch = { saveStatus: "saved", saveError: null };
-      if (data?.returnPpm != null) {
-        savedPatch.returnPpm = data.returnPpm;
-        savedPatch.returnPct = data.returnPct;
-      }
-      if (data?.assistClass) savedPatch.assistClass = data.assistClass;
-      if (data?.undoCount != null) savedPatch.undoCount = data.undoCount;
-      if (isPuzzle) {
-        savedPatch.puzzleResult = data;
-        if (data?.levelKey) savedPatch.puzzleLevelKey = data.levelKey;
-      }
-      patchSession(savedPatch);
+      patchSession(sessionPatchFromCloudFinish(data, { isPuzzle }));
       clearCloudGameDraft(gameId);
       updateSaveStatusUi();
       if (!isPuzzle) {
