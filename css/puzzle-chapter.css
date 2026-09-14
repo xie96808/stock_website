@@ -294,21 +294,85 @@
   font-weight: 600;
   color: var(--ink, #222);
 }
+/* Shared CSS star icons (filled / empty) */
+.puzzle-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12em;
+  line-height: 1;
+  color: var(--terra, #c45c26);
+}
+.puzzle-stars--pending {
+  color: var(--mute, #8a7f70);
+  font-size: 1.4em;
+  letter-spacing: 0.08em;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+}
+.puzzle-star {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  background: currentColor;
+  opacity: 0.22;
+  clip-path: polygon(
+    50% 4%,
+    61% 35%,
+    95% 35%,
+    68% 57%,
+    79% 91%,
+    50% 72%,
+    21% 91%,
+    32% 57%,
+    5% 35%,
+    39% 35%
+  );
+  vertical-align: -0.12em;
+}
+.puzzle-star--on {
+  opacity: 1;
+}
+.puzzle-star--goal {
+  width: 0.95em;
+  height: 0.95em;
+  margin-right: 0.35em;
+  color: var(--terra, #c45c26);
+}
+.puzzle-star--goal.puzzle-star--pending {
+  opacity: 0.18;
+}
+.puzzle-goal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 2px 0;
+}
+.puzzle-goal-label {
+  flex: 1;
+  min-width: 0;
+}
+
 .puzzle-settle-stars {
-  font-size: 2.1rem;
-  letter-spacing: 0.18em;
+  font-size: 2rem;
   line-height: 1.2;
   margin: 4px 0 10px;
   color: var(--terra, #c45c26);
-  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  display: flex;
+  justify-content: center;
 }
 .puzzle-settle-stars.is-pending {
   color: var(--mute, #8a7f70);
-  letter-spacing: 0.08em;
   font-size: 1.6rem;
 }
 .puzzle-settle-stars.is-three {
   color: #b45309;
+}
+.puzzle-settle-stars .puzzle-stars {
+  font-size: 1em;
+}
+.puzzle-debrief-stars-row {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
 }
 .puzzle-settle-headline {
   margin: 0 0 10px;
@@ -337,6 +401,9 @@
 }
 .puzzle-settle-goals li {
   padding: 2px 0;
+}
+.puzzle-settle-goals .puzzle-goal-row {
+  align-items: center;
 }
 .puzzle-settle-edge {
   margin: 0 0 8px;

@@ -96,9 +96,14 @@ test('formatStarBreakdown 3★ with mdd/orders facts', () => {
     },
   });
   assert.equal(s.starN, 3);
-  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('1★')));
-  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('二星') && l.includes('+8.20')));
-  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('三星') && l.includes('回撤 18.00%')));
+  assert.ok(s.items.every((it) => it.met === true));
+  assert.ok(s.items.some((it) => it.label.includes('合法完成')));
+  assert.ok(s.items.some((it) => it.label.includes('收益比买持') && it.label.includes('+8.20') && !it.label.includes('二星：')));
+  assert.ok(s.items.some((it) => it.label.includes('回撤 18.00%') && !it.label.startsWith('三星')));
+  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('合法完成')));
+  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('+8.20')));
+  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('回撤 18.00%')));
+  assert.ok(!s.lines.some((l) => /1★|2★|3★/.test(l)));
   assert.match(s.paragraph, /3 星/);
   assert.match(s.paragraph, /\+8\.20pp|18\.00%/);
   assertNoBannedTone(s.paragraph);
@@ -119,8 +124,12 @@ test('formatStarBreakdown 1★ marks 2★/3★ missed with edge', () => {
     },
   });
   assert.equal(s.starN, 1);
-  assert.ok(s.lines.some((l) => l.startsWith('○') && l.includes('二星') && l.includes('未达线')));
-  assert.ok(s.lines.some((l) => l.startsWith('○') && l.includes('三星')));
+  assert.equal(s.items[0].met, true);
+  assert.equal(s.items[1].met, false);
+  assert.equal(s.items[2].met, false);
+  assert.ok(s.lines.some((l) => l.startsWith('○') && l.includes('未达线') && l.includes('收益比买持')));
+  assert.ok(s.lines.some((l) => l.startsWith('○') && (l.includes('回撤') || l.includes('成交'))));
+  assert.ok(!s.lines.some((l) => /1★|2★|3★/.test(l)));
   assert.match(s.paragraph, /1 星/);
   assert.match(s.paragraph, /-1\.50pp/);
   assertNoBannedTone(s.paragraph);
@@ -139,8 +148,10 @@ test('formatStarBreakdown 2★ not 3★', () => {
       threeStar: { maxMddPct: 30, maxOrders: 1 },
     },
   });
-  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('二星')));
-  assert.ok(s.lines.some((l) => l.startsWith('○') && l.includes('三星')));
+  assert.equal(s.items[1].met, true);
+  assert.equal(s.items[2].met, false);
+  assert.ok(s.lines.some((l) => l.startsWith('✓') && l.includes('收益比买持')));
+  assert.ok(s.lines.some((l) => l.startsWith('○') && (l.includes('回撤') || l.includes('成交'))));
   assert.match(s.paragraph, /2 星/);
   assert.match(s.paragraph, /三星侧/);
   assertNoBannedTone(s.paragraph);
