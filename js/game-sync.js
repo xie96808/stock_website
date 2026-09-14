@@ -1,7 +1,10 @@
-/** Stage 3: cloud game create / finish with light retry */
+/** Cloud game HTTP adapter: create / finish / abandon / decision / rewind + light retry.
+ * Save-status DOM is injectable (default paints #cloudSaveStatus). Session finish
+ * body/patch shaping lives in game-play-usecase (Wave C · C2).
+ */
 import { api, getAuthState } from "./auth.js";
 import { gameState } from "./state.js";
-import { patchSession } from "./game-session.js";
+import { getSession, patchSession } from "./game-session.js";
 import {
   CLOUD_DRAFT_KEY,
   normalizeDraftActions,
@@ -69,11 +72,12 @@ export async function createCloudGame(fillMode) {
   return { ...data, httpStatus: status, createKey: key };
 }
 
-export function updateSaveStatusUi() {
+/** Default save-status chrome (view). Overridable via setSaveStatusUiHandler. */
+export function paintCloudSaveStatus(session = getSession()) {
   const el = document.getElementById("cloudSaveStatus");
   if (!el) return;
-  if (!gameState.cloudMode) {
-    if (gameState.practiceOnly) {
+  if (!session.cloudMode) {
+    if (session.practiceOnly) {
       el.hidden = false;
       el.className = "cloud-save-status status-idle";
       el.textContent = "本地练习（本局不保存到云端）";
@@ -87,11 +91,26 @@ export function updateSaveStatusUi() {
     saving: "云端战绩保存中…",
     saved: "云端战绩已保存",
     retry: "保存失败，正在重试…",
-    fail: `云端保存失败${gameState.saveError ? "：" + gameState.saveError : ""}`,
+    fail: `云端保存失败${session.saveError ? "：" + session.saveError : ""}`,
   };
   el.hidden = false;
-  el.className = "cloud-save-status status-" + (gameState.saveStatus || "idle");
-  el.textContent = map[gameState.saveStatus] || "云端对局进行中";
+  el.className = "cloud-save-status status-" + (session.saveStatus || "idle");
+  el.textContent = map[session.saveStatus] || "云端对局进行中";
+}
+
+let saveStatusUiHandler = paintCloudSaveStatus;
+
+/** Inject save-status UI (tests / alternate chrome). Pass null/non-function to restore default. */
+export function setSaveStatusUiHandler(handler) {
+  saveStatusUiHandler = typeof handler === "function" ? handler : paintCloudSaveStatus;
+}
+
+export function updateSaveStatusUi() {
+  try {
+    saveStatusUiHandler(getSession());
+  } catch (err) {
+    console.warn("save-status UI handler failed", err);
+  }
 }
 
 /** Finish cloud game with retries on network / 5xx. */

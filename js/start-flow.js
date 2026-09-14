@@ -7,10 +7,14 @@ import { getAuthState, openAuthModal, refreshMe } from './auth.js';
 import {
   createCloudGame,
   fetchActiveCloudGame,
-  abandonActiveCloudGame,
+  abandonCloudGame,
   loadCloudGameDraft,
   clearCloudGameDraft,
 } from './game-sync.js';
+import {
+  createCloudSession,
+  abandonCloudSession,
+} from './game-play-usecase.js';
 import {
   ensureStocksLoaded,
   prefetchStocksPack,
@@ -243,9 +247,9 @@ export function attachDeferredStart(startGame, gameState) {
       let cloudPromise = null;
       if (wantCloud) {
         setProgress(packAlreadyReady ? 62 : 18, '创建云端对局…');
-        cloudPromise = createCloudGame(fillMode).then(function (cloud) {
-          clearCloudGameDraft();
-          return cloud;
+        cloudPromise = createCloudSession(fillMode, {
+          createHttp: createCloudGame,
+          clearDraft: clearCloudGameDraft,
         });
       }
 
@@ -295,9 +299,14 @@ export function attachDeferredStart(startGame, gameState) {
             } else {
               showLoadingView();
               setProgress(82, '放弃旧局…');
-              await abandonActiveCloudGame();
-              clearCloudGameDraft(active.gameId);
-              cloud = await createCloudGame(fillMode);
+              await abandonCloudSession(active.gameId, {
+                abandonHttp: abandonCloudGame,
+                clearDraft: clearCloudGameDraft,
+              });
+              cloud = await createCloudSession(fillMode, {
+                createHttp: createCloudGame,
+                clearDraft: clearCloudGameDraft,
+              });
               resumeActions = null;
             }
           } else {

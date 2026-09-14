@@ -1,6 +1,6 @@
 # C2 — Game use-case / view separation
 
-Status: Wave C · item 2 — **in progress** (slice 1 of N).
+Status: Wave C · item 2 — **done**.
 
 ## Intent
 
@@ -11,56 +11,69 @@ without a big-bang rewrite. Prefer architecture quality over folder theater.
 
 | Layer | Owns | Must not own |
 |-------|------|--------------|
-| **use-case** | start / resume / action / finish / abandon orchestration (cloud + local); session updates via `game-session` | DOM, chart chrome, HUD copy, screen routing |
-| **view** | DOM / chart / HUD / result chrome wiring that **calls** use-cases | Engine settle math, cloud finish body shaping, illegal-action rules |
+| **use-case** | start / resume / action / finish / abandon / rewind orchestration (cloud + local); session updates via `game-session` | DOM, chart chrome, HUD copy, screen routing |
+| **view** | DOM / chart / HUD / result chrome wiring that **calls** use-cases | Engine settle math, cloud finish body shaping, illegal-action rules, seed math |
 | **session seam** | `js/game-session.js` blackboard façade (already shipped) | Product orchestration |
 | **engine** | `shared/engine.js` / `shared/puzzleEngine.js` pure replay/settle | Session / DOM |
+| **HTTP adapter** | `js/game-sync.js` create/finish/decision/rewind + retry; injectable save-status UI | Seed / settle / rewind eligibility rules |
 
-## Today vs target (slice 1)
+## Module map (complete)
 
-| Module | Today (after this PR) | Target |
-|--------|----------------------|--------|
-| `js/game-play-usecase.js` | **New** — local action / resume / settle + cloud finish body/patch helpers | Expand: start/seed orchestration, abandon, rewind orchestration without DOM |
-| `js/game.js` | Still owns start seed, chart/HUD, rewind modal; **calls** use-case for action/resume/settle | Thin view: seed UI + call use-cases only |
-| `js/game-sync.js` | HTTP create/finish/decision/rewind + save-status DOM; finish body/patch via use-case | Thinner adapter: HTTP + retry; status UI injected/callback; no session business rules |
-| `js/result.js` | Result view + triggers `finishCloudGame` | Pure view: render `selectSettleView`; cloud finish invoked by settle use-case or explicit view hook |
+| Module | Role |
+|--------|------|
+| `js/game-play-usecase.js` | Seed (puzzle / window / pack / local), action / resume / settle, rewind eligibility+apply, cloud finish body/patch, create/abandon/persist orchestration hooks |
+| `js/game.js` | View: `startGame` calls `prepareSessionSeed` then paints screens/chart/HUD; action/resume/settle/rewind confirm call use-case then paint |
+| `js/game-sync.js` | HTTP + retry; `setSaveStatusUiHandler` / default `paintCloudSaveStatus`; finish uses use-case body/patch helpers |
+| `js/result.js` | Paint-only settle chrome / share / review; cloud save via `persistSettledCloudGame({ finishCloud })` |
+| `js/start-flow.js` | Modal / progress UI; create/abandon go through use-case hooks with HTTP injected from game-sync |
+| `js/game-window-seed.js` | R5 classic window DTO seed (called from use-case) |
 
-## Slice 1 — what moved
+## Use-case API surface
 
-### `js/game-play-usecase.js` (new)
+### Play / settle (slice 1 + kept)
 
 | API | Role |
 |-----|------|
-| `validatePlayAction(session, action)` | Client illegal-action guards (pure) |
-| `applyLocalDecision(action, { bars })` | Classic/puzzle mid-game replay → session (no DOM) |
-| `applyServerDecisionState(state, { bars })` | event-v1 server state → classic session |
-| `resumeLocalActions(actions, { bars })` | Draft resume replay (no DOM) |
-| `settleLocalSession({ bars })` | Last-day settle → finished session fields |
-| `applyPuzzleEngineResult` / `puzzlePositionFromState` | Puzzle mid/finish sync (was inline in `game.js`) |
-| `buildCloudFinishBody(session)` | Finish request body + puzzle/event flags |
-| `sessionPatchFromCloudFinish(data, { isPuzzle })` | Response → session patch bag |
+| `validatePlayAction` / `applyLocalDecision` / `applyServerDecisionState` | Guards + mid-game replay |
+| `resumeLocalActions` / `settleLocalSession` | Draft resume + last-day settle |
+| `applyPuzzleEngineResult` / `puzzlePositionFromState` | Puzzle mid/finish sync |
+| `buildCloudFinishBody` / `sessionPatchFromCloudFinish` | Finish request/response shaping |
 
-### Call sites
+### Start / seed
 
-- `js/game.js` — `handleAction` / `applyLocalAction` / `applyServerStateActions` / `applyCloudResume` / `finishSettle` call the use-case then paint HUD/chart/toast/`endGame`
-- `js/game-sync.js` — `finishCloudGame` uses `buildCloudFinishBody` + `sessionPatchFromCloudFinish`
+| API | Role |
+|-----|------|
+| `detectSeedKind` | `puzzle` / `window` / `pack` / `local` |
+| `seedPuzzleSession` / `seedClassicFromPack` / `seedLocalPractice` | Individual seed paths |
+| `prepareSessionSeed` | `resetSession` + choose seed path (no chart) |
+
+### Rewind
+
+| API | Role |
+|-----|------|
+| `evaluateRewindEligibility` | Flag + protocol + once + actions window |
+| `buildRewindPreview` | Cost / balance / target day for confirm modal |
+| `applyRewindServerResult` | Server rewind state → session |
+
+### Cloud lifecycle hooks
+
+| API | Role |
+|-----|------|
+| `shouldPersistCloudSettle` / `persistSettledCloudGame` | Single settle→persist entry (inject `finishCloud`) |
+| `createCloudSession` / `abandonCloudSession` | Create/abandon + draft clear (inject HTTP) |
 
 ## Behaviors preserved
 
 1. Classic local + cloud (legacy-batch + event-v1) action / settle
-2. Puzzle action guards, settle, and finish response → stars / reward fields
+2. Puzzle action guards, settle, stars modal, cloud finish
 3. Cloud draft resume invalid → stay day 1
-4. Cloud finish retry / save-status UI still in `game-sync` (view-ish residue)
+4. R5 GameWindowDTO seed without full pack
+5. Create / ACTIVE_GAME conflict continue|restart|abandon
+6. F03 rewind confirm modal + once-per-game apply when flag on
+7. Result paint + cloud save-status / share refresh after finish
 
-## Next C2 slices (not this PR)
-
-1. Extract **start / seed** use-case from `startGame` (classic pack vs window DTO vs puzzle snapshot) — leave chart init in view
-2. Thin `game-sync`: inject save-status UI callback; optionally move create/abandon orchestration beside play use-case
-3. `result.js`: keep paint-only; ensure cloud finish is a single settle→persist hook with no analysis coupling
-4. Rewind confirm: keep modal in view; move “may rewind / apply rewind state” into use-case
-
-## Out of scope
+## Out of scope (later Wave C)
 
 - theme de-smuggle (Wave C §3)
 - hindsight / quiz purification (Wave C §4)
-- R5 API deploy, R6 follow-ups, React, folder theater
+- React, folder theater, R5 API deploy to server 29
