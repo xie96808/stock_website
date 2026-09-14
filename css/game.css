@@ -730,3 +730,31 @@
   font-size: 0.85rem;
   opacity: 0.85;
 }
+
+/* R6: non-blocking ECharts loading / failure fallback */
+#kline-chart[data-chart-pending],
+#result-kline-chart[data-chart-pending],
+#hindsightChart[data-chart-pending],
+.quiz-kline-display[data-chart-pending],
+.quiz-option-chart[data-chart-pending] {
+    position: relative;
+}
+
+.chart-pending-msg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+    font-family: 'Noto Sans SC', system-ui, sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    color: var(--muted, #8a847a);
+    background: color-mix(in srgb, var(--card, #fffdf8) 82%, transparent);
+}
+
+[data-chart-failed] > .chart-pending-msg {
+    color: var(--danger, #c43030);
+}

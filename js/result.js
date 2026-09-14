@@ -23,6 +23,12 @@ import {
     copyResultShareText,
     openResultLeaderboard,
 } from './result-share.js';
+import {
+    ensureEcharts,
+    markChartLoading,
+    clearChartLoading,
+    markChartFailed,
+} from './echarts-loader.js';
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
 
 /** Paint result hero for puzzle: icon stars +「残局结算」(no giant digit). */
@@ -196,7 +202,9 @@ export function endGame() {
             ka.innerHTML = '';
         }
     }
-    runResultStep('drawResultChart', () => drawResultChart());
+    runResultStep('drawResultChart', () => {
+        void drawResultChart().catch((err) => console.error('[endGame] drawResultChart failed', err));
+    });
 
     // BS score written by generateBSReport — re-read live session.
     // Puzzle already painted 星级 copy above; do not overwrite with classic letter grade.
@@ -305,12 +313,25 @@ export function endGame() {
     }
 }
 
-export function drawResultChart() {
+export async function drawResultChart() {
     const chartDom = document.getElementById('result-kline-chart');
+    if (!chartDom) return;
+
+    markChartLoading(chartDom);
+    let echartsApi;
+    try {
+        echartsApi = await ensureEcharts();
+    } catch (err) {
+        console.error('ECharts unavailable for result chart', err);
+        markChartFailed(chartDom, '结算图加载失败，请检查网络后刷新');
+        return;
+    }
+    clearChartLoading(chartDom);
+
     if (chartRefs.resultChart) {
         chartRefs.resultChart.dispose();
     }
-    chartRefs.resultChart = echarts.init(chartDom);
+    chartRefs.resultChart = echartsApi.init(chartDom);
 
     const view = selectSettleView();
     const histLen = view.historyLength;
@@ -325,9 +346,13 @@ export function drawResultChart() {
         mode: 'result',
     });
 
-    chartRefs.resultChart.setOption(option);
-    applyChartTheme(chartRefs.resultChart);
-    buildPointNavigator(chartRefs.resultChart, histLen, fullData);
+    // Keep settlement copy/UI responsive; paint chart next frame.
+    requestAnimationFrame(function () {
+        if (!chartRefs.resultChart) return;
+        chartRefs.resultChart.setOption(option);
+        applyChartTheme(chartRefs.resultChart);
+        buildPointNavigator(chartRefs.resultChart, histLen, fullData);
+    });
 }
 
 export function buildPointNavigator(chart, histLen, fullData) {

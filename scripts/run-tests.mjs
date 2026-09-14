@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 
 const runs = [
-  ["node", ["--test", "tests/engine/engine.test.js", "tests/engine/equity-curve.test.js", "tests/engine/puzzle-engine.test.js", "tests/cloud-draft.test.js", "tests/screen-router.test.js", "tests/analysis-pure.test.js", "tests/kline-option.test.js", "tests/game-session.test.js", "tests/game-window-seed.test.js", "tests/auth-state.test.js", "tests/pack-url.test.js", "tests/fingerprint-assets.test.js", "tests/time.test.js", "tests/puzzle-chapter-ui.test.js", "tests/puzzle-levels-history.test.js", "tests/puzzle-settle-copy.test.js", "tests/puzzle-goals-copy.test.js", "tests/puzzle-debrief-copy.test.js"]],
+  ["node", ["--test", "tests/engine/engine.test.js", "tests/engine/equity-curve.test.js", "tests/engine/puzzle-engine.test.js", "tests/cloud-draft.test.js", "tests/screen-router.test.js", "tests/analysis-pure.test.js", "tests/kline-option.test.js", "tests/game-session.test.js", "tests/game-window-seed.test.js", "tests/echarts-loader.test.js", "tests/auth-state.test.js", "tests/pack-url.test.js", "tests/fingerprint-assets.test.js", "tests/time.test.js", "tests/puzzle-chapter-ui.test.js", "tests/puzzle-levels-history.test.js", "tests/puzzle-settle-copy.test.js", "tests/puzzle-goals-copy.test.js", "tests/puzzle-debrief-copy.test.js"]],
   // Separate processes so in-memory rate-limit / config mutations do not leak across suites.
   ["node", ["--test", "server/tests/auth.integration.test.js"]],
   ["node", ["--test", "server/tests/games.integration.test.js"]],

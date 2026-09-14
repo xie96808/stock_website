@@ -2,6 +2,12 @@
 import { gameState, quizState } from './state.js';
 import { shuffleArray, applyChartTheme } from './utils.js';
 import { QUIZ_PATTERNS } from './patterns.js';
+import {
+    ensureEcharts,
+    markChartLoading,
+    clearChartLoading,
+    markChartFailed,
+} from './echarts-loader.js';
 
 export function disposeQuizCharts() {
     quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.dispose(); });
@@ -364,22 +370,40 @@ export function renderQuestion() {
 
     if (q.type === 'practical') {
         setTimeout(() => {
-            const mainDom = document.getElementById('quizMainChart');
-            if (mainDom) {
-                const mc = echarts.init(mainDom);
-                quizState.charts.push(mc);
-                renderMiniKline(mc, q.shownData, false);
-                applyChartTheme(mc);
-            }
-            q.options.forEach((opt, i) => {
-                const dom = document.getElementById('quizOptChart' + i);
-                if (dom) {
-                    const c = echarts.init(dom);
-                    quizState.charts.push(c);
-                    renderMiniKline(c, opt.data, true);
-                    applyChartTheme(c);
+            void (async function () {
+                const hosts = [];
+                const mainDom = document.getElementById('quizMainChart');
+                if (mainDom) hosts.push(mainDom);
+                q.options.forEach((_, i) => {
+                    const dom = document.getElementById('quizOptChart' + i);
+                    if (dom) hosts.push(dom);
+                });
+                hosts.forEach((dom) => markChartLoading(dom));
+                let echartsApi;
+                try {
+                    echartsApi = await ensureEcharts();
+                } catch (err) {
+                    console.error('ECharts unavailable for quiz charts', err);
+                    hosts.forEach((dom) => markChartFailed(dom, '图表加载失败'));
+                    return;
                 }
-            });
+                hosts.forEach((dom) => clearChartLoading(dom));
+                if (mainDom) {
+                    const mc = echartsApi.init(mainDom);
+                    quizState.charts.push(mc);
+                    renderMiniKline(mc, q.shownData, false);
+                    applyChartTheme(mc);
+                }
+                q.options.forEach((opt, i) => {
+                    const dom = document.getElementById('quizOptChart' + i);
+                    if (dom) {
+                        const c = echartsApi.init(dom);
+                        quizState.charts.push(c);
+                        renderMiniKline(c, opt.data, true);
+                        applyChartTheme(c);
+                    }
+                });
+            })();
         }, 50);
     }
 }
