@@ -2,7 +2,7 @@
 
 ## 状态日期 / Status
 
-- **日期**：2026-09-10
+- **日期**：2026-09-14（R5 首片）
 - **基线**：约 `0a84741`；`main` 在合并 [#66](https://github.com/xie96808/stock_website/pull/66) 之后（merge `c0dc52e`）
 - **服务器**：昵称 **29**（`121.199.33.29`），**不是** 39
 - **测试账号**：`aaaa` / `1111`
@@ -60,11 +60,11 @@
 1. **R2**：tombstone 独立于 restore 的 ledger + 真实 backup 验收 — **已实现**（外部 `user-tombstones.jsonl`；`db:restore` 自动 replay；见 `docs/ops-tombstone-ledger.md`）
 2. **R1**：不可变静态资源（immutable static assets）— **已实现**：见 `docs/r1-immutable-static-assets.md` + `deploy/fingerprint-assets.mjs`
 3. **R3**：auth 状态机 — **已实现**：见 `docs/r3-auth-state-machine.md` + `js/auth-state.js`
-4. **R4**：草稿单写者（single-writer drafts）— **本波实现**：见 `docs/r4-single-writer-drafts.md` + `js/cloud-draft.js`
+4. **R4**：草稿单写者（single-writer drafts）— **已实现**：见 `docs/r4-single-writer-drafts.md` + `js/cloud-draft.js`
 
 ### Wave B
 
-1. **R5**：`SettlementSnapshot` vs `GameWindowDTO`（OHLCV）→ cloud create/active window → 云端去掉 full-pack
+1. **R5**：`SettlementSnapshot` vs `GameWindowDTO`（OHLCV）→ cloud create/active window → 云端去掉 full-pack — **本波实现（首片）**：见 `docs/r5-game-window-dto.md`；create/active/state 下发 `window`；经典云端 seed 优先 DTO，不再阻塞 full-pack
 2. **R6**：非阻塞 ECharts
 
 ### Wave C
@@ -100,4 +100,5 @@
 
 - 历史：交接文档曾「仅文档」。
 - **R2–R3 实现**（已合 main）：见各 `docs/ops-tombstone-ledger.md` / `r1-immutable-static-assets.md` / `r3-auth-state-machine.md`。
-- **R4 实现**（本分支）：`docs/r4-single-writer-drafts.md` + `js/cloud-draft.js` 单写者草稿。
+- **R4 实现**（已合 main）：`docs/r4-single-writer-drafts.md` + `js/cloud-draft.js` 单写者草稿。
+- **R5 实现**（本分支首片）：`docs/r5-game-window-dto.md` + create/active/state `window` + classic cloud seed without full-pack gate。

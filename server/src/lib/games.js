@@ -9,6 +9,7 @@ import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
 import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
+import { windowFromSessionRow } from "./gameWindowDto.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -122,6 +123,8 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
     assistClass: row.assist_class || "legacy",
     revision: row.revision ?? 0,
   };
+  const win = windowFromSessionRow(row);
+  if (win) base.window = win;
   if (includeResult && result) {
     return { ...base, ...resultDto(result, row) };
   }

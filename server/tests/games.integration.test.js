@@ -460,3 +460,75 @@ test("P0 conflicting finish payload → 409", async () => {
   });
   assert.equal(f2.status, 409);
 });
+
+
+test("R5 create returns GameWindowDTO with OHLCV; active/state match; finish still validates", async () => {
+  const auth = await register(`r5${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `k-r5-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assertOk(create.status, create.json, 201);
+  const win = create.json.data.window;
+  assert.ok(win, "create must include window");
+  assert.equal(win.v, 1);
+  assert.equal(win.historyLength, 30);
+  assert.equal(win.gameDays, 30);
+  assert.equal(win.history.length, 30);
+  assert.equal(win.bars.length, 30);
+  assert.ok(Number.isFinite(win.bars[0].volume), "bars include volume");
+  assert.ok(Number.isFinite(win.history[0].volume), "history include volume");
+
+  const gameId = create.json.data.gameId;
+  const active = await api("/api/v1/games/active", { csrf: auth.csrfToken });
+  assertOk(active.status, active.json, 200);
+  assert.equal(active.json.data.window.bars.length, 30);
+  assert.equal(active.json.data.window.bars[0].close, win.bars[0].close);
+
+  const state = await api(`/api/v1/games/${gameId}/state`, { csrf: auth.csrfToken });
+  assertOk(state.status, state.json, 200);
+  assert.ok(state.json.data.window);
+  assert.equal(state.json.data.window.gameDays, 30);
+
+  const actions = ["buy", "sell", ...holds(27)];
+  const finish = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    body: { actions: actionsObj(actions), finish: true },
+  });
+  assertOk(finish.status, finish.json, 201);
+
+  const row = getSessionRow(gameId);
+  const snap = JSON.parse(row.snapshot_json);
+  assert.ok(snap.bars[0].volume != null, "new SettlementSnapshot keeps volume on bars");
+  const local = settleGame({ fillMode: "next_open", bars: snap.bars, actions });
+  assert.equal(local.ok, true);
+  assert.equal(finish.json.data.returnPpm, local.returnPpm);
+});
+
+test("R5 GameWindowDTO enriches volume when stored bars stripped OHLC-only", async () => {
+  const { buildGameWindowDto } = await import("../src/lib/gameWindowDto.js");
+  const { pickRandomWindow, ensureDatasetLoaded } = await import("../src/lib/dataset.js");
+  ensureDatasetLoaded();
+  const picked = pickRandomWindow({ stockIndex: 0, windowStartIndex: 30, historyLength: 30 });
+  const stripped = {
+    ...picked.snapshot,
+    bars: picked.snapshot.bars.map(({ date, open, high, low, close }) => ({
+      date,
+      open,
+      high,
+      low,
+      close,
+    })),
+  };
+  assert.equal(stripped.bars[0].volume, undefined);
+  const dto = buildGameWindowDto(stripped);
+  assert.ok(dto);
+  assert.ok(Number.isFinite(dto.bars[0].volume));
+  assert.ok(dto.bars[0].volume > 0);
+});

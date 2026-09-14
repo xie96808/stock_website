@@ -29,6 +29,7 @@ import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip } from './puzzle-goals-copy.js';
+import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -214,10 +215,13 @@ export async function startGame(options = {}) {
     const isPuzzle =
         !!cloud &&
         (cloud.gameKind === 'puzzle' ||
-            (Array.isArray(cloud.bars) && cloud.bars.length >= 6));
+            (Array.isArray(cloud.bars) && cloud.bars.length >= 6 && cloud.gameKind !== 'classic'));
 
     if (isPuzzle) {
         seedPuzzleSession(cloud);
+    } else if (cloud && hasGameWindowDto(cloud)) {
+        // R5: prefer GameWindowDTO — pack/catalog not required to enter the board.
+        seedClassicFromWindow(cloud);
     } else {
         const gameDays = 30;
         if (cloud && Number.isInteger(cloud.stockIndex) && catalog[cloud.stockIndex]) {
@@ -249,6 +253,9 @@ export async function startGame(options = {}) {
             });
         } else {
             // Local practice: pick random stock and window (30 game days).
+            if (!catalog.length) {
+                throw new Error('股票资源未就绪');
+            }
             const stockIndex = Math.floor(Math.random() * catalog.length);
             const currentStock = catalog[stockIndex];
             const klineLen = currentStock.kline.length;
