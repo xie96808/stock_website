@@ -10,6 +10,7 @@ import {
   pickRandomWindow,
   sha256Text,
 } from "./dataset.js";
+import { windowFromSessionRow } from "./gameWindowDto.js";
 import { deductGameCreateCost, shanghaiYmd, getJiuCoinBalance } from "./jiuCoin.js";
 import { settleCurveMetrics } from "../../../shared/equityCurve.js";
 import { RULE_VERSION, INITIAL_CASH, GAME_DAYS } from "../../../shared/rules.js";
@@ -22,7 +23,7 @@ import {
 /** Local session DTO — avoid circular import with games.js */
 function sessionPublicFromRow(row) {
   if (!row) return null;
-  return {
+  const base = {
     gameId: row.id,
     ruleVersion: row.rule_version,
     datasetVersion: row.dataset_version,
@@ -42,6 +43,9 @@ function sessionPublicFromRow(row) {
     protocolVersion: row.protocol_version || "legacy-batch",
     undoCount: row.undo_count ?? 0,
   };
+  const win = windowFromSessionRow(row);
+  if (win) base.window = win;
+  return base;
 }
 
 /** Decoupled from classic create cost (20). Challenge-only fee. */

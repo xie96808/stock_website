@@ -238,28 +238,22 @@ export function attachDeferredStart(startGame, gameState) {
       const wantCloud = true;
 
       const packAlreadyReady = packReady();
-      setProgress(packAlreadyReady ? 55 : 8, packAlreadyReady ? '资源已就绪…' : '股票资源加载中…');
+      setProgress(packAlreadyReady ? 55 : 8, packAlreadyReady ? '资源已就绪…' : '准备开局…');
 
       let cloudPromise = null;
       if (wantCloud) {
-        setProgress(packAlreadyReady ? 62 : 12, '创建云端对局…');
+        setProgress(packAlreadyReady ? 62 : 18, '创建云端对局…');
         cloudPromise = createCloudGame(fillMode).then(function (cloud) {
           clearCloudGameDraft();
           return cloud;
         });
       }
 
+      // Pack may still load for non-board features; R5 cloud window must not block enter.
       const packPromiseEnsure = ensureStocksLoaded(gameState, function (ratio) {
         const top = wantCloud ? 70 : 88;
         setProgress(8 + Math.max(0, Math.min(1, ratio)) * (top - 8), '股票资源加载中…');
       });
-
-      await packPromiseEnsure;
-      if (packAlreadyReady) {
-        await animateTo(wantCloud ? 70 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 120);
-      } else {
-        await animateTo(wantCloud ? 72 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 80);
-      }
 
       let cloud = null;
       let resumeActions = null;
@@ -310,6 +304,28 @@ export function attachDeferredStart(startGame, gameState) {
             throw e;
           }
         }
+      }
+
+      const canSeedFromWindow = !!(
+        cloud &&
+        cloud.window &&
+        Array.isArray(cloud.window.bars) &&
+        cloud.window.bars.length > 0
+      );
+
+      if (!canSeedFromWindow) {
+        // Backward compatible: old servers without window still need the pack.
+        await packPromiseEnsure;
+        if (packAlreadyReady) {
+          await animateTo(wantCloud ? 70 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 120);
+        } else {
+          await animateTo(wantCloud ? 72 : 90, wantCloud ? '创建云端对局…' : '初始化模拟盘…', 80);
+        }
+      } else {
+        packPromiseEnsure.catch(function (err) {
+          console.warn('pack load (non-blocking)', err);
+        });
+        await animateTo(88, '进入模拟盘…', 80);
       }
 
       setProgress(94, '进入模拟盘…');

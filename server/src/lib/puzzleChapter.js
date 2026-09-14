@@ -6,6 +6,7 @@ import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { ensureDatasetLoaded, sha256Text } from "./dataset.js";
+import { buildGameWindowDto } from "./gameWindowDto.js";
 import { grantRewardClaim } from "./rewardClaims.js";
 import {
   GAME_KIND_PUZZLE,
@@ -103,7 +104,7 @@ function sessionPublicFromRow(row) {
   }
   // Authored copy (not seed-frozen snapshot) — same source as GET /puzzles list.
   const authored = levelKey ? levelDefByKey(levelKey) : null;
-  return {
+  const out = {
     gameId: row.id,
     ruleVersion: row.rule_version,
     datasetVersion: row.dataset_version,
@@ -136,6 +137,14 @@ function sessionPublicFromRow(row) {
     bars,
     history: history || [],
   };
+  try {
+    const snap = JSON.parse(row.snapshot_json);
+    const win = buildGameWindowDto(snap);
+    if (win) out.window = win;
+  } catch {
+    /* ignore */
+  }
+  return out;
 }
 
 /** Seed / upsert published chapter-1 levels (idempotent on version id). */

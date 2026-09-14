@@ -173,12 +173,14 @@ export function pickRandomWindow(opts = {}) {
     historyLength,
     gameDays: GAME_DAYS,
     history: historyBars,
-    bars: gameBars.map(({ date, open, high, low, close }) => ({
+    // SettlementSnapshot bars keep OHLCV (engine ignores volume; GameWindowDTO needs it).
+    bars: gameBars.map(({ date, open, high, low, close, volume }) => ({
       date,
       open,
       high,
       low,
       close,
+      volume: volume != null ? Number(volume) : 0,
     })),
   };
   const snapshotJson = JSON.stringify(snapshot);
@@ -254,12 +256,13 @@ export function pickPuzzleWindow(opts = {}) {
     historyLength,
     gameDays,
     history: historyBars,
-    bars: gameBars.map(({ date, open, high, low, close }) => ({
+    bars: gameBars.map(({ date, open, high, low, close, volume }) => ({
       date,
       open,
       high,
       low,
       close,
+      volume: volume != null ? Number(volume) : 0,
     })),
   };
   const snapshotJson = JSON.stringify(snapshot);

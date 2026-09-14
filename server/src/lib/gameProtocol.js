@@ -5,6 +5,7 @@
 import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
+import { windowFromSessionRow } from "./gameWindowDto.js";
 import { sha256Text } from "./dataset.js";
 import { replayGame, settleGame, DECISION_DAYS, GAME_DAYS } from "../../../shared/engine.js";
 import {
@@ -123,6 +124,10 @@ export function buildStateDto(row) {
       dto.stockName = row.stock_name;
     }
   }
+
+  // R5: full playable window for owners (create/active already expose identity).
+  const win = windowFromSessionRow(row);
+  if (win) dto.window = win;
 
   return dto;
 }
