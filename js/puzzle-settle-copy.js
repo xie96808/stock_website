@@ -1,6 +1,10 @@
 /**
  * Pure copy helpers for F02 puzzle settle celebration modal (no DOM).
  */
+import {
+  formatTwoStarGoalLine,
+  formatThreeStarGoalLine,
+} from './puzzle-goals-copy.js';
 
 /** @param {unknown} stars @param {{ pending?: boolean }} [opts] */
 export function starsGlyph(stars, opts = {}) {
@@ -28,24 +32,12 @@ export function formatEdgeVsBuyHold(edgePpm) {
 
 /** @param {object|null|undefined} goals */
 export function formatThreeStarSummary(goals) {
-  const t = goals?.threeStar;
-  if (!t || typeof t !== 'object') return null;
-  const parts = [];
-  if (t.maxMddPct != null && Number.isFinite(Number(t.maxMddPct))) {
-    parts.push(`回撤≤${t.maxMddPct}%`);
-  }
-  if (t.maxOrders != null && Number.isFinite(Number(t.maxOrders))) {
-    parts.push(`下单≤${t.maxOrders}次`);
-  }
-  if (!parts.length) return null;
-  return `三星条件：${parts.join(' · ')}`;
+  return formatThreeStarGoalLine(goals);
 }
 
 /** @param {object|null|undefined} goals */
 export function formatTwoStarSummary(goals) {
-  const beat = goals?.twoStar?.beatBuyHoldPp;
-  if (beat == null || !Number.isFinite(Number(beat))) return null;
-  return `二星：相对买入持有至少 +${beat}pp`;
+  return formatTwoStarGoalLine(goals);
 }
 
 /**
@@ -71,9 +63,13 @@ export function formatPuzzleSettleModal(input = {}) {
       rewardLine: null,
       rewardAmount: null,
       rewardGranted: false,
-      goalLines: ['1★ 合法完成', '≥2★ 通关可领首通韭币', '3★ 看回撤与下单次数'],
+      goalLines: [
+        '1★ 合法完成结算',
+        '2★ 收益优于买入持有（达线可领首通韭币）',
+        '3★ 额外看回撤与成交笔数',
+      ],
       edgeLine: null,
-      hintLine: '星级：合法完成 1★；达二星通关并首次可领韭币；三星看额外条件。',
+      hintLine: '星级：1★合法完成；2★达主目标可领首通；3★再加回撤/笔数约束。',
       failNote: null,
     };
   }
@@ -107,29 +103,30 @@ export function formatPuzzleSettleModal(input = {}) {
     rewardGranted = true;
     rewardLine = `首通奖励 +${rewardAmount} 韭币`;
   } else if (reward?.alreadyClaimed) {
-    rewardLine = '本关首通奖励已领取';
+    rewardLine = '本关首通韭币已领过';
   } else if (starN != null && starN < 2) {
-    rewardLine = '未达二星，无首通奖励';
+    rewardLine = '未达二星：首通韭币需 ≥2★';
   }
 
   let headline = '残局结算';
   if (starN >= 3) headline = '三星通关！';
-  else if (starN >= 2) headline = '通关成功';
+  else if (starN >= 2) headline = '通关成功 · 已达二星';
   else if (starN >= 1) headline = '合法完成 · 1★';
+
+  const twoLine = formatTwoStarGoalLine(pr?.goals) || '二星：收益优于买入持有';
+  const threeLine = formatThreeStarGoalLine(pr?.goals) || '三星：回撤与成交约束';
 
   const goalLines = [];
   goalLines.push(starN >= 1 ? '✓ 1★ 合法完成' : '○ 1★ 合法完成');
   if (pr?.twoStarMet || starN >= 2) {
-    goalLines.push('✓ 2★ 通关');
+    goalLines.push(`✓ ${twoLine}`);
   } else {
-    const two = formatTwoStarSummary(pr?.goals);
-    goalLines.push(two ? `○ ${two}` : '○ 2★ 通关未达成');
+    goalLines.push(`○ ${twoLine}`);
   }
-  const threeSummary = formatThreeStarSummary(pr?.goals);
   if (pr?.threeStarMet || starN >= 3) {
-    goalLines.push(threeSummary ? `✓ ${threeSummary}` : '✓ 3★ 条件达成');
+    goalLines.push(`✓ ${threeLine}`);
   } else {
-    goalLines.push(threeSummary ? `○ ${threeSummary}` : '○ 3★ 未达成');
+    goalLines.push(`○ ${threeLine}`);
   }
 
   return {

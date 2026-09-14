@@ -101,6 +101,8 @@ function sessionPublicFromRow(row) {
     const m = String(row.puzzle_version_id).match(/^puzzle:([^:]+):/);
     if (m) levelKey = m[1];
   }
+  // Authored copy (not seed-frozen snapshot) — same source as GET /puzzles list.
+  const authored = levelKey ? levelDefByKey(levelKey) : null;
   return {
     gameId: row.id,
     ruleVersion: row.rule_version,
@@ -125,6 +127,8 @@ function sessionPublicFromRow(row) {
     initialState,
     goals,
     maxOrders,
+    teachingBrief: authored?.teachingBrief || null,
+    openStateHint: authored?.openStateHint || null,
     decisionDays: (row.game_days || 0) - 1,
     // Client feeds #gameScreen K-line from snapshot (short synthetic window; not pack slice).
     bars,
