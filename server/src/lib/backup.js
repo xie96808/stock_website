@@ -6,6 +6,10 @@
  *   node src/lib/backup.js backup [--output PATH | --dir DIR] [--prune] [--no-status]
  *   node src/lib/backup.js restore-check --backup PATH
  *   STOCKGAME_ALLOW_RESTORE=1 node src/lib/backup.js restore --backup PATH [--target PATH]
+ *
+ * After a successful restore the CLI auto-replays user tombstones from the
+ * external ledger (data dir user-tombstones.jsonl), which is not part of the
+ * main SQLite backup file.
  */
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -229,6 +233,78 @@ function stampName(d = new Date()) {
   return `stockgame-${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}.sqlite`;
 }
 
+/**
+ * Copy a verified backup onto targetPath (CLI restore). Does not touch the
+ * external tombstone ledger under the data dir.
+ * @param {{ backupPath: string, targetPath?: string, autoReplay?: boolean }} opts
+ * @returns {Promise<{ backupPath: string, targetPath: string, stats: object, salvage?: string, replay?: object|null }>}
+ */
+export async function restoreBackupFile({
+  backupPath,
+  targetPath = null,
+  autoReplay = true,
+} = {}) {
+  if (!backupPath) throw new Error("backupPath required");
+  const resolvedBackup = path.resolve(backupPath);
+  const resolvedTarget = path.resolve(targetPath || getDbPath());
+  const check = checkBackupIntegrity(resolvedBackup);
+  if (!check.ok) {
+    const err = new Error(
+      `RESTORE_ABORT integrity=${check.integrity} fk=${check.foreignKeyViolations}`
+    );
+    err.check = check;
+    throw err;
+  }
+
+  // Drop any live handle before replacing the file on disk.
+  closeDb();
+
+  fs.mkdirSync(path.dirname(resolvedTarget), { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const salvageDir = path.join(getDataDir(), "restore-salvage");
+  fs.mkdirSync(salvageDir, { recursive: true });
+  let salvage = null;
+  if (fs.existsSync(resolvedTarget)) {
+    salvage = path.join(salvageDir, `pre-restore-${stamp}.sqlite`);
+    fs.copyFileSync(resolvedTarget, salvage);
+    for (const suffix of ["-wal", "-shm"]) {
+      const side = `${resolvedTarget}${suffix}`;
+      if (fs.existsSync(side)) {
+        fs.copyFileSync(side, `${salvage}${suffix}`);
+        fs.unlinkSync(side);
+      }
+    }
+  }
+  fs.copyFileSync(resolvedBackup, resolvedTarget);
+  for (const suffix of ["-wal", "-shm"]) {
+    const side = `${resolvedTarget}${suffix}`;
+    if (fs.existsSync(side)) fs.unlinkSync(side);
+  }
+
+  let replay = null;
+  if (autoReplay) {
+    const prevDb = process.env.STOCKGAME_DB_PATH;
+    process.env.STOCKGAME_DB_PATH = resolvedTarget;
+    try {
+      closeDb();
+      const { replayUserTombstones } = await import("./tombstones.js");
+      replay = replayUserTombstones();
+    } finally {
+      closeDb();
+      if (prevDb === undefined) delete process.env.STOCKGAME_DB_PATH;
+      else process.env.STOCKGAME_DB_PATH = prevDb;
+    }
+  }
+
+  return {
+    backupPath: resolvedBackup,
+    targetPath: resolvedTarget,
+    stats: check.stats,
+    salvage,
+    replay,
+  };
+}
+
 function parseCliArgs(argv) {
   const out = { _: [], prune: false, updateStatus: true, output: null, dir: null, backup: null, target: null };
   for (let i = 0; i < argv.length; i++) {
@@ -277,41 +353,28 @@ async function cliMain(argv) {
       console.error("需要 --backup <path>");
       return 2;
     }
-    const backupPath = path.resolve(args.backup);
-    const targetPath = path.resolve(args.target || getDbPath());
-    const check = checkBackupIntegrity(backupPath);
-    if (!check.ok) {
-      console.error("RESTORE_ABORT", JSON.stringify(check));
-      return 1;
-    }
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const salvageDir = path.join(getDataDir(), "restore-salvage");
-    fs.mkdirSync(salvageDir, { recursive: true });
-    if (fs.existsSync(targetPath)) {
-      const salvage = path.join(salvageDir, `pre-restore-${stamp}.sqlite`);
-      fs.copyFileSync(targetPath, salvage);
-      console.log("SALVAGED_OLD_DB", salvage);
-      for (const suffix of ["-wal", "-shm"]) {
-        const side = `${targetPath}${suffix}`;
-        if (fs.existsSync(side)) {
-          fs.copyFileSync(side, `${salvage}${suffix}`);
-          fs.unlinkSync(side);
-        }
+    try {
+      const result = await restoreBackupFile({
+        backupPath: args.backup,
+        targetPath: args.target || getDbPath(),
+        autoReplay: true,
+      });
+      if (result.salvage) console.log("SALVAGED_OLD_DB", result.salvage);
+      console.log("RESTORE_OK", JSON.stringify({
+        backupPath: result.backupPath,
+        targetPath: result.targetPath,
+        stats: result.stats,
+        tombstoneReplay: result.replay,
+        note: "已自动从外部 tombstone ledger 重放注销；启动 API 前仍建议全量撤销旧 session。整库恢复仅 CLI，无 Web 按钮。外部 ledger 路径见 tombstoneReplay.ledgerPath。",
+      }));
+      return 0;
+    } catch (e) {
+      if (e.check) {
+        console.error("RESTORE_ABORT", JSON.stringify(e.check));
+        return 1;
       }
+      throw e;
     }
-    fs.copyFileSync(backupPath, targetPath);
-    for (const suffix of ["-wal", "-shm"]) {
-      const side = `${targetPath}${suffix}`;
-      if (fs.existsSync(side)) fs.unlinkSync(side);
-    }
-    console.log("RESTORE_OK", JSON.stringify({
-      backupPath,
-      targetPath,
-      stats: check.stats,
-      note: "恢复后须：1) 全量撤销旧 session 2) npm run db:replay-tombstones 重放注销 tombstone 3) 再启动 API 开放写入。整库恢复仅 CLI，无 Web 按钮。",
-    }));
-    return 0;
   }
 
   if (cmd !== "backup") {
