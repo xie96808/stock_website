@@ -182,10 +182,14 @@ export function attachDeferredStart(startGame, gameState) {
     });
   }
 
-  window.startGame = function () {
+  window.startGame = async function () {
     if (locked) return;
-    const auth = getAuthState();
-    if (!auth.user) {
+    let auth = getAuthState();
+    // Avoid "not logged in" during unknown/refreshing bootstrap.
+    if (!auth.ready || auth.status === 'refreshing' || auth.status === 'unknown') {
+      try { auth = await refreshMe(); } catch { /* refreshMe settles locally */ }
+    }
+    if (!auth.user || auth.status !== 'authenticated') {
       openAuthModal('login');
       return;
     }
@@ -220,9 +224,12 @@ export function attachDeferredStart(startGame, gameState) {
       const tAll = performance.now();
       const fillInput = document.querySelector('input[name="fillMode"]:checked');
       const fillMode = fillInput && fillInput.value === 'same_close' ? 'same_close' : 'next_open';
-      const auth = getAuthState();
+      let auth = getAuthState();
       // Locked economy: cloud CREATE only; no silent local full-game substitute when logged out.
-      if (!auth.user) {
+      if (!auth.ready || auth.status === 'refreshing' || auth.status === 'unknown') {
+        try { auth = await refreshMe(); } catch { /* settled in refreshMe */ }
+      }
+      if (!auth.user || auth.status !== 'authenticated') {
         openAuthModal('login');
         const cancelErr = new Error('请先登录');
         cancelErr.code = 'USER_CANCELLED';

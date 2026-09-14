@@ -1,5 +1,5 @@
 /** 韭币 client: balance chrome + daily claim beside auth chip */
-import { api, getAuthState, showToast } from "./auth.js";
+import { api, getAuthState, showToast, selectIsAuthenticated } from "./auth.js";
 
 /** Shared coin SVG markup (auth chrome, price badges, modals). */
 export function coinIconHtml({ size = 18, className = "jiu-coin-icon" } = {}) {
@@ -192,7 +192,7 @@ export function renderJiuCoinChrome() {
   if (!wrap || !balEl) return;
 
   const auth = getAuthState();
-  const logged = !!(auth.user);
+  const logged = selectIsAuthenticated(auth);
   wrap.hidden = !logged;
   if (!logged) {
     balEl.textContent = "0";
