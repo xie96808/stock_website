@@ -33,7 +33,7 @@ import {
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
-import { formatPuzzlePlayTip } from './puzzle-goals-copy.js';
+import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
 import {
     ensureEcharts,
     markChartLoading,
@@ -509,22 +509,74 @@ export function updateUI() {
     const fillEl = document.getElementById('dayProgressFill');
     if (fillEl) fillEl.style.width = pct + '%';
 
-    // Day counter & mood
+    // Day counter, mode chrome & mood (残局 vs 模拟盘)
+    const hud = formatPlayHudChrome({
+        gameKind: session.gameKind,
+        title: session.puzzleTitle,
+        theme: session.puzzleTheme,
+        currentDay: session.currentDay,
+        gameDays,
+    });
+    const gameScreenEl = document.getElementById('gameScreen');
+    if (gameScreenEl) {
+        gameScreenEl.classList.toggle('game-screen--puzzle', hud.isPuzzle);
+        gameScreenEl.classList.toggle('game-screen--classic', !hud.isPuzzle);
+    }
+    const progressShell = document.getElementById('gameProgressShell');
+    if (progressShell) {
+        progressShell.classList.toggle('game-progress-shell--puzzle', hud.isPuzzle);
+    }
+    const badgeEl = document.getElementById('gameModeBadge');
+    if (badgeEl) {
+        badgeEl.textContent = hud.badge;
+        badgeEl.dataset.kind = hud.isPuzzle ? 'puzzle' : 'classic';
+    }
+    const modeSubEl = document.getElementById('gameModeSubtitle');
+    if (modeSubEl) {
+        if (hud.isPuzzle && hud.subtitle) {
+            modeSubEl.hidden = false;
+            modeSubEl.textContent = hud.subtitle;
+        } else {
+            modeSubEl.hidden = true;
+            modeSubEl.textContent = '';
+        }
+    }
+    const dayLeadEl = document.getElementById('gameDayLabelLead');
+    if (dayLeadEl) dayLeadEl.textContent = hud.dayLead;
     document.getElementById('currentDay').textContent = session.currentDay;
     const totalDaysEl = document.getElementById('gameDaysTotal');
     if (totalDaysEl) totalDaysEl.textContent = String(gameDays);
+    const dayUnitEl = document.getElementById('gameDayLabelUnit');
+    if (dayUnitEl) dayUnitEl.textContent = hud.dayUnit;
+    const remainEl = document.getElementById('gameProgressRemain');
+    if (remainEl) {
+        if (hud.isPuzzle && hud.remainLabel) {
+            remainEl.hidden = false;
+            remainEl.textContent = hud.remainLabel;
+        } else {
+            remainEl.hidden = true;
+            remainEl.textContent = '';
+        }
+    }
     const moodEl = document.getElementById('progressMood');
     if (moodEl) {
-        if (session.gameKind === 'puzzle') {
-            moodEl.textContent = '残局挑战 · 对照星级目标出手';
+        if (hud.isPuzzle && hud.mood) {
+            moodEl.textContent = hud.mood;
         } else {
             const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
             moodEl.textContent = MOODS[moodIdx];
         }
     }
+    const boardKicker = document.getElementById('boardKicker');
+    if (boardKicker) boardKicker.textContent = hud.boardKicker;
+    const stageKicker = document.getElementById('stageKicker');
+    if (stageKicker) stageKicker.textContent = hud.stageKicker;
+    const stageTitle = document.getElementById('stageTitle');
+    if (stageTitle) stageTitle.textContent = hud.stageTitle;
+
     const tipEl = document.getElementById('puzzlePlayTip');
     if (tipEl) {
-        if (session.gameKind === 'puzzle') {
+        if (hud.isPuzzle) {
             const tip = formatPuzzlePlayTip({
                 goals: session.puzzleGoals,
                 openStateHint: session.puzzleOpenStateHint,
@@ -692,28 +744,39 @@ export function updateUI() {
     const hintEl = document.getElementById('actionHint');
     if (hintEl) {
         const sameClose = session.fillMode === 'same_close';
+        const puzzle = isPuzzleSession(session);
         if (settleDay) {
             if (session.position === 'empty') {
-                hintEl.textContent = `第 ${gameDays} 日 · 空仓可直接结束并结算`;
+                hintEl.textContent = puzzle
+                    ? `残局末日 · 空仓可直接结束并结算`
+                    : `第 ${gameDays} 日 · 空仓可直接结束并结算`;
                 hintEl.className = 'action-hint';
             } else {
-                hintEl.textContent = `第 ${gameDays} 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）`;
+                hintEl.textContent = puzzle
+                    ? `残局末日 · 未平仓将按今日收盘估值（不计卖出成交）`
+                    : `第 ${gameDays} 日 · 未平仓将按今日收盘做期末估值（不计卖出成交）`;
                 hintEl.className = 'action-hint warning';
             }
         } else if (session.position === 'locked') {
             hintEl.textContent = sameClose
                 ? 'T+1 锁定中，今日可卖出（按今日收盘价成交）'
-                : 'T+1 锁定中，今日可挂卖单（按次日开盘成交）';
+                : (puzzle
+                    ? '残局 T+1 锁定 · 今日可挂卖单（次日开盘成交）'
+                    : 'T+1 锁定中，今日可挂卖单（按次日开盘成交）');
             hintEl.className = 'action-hint warning';
         } else if (session.position === 'empty') {
             hintEl.textContent = sameClose
                 ? '当前空仓 · 买入将按今日收盘价成交'
-                : '当前空仓，可以选择买入或继续观望';
+                : (puzzle
+                    ? '残局空仓 · 买入或观望（对照星级目标）'
+                    : '当前空仓，可以选择买入或继续观望');
             hintEl.className = 'action-hint';
         } else {
             hintEl.textContent = sameClose
                 ? '当前持仓 · 卖出将按今日收盘价成交'
-                : '当前持仓，可以选择卖出或继续持有';
+                : (puzzle
+                    ? '残局持仓 · 卖出或继续持有（对照星级目标）'
+                    : '当前持仓，可以选择卖出或继续持有');
             hintEl.className = 'action-hint';
         }
     }

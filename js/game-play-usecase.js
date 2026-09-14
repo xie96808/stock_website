@@ -384,6 +384,7 @@ export function seedPuzzleSession(cloud) {
     puzzleOpenStateHint: cloud.openStateHint || null,
     puzzleTeachingBrief: cloud.teachingBrief || null,
     puzzleTheme: cloud.theme || null,
+    puzzleTitle: cloud.title || null,
     puzzleResult: null,
     takeoverNav,
     revision: cloud.revision ?? 0,

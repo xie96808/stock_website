@@ -43,6 +43,90 @@
     font-size: 0.76rem;
 }
 
+/* Mode badge: 残局 vs 模拟盘 at-a-glance */
+.game-progress-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.game-mode-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px 8px 999px 6px;
+    font-family: var(--kaiti);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    border: 1.4px solid var(--line);
+    background: var(--paper-2);
+    color: var(--ink-soft);
+    box-shadow: 1px 1px 0 var(--line);
+}
+
+.game-mode-badge[data-kind="puzzle"] {
+    color: var(--terra);
+    border-color: color-mix(in srgb, var(--terra) 55%, var(--line));
+    background: color-mix(in srgb, var(--terra) 14%, var(--card));
+}
+
+.game-mode-badge[data-kind="classic"] {
+    color: var(--ink-soft);
+    background: var(--paper-2);
+}
+
+.game-mode-subtitle {
+    font-size: 0.78rem;
+    color: var(--ink);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    min-width: 0;
+}
+
+.game-mode-subtitle[hidden] {
+    display: none !important;
+}
+
+.game-progress-remain {
+    margin-left: 0.45em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--terra);
+    background: color-mix(in srgb, var(--terra) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--terra) 30%, transparent);
+}
+
+.game-progress-remain[hidden] {
+    display: none !important;
+}
+
+/* Puzzle lane accent — keep classic shell unchanged */
+.game-progress-shell--puzzle,
+.game-screen--puzzle .game-progress-shell {
+    border-color: color-mix(in srgb, var(--terra) 42%, var(--line));
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--terra) 28%, var(--line));
+}
+
+.game-screen--puzzle .game-progress-bar span {
+    background: color-mix(in srgb, var(--terra) 82%, #8b4513);
+}
+
+.game-screen--puzzle .asset-board {
+    border-color: color-mix(in srgb, var(--terra) 28%, var(--line));
+}
+
+.game-screen--puzzle .board-kicker,
+.game-screen--puzzle .stage-kicker {
+    color: var(--terra);
+    letter-spacing: 0.2em;
+}
+
 .game-progress-bar {
     position: relative;
     height: 5px;

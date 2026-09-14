@@ -5,6 +5,8 @@ import {
   formatThreeStarGoalLine,
   formatLevelGoalLines,
   formatPuzzlePlayTip,
+  formatPuzzleRemainLabel,
+  formatPlayHudChrome,
 } from '../js/puzzle-goals-copy.js';
 
 const sampleGoals = {
@@ -59,3 +61,37 @@ test('formatPuzzlePlayTip falls back to maxOrders when no hint', () => {
   assert.match(tip, /订单上限 2/);
   assert.match(tip, /≥5 个百分点/);
 });
+
+test('formatPuzzleRemainLabel counts remaining window days', () => {
+  assert.equal(formatPuzzleRemainLabel(1, 6), '余 5 日');
+  assert.equal(formatPuzzleRemainLabel(6, 6), '本日结算');
+  assert.equal(formatPuzzleRemainLabel(7, 6), '本日结算');
+});
+
+test('formatPlayHudChrome differentiates puzzle vs classic', () => {
+  const classic = formatPlayHudChrome({ gameKind: 'classic' });
+  assert.equal(classic.isPuzzle, false);
+  assert.equal(classic.badge, '模拟盘');
+  assert.equal(classic.dayLead, '第');
+  assert.equal(classic.dayUnit, '天');
+  assert.equal(classic.remainLabel, '');
+  assert.equal(classic.boardKicker, 'SOUL PORTFOLIO');
+
+  const puzzle = formatPlayHudChrome({
+    gameKind: 'puzzle',
+    title: '第一天站岗',
+    theme: '买入后已有浮亏',
+    currentDay: 2,
+    gameDays: 6,
+  });
+  assert.equal(puzzle.isPuzzle, true);
+  assert.equal(puzzle.badge, '残局');
+  assert.equal(puzzle.subtitle, '第一天站岗 · 买入后已有浮亏');
+  assert.equal(puzzle.dayLead, '窗口');
+  assert.equal(puzzle.dayUnit, '日');
+  assert.equal(puzzle.remainLabel, '余 4 日');
+  assert.equal(puzzle.boardKicker, 'PUZZLE · 残局');
+  assert.equal(puzzle.stageTitle, '短窗走势');
+  assert.match(puzzle.mood, /残局挑战/);
+});
+
