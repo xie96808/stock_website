@@ -37,11 +37,16 @@ export const gameState = {
     shareBeatPct: null,
 };
 
+// In-game + result review charts only. Hindsight keeps a local chart handle;
+// quiz charts live on quizState.charts (view-owned).
 export const chartRefs = {
     klineChart: null,
     resultChart: null
 };
 
+// Training quiz blackboard (academy). Session fields are driven by quiz view via
+// js/quiz-pure.js helpers; `charts` is view-owned ECharts handles only.
+// Hindsight does not write here. Do not poke game-session / theme from quiz flows.
 export const quizState = {
     questions: [], currentIndex: 0, score: 0,
     answers: [], answered: false, charts: []

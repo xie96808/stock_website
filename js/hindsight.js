@@ -1,7 +1,12 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
 import { gameState } from './state.js';
-import { calculateMA } from './utils.js';
 import { ensureStocksLoaded } from './pack-store.js';
+import {
+    filterStocksByQuery,
+    resolveHindsightWindow,
+    computeHindsightAnalysis,
+    commodityAffordances,
+} from './hindsight-pure.js';
 import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
 import {
     ensureEcharts,
@@ -142,53 +147,9 @@ function _resetToFormState() {
     btn.disabled = false;
 }
 
-const CHAR_PY = {"万":"wan","三":"san","上":"shang","世":"shi","业":"ye","东":"dong","中":"zhong","丰":"feng","九":"jiu","云":"yun","井":"jing","产":"chan","京":"jing","人":"ren","亿":"yi","今":"jin","仑":"lun","仔":"zai","代":"dai","件":"jian","份":"fen","众":"zhong","传":"chuan","伦":"lun","保":"bao","信":"xin","储":"chu","兆":"zhao","先":"xian","光":"guang","克":"ke","兖":"yan","全":"quan","公":"gong","六":"liu","兰":"lan","农":"nong","分":"fen","创":"chuang","利":"li","券":"quan","力":"li","办":"ban","动":"dong","勤":"qin","化":"hua","北":"bei","医":"yi","升":"sheng","华":"hua","南":"nan","卫":"wei","压":"ya","原":"yuan","厦":"sha","友":"you","变":"bian","口":"kou","古":"gu","号":"hao","司":"si","合":"he","同":"tong","君":"jun","启":"qi","味":"wei","和":"he","品":"pin","商":"shang","啤":"pi","器":"qi","四":"si","团":"tuan","国":"guo","圆":"yuan","圣":"sheng","场":"chang","城":"cheng","基":"ji","士":"shi","大":"da","天":"tian","奥":"ao","威":"wei","媒":"mei","子":"zi","孚":"fu","学":"xue","宁":"ning","宇":"yu","安":"an","宏":"hong","宝":"bao","客":"ke","密":"mi","富":"fu","寒":"han","导":"dao","小":"xiao","尔":"er","山":"shan","岛":"dao","峡":"xia","川":"chuan","州":"zhou","工":"gong","巨":"ju","广":"guang","康":"kang","建":"jian","影":"ying","微":"wei","德":"de","思":"si","恒":"heng","息":"xi","成":"cheng","技":"ji","投":"tou","拓":"tuo","招":"zhao","指":"zhi","捷":"jie","控":"kong","料":"liao","新":"xin","方":"fang","旭":"xu","时":"shi","昆":"kun","明":"ming","易":"yi","星":"xing","春":"chun","普":"pu","晶":"jing","智":"zhi","曙":"shu","有":"you","本":"ben","术":"shu","机":"ji","材":"cai","杭":"hang","杰":"jie","果":"guo","核":"he","格":"ge","桥":"qiao","正":"zheng","武":"wu","氏":"shi","民":"min","气":"qi","水":"shui","汇":"hui","江":"jiang","汽":"qi","汾":"fen","沈":"shen","沪":"hu","河":"he","油":"you","波":"bo","泰":"tai","泽":"ze","洋":"yang","浙":"zhe","浪":"lang","海":"hai","润":"run","液":"ye","深":"shen","渝":"yu","温":"wen","港":"gang","湖":"hu","源":"yuan","潮":"chao","澜":"lan","煤":"mei","爱":"ai","片":"pian","牧":"mu","物":"wu","特":"te","环":"huan","瑞":"rui","生":"sheng","申":"shen","电":"dian","疗":"liao","癀":"huang","百":"bai","益":"yi","盐":"yan","盛":"sheng","眼":"yan","石":"shi","矿":"kuang","硅":"gui","秋":"qiu","科":"ke","移":"yi","空":"kong","立":"li","精":"jing","紫":"zi","纪":"ji","纬":"wei","线":"xian","络":"luo","维":"wei","缘":"yuan","网":"wang","美":"mei","联":"lian","股":"gu","胎":"tai","胜":"sheng","能":"neng","航":"hang","舶":"bo","船":"chuan","色":"se","芒":"mang","芯":"xin","花":"hua","苏":"su","英":"ying","荆":"jing","荣":"rong","药":"yao","蓝":"lan","藏":"cang","虹":"hong","蛇":"she","行":"xing","西":"xi","证":"zheng","贡":"gong","财":"cai","货":"huo","资":"zi","赐":"ci","赛":"sai","赣":"gan","起":"qi","超":"chao","路":"lu","车":"che","轩":"xuan","轮":"lun","软":"ruan","载":"zai","达":"da","迈":"mai","远":"yuan","递":"di","通":"tong","速":"su","造":"zao","邦":"bang","邮":"you","都":"dou","酒":"jiu","金":"jin","针":"zhen","钢":"gang","钨":"wu","钴":"gu","铀":"you","铁":"tie","铜":"tong","铝":"lv","银":"yin","锂":"li","锋":"feng","锐":"rui","长":"zhang","门":"men","际":"ji","陵":"ling","隆":"long","集":"ji","零":"ling","青":"qing","韦":"wei","音":"yin","顺":"shun","领":"ling","风":"feng","飞":"fei","饮":"yin","首":"shou","高":"gao","鱼":"yu","鲁":"lu","鹏":"peng","黄":"huang","鼎":"ding","齐":"qi","龙":"long"};
-
-function _pinyinOf(name) {
-    let full = '';
-    let initials = '';
-    const s = String(name || '');
-    for (let i = 0; i < s.length; i++) {
-        const ch = s[i];
-        const py = CHAR_PY[ch];
-        if (py) {
-            full += py;
-            initials += py.charAt(0);
-        } else {
-            const low = ch.toLowerCase();
-            if (/[a-z0-9]/.test(low)) {
-                full += low;
-                initials += low;
-            }
-        }
-    }
-    return { full: full, initials: initials };
-}
-
-function _normCode(s) {
-    return String(s || '').toLowerCase().replace(/^(sh|sz)/, '').replace(/^0+/, '');
-}
-
-function _stockMatches(stock, qRaw) {
-    const q = String(qRaw || '').toLowerCase().replace(/\s+/g, '');
-    if (!q) return false;
-    const name = String(stock.name || '').toLowerCase();
-    const code = String(stock.code || '').toLowerCase();
-    if (name.includes(q) || code.includes(q)) return true;
-    const qCode = _normCode(q);
-    const codeBare = _normCode(code);
-    if (qCode && (codeBare.includes(qCode) || code.includes(qCode))) return true;
-    // Prefer pack-baked py/jp (covers 1000-stock universe); fallback to CHAR_PY map.
-    const packPy = String(stock.py || '').toLowerCase();
-    const packJp = String(stock.jp || '').toLowerCase();
-    if ((packPy && packPy.includes(q)) || (packJp && packJp.includes(q))) return true;
-    const py = _pinyinOf(stock.name);
-    return py.full.includes(q) || py.initials.includes(q);
-}
-
 function _fillSuggestions(raw) {
     const stocks = gameState.stocksData || [];
-    const matches = stocks.filter(s => _stockMatches(s, raw)).slice(0, 12);
+    const matches = filterStocksByQuery(stocks, raw, { limit: 12 });
     const list = document.getElementById('hindsightSuggestions');
     if (!list) return;
     list.innerHTML = '';
@@ -268,63 +229,36 @@ function _selectStock(stock, { dates = 'fill' } = {}) {
 }
 
 
-/** Strict positive integer hands — rejects 0, 1e2, decimals, blanks. */
-function _parseHands(raw) {
-    const s = String(raw ?? '').trim();
-    if (!s) return { ok: false, err: '请输入买入数量（正整数手数）' };
-    if (!/^\d+$/.test(s)) {
-        return { ok: false, err: '买入数量须为正整数手数（不支持科学计数法或小数）' };
-    }
-    const n = parseInt(s, 10);
-    if (n < 1) return { ok: false, err: '买入数量至少为 1 手' };
-    return { ok: true, value: n };
-}
-
 export function submitHindsight() {
     const btn = document.getElementById('hindsightSubmitBtn');
-    if (!selectedStock) {
-        const raw = document.getElementById('hindsightStockInput').value.trim().toLowerCase();
-        const match = gameState.stocksData.find(s =>
-            s.name.toLowerCase() === raw ||
-            s.code.toLowerCase() === raw ||
-            `${s.name} · ${s.code}`.toLowerCase() === raw ||
-            _stockMatches(s, raw)
-        );
-        if (match) {
-            // Preserve user-picked dates; only fill if still blank.
-            _selectStock(match, { dates: 'ifEmpty' });
-        } else {
-            _setHint('hindsightStockHint', '请从列表中选择一只股票', 'error');
-            document.getElementById('hindsightStockInput').focus();
-            return;
-        }
-    }
     const fromVal = document.getElementById('hindsightDateFrom').value;
     const toVal   = document.getElementById('hindsightDateTo').value;
-    if (!fromVal || !toVal) {
-        _setHint('hindsightDateHint', '请选择起止日期', 'error');
+    const resolved = resolveHindsightWindow({
+        stocks: gameState.stocksData || [],
+        selectedStock,
+        stockInputRaw: document.getElementById('hindsightStockInput').value,
+        fromVal,
+        toVal,
+        qtyRaw: document.getElementById('hindsightQtyInput')?.value,
+    });
+    if (!resolved.ok) {
+        if (resolved.field === 'stock') {
+            _setHint('hindsightStockHint', resolved.err, 'error');
+            document.getElementById('hindsightStockInput').focus();
+        } else if (resolved.field === 'qty') {
+            _setHint('hindsightDateHint', resolved.err, 'error');
+            document.getElementById('hindsightQtyInput')?.focus();
+        } else {
+            _setHint('hindsightDateHint', resolved.err, 'error');
+        }
         return;
     }
-    if (fromVal >= toVal) {
-        _setHint('hindsightDateHint', '结束日期必须晚于开始日期', 'error');
-        return;
+    // Preserve user-picked dates when resolving from typed input.
+    if (!selectedStock || selectedStock !== resolved.stock) {
+        _selectStock(resolved.stock, { dates: 'ifEmpty' });
     }
-    const qtyParsed = _parseHands(document.getElementById('hindsightQtyInput')?.value);
-    if (!qtyParsed.ok) {
-        _setHint('hindsightDateHint', qtyParsed.err, 'error');
-        document.getElementById('hindsightQtyInput')?.focus();
-        return;
-    }
-    const qtyHands = qtyParsed.value;
-    const kline = selectedStock.kline;
-    filteredKline = kline.filter(d => d.date >= fromVal && d.date <= toVal);
-    if (filteredKline.length < 5) {
-        _setHint('hindsightDateHint',
-            `该区间内交易数据不足（仅 ${filteredKline.length} 条），请扩大范围`,
-            'error'
-        );
-        return;
-    }
+    filteredKline = resolved.kline;
+    const qtyHands = resolved.qtyHands;
     _setHint('hindsightDateHint',  '', '');
     _setHint('hindsightStockHint', '', '');
     btn.classList.add('loading');
@@ -341,48 +275,19 @@ export function submitHindsight() {
     });
 }
 
-function _findBestSellAfterBuy(kline) {
-    const buyIdx = 0;
-    // Best executable sell: highest high AFTER the buy day (cannot sell buy-day high as exit).
-    let sellIdx = 1;
-    for (let i = 2; i < kline.length; i++) {
-        if (kline[i].high > kline[sellIdx].high) sellIdx = i;
-    }
-    // Range high across the whole selected window (for the "区间最高价" label).
-    let rangeHighIdx = 0;
-    for (let i = 1; i < kline.length; i++) {
-        if (kline[i].high > kline[rangeHighIdx].high) rangeHighIdx = i;
-    }
-    const buy = kline[buyIdx].close;
-    const bestSell = kline[sellIdx].high;
-    const rangeHigh = kline[rangeHighIdx].high;
-    const bestReturn = buy ? (bestSell - buy) / buy : 0;
-    return {
-        buyIdx,
-        sellIdx,
-        peakIdx: sellIdx,
-        rangeHighIdx,
-        buy,
-        bestSell,
-        rangeHigh,
-        bestReturn,
-    };
-}
-
 let _lastResultCache = null;
 
 function _renderResults(qtyHands = 10) {
     const stock  = selectedStock;
     const kline  = filteredKline;
-    const { buyIdx, sellIdx, peakIdx, buy, bestSell, bestReturn, rangeHigh } = _findBestSellAfterBuy(kline);
-    const buyDay  = kline[buyIdx];
-    const sellDay = kline[sellIdx];
-    const buyShares = qtyHands * 100;
-    const earnedAmt = (bestSell - buy) * buyShares;
-    const periodReturn = (kline[kline.length - 1].close / kline[0].close - 1) * 100;
+    const analysis = computeHindsightAnalysis({ kline, qtyHands, stock });
+    const {
+        buyIdx, sellIdx, peakIdx, buy, bestSell, bestReturn, rangeHigh,
+        buyDay, sellDay, buyShares, earnedAmt, periodReturn, earnedLabel,
+    } = analysis;
     _lastResultCache = {
-        stockName:  `${stock.name}（${stock.code}）`,
-        dateRange:  `${kline[0].date} → ${kline[kline.length - 1].date}`,
+        stockName:  analysis.stockName,
+        dateRange:  analysis.dateRange,
         buyDate:    buyDay.date,
         buyPrice:   buy.toFixed(2),
         peakDate:   sellDay.date,
@@ -394,8 +299,7 @@ function _renderResults(qtyHands = 10) {
         bestReturn,
         periodReturn,
     };
-    document.getElementById('hindsightResultStockName').textContent =
-        `${stock.name}（${stock.code}）`;
+    document.getElementById('hindsightResultStockName').textContent = analysis.stockName;
     document.getElementById('hindsightResultDateRange').textContent =
         `${kline[0].date}  →  ${kline[kline.length - 1].date}`;
     document.getElementById('hindsightBuyPrice').textContent  = `¥ ${buy.toFixed(2)}`;
@@ -409,13 +313,12 @@ function _renderResults(qtyHands = 10) {
     periodEl.textContent = (periodReturn >= 0 ? '+' : '') + periodReturn.toFixed(2) + '%';
     periodEl.className   = 'ar-data-value ' + (periodReturn >= 0 ? 'up' : 'down');
     const earnedEl    = document.getElementById('hindsightEarnedAmt');
-    const earnedLabel = document.getElementById('hindsightEarnedLabel');
+    const earnedLabelEl = document.getElementById('hindsightEarnedLabel');
     if (earnedEl) {
         const isPos = earnedAmt >= 0;
         earnedEl.textContent = '¥ --';
         earnedEl.className   = 'ar-return-earned ' + (isPos ? 'earned-pos' : 'earned-neg');
-        // Optimal path: "最多赚" when green; when red it is the *least* loss, not the worst.
-        if (earnedLabel) earnedLabel.textContent = isPos ? '理论最多赚' : '理论最少亏';
+        if (earnedLabelEl) earnedLabelEl.textContent = earnedLabel;
     }
     const counterEl = document.getElementById('hindsightReturnCounter');
     if (counterEl) {
@@ -627,27 +530,14 @@ export function resizeHindsightChart() {
 }
 
 function _renderCommodities(earnedAmt) {
-    const gained = Math.max(0, earnedAmt);
-    const items = [
-        { icon: '🧋', name: '杯奶茶',                    price: 20     },
-        { icon: '☕', name: '杯瑞幸咖啡',                price: 10     },
-        { icon: '📱', name: '部 iPhone 17 Pro',          price: 9000   },
-        { icon: '✈️', name: '张机票（经济舱）',          price: 2000   },
-        { icon: '🏖️', name: '次出境游',                  price: 12000  },
-        { icon: '🏠', name: '个月小城市首付',            price: 150000 },
-        { icon: '📚', name: '本《聪明的投资者》',        price: 68     },
-    ];
     const el = document.getElementById('hindsightCommodityList');
     if (!el) return;
-    const rows = items.map(it => {
-        const n = Math.floor(gained / it.price + 1e-9);
-        if (n < 1) return '';
-        const verb = it.name.includes('首付') ? '多出' : '多买';
-        return `<div class="archive-commodity-row">` +
+    const rows = commodityAffordances(earnedAmt).map((it) =>
+        `<div class="archive-commodity-row">` +
             `<span class="archive-commodity-icon">${it.icon}</span>` +
-            `<span class="archive-commodity-text">${verb} <strong>${n.toLocaleString()}</strong> ${it.name}</span>` +
-            `</div>`;
-    }).filter(Boolean);
+            `<span class="archive-commodity-text">${it.verb} <strong>${it.n.toLocaleString()}</strong> ${it.name}</span>` +
+            `</div>`
+    );
     el.innerHTML = rows.length
         ? rows.join('')
         : `<div class="archive-commodity-row"><span class="archive-commodity-text" style="color:#AAAAAA;font-style:italic">收益较小，暂无等价实物 🌱</span></div>`;
