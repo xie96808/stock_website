@@ -121,6 +121,8 @@ function sessionPublicFromRow(row) {
     gameKind: row.game_kind || GAME_KIND_PUZZLE,
     puzzleVersionId: row.puzzle_version_id || null,
     levelKey,
+    title: authored?.title || null,
+    theme: authored?.theme || null,
     protocolVersion: row.protocol_version || PROTOCOL_LEGACY_BATCH,
     undoCount: row.undo_count ?? 0,
     createFee: PUZZLE_CREATE_FEE,
@@ -907,12 +909,17 @@ function buildPuzzleResultDto(db, resultRow, sessionRow, extra = null) {
     }
   }
 
+  const authored = level?.level_key ? levelDefByKey(level.level_key) : null;
   return {
     gameId: sessionRow.id,
     gameKind: GAME_KIND_PUZZLE,
     levelKey: level?.level_key || null,
     puzzleVersionId: sessionRow.puzzle_version_id,
     rewardFamilyId: level?.reward_family_id || null,
+    title: authored?.title || level?.title || null,
+    theme: authored?.theme || level?.theme || null,
+    teachingBrief: authored?.teachingBrief || null,
+    openStateHint: authored?.openStateHint || null,
     returnPpm: resultRow.return_ppm,
     returnPct: formatReturnPct(resultRow.return_ppm),
     mddPpm: resultRow.mdd_ppm,

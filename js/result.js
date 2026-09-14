@@ -6,7 +6,12 @@ import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { calcGrade } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
-import { showPuzzleSettleModal } from './puzzle-settle-modal.js';
+import {
+    showPuzzleSettleModal,
+    paintPuzzleResultDebrief,
+    clearPuzzleResultDebrief,
+} from './puzzle-settle-modal.js';
+import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
 import { showToast } from './auth.js';
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
 import {
@@ -105,12 +110,22 @@ export function endGame() {
         if (playBtn && playBtn.getAttribute('onclick') === 'playAgain()') {
             playBtn.textContent = '返回残局列表';
         }
-        // Celebration / reward layer on top of full result screen.
-        showPuzzleSettleModal({
+        // Celebration / reward layer on top of full result screen + 残局复盘.
+        const debriefInput = {
             status: pendingStars ? 'pending' : 'ok',
             puzzleResult: view.puzzleResult || null,
-        });
+            theme: view.puzzleTheme || null,
+            teachingBrief: view.puzzleTeachingBrief || null,
+            openStateHint: view.puzzleOpenStateHint || null,
+            initialState: view.initialState || null,
+            maxOrders: view.maxOrders ?? null,
+            tradeHistory: view.tradeHistory || [],
+            gameDays: view.gameDays || null,
+        };
+        showPuzzleSettleModal(debriefInput);
+        paintPuzzleResultDebrief(formatPuzzleDebrief(debriefInput));
     } else {
+        clearPuzzleResultDebrief();
         const lbBtn = document.getElementById('resultLeaderboardBtn');
         if (lbBtn) lbBtn.hidden = false;
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
@@ -150,10 +165,26 @@ export function endGame() {
             console.error(`[endGame] ${label} failed`, err);
         }
     };
-    runResultStep('generateBSReport', () => generateBSReport());
-    runResultStep('generateBestPoints', () => generateBestPoints());
+    const settledEarly = selectSettleView();
+    const isPuzzle = settledEarly.gameKind === 'puzzle';
+    if (!isPuzzle) {
+        runResultStep('generateBSReport', () => generateBSReport());
+        runResultStep('generateBestPoints', () => generateBestPoints());
+        runResultStep('generateKlineAnalysis', () => generateKlineAnalysis());
+    } else {
+        // Short-window puzzle: keep K-line; classic BS / 波段分析 replaced by 残局复盘.
+        const bsEl = document.getElementById('bsReport');
+        if (bsEl) {
+            bsEl.hidden = true;
+            bsEl.innerHTML = '';
+        }
+        const ka = document.getElementById('klineAnalysis');
+        if (ka) {
+            ka.hidden = true;
+            ka.innerHTML = '';
+        }
+    }
     runResultStep('drawResultChart', () => drawResultChart());
-    runResultStep('generateKlineAnalysis', () => generateKlineAnalysis());
 
     // BS score written by generateBSReport — re-read live session.
     // Puzzle already painted 星级 copy above; do not overwrite with classic letter grade.
@@ -172,7 +203,12 @@ export function endGame() {
     }
 
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
-    if (bsDisplayEl) bsDisplayEl.textContent = settled.bsScore != null ? settled.bsScore : '--';
+    if (bsDisplayEl) {
+        bsDisplayEl.textContent =
+            settled.gameKind === 'puzzle'
+                ? '--'
+                : (settled.bsScore != null ? settled.bsScore : '--');
+    }
 
     updateSaveStatusUi();
     clearShareRankMeta();
@@ -212,15 +248,30 @@ export function endGame() {
                     }
                     const letter = document.getElementById('gradeLetter');
                     if (letter) letter.textContent = String(starN);
+                    const pr = live.puzzleResult;
                     showPuzzleSettleModal({
                         status: 'ok',
-                        puzzleResult: live.puzzleResult,
+                        puzzleResult: pr,
+                        theme: pr?.theme || live.puzzleTheme || null,
+                        teachingBrief: pr?.teachingBrief || live.puzzleTeachingBrief || null,
+                        openStateHint: pr?.openStateHint || live.puzzleOpenStateHint || null,
+                        initialState: live.initialState || null,
+                        maxOrders: live.maxOrders ?? null,
+                        tradeHistory: live.tradeHistory || [],
+                        gameDays: live.gameDays || null,
                     });
                 } else if (!res) {
                     const err = live.saveError || '保存失败';
                     showPuzzleSettleModal({
                         status: 'fail',
                         saveError: err,
+                        theme: live.puzzleTheme || null,
+                        teachingBrief: live.puzzleTeachingBrief || null,
+                        openStateHint: live.puzzleOpenStateHint || null,
+                        initialState: live.initialState || null,
+                        maxOrders: live.maxOrders ?? null,
+                        tradeHistory: live.tradeHistory || [],
+                        gameDays: live.gameDays || null,
                     });
                     try { showToast('残局进度保存失败：' + err, 'error'); } catch (_) {}
                 }
@@ -232,7 +283,17 @@ export function endGame() {
             const live = getSession();
             if (live.gameKind === 'puzzle' && !live.puzzleResult) {
                 const err = live.saveError || '保存失败';
-                showPuzzleSettleModal({ status: 'fail', saveError: err });
+                showPuzzleSettleModal({
+                    status: 'fail',
+                    saveError: err,
+                    theme: live.puzzleTheme || null,
+                    teachingBrief: live.puzzleTeachingBrief || null,
+                    openStateHint: live.puzzleOpenStateHint || null,
+                    initialState: live.initialState || null,
+                    maxOrders: live.maxOrders ?? null,
+                    tradeHistory: live.tradeHistory || [],
+                    gameDays: live.gameDays || null,
+                });
                 try { showToast('残局进度保存失败：' + err, 'error'); } catch (_) {}
             }
             updateSaveStatusUi();
