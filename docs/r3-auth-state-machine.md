@@ -49,4 +49,5 @@ error → refreshing           (retry refreshMe)
 
 ## Out of scope
 
-Wave B/C, React rewrite, extracting auth HTTP into a separate client package.
+Wave C items after C1, React rewrite.
+C1 (auth HTTP extract) shipped separately: see `docs/c1-auth-http.md`.

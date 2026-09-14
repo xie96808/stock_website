@@ -7,6 +7,7 @@ import {
   selectIsAuthenticated,
   selectAuthChromeMode,
 } from "./auth-state.js";
+import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";
@@ -105,28 +106,24 @@ function randomNickname(exclude) {
   return nick;
 }
 
+/**
+ * Session-aware JSON API used by auth UI and other feature modules.
+ * Delegates fetch/mapping to auth-http; owns 401 → SESSION_CLEARED + chrome.
+ */
 export async function api(path, { method = "GET", body, csrf } = {}) {
   const t0 = performance.now();
-  const headers = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (csrf || authState.csrfToken) headers["X-CSRF-Token"] = csrf || authState.csrfToken;
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: "same-origin",
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  if (res.status === 204) {
-    perfLog("api " + method + " " + path, performance.now() - t0, { status: 204 });
-    return { ok: true, status: 204, data: null };
-  }
-  const json = await res.json().catch(() => ({}));
-  perfLog("api " + method + " " + path, performance.now() - t0, { status: res.status });
-  if (!res.ok) {
-    const err = new Error(json?.error?.message || `HTTP ${res.status}`);
-    err.code = json?.error?.code;
-    err.status = res.status;
-    err.payload = json;
+  try {
+    const result = await apiRequest(path, {
+      method,
+      body,
+      csrf: csrf || authState.csrfToken,
+    });
+    perfLog("api " + method + " " + path, performance.now() - t0, { status: result.status });
+    return result;
+  } catch (err) {
+    if (err && err.status != null) {
+      perfLog("api " + method + " " + path, performance.now() - t0, { status: err.status });
+    }
     // Session gone — clear chrome so UI never looks logged-in without a cookie.
     // Do not clear on INVALID_CREDENTIALS / BAD_PASSWORD (login / password forms).
     if (isUnauthorized(err) && authState.user) {
@@ -135,32 +132,27 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
     }
     throw err;
   }
-  return { ok: true, status: res.status, data: json.data, requestId: json.requestId };
 }
 
 async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
   const t0 = performance.now();
-  const headers = { Accept: "application/json" };
-  if (csrf || authState.csrfToken) headers["X-CSRF-Token"] = csrf || authState.csrfToken;
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: "same-origin",
-    headers,
-    body: formData,
-  });
-  const json = await res.json().catch(() => ({}));
-  perfLog("api " + method + " " + path, performance.now() - t0, { status: res.status });
-  if (!res.ok) {
-    const err = new Error(json?.error?.message || `HTTP ${res.status}`);
-    err.code = json?.error?.code;
-    err.status = res.status;
+  try {
+    const result = await apiMultipartRequest(path, formData, {
+      method,
+      csrf: csrf || authState.csrfToken,
+    });
+    perfLog("api " + method + " " + path, performance.now() - t0, { status: result.status });
+    return result;
+  } catch (err) {
+    if (err && err.status != null) {
+      perfLog("api " + method + " " + path, performance.now() - t0, { status: err.status });
+    }
     if (isUnauthorized(err) && authState.user) {
       clearSessionLocal("api_multipart_401");
       renderAuthChrome();
     }
     throw err;
   }
-  return { ok: true, status: res.status, data: json.data };
 }
 
 export function getAuthState() {
