@@ -215,7 +215,8 @@ export async function abandonActiveCloudGame() {
 }
 
 
-/** Persist current in-memory cloud game progress (no-op if not cloud). */
+/** Persist current in-memory cloud game progress (no-op if not cloud).
+ * Adapter only — localStorage I/O stays in cloud-draft (single writer). */
 export function persistCurrentCloudDraft() {
   if (!gameState.cloudMode || !gameState.cloudGameId) return false;
   const auth = getAuthState();
@@ -227,6 +228,7 @@ export function persistCurrentCloudDraft() {
     actions: gameState.actions,
     ruleVersion: gameState.ruleVersion,
     datasetVersion: gameState.datasetVersion,
+    coalesce: true,
   });
 }
 
