@@ -280,6 +280,15 @@
   display: none !important;
 }
 
+/* Stronger in-play tip when #gameScreen is in puzzle lane */
+.game-screen--puzzle .puzzle-play-tip {
+  margin-top: 0.45rem;
+  font-weight: 500;
+  color: var(--ink, #2a241c);
+  background: color-mix(in srgb, var(--terra, #c45c26) 14%, transparent);
+  border-color: color-mix(in srgb, var(--terra, #c45c26) 38%, transparent);
+}
+
 /* F02 settle celebration modal (reuses jiu-coin paper shell) */
 .puzzle-settle-dialog {
   width: min(440px, 100%);

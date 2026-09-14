@@ -297,9 +297,18 @@
         <section class="game-screen" id="gameScreen">
 
             <!-- 顶部进度条 -->
-            <div class="game-progress-shell">
+            <div class="game-progress-shell" id="gameProgressShell">
+                <div class="game-progress-head">
+                    <span class="game-mode-badge" id="gameModeBadge" data-kind="classic">模拟盘</span>
+                    <span class="game-mode-subtitle" id="gameModeSubtitle" hidden></span>
+                </div>
                 <div class="game-progress-meta">
-                    <span class="game-progress-label">第 <span id="currentDay">1</span> / <span id="gameDaysTotal">30</span> 天</span>
+                    <span class="game-progress-label" id="gameProgressDayLabel">
+                        <span id="gameDayLabelLead">第</span>
+                        <span id="currentDay">1</span> / <span id="gameDaysTotal">30</span>
+                        <span id="gameDayLabelUnit">天</span>
+                        <span class="game-progress-remain" id="gameProgressRemain" hidden></span>
+                    </span>
                     <span class="game-progress-mood" id="progressMood">市场在等待你的判断…</span>
                     <span class="stage-subtitle" id="chartSubtitle">股票代码: ******</span>
                 </div>
@@ -314,7 +323,7 @@
 
                 <!-- 左侧资产看板 30% -->
                 <aside class="asset-board">
-                    <div class="board-kicker">SOUL PORTFOLIO</div>
+                    <div class="board-kicker" id="boardKicker">SOUL PORTFOLIO</div>
 
                     <!-- 收益率主卡（评判标准）；不展示初始/总资金绝对值 -->
                     <div class="metric-stack">
@@ -407,8 +416,8 @@
                     <div class="market-stage">
                         <div class="market-stage-header">
                             <div>
-                                <div class="stage-kicker">MARKET · K-LINE</div>
-                                <h3 class="stage-title">实时走势</h3>
+                                <div class="stage-kicker" id="stageKicker">MARKET · K-LINE</div>
+                                <h3 class="stage-title" id="stageTitle">实时走势</h3>
                                 <div class="stage-subtitle" id="chartSubtitleInner">--</div>
                             </div>
                             <div class="stage-tools">

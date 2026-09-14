@@ -381,6 +381,28 @@ test('seedPuzzleSession rejects bad bars', () => {
   assert.throws(() => seedPuzzleSession({ bars: [], gameDays: 8 }), /残局/);
 });
 
+test('seedPuzzleSession stores title and theme for HUD', () => {
+  const bars = [];
+  for (let i = 0; i < 6; i++) {
+    bars.push({ open: 10, high: 11, low: 9, close: 10, volume: 1, date: `2026-01-0${i + 1}` });
+  }
+  seedPuzzleSession({
+    bars,
+    gameDays: 6,
+    history: [],
+    historyLength: 0,
+    gameId: 'pz1',
+    title: '第一天站岗',
+    theme: '买入后已有浮亏',
+    levelKey: 'ch1-01',
+    goals: { twoStar: { beatBuyHoldPp: 3 } },
+  });
+  assert.equal(getSession().gameKind, 'puzzle');
+  assert.equal(getSession().puzzleTitle, '第一天站岗');
+  assert.equal(getSession().puzzleTheme, '买入后已有浮亏');
+  assert.equal(getSession().puzzleLevelKey, 'ch1-01');
+});
+
 test('seedLocalPractice throws when catalog empty', () => {
   assert.throws(() => seedLocalPractice([]), /股票资源未就绪/);
 });

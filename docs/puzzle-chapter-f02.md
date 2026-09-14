@@ -64,6 +64,7 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 - **关卡列表在独立全屏 `#puzzleScreen`**（返回模拟盘 hub），**不**在 hub 内联展开；章节进度条用 `GET /puzzles` 的 levels/stars
 - 关卡行展示教学短文案 + 开局状态提示（满仓浮亏/浮盈/T+1/空仓等）+ 可读二星/三星条件
 - 局内 HUD（`#puzzlePlayTip`）提醒开局状态与星级目标
+- **局内 HUD 区分模拟盘**：`#gameScreen.game-screen--puzzle` + 顶栏徽章「残局」/「模拟盘」、关卡标题副标、窗口日 +「余 N 日」、资产/舞台 kicker 文案；经典局布局不变（`js/puzzle-goals-copy.js` → `formatPlayHudChrome`）
 - Hub 左侧猫插画：左栏 `minmax(200px,340px)` + `.frame` 定宽 `min(100%,340px)` + `aspect-ratio: 3/4`（避免 absolute 图把左轨塌成 0）
 - **开局后进入完整 `#gameScreen` 模拟盘**（与经典云局同一套 K 线 / 买卖观望 / 结算按钮）
   - `POST /puzzles/:levelKey/entries` 成功后调用 `startGame({ cloud })`（`window.__puzzleStartGame`）

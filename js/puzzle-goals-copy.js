@@ -70,3 +70,72 @@ export function formatPuzzlePlayTip(input = {}) {
   if (!parts.length) return null;
   return parts.join(' · ');
 }
+
+/**
+ * Remaining days in a short puzzle window (inclusive of today as "in progress").
+ * @param {number} currentDay
+ * @param {number} gameDays
+ * @returns {number}
+ */
+export function puzzleDaysRemaining(currentDay, gameDays) {
+  const cur = Number(currentDay);
+  const total = Number(gameDays);
+  if (!Number.isFinite(cur) || !Number.isFinite(total)) return 0;
+  return Math.max(0, total - cur);
+}
+
+/**
+ * Puzzle day-strip secondary: "余 N 日" (hidden on classic).
+ * @param {number} currentDay
+ * @param {number} gameDays
+ * @returns {string}
+ */
+export function formatPuzzleRemainLabel(currentDay, gameDays) {
+  const left = puzzleDaysRemaining(currentDay, gameDays);
+  if (left <= 0) return '本日结算';
+  return `余 ${left} 日`;
+}
+
+/**
+ * In-play HUD chrome copy for 残局 vs 模拟盘 (view applies; no DOM).
+ * @param {{
+ *   gameKind?: string|null,
+ *   title?: string|null,
+ *   theme?: string|null,
+ *   currentDay?: number,
+ *   gameDays?: number,
+ * }} input
+ */
+export function formatPlayHudChrome(input = {}) {
+  const isPuzzle = input.gameKind === 'puzzle';
+  if (!isPuzzle) {
+    return {
+      isPuzzle: false,
+      badge: '模拟盘',
+      subtitle: '',
+      mood: null, // view keeps rotating MOODS
+      dayLead: '第',
+      dayUnit: '天',
+      remainLabel: '',
+      boardKicker: 'SOUL PORTFOLIO',
+      stageKicker: 'MARKET · K-LINE',
+      stageTitle: '实时走势',
+    };
+  }
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  const theme = typeof input.theme === 'string' ? input.theme.trim() : '';
+  const subtitle = [title, theme].filter(Boolean).join(' · ') || '残局挑战';
+  return {
+    isPuzzle: true,
+    badge: '残局',
+    subtitle,
+    mood: '残局挑战 · 对照星级目标出手',
+    dayLead: '窗口',
+    dayUnit: '日',
+    remainLabel: formatPuzzleRemainLabel(input.currentDay, input.gameDays),
+    boardKicker: 'PUZZLE · 残局',
+    stageKicker: '残局 · K-LINE',
+    stageTitle: '短窗走势',
+  };
+}
+
