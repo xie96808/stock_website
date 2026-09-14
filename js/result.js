@@ -12,6 +12,7 @@ import {
     clearPuzzleResultDebrief,
 } from './puzzle-settle-modal.js';
 import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
+import { renderStarIcons } from './puzzle-settle-copy.js';
 import { showToast } from './auth.js';
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
 import {
@@ -23,6 +24,42 @@ import {
     openResultLeaderboard,
 } from './result-share.js';
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
+
+/** Paint result hero for puzzle: icon stars +「残局结算」(no giant digit). */
+function paintPuzzleGradeHero({ stars, pending, reward }) {
+    const medalEl = document.getElementById('gradeMedal');
+    const letter = document.getElementById('gradeLetter');
+    const titleEl = document.getElementById('gradeTitle');
+    const verdictEl = document.getElementById('gradeVerdict');
+    const starInfo = renderStarIcons(pending ? null : stars, {
+        pending: !!pending,
+        className: 'puzzle-stars puzzle-stars--hero',
+    });
+    if (medalEl) {
+        medalEl.className = 'grade-medal grade-medal--puzzle' +
+            (starInfo.starN != null && starInfo.starN >= 3 ? ' is-three' : '') +
+            (pending ? ' is-pending' : '');
+    }
+    if (letter) {
+        letter.className = 'grade-medal__letter grade-medal__stars';
+        letter.innerHTML = starInfo.html;
+        letter.setAttribute('aria-label', starInfo.ariaLabel);
+    }
+    if (titleEl) titleEl.textContent = pending ? '残局结算中' : '残局结算';
+    if (verdictEl) {
+        if (pending) {
+            verdictEl.textContent = '正在保存进度…';
+        } else if (reward?.grantedThisTime) {
+            verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
+        } else if (reward?.alreadyClaimed) {
+            verdictEl.textContent = '本关首通韭币已领过';
+        } else if (stars != null && stars < 2) {
+            verdictEl.textContent = '未达二星：首通韭币需 ≥二星';
+        } else {
+            verdictEl.textContent = '短窗残局 · 不计入经典榜';
+        }
+    }
+}
 
 
 export function endGame() {
@@ -70,40 +107,15 @@ export function endGame() {
         }
     }
 
-    // F02 puzzle: show stars instead of classic letter grade when available.
-    // Until server finish returns stars, avoid a fake single-★ medal (use … / 结算中).
+    // F02 puzzle: icon stars +「残局结算」header (no giant digit / letter grade).
     if (view.gameKind === 'puzzle') {
         const stars = view.puzzleResult?.stars;
         const pendingStars = stars == null;
-        const medalElEarly = document.getElementById('gradeMedal');
-        const titleElEarly = document.getElementById('gradeTitle');
-        const verdictElEarly = document.getElementById('gradeVerdict');
-        const starN = pendingStars ? 0 : Math.max(0, Math.min(3, Number(stars) || 0));
-        const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
-        if (medalElEarly) {
-            medalElEarly.className = 'grade-medal';
-            const letter = document.getElementById('gradeLetter');
-            if (letter) letter.textContent = pendingStars ? '…' : String(starN);
-        }
-        if (titleElEarly) {
-            titleElEarly.textContent = pendingStars
-                ? '残局结算 · 结算中…'
-                : `残局结算 · ${starText}`;
-        }
-        if (verdictElEarly) {
-            const reward = view.puzzleResult?.reward;
-            if (pendingStars) {
-                verdictElEarly.textContent = '正在保存进度…';
-            } else if (reward?.grantedThisTime) {
-                verdictElEarly.textContent = `首通奖励 +${reward.amount} 韭币`;
-            } else if (reward?.alreadyClaimed) {
-                verdictElEarly.textContent = '本关首通韭币已领过';
-            } else if (stars != null && stars < 2) {
-                verdictElEarly.textContent = '未达二星：首通韭币需 ≥2★';
-            } else {
-                verdictElEarly.textContent = '短窗残局 · 不计入经典榜';
-            }
-        }
+        paintPuzzleGradeHero({
+            stars,
+            pending: pendingStars,
+            reward: view.puzzleResult?.reward,
+        });
         const lbBtn = document.getElementById('resultLeaderboardBtn');
         if (lbBtn) lbBtn.hidden = true;
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
@@ -194,7 +206,12 @@ export function endGame() {
         const medalEl = document.getElementById('gradeMedal');
         if (medalEl) {
             medalEl.className = 'grade-medal ' + grade.cls;
-            document.getElementById('gradeLetter').textContent = grade.letter;
+            const letterEl = document.getElementById('gradeLetter');
+            if (letterEl) {
+                letterEl.className = 'grade-medal__letter';
+                letterEl.textContent = grade.letter;
+                letterEl.removeAttribute('aria-label');
+            }
         }
         const titleEl = document.getElementById('gradeTitle');
         if (titleEl) titleEl.textContent = `${grade.letter}级 · ${grade.title}`;
@@ -229,25 +246,11 @@ export function endGame() {
             if (live.gameKind === 'puzzle') {
                 if (live.puzzleResult) {
                     const stars = live.puzzleResult.stars;
-                    const starN = Math.max(0, Math.min(3, Number(stars) || 0));
-                    const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
-                    const titleEl = document.getElementById('gradeTitle');
-                    if (titleEl) titleEl.textContent = `残局结算 · ${starText}`;
-                    const verdictEl = document.getElementById('gradeVerdict');
-                    const reward = live.puzzleResult.reward;
-                    if (verdictEl) {
-                        if (reward?.grantedThisTime) {
-                            verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
-                        } else if (reward?.alreadyClaimed) {
-                            verdictEl.textContent = '本关首通韭币已领过';
-                        } else if (stars != null && stars < 2) {
-                            verdictEl.textContent = '未达二星：首通韭币需 ≥2★';
-                        } else {
-                            verdictEl.textContent = '短窗残局 · 不计入经典榜';
-                        }
-                    }
-                    const letter = document.getElementById('gradeLetter');
-                    if (letter) letter.textContent = String(starN);
+                    paintPuzzleGradeHero({
+                        stars,
+                        pending: false,
+                        reward: live.puzzleResult.reward,
+                    });
                     const pr = live.puzzleResult;
                     showPuzzleSettleModal({
                         status: 'ok',

@@ -580,6 +580,39 @@
 .grade-medal.grade-D .grade-medal__letter  { color: var(--gain-color); text-shadow: none; }
 .grade-medal.grade-D .grade-medal__ring     { border-color: var(--gain-color); }
 
+/* F02 puzzle settle hero: row of star icons, no giant digit */
+.grade-medal.grade-medal--puzzle {
+  width: auto;
+  min-width: 118px;
+  height: auto;
+  min-height: 72px;
+  padding: 10px 14px;
+}
+.grade-medal.grade-medal--puzzle .grade-medal__ring {
+  display: none;
+}
+.grade-medal.grade-medal--puzzle .grade-medal__stars {
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.grade-medal.grade-medal--puzzle .puzzle-stars {
+  font-size: 1em;
+  color: var(--terra, #c45c26);
+}
+.grade-medal.grade-medal--puzzle.is-three .puzzle-stars {
+  color: #b45309;
+}
+.grade-medal.grade-medal--puzzle.is-pending .puzzle-stars,
+.grade-medal.grade-medal--puzzle.is-pending .grade-medal__stars {
+  color: var(--mute, #8a7f70);
+  font-size: 1.6rem;
+}
+
+
 .grade-title {
     font-family: var(--kaiti);
     font-size: 1.15rem;

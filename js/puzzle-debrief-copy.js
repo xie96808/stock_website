@@ -6,6 +6,7 @@ import {
   formatTwoStarGoalLine,
   formatThreeStarGoalLine,
 } from './puzzle-goals-copy.js';
+import { stripStarPrefix } from './puzzle-settle-copy.js';
 
 /** @param {unknown} ppm @returns {string|null} percent with 2 decimals, no + */
 export function ppmToPctString(ppm) {
@@ -79,8 +80,10 @@ export function formatStarBreakdown(pr) {
   if (!pr || pr.stars == null || !Number.isFinite(Number(pr.stars))) return null;
   const starN = Math.max(0, Math.min(3, Math.floor(Number(pr.stars))));
   const goals = pr.goals || null;
-  const twoLine = formatTwoStarGoalLine(goals) || '二星：收益优于买入持有';
-  const threeLine = formatThreeStarGoalLine(goals) || '三星：回撤与成交约束';
+  const twoRaw = formatTwoStarGoalLine(goals) || '二星：收益优于买入持有';
+  const threeRaw = formatThreeStarGoalLine(goals) || '三星：回撤与成交约束';
+  const twoLabel = stripStarPrefix(twoRaw) || '收益优于买入持有';
+  const threeLabel = stripStarPrefix(threeRaw) || '回撤与成交约束';
 
   const edgePp = formatSignedPp(
     pr.edgePpm != null
@@ -95,25 +98,16 @@ export function formatStarBreakdown(pr) {
       ? Number(pr.tradeCount)
       : null;
 
+  const oneMet = starN >= 1;
   const twoMet = !!(pr.twoStarMet || starN >= 2);
   const threeMet = !!(pr.threeStarMet || starN >= 3);
 
-  const lines = [];
-  lines.push(starN >= 1 ? '✓ 1★ 合法完成结算' : '○ 1★ 合法完成结算');
-
-  if (twoMet) {
-    lines.push(
-      edgePp != null
-        ? `✓ ${twoLine}（本局相对买持 ${edgePp}pp）`
-        : `✓ ${twoLine}`
-    );
-  } else {
-    lines.push(
-      edgePp != null
-        ? `○ ${twoLine}（本局相对买持 ${edgePp}pp，未达线）`
-        : `○ ${twoLine}`
-    );
-  }
+  const twoText =
+    edgePp != null
+      ? twoMet
+        ? `${twoLabel}（本局相对买持 ${edgePp}pp）`
+        : `${twoLabel}（本局相对买持 ${edgePp}pp，未达线）`
+      : twoLabel;
 
   const threeFacts = [];
   const maxMdd = goals?.threeStar?.maxMddPct;
@@ -129,11 +123,27 @@ export function formatStarBreakdown(pr) {
     threeFacts.push(`成交 ${tradeCount} 笔`);
   }
   const factSuffix = threeFacts.length ? `（本局 ${threeFacts.join('，')}）` : '';
-  if (threeMet) {
-    lines.push(`✓ ${threeLine}${factSuffix}`);
-  } else {
-    lines.push(`○ ${threeLine}${factSuffix}`);
-  }
+  const threeText = `${threeLabel}${factSuffix}`;
+
+  const items = [
+    {
+      met: oneMet,
+      label: '合法完成结算',
+      ariaLabel: oneMet ? '一星已达成' : '一星未达成',
+    },
+    {
+      met: twoMet,
+      label: twoText,
+      ariaLabel: twoMet ? '二星已达成' : '二星未达成',
+    },
+    {
+      met: threeMet,
+      label: threeText,
+      ariaLabel: threeMet ? '三星已达成' : '三星未达成',
+    },
+  ];
+
+  const lines = items.map((it) => `${it.met ? '✓' : '○'} ${it.label}`);
 
   let paragraph;
   if (starN >= 3) {
@@ -155,7 +165,7 @@ export function formatStarBreakdown(pr) {
       '。三星约束在未达二星时不另行计分。';
   }
 
-  return { starN, lines, paragraph };
+  return { starN, items, lines, paragraph };
 }
 
 /**

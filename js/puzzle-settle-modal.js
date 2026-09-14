@@ -2,7 +2,11 @@
  * F02 puzzle settle celebration modal — paper shell (mirrors F11 dailyQuizResultModal).
  * Includes 残局专属复盘 section when puzzleResult / session context is available.
  */
-import { formatPuzzleSettleModal } from './puzzle-settle-copy.js';
+import {
+  formatPuzzleSettleModal,
+  renderGoalStarIcon,
+  renderStarIcons,
+} from './puzzle-settle-copy.js';
 import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 
@@ -41,9 +45,21 @@ export function renderPuzzleDebriefHtml(debrief) {
     const s = debrief.starBreakdown;
     parts.push('<div class="puzzle-debrief-block puzzle-debrief-stars">');
     parts.push('<div class="puzzle-debrief-label">星级拆解</div>');
+    if (s.starN != null) {
+      parts.push(
+        `<div class="puzzle-debrief-stars-row">${renderStarIcons(s.starN).html}</div>`
+      );
+    }
     parts.push('<ul class="puzzle-debrief-star-list">');
-    for (const line of s.lines || []) {
-      parts.push(`<li>${escapeHtml(line)}</li>`);
+    const items = s.items?.length
+      ? s.items
+      : (s.lines || []).map((line) => ({ met: line.startsWith('✓'), label: line.replace(/^[✓○]\s*/, ''), ariaLabel: '' }));
+    for (const item of items) {
+      const met = !!item.met;
+      const icon = renderGoalStarIcon(met, item.ariaLabel || (met ? '已达成' : '未达成'));
+      parts.push(
+        `<li class="puzzle-goal-row">${icon}<span class="puzzle-goal-label">${escapeHtml(item.label)}</span></li>`
+      );
     }
     parts.push('</ul>');
     if (s.paragraph) {
@@ -165,11 +181,16 @@ export function showPuzzleSettleModal(state) {
 
   if (titleEl) titleEl.textContent = copy.title;
   if (starsEl) {
-    starsEl.textContent = copy.starsGlyph;
+    starsEl.innerHTML =
+      copy.starsHtml ||
+      renderStarIcons(copy.starN, {
+        pending: copy.status === 'pending' || copy.status === 'fail' || copy.starN == null,
+      }).html;
     starsEl.className =
       'puzzle-settle-stars' +
       (copy.status === 'pending' || copy.status === 'fail' ? ' is-pending' : '') +
       (copy.starN != null && copy.starN >= 3 ? ' is-three' : '');
+    if (copy.starsAriaLabel) starsEl.setAttribute('aria-label', copy.starsAriaLabel);
   }
   if (headlineEl) headlineEl.textContent = copy.headline;
 
@@ -188,10 +209,24 @@ export function showPuzzleSettleModal(state) {
   }
 
   if (goalsEl) {
-    if (copy.goalLines?.length) {
+    const items = copy.goalItems?.length
+      ? copy.goalItems
+      : (copy.goalLines || []).map((line) => ({
+          met: line.startsWith('✓') ? true : line.startsWith('○') ? false : null,
+          label: line.replace(/^[✓○·]\s*/, ''),
+          ariaLabel: '',
+        }));
+    if (items.length) {
       goalsEl.hidden = false;
-      goalsEl.innerHTML = copy.goalLines
-        .map((line) => `<li>${escapeHtml(line)}</li>`)
+      goalsEl.innerHTML = items
+        .map((item) => {
+          const met = item.met === true;
+          const pending = item.met == null;
+          const icon = pending
+            ? '<span class="puzzle-star puzzle-star--goal puzzle-star--pending" aria-hidden="true"></span>'
+            : renderGoalStarIcon(met, item.ariaLabel || (met ? '已达成' : '未达成'));
+          return `<li class="puzzle-goal-row">${icon}<span class="puzzle-goal-label">${escapeHtml(item.label)}</span></li>`;
+        })
         .join('');
     } else {
       goalsEl.hidden = true;

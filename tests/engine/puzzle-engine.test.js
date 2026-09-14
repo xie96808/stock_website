@@ -216,3 +216,150 @@ test('3★ requires beat + MDD/order caps', () => {
   });
   assert.equal(s.stars, 3);
 });
+
+test('scorePuzzleStars thresholds: exactly at / just below beatBuyHoldPp', () => {
+  const goals = {
+    twoStar: { beatBuyHoldPp: 3 },
+    threeStar: { maxMddPct: 30, maxOrders: 1 },
+  };
+  // edgePpm = returnPpm - benchmark; threshold = 3pp = 30000 ppm
+  const at = scorePuzzleStars({
+    returnPpm: 30_000,
+    mddPpm: 100_000,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(at.stars, 3);
+  assert.equal(at.edgePpm, 30_000);
+  assert.equal(at.twoStarMet, true);
+
+  const justBelow = scorePuzzleStars({
+    returnPpm: 29_999,
+    mddPpm: 100_000,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(justBelow.stars, 1);
+  assert.equal(justBelow.twoStarMet, false);
+  assert.equal(justBelow.threeStarMet, false);
+  assert.equal(justBelow.edgePpm, 29_999);
+});
+
+test('scorePuzzleStars MDD bounds: at / just over maxMddPct', () => {
+  const goals = {
+    twoStar: { beatBuyHoldPp: 3 },
+    threeStar: { maxMddPct: 30, maxOrders: 2 },
+  };
+  const atCap = scorePuzzleStars({
+    returnPpm: 50_000,
+    mddPpm: 300_000, // exactly 30%
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(atCap.stars, 3);
+
+  const over = scorePuzzleStars({
+    returnPpm: 50_000,
+    mddPpm: 300_001,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(over.stars, 2);
+  assert.equal(over.twoStarMet, true);
+  assert.equal(over.threeStarMet, false);
+});
+
+test('returnPpm / edgePpm vs buy-hold: hold-only edge is ~0 for starting long', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const hold = settlePuzzle({
+    bars: def.bars,
+    actions: holds(def.gameDays - 1),
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(hold.ok, true);
+  assert.equal(hold.returnPpm, bh);
+  const s = scorePuzzleStars({
+    returnPpm: hold.returnPpm,
+    mddPpm: hold.mddPpm,
+    orderCount: hold.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  assert.equal(s.edgePpm, 0);
+  // beatBuyHoldPp is 3 → edge 0 fails 2★
+  assert.equal(s.stars, 1);
+});
+
+test('ch1-01 sell-day1: next_open fill price, ~-10% return, 3★', () => {
+  const def = CHAPTER1_LEVEL_DEFS[0];
+  assert.equal(def.levelKey, 'ch1-01');
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const best = settlePuzzle({
+    bars: def.bars,
+    actions: ['sell', 'hold', 'hold', 'hold', 'hold'],
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(best.ok, true, best.message);
+  assert.equal(best.fillMode, 'next_open');
+  assert.equal(best.trades.length, 1);
+  assert.equal(best.trades[0].type, 'sell');
+  // Decision day 1 → fill day 2 open
+  assert.equal(best.trades[0].day, 2);
+  assert.equal(best.trades[0].price, def.bars[1].open);
+  assert.equal(best.trades[0].price, 32.14);
+
+  // qty * day1 open = takeover NAV
+  const init = normalizeInitialState(def.initialState, def.bars);
+  assert.ok(Math.abs(init.takeoverNav - def.initialState.qty * def.bars[0].open) < 1e-9);
+
+  // Sell at 32.14 vs takeover 35.71 → cash/nav ≈ 32.14/35.71 − 1 ≈ -9.997% → ~-10%
+  const expectedReturn = (32.14 / 35.71 - 1) * 1e6;
+  assert.ok(Math.abs(best.returnPpm - expectedReturn) < 2, `returnPpm ${best.returnPpm} vs ${expectedReturn}`);
+  assert.ok(best.returnPpm > -110_000 && best.returnPpm < -90_000);
+
+  const s = scorePuzzleStars({
+    returnPpm: best.returnPpm,
+    mddPpm: best.mddPpm,
+    orderCount: best.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  assert.equal(s.stars, 3);
+  assert.equal(s.edgePpm, best.returnPpm - bh);
+  assert.ok(s.edgePpm >= 3 * 10000);
+  assert.ok(best.mddPpm <= 300_000);
+  assert.equal(best.orderCount, 1);
+});
+
+test('qty * price NAV conservation on flat buy fill next_open', () => {
+  const def = CHAPTER1_LEVEL_DEFS[2]; // starting flat
+  assert.equal(def.initialState.qty, 0);
+  const mid = settlePuzzle({
+    bars: def.bars,
+    actions: ['buy', ...holds(def.gameDays - 2)],
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(mid.ok, true, mid.message);
+  assert.equal(mid.trades[0].type, 'buy');
+  assert.equal(mid.trades[0].day, 2);
+  assert.equal(mid.trades[0].price, def.bars[1].open);
+  // After buy-all at next open, cash ~0 and qty * fill ≈ prior cash (takeover NAV)
+  const init = normalizeInitialState(def.initialState, def.bars);
+  assert.equal(init.takeoverNav, def.initialState.cash);
+  // Final NAV from returnPpm: takeover * (1 + returnPpm/1e6)
+  const finalNav = init.takeoverNav * (1 + mid.returnPpm / 1e6);
+  // Mark-to-market at last close while holding
+  const lastClose = def.bars[def.bars.length - 1].close;
+  const fill = def.bars[1].open;
+  const qty = def.initialState.cash / fill;
+  const expectedNav = qty * lastClose;
+  assert.ok(Math.abs(finalNav - expectedNav) / expectedNav < 1e-6);
+});
