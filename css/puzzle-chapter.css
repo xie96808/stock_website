@@ -254,3 +254,88 @@
   color: var(--accent, #7dd3fc);
   font-weight: 500;
 }
+
+/* F02 settle celebration modal (reuses jiu-coin paper shell) */
+.puzzle-settle-dialog {
+  width: min(440px, 100%);
+}
+.puzzle-settle-title {
+  margin: 0 28px 8px 0;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--ink, #222);
+}
+.puzzle-settle-stars {
+  font-size: 2.1rem;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  margin: 4px 0 10px;
+  color: var(--terra, #c45c26);
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+}
+.puzzle-settle-stars.is-pending {
+  color: var(--mute, #8a7f70);
+  letter-spacing: 0.08em;
+  font-size: 1.6rem;
+}
+.puzzle-settle-stars.is-three {
+  color: #b45309;
+}
+.puzzle-settle-headline {
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  letter-spacing: 0.06em;
+  color: var(--ink, #222);
+}
+.puzzle-settle-reward {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #14532d;
+}
+[data-theme="dark"] .puzzle-settle-reward {
+  color: #b7e0c5;
+}
+.puzzle-settle-goals {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--ink-soft, #5a5248);
+}
+.puzzle-settle-goals li {
+  padding: 2px 0;
+}
+.puzzle-settle-edge {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  color: var(--ink, #222);
+  font-weight: 600;
+}
+.puzzle-settle-hint {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--mute, #8a7f70);
+}
+.puzzle-settle-fail {
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #9b1c1c;
+  background: color-mix(in srgb, #e05252 12%, transparent);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+[data-theme="dark"] .puzzle-settle-fail {
+  color: #f5a8a8;
+}
+.puzzle-settle-actions {
+  margin-top: 14px;
+  justify-content: center;
+}

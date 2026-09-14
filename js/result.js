@@ -6,6 +6,8 @@ import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { calcGrade } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
+import { showPuzzleSettleModal } from './puzzle-settle-modal.js';
+import { showToast } from './auth.js';
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
 import {
     clearShareRankMeta,
@@ -103,6 +105,11 @@ export function endGame() {
         if (playBtn && playBtn.getAttribute('onclick') === 'playAgain()') {
             playBtn.textContent = '返回残局列表';
         }
+        // Celebration / reward layer on top of full result screen.
+        showPuzzleSettleModal({
+            status: pendingStars ? 'pending' : 'ok',
+            puzzleResult: view.puzzleResult || null,
+        });
     } else {
         const lbBtn = document.getElementById('resultLeaderboardBtn');
         if (lbBtn) lbBtn.hidden = false;
@@ -183,32 +190,51 @@ export function endGame() {
                 finalReturnEl.className = 'final-return ' +
                     (finalReturnPercent > 0 ? 'positive' : finalReturnPercent < 0 ? 'negative' : 'zero');
             }
-            if (live.gameKind === 'puzzle' && live.puzzleResult) {
-                const stars = live.puzzleResult.stars;
-                const starN = Math.max(0, Math.min(3, Number(stars) || 0));
-                const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
-                const titleEl = document.getElementById('gradeTitle');
-                if (titleEl) titleEl.textContent = `残局结算 · ${starText}`;
-                const verdictEl = document.getElementById('gradeVerdict');
-                const reward = live.puzzleResult.reward;
-                if (verdictEl) {
-                    if (reward?.grantedThisTime) {
-                        verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
-                    } else if (reward?.alreadyClaimed) {
-                        verdictEl.textContent = '本关首通奖励已领取';
-                    } else if (stars != null && stars < 2) {
-                        verdictEl.textContent = '未达二星，无首通奖励';
-                    } else {
-                        verdictEl.textContent = '短窗残局 · 不计入经典榜';
+            if (live.gameKind === 'puzzle') {
+                if (live.puzzleResult) {
+                    const stars = live.puzzleResult.stars;
+                    const starN = Math.max(0, Math.min(3, Number(stars) || 0));
+                    const starText = '★'.repeat(starN) + '☆'.repeat(3 - starN);
+                    const titleEl = document.getElementById('gradeTitle');
+                    if (titleEl) titleEl.textContent = `残局结算 · ${starText}`;
+                    const verdictEl = document.getElementById('gradeVerdict');
+                    const reward = live.puzzleResult.reward;
+                    if (verdictEl) {
+                        if (reward?.grantedThisTime) {
+                            verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
+                        } else if (reward?.alreadyClaimed) {
+                            verdictEl.textContent = '本关首通奖励已领取';
+                        } else if (stars != null && stars < 2) {
+                            verdictEl.textContent = '未达二星，无首通奖励';
+                        } else {
+                            verdictEl.textContent = '短窗残局 · 不计入经典榜';
+                        }
                     }
+                    const letter = document.getElementById('gradeLetter');
+                    if (letter) letter.textContent = String(starN);
+                    showPuzzleSettleModal({
+                        status: 'ok',
+                        puzzleResult: live.puzzleResult,
+                    });
+                } else if (!res) {
+                    const err = live.saveError || '保存失败';
+                    showPuzzleSettleModal({
+                        status: 'fail',
+                        saveError: err,
+                    });
+                    try { showToast('残局进度保存失败：' + err, 'error'); } catch (_) {}
                 }
-                const letter = document.getElementById('gradeLetter');
-                if (letter) letter.textContent = String(starN);
             }
             updateSaveStatusUi();
             if (res && live.gameKind !== 'puzzle') await refreshShareRankMeta();
             updateShareRankHint();
         }).catch(() => {
+            const live = getSession();
+            if (live.gameKind === 'puzzle' && !live.puzzleResult) {
+                const err = live.saveError || '保存失败';
+                showPuzzleSettleModal({ status: 'fail', saveError: err });
+                try { showToast('残局进度保存失败：' + err, 'error'); } catch (_) {}
+            }
             updateSaveStatusUi();
             updateShareRankHint();
         });
