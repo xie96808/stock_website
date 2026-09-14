@@ -4,7 +4,6 @@ import {
     getSession,
     getStocksCatalog,
     resetSession,
-    applyEngineResult,
     patchSession,
     selectVisibleKline,
     selectGameWindow,
@@ -13,18 +12,21 @@ import {
 import { applyChartTheme } from './utils.js';
 import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
-import { replayGame, settleGame } from '../shared/engine.js';
-import {
-    replayPuzzle,
-    settlePuzzle,
-    puzzleActionErrorZh,
-} from '../shared/puzzleEngine.js';
 import {
     persistCurrentCloudDraft,
     appendCloudDecision,
     rewindCloudGame,
     fetchServerConfigFeatures,
 } from './game-sync.js';
+import {
+    sessionGameDays,
+    isPuzzleSession,
+    validatePlayAction,
+    applyLocalDecision,
+    applyServerDecisionState,
+    resumeLocalActions,
+    settleLocalSession,
+} from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
@@ -65,14 +67,6 @@ function syncMobileIntelDefaults() {
     });
 }
 
-
-function sessionGameDays(session = getSession()) {
-    return session.gameDays || 30;
-}
-
-function isPuzzleSession(session = getSession()) {
-    return session.gameKind === 'puzzle';
-}
 
 /** Feed #gameScreen from puzzle snapshot bars (short window + optional history). */
 function seedPuzzleSession(cloud) {
@@ -140,72 +134,6 @@ function seedPuzzleSession(cloud) {
         lastBuyFillDay: init.buyFillDay != null ? init.buyFillDay : null,
         totalReturn: takeoverNav > 0 ? equity0 / takeoverNav : 1,
         practiceOnly: false,
-    });
-}
-
-function puzzlePositionFromState(qty, decisionDay, buyFillDay, firstSellableDay) {
-    if (!(qty > 0)) return 'empty';
-    const fillDayIfSell = decisionDay + 1; // next_open
-    if (decisionDay < firstSellableDay) return 'locked';
-    if (buyFillDay != null && fillDayIfSell <= buyFillDay) return 'locked';
-    return 'holding';
-}
-
-function syncFromPuzzleEngine(r, { finished = false, bars = null } = {}) {
-    const session = getSession();
-    const gameDays = sessionGameDays(session);
-    const init = session.initialState || {};
-    const firstSellable = Number(session.firstSellableDay || init.firstSellableDay || 1);
-    const trades = (r.trades || []).map((t) => ({
-        type: t.type,
-        day: t.day,
-        price: t.price,
-        return: t.return != null ? t.return : null,
-    }));
-    const tradeGains = trades
-        .filter((t) => t.type === 'sell' && t.return != null)
-        .map((t) => (t.return - 1) * 100);
-    let holdingDays = 0;
-    for (const t of trades) {
-        if (t.type === 'buy') holdingDays = 0;
-        // approximate; engine owns truth on settle
-    }
-    if (finished) {
-        patchSession({
-            tradeHistory: trades,
-            valuation: r.valuation,
-            tradeGains,
-            holdingDays: r.holdingDays != null ? r.holdingDays : holdingDays,
-            ruleVersion: r.ruleVersion,
-            totalReturn: r.takeoverNav > 0 ? r.finalEquity / r.takeoverNav : 1,
-            position: 'empty',
-            costBasis: 0,
-            lastBuyFillDay: null,
-            returnPpm: r.returnPpm,
-            returnPct: r.returnPct,
-            takeoverNav: r.takeoverNav,
-        });
-        return;
-    }
-    const actionCount = session.actions.length;
-    const asOfDay = Math.min(Math.max(actionCount + 1, 1), gameDays);
-    const mark = bars && bars[asOfDay - 1] ? bars[asOfDay - 1].close : null;
-    const equity =
-        mark != null ? r.cash + r.qty * mark : r.finalEquity;
-    const decisionDay = Math.min(actionCount + 1, gameDays);
-    patchSession({
-        tradeHistory: trades,
-        valuation: null,
-        tradeGains,
-        holdingDays,
-        ruleVersion: r.ruleVersion,
-        position: puzzlePositionFromState(r.qty, decisionDay, r.buyFillDay, firstSellable),
-        costBasis: r.qty > 0 ? r.cost || 0 : 0,
-        lastBuyFillDay: r.buyFillDay,
-        totalReturn: r.takeoverNav > 0 ? equity / r.takeoverNav : 1,
-        returnPpm: null,
-        returnPct: null,
-        takeoverNav: r.takeoverNav,
     });
 }
 
@@ -332,49 +260,21 @@ export async function startGame(options = {}) {
  * Invalid drafts are ignored so the player still enters day 1 of the same seed.
  */
 export function applyCloudResume(actions) {
-    if (!Array.isArray(actions) || !actions.length) return false;
-    const session = getSession();
     const bars = getGameBars();
-    const gameDays = sessionGameDays(session);
-    const decisionDays = gameDays - 1;
-    if (bars.length < gameDays) return false;
-    const clipped = actions.slice(0, decisionDays);
-    if (isPuzzleSession(session)) {
-        const r = replayPuzzle({
-            fillMode: session.fillMode,
-            bars,
-            actions: clipped,
-            finish: false,
-            initialState: session.initialState,
-            maxOrders: session.maxOrders,
-        });
-        if (!r.ok) {
-            console.warn('puzzle resume draft invalid, starting day 1', r);
+    const result = resumeLocalActions(actions, { bars });
+    if (!result.ok) {
+        if (result.engine) {
+            console.warn(
+                isPuzzleSession() ? 'puzzle resume draft invalid, starting day 1' : 'cloud resume draft invalid, starting day 1',
+                result.engine
+            );
+        }
+        if (!result.empty && !result.silent) {
             updateUI();
             resetOHLCToToday();
             renderWaveAnalysis();
-            return false;
         }
-        patchSession({ actions: clipped.slice() });
-        syncFromPuzzleEngine(r, { finished: false, bars });
-        patchSession({ currentDay: Math.min(clipped.length + 1, gameDays) });
-    } else {
-        const r = replayGame({
-            fillMode: session.fillMode,
-            bars,
-            actions: clipped,
-            finish: false
-        });
-        if (!r.ok) {
-            console.warn('cloud resume draft invalid, starting day 1', r);
-            updateUI();
-            resetOHLCToToday();
-            renderWaveAnalysis();
-            return false;
-        }
-        patchSession({ actions: clipped.slice() });
-        syncFromEngine(r, { finished: false, bars });
-        patchSession({ currentDay: Math.min(clipped.length + 1, gameDays) });
+        return false;
     }
     updateUI();
     updateChart();
@@ -506,46 +406,12 @@ export function getGameBars() {
     return selectGameWindow();
 }
 
-function syncFromEngine(r, { finished = false, bars = null } = {}) {
-    applyEngineResult(r, { finished, bars });
-}
-
 function applyLocalAction(action) {
-    const session = getSession();
     const bars = getGameBars();
-    const gameDays = sessionGameDays(session);
-    if (bars.length < gameDays) return false;
-    const nextActions = session.actions.concat(action);
-    if (isPuzzleSession(session)) {
-        const r = replayPuzzle({
-            fillMode: session.fillMode,
-            bars,
-            actions: nextActions,
-            finish: false,
-            initialState: session.initialState,
-            maxOrders: session.maxOrders,
-        });
-        if (!r.ok) {
-            showToast(puzzleActionErrorZh(r.message), 'error');
-            return false;
-        }
-        patchSession({ actions: nextActions, pendingAction: null });
-        syncFromPuzzleEngine(r, { finished: false, bars });
-        patchSession({ currentDay: Math.min(nextActions.length + 1, gameDays) });
-    } else {
-        const r = replayGame({
-            fillMode: session.fillMode,
-            bars,
-            actions: nextActions,
-            finish: false
-        });
-        if (!r.ok) {
-            showToast(puzzleActionErrorZh(r.message) || r.message || '操作不合法', 'error');
-            return false;
-        }
-        patchSession({ actions: nextActions, pendingAction: null });
-        syncFromEngine(r, { finished: false, bars });
-        patchSession({ currentDay: nextActions.length + 1 });
+    const result = applyLocalDecision(action, { bars });
+    if (!result.ok) {
+        if (result.errorZh) showToast(result.errorZh, 'error');
+        return false;
     }
     persistCurrentCloudDraft();
     updateUI();
@@ -556,24 +422,8 @@ function applyLocalAction(action) {
 
 function applyServerStateActions(state) {
     const bars = getGameBars();
-    const actions = Array.isArray(state.actions) ? state.actions.slice() : [];
-    const r = replayGame({
-        fillMode: getSession().fillMode,
-        bars,
-        actions,
-        finish: false
-    });
-    if (!r.ok) return false;
-    patchSession({
-        actions,
-        pendingAction: null,
-        revision: state.revision ?? getSession().revision,
-        undoCount: state.undoCount ?? getSession().undoCount,
-        assistClass: state.assistClass ?? getSession().assistClass,
-        protocolVersion: state.protocolVersion || getSession().protocolVersion,
-        currentDay: Math.min(actions.length + 1, sessionGameDays()),
-    });
-    syncFromEngine(r, { finished: false, bars });
+    const result = applyServerDecisionState(state, { bars });
+    if (!result.ok) return false;
     persistCurrentCloudDraft();
     updateUI();
     updateChart();
@@ -583,33 +433,23 @@ function applyServerStateActions(state) {
 
 export async function handleAction(action) {
     const session = getSession();
-    if (session.rewindBusy) return;
-    const gameDays = sessionGameDays(session);
-    if (session.currentDay >= gameDays) return;
-    if (action !== 'buy' && action !== 'sell' && action !== 'hold') return;
-
-    const bars = getGameBars();
-    if (bars.length < gameDays) return;
-
-    // Client-side illegal-action guards (puzzle often starts long).
-    if (action === 'buy' && session.position !== 'empty') {
-        showToast('已有持仓，不能再买入', 'error');
+    const guard = validatePlayAction(session, action);
+    if (!guard.ok) {
+        // Silent for busy / end-of-window / bad enum (historical handleAction early-return).
+        if (
+            guard.errorZh === '忙碌中' ||
+            guard.errorZh === '已到结算日' ||
+            guard.errorZh === '非法操作' ||
+            guard.errorZh === '无对局'
+        ) {
+            return;
+        }
+        showToast(guard.errorZh, 'error');
         return;
     }
-    if (action === 'sell') {
-        if (session.position === 'empty') {
-            showToast('空仓无法卖出', 'error');
-            return;
-        }
-        if (isPuzzleSession(session) && session.currentDay < (session.firstSellableDay || 1)) {
-            showToast('尚未到可卖日（T+1）', 'error');
-            return;
-        }
-        if (session.position === 'locked') {
-            showToast('受 T+1 限制，今日不可卖出', 'error');
-            return;
-        }
-    }
+
+    const bars = getGameBars();
+    if (bars.length < sessionGameDays(session)) return;
 
     if (session.cloudMode && session.protocolVersion === 'event-v1' && !isPuzzleSession(session)) {
         try {
@@ -757,38 +597,19 @@ export async function confirmRewind() {
 
 /** Last day only: settle with valuation (not a fake sell). */
 export function finishSettle() {
-    const session = getSession();
-    const gameDays = sessionGameDays(session);
-    const decisionDays = gameDays - 1;
-    if (session.currentDay < gameDays || session.actions.length !== decisionDays) return;
     const bars = getGameBars();
-    if (isPuzzleSession(session)) {
-        const r = settlePuzzle({
-            fillMode: session.fillMode,
-            bars,
-            actions: session.actions,
-            initialState: session.initialState,
-            maxOrders: session.maxOrders,
-        });
-        if (!r.ok) {
-            showToast(puzzleActionErrorZh(r.message), 'error');
-            console.error('puzzle settle failed', r);
-            return;
+    const result = settleLocalSession({ bars });
+    if (!result.ok) {
+        if (result.silent) return;
+        if (result.errorZh) showToast(result.errorZh, 'error');
+        if (result.engine) {
+            console.error(
+                isPuzzleSession() ? 'puzzle settle failed' : 'settle failed',
+                result.engine
+            );
         }
-        syncFromPuzzleEngine(r, { finished: true, bars });
-        endGame();
         return;
     }
-    const r = settleGame({
-        fillMode: session.fillMode,
-        bars,
-        actions: session.actions
-    });
-    if (!r.ok) {
-        console.error('settle failed', r);
-        return;
-    }
-    syncFromEngine(r, { finished: true, bars });
     endGame();
 }
 
