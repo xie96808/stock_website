@@ -2,11 +2,15 @@
 // Fingerprint js/css (and optionally HTML-referenced images) by content hash in
 // the filename for immutable long-cache. Runs on the release tree only.
 //
-// Algorithm (dependency-aware so ESM graphs stay cache-correct):
+// Algorithm (dependency-aware so ESM graphs stay cache-correct, including cycles):
 //   1. Collect assets under the release dir
-//   2. Parse static local deps (from / import() / new URL / @import / HTML href|src)
-//   3. Topo-process leaves -> roots: rewrite refs to already-fingerprinted deps,
-//      hash rewritten bytes, rename file to name.<8-12hex>.ext
+//   2. Fingerprint HTML-referenced images (one-shot rename)
+//   3. Iterative fixed-point on JS/CSS in memory:
+//        rewrite imports via current originalAbs→outputAbs mapping,
+//        re-hash → desired name.<hash>.ext; repeat until mapping stable
+//      True static cycles (A↔B) cannot converge name===sha(bytes); after max
+//      iters we freeze the mapping and do one final rewrite so imports still
+//      point at hashed paths, then write once.
 //   4. Rewrite HTML entry points (index.html not renamed; stays bustable)
 //
 // Skips remote/data/blob URLs. Does not double-hash already-fingerprinted names.
@@ -31,6 +35,7 @@ const HASH_LEN = 10;
 const HASHED_NAME_RE = /^(.+)\.([a-f0-9]{8,12})(\.(?:js|mjs|css|png|jpe?g|gif|svg|webp|ico))$/i;
 const ASSET_EXT_RE = /\.(js|mjs|css)$/i;
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|svg|webp|ico)$/i;
+const MAX_FP_ITERS = 20;
 
 export function contentHash(buf, len = HASH_LEN) {
   return createHash("sha256").update(buf).digest("hex").slice(0, len);
@@ -222,8 +227,20 @@ function rewriteHtml(root, fromFile, text, mapping) {
   return out;
 }
 
+function rewriteTextAsset(root, file, origText, mapping) {
+  const ext = extname(file).toLowerCase();
+  return ext === ".css"
+    ? rewriteCss(root, file, origText, mapping)
+    : rewriteJs(root, file, origText, mapping);
+}
+
 /**
  * Fingerprint assets in-place under `root`.
+ *
+ * JS/CSS use an iterative fixed-point over the import graph so cycles still
+ * get fully hashed local specs (topo-order alone leaves unhashed refs when A↔B).
+ * Images are one-shot renamed first; HTML is rewritten once at the end.
+ *
  * @returns {{ renamed: number, rewrittenHtml: number, mapping: Map<string,string> }}
  */
 export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
@@ -232,6 +249,7 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     (p) => !p.endsWith(".gz") && !p.endsWith(".br")
   );
 
+  /** @type {Map<string, string>} originalAbs -> source text */
   const textAssets = new Map();
   const imageAssets = new Set();
   const htmlFiles = [];
@@ -261,47 +279,7 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     }
   }
 
-  const deps = new Map();
-  for (const [file, text] of textAssets) {
-    const ext = extname(file).toLowerCase();
-    const specs =
-      ext === ".css" ? collectSpecsFromCss(text) : collectSpecsFromJs(text);
-    const resolved = [];
-    for (const spec of specs) {
-      const r = resolveLocal(rootResolved, file, spec);
-      if (r && textAssets.has(r.abs)) resolved.push(r.abs);
-    }
-    deps.set(file, resolved);
-  }
-
-  const indeg = new Map();
-  for (const f of textAssets.keys()) {
-    indeg.set(f, (deps.get(f) || []).length);
-  }
-  const dependents = new Map();
-  for (const [f, ds] of deps) {
-    for (const d of ds) {
-      if (!dependents.has(d)) dependents.set(d, []);
-      dependents.get(d).push(f);
-    }
-  }
-  const queue = [];
-  for (const [f, n] of indeg) {
-    if (n === 0) queue.push(f);
-  }
-  const order = [];
-  while (queue.length) {
-    const f = queue.shift();
-    order.push(f);
-    for (const parent of dependents.get(f) || []) {
-      indeg.set(parent, indeg.get(parent) - 1);
-      if (indeg.get(parent) === 0) queue.push(parent);
-    }
-  }
-  for (const f of textAssets.keys()) {
-    if (!order.includes(f)) order.push(f);
-  }
-
+  /** originalAbs -> current/desired outputAbs (identity until hashed). */
   const mapping = new Map();
 
   for (const img of referencedImages) {
@@ -320,34 +298,60 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     mapping.set(img, newAbs);
   }
 
+  for (const file of textAssets.keys()) {
+    mapping.set(file, file);
+  }
+
+  for (let iter = 0; iter < MAX_FP_ITERS; iter++) {
+    let changed = false;
+    for (const [file, origText] of textAssets) {
+      if (isAlreadyHashedName(file)) {
+        if (mapping.get(file) !== file) {
+          mapping.set(file, file);
+          changed = true;
+        }
+        continue;
+      }
+      const text = rewriteTextAsset(rootResolved, file, origText, mapping);
+      const hash = contentHash(Buffer.from(text, "utf8"));
+      const newAbs = join(dirname(file), insertHashBeforeExt(file, hash));
+      if (mapping.get(file) !== newAbs) {
+        mapping.set(file, newAbs);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  // Final rewrite against frozen/stable mapping so import specs match out paths.
+  /** @type {Map<string, string>} */
+  const rewrittenTexts = new Map();
+  for (const [file, origText] of textAssets) {
+    rewrittenTexts.set(
+      file,
+      rewriteTextAsset(rootResolved, file, origText, mapping)
+    );
+  }
+
   let renamed = 0;
-  for (const file of order) {
-    let text = textAssets.get(file);
-    const ext = extname(file).toLowerCase();
-    text =
-      ext === ".css"
-        ? rewriteCss(rootResolved, file, text, mapping)
-        : rewriteJs(rootResolved, file, text, mapping);
+  for (const [file, text] of textAssets) {
+    const outAbs = mapping.get(file);
+    const rewritten = rewrittenTexts.get(file) ?? text;
 
     if (isAlreadyHashedName(file)) {
-      if (text !== textAssets.get(file)) writeFileSync(file, text);
-      mapping.set(file, file);
-      textAssets.set(file, text);
+      if (rewritten !== text) writeFileSync(file, rewritten);
       continue;
     }
 
-    const hash = contentHash(Buffer.from(text, "utf8"));
-    const newName = insertHashBeforeExt(file, hash);
-    const newAbs = join(dirname(file), newName);
-    writeFileSync(file, text);
-    if (newAbs !== file) {
-      if (existsSync(newAbs)) unlinkSync(newAbs);
-      renameSync(file, newAbs);
-      renamed++;
+    if (outAbs === file) {
+      if (rewritten !== text) writeFileSync(file, rewritten);
+      continue;
     }
-    mapping.set(file, newAbs);
-    textAssets.delete(file);
-    textAssets.set(newAbs, text);
+
+    if (existsSync(outAbs)) unlinkSync(outAbs);
+    writeFileSync(outAbs, rewritten);
+    if (existsSync(file)) unlinkSync(file);
+    renamed++;
   }
 
   let rewrittenHtml = 0;
