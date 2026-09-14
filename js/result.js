@@ -1,7 +1,7 @@
 // ========== RESULT SCREEN ==========
 import { chartRefs } from './state.js';
 import { getSession, selectSettleView } from './game-session.js';
-import { applyChartTheme } from './utils.js';
+import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { calcGrade } from './analysis-pure.js';
@@ -30,6 +30,11 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+
+onThemeChange((theme) => {
+    applyChartTheme(chartRefs.resultChart, theme);
+});
+
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
 
 /** Paint result hero for puzzle: icon stars +「残局结算」(no giant digit). */
@@ -355,7 +360,7 @@ export async function drawResultChart() {
     requestAnimationFrame(function () {
         if (!chartRefs.resultChart) return;
         chartRefs.resultChart.setOption(option);
-        applyChartTheme(chartRefs.resultChart);
+        applyChartTheme(chartRefs.resultChart, getTheme());
         buildPointNavigator(chartRefs.resultChart, histLen, fullData);
     });
 }

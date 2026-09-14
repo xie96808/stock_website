@@ -1,6 +1,7 @@
 // ========== QUIZ ENGINE ==========
 import { gameState, quizState } from './state.js';
-import { shuffleArray, applyChartTheme } from './utils.js';
+import { shuffleArray } from './utils.js';
+import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { QUIZ_PATTERNS } from './patterns.js';
 import {
     ensureEcharts,
@@ -8,6 +9,11 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+
+onThemeChange((theme) => {
+    quizState.charts.forEach((c) => applyChartTheme(c, theme));
+});
+
 
 export function disposeQuizCharts() {
     quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.dispose(); });
@@ -392,7 +398,7 @@ export function renderQuestion() {
                     const mc = echartsApi.init(mainDom);
                     quizState.charts.push(mc);
                     renderMiniKline(mc, q.shownData, false);
-                    applyChartTheme(mc);
+                    applyChartTheme(mc, getTheme());
                 }
                 q.options.forEach((opt, i) => {
                     const dom = document.getElementById('quizOptChart' + i);
@@ -400,7 +406,7 @@ export function renderQuestion() {
                         const c = echartsApi.init(dom);
                         quizState.charts.push(c);
                         renderMiniKline(c, opt.data, true);
-                        applyChartTheme(c);
+                        applyChartTheme(c, getTheme());
                     }
                 });
             })();
