@@ -58,7 +58,7 @@
 ### Wave A（先做）
 
 1. **R2**：tombstone 独立于 restore 的 ledger + 真实 backup 验收 — **已实现**（外部 `user-tombstones.jsonl`；`db:restore` 自动 replay；见 `docs/ops-tombstone-ledger.md`）
-2. **R1**：不可变静态资源（immutable static assets）
+2. **R1**：不可变静态资源（immutable static assets）— **本波实现**：见 `docs/r1-immutable-static-assets.md` + `deploy/fingerprint-assets.mjs`
 3. **R3**：auth 状态机
 4. **R4**：草稿单写者（single-writer drafts）
 
@@ -99,4 +99,5 @@
 ## 本 PR 范围
 
 - 历史：交接文档曾「仅文档」。
-- **R2 实现**见独立 PR：`docs/ops-tombstone-ledger.md` + `server/src/lib/tombstones.js` 外部 ledger。
+- **R2 实现**（已合 main）：`docs/ops-tombstone-ledger.md` + `server/src/lib/tombstones.js` 外部 ledger。
+- **R1 实现**（本分支）：`docs/r1-immutable-static-assets.md` + `deploy/fingerprint-assets.mjs` + nginx immutable 指纹资源。

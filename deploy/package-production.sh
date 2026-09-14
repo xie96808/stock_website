@@ -18,11 +18,12 @@ for path in index.html favicon.ico favicon.png css js data images shared admin; 
 done
 find "$STAGING/release" -name .DS_Store -delete
 
-# Cache-bust local js/css references with ?v=<short-sha> (release tree only).
+# Content-hash fingerprint js/css (+ HTML-referenced images) into filenames
+# for immutable long-cache. Replaces ?v= stamping (release tree only).
 if command -v node >/dev/null 2>&1; then
-  node "$ROOT_DIR/deploy/stamp-asset-revision.mjs" "$STAGING/release" "$REVISION"
+  node "$ROOT_DIR/deploy/fingerprint-assets.mjs" "$STAGING/release"
 else
-  echo "node required for stamp-asset-revision.mjs" >&2
+  echo "node required for fingerprint-assets.mjs" >&2
   exit 1
 fi
 
