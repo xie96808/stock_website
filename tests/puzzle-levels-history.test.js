@@ -15,7 +15,7 @@ test('buildContextHistory yields ordered bars ending near day-1 open', () => {
   assert.ok(hist[0].date < hist[hist.length - 1].date);
 });
 
-test('buildLevelSnapshot includes real-pack history for all chapter-1 defs (v3)', () => {
+test('buildLevelSnapshot includes real-pack history for all chapter-1 defs', () => {
   const opens = new Set();
   for (const def of CHAPTER1_LEVEL_DEFS) {
     const { snapshot } = buildLevelSnapshot(def);
@@ -23,12 +23,17 @@ test('buildLevelSnapshot includes real-pack history for all chapter-1 defs (v3)'
     assert.equal(snapshot.bars.length, def.gameDays);
     assert.ok(snapshot.historyLength >= 20);
     assert.equal(snapshot.history.length, snapshot.historyLength);
-    assert.equal(def.version, 3);
+    assert.ok(def.version >= 3, `${def.levelKey} version`);
     assert.ok(def.packRef && Number.isInteger(def.packRef.stockIndex));
     assert.ok(def.teachingBrief && def.openStateHint);
     assert.equal(def.stockCode, PUZZLE_PUBLIC_STOCK_CODE);
     opens.add(snapshot.bars[0].open);
   }
+  // ch1-01 v4: tightened star goals (beat≥8pp, MDD≤15%) so only early cut is 3★
+  assert.equal(CHAPTER1_LEVEL_DEFS[0].levelKey, 'ch1-01');
+  assert.equal(CHAPTER1_LEVEL_DEFS[0].version, 4);
+  assert.equal(CHAPTER1_LEVEL_DEFS[0].goals.twoStar.beatBuyHoldPp, 8);
+  assert.equal(CHAPTER1_LEVEL_DEFS[0].goals.threeStar.maxMddPct, 15);
   // Distinct real windows — not identical synthetic junk.
   assert.ok(opens.size >= 5, `expected distinct day1 opens, got ${[...opens]}`);
 });

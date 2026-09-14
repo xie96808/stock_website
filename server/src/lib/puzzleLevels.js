@@ -29,7 +29,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 1,
     levelKey: "ch1-01",
     rewardFamilyId: "ch1-01",
-    version: 3,
+    version: 4,
     title: "第一天站岗",
     theme: "买入后已有浮亏",
     teachingBrief: "开局已浮亏。继续死扛还是止损离场，比的是相对买入持有少亏多少。",
@@ -96,15 +96,15 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 3
+        "beatBuyHoldPp": 8
       },
       "threeStar": {
-        "maxMddPct": 30,
+        "maxMddPct": 15,
         "maxOrders": 1
       }
     },
     validatedThreeStarActions: ["sell","hold","hold","hold","hold"],
-    contentNote: "real pack window v3; underwater hold theme",
+    contentNote: "real pack window v4; early-cut 3★ only (beat≥8pp, MDD≤15%)",
     status: "published",
   },
   {
