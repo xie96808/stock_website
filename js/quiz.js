@@ -4,6 +4,17 @@ import { shuffleArray } from './utils.js';
 import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { QUIZ_PATTERNS } from './patterns.js';
 import {
+    trendScore,
+    analyzeTechnical,
+    normalizeContinuation,
+    gradeQuizScore,
+    createEmptyQuizSession,
+    applyQuizAnswer,
+    advanceQuizSession,
+    buildQuizResultDetails,
+    pickPracticalWindow,
+} from './quiz-pure.js';
+import {
     ensureEcharts,
     markChartLoading,
     clearChartLoading,
@@ -54,150 +65,20 @@ function genVisualQuestion(pattern, allPatterns) {
     return { type: 'theory_visual', illustHtml: pattern.illust, question: '这是什么形态？', correct: pattern.name, wrongChoices: shuffleArray(others).slice(0, 3).map(p => p.name), explanation: '这是"' + pattern.name + '"（' + pattern.signal + '）。' + pattern.desc };
 }
 
-// Technical analysis for practical questions
-function analyzeTechnical(shownData, correctCont) {
-    const all = shownData.concat(correctCont);
-    const n = shownData.length;
-
-    function sma(data, period) {
-        const result = [];
-        for (let i = 0; i < data.length; i++) {
-            if (i < period - 1) { result.push(null); continue; }
-            let sum = 0;
-            for (let j = i - period + 1; j <= i; j++) sum += data[j].close;
-            result.push(+(sum / period).toFixed(2));
-        }
-        return result;
-    }
-
-    const closes = all.map(d => d.close);
-    const ma5 = sma(all, 5);
-    const ma10 = sma(all, 10);
-    const ma20 = sma(all, 20);
-
-    const parts = [];
-
-    const last5 = shownData.slice(-5);
-    const priceChange5 = ((last5[last5.length-1].close - last5[0].close) / last5[0].close * 100).toFixed(2);
-    const trendWord = priceChange5 > 1 ? '上涨' : priceChange5 < -1 ? '下跌' : '横盘整理';
-    parts.push('近5日走势' + trendWord + '（' + (priceChange5 > 0 ? '+' : '') + priceChange5 + '%）');
-
-    const boundaryMa5 = ma5[n - 1];
-    const boundaryMa10 = ma10[n - 1];
-    const boundaryMa20 = ma20[n - 1];
-    const lastClose = shownData[n - 1].close;
-    if (boundaryMa5 && boundaryMa10) {
-        if (boundaryMa5 > boundaryMa10) {
-            parts.push('均线呈多头排列（MA5 > MA10），短期趋势偏多');
-        } else {
-            parts.push('均线呈空头排列（MA5 < MA10），短期趋势偏空');
-        }
-        if (boundaryMa20) {
-            if (lastClose > boundaryMa20) parts.push('股价在MA20上方运行，中期趋势向好');
-            else parts.push('股价跌破MA20，中期支撑较弱');
-        }
-    }
-
-    const recentVol = last5.map(d => d.volume);
-    const prevVol = shownData.slice(-10, -5).map(d => d.volume);
-    if (prevVol.length >= 3) {
-        const avgRecent = recentVol.reduce((a,b) => a+b, 0) / recentVol.length;
-        const avgPrev = prevVol.reduce((a,b) => a+b, 0) / prevVol.length;
-        const volRatio = avgRecent / avgPrev;
-        if (volRatio > 1.5) parts.push('近期成交量明显放大（较前期增加' + ((volRatio-1)*100).toFixed(0) + '%），资金活跃');
-        else if (volRatio < 0.6) parts.push('近期成交量大幅萎缩（较前期减少' + ((1-volRatio)*100).toFixed(0) + '%），观望情绪浓');
-        else if (volRatio > 1.1) parts.push('成交量温和放大');
-        else if (volRatio < 0.85) parts.push('成交量略有萎缩');
-    }
-
-    const lastBar = shownData[n - 1];
-    const prevBar = shownData[n - 2];
-    const bodyLen = Math.abs(lastBar.close - lastBar.open);
-    const upperWick = lastBar.high - Math.max(lastBar.open, lastBar.close);
-    const lowerWick = Math.min(lastBar.open, lastBar.close) - lastBar.low;
-
-    if (upperWick > bodyLen * 2 && bodyLen > 0) parts.push('最后一根K线上影线较长，存在上方抛压');
-    if (lowerWick > bodyLen * 2 && bodyLen > 0) parts.push('最后一根K线下影线较长，下方有支撑');
-    if (bodyLen < (lastBar.high - lastBar.low) * 0.1) parts.push('最后一根K线呈十字星形态，多空分歧明显');
-
-    if (prevBar) {
-        const prevBody = Math.abs(prevBar.close - prevBar.open);
-        if (lastBar.close > lastBar.open && prevBar.close < prevBar.open && bodyLen > prevBody * 1.3) {
-            parts.push('最后两日出现看涨吞没形态');
-        } else if (lastBar.close < lastBar.open && prevBar.close > prevBar.open && bodyLen > prevBody * 1.3) {
-            parts.push('最后两日出现看跌吞没形态');
-        }
-    }
-
-    const contChange = ((correctCont[correctCont.length-1].close - correctCont[0].open) / correctCont[0].open * 100).toFixed(2);
-    const contWord = contChange > 2 ? '上涨' : contChange < -2 ? '下跌' : '震荡';
-    parts.push('实际后续走势：' + contWord + '（' + (contChange > 0 ? '+' : '') + contChange + '%）');
-
-    const contUpDays = correctCont.filter(d => d.close >= d.open).length;
-    const contDownDays = correctCont.length - contUpDays;
-    parts.push('后续' + correctCont.length + '个交易日中，' + contUpDays + '天收阳、' + contDownDays + '天收阴');
-
-    return parts.join('；') + '。';
-}
-
-function trendScore(data) {
-    if (!data || data.length < 2) return { pct: 0, clarity: 0 };
-    const pct = (data[data.length - 1].close - data[0].open) / data[0].open * 100;
-    const dir = pct >= 0 ? 1 : -1;
-    let sameDirDays = 0;
-    for (let i = 0; i < data.length; i++) {
-        if ((data[i].close - data[i].open) * dir >= 0) sameDirDays++;
-    }
-    const clarity = sameDirDays / data.length;
-    return { pct, clarity };
-}
-
-function genPracticalQuestion() {
-    const stocks = gameState.stocksData;
-    if (!stocks || stocks.length === 0) return null;
-    const SHOW_DAYS = 25, CONT_DAYS = 12;
-    const minLen = SHOW_DAYS + CONT_DAYS + 5;
-    const MIN_TREND_PCT = 4;
-    const MIN_CLARITY = 0.5;
-
-    let stock, startIdx, shownData, correctCont;
-    let found = false;
-    for (let attempt = 0; attempt < 80; attempt++) {
-        stock = stocks[Math.floor(Math.random() * stocks.length)];
-        if (stock.kline.length < minLen) continue;
-        startIdx = Math.floor(Math.random() * (stock.kline.length - SHOW_DAYS - CONT_DAYS));
-        const sd = stock.kline.slice(startIdx, startIdx + SHOW_DAYS);
-        const cc = stock.kline.slice(startIdx + SHOW_DAYS, startIdx + SHOW_DAYS + CONT_DAYS);
-        const ts = trendScore(cc);
-        if (Math.abs(ts.pct) >= MIN_TREND_PCT && ts.clarity >= MIN_CLARITY) {
-            shownData = sd;
-            correctCont = cc;
-            found = true;
-            break;
-        }
-    }
-    if (!found) return null;
-
+function genPracticalQuestion(stocks = gameState.stocksData) {
+    const picked = pickPracticalWindow(stocks);
+    if (!picked) return null;
+    const { stock, startIdx, shownData, correctCont } = picked;
     const lastClose = shownData[shownData.length - 1].close;
 
-    function normalize(data) {
-        const ratio = lastClose / data[0].open;
-        return data.map(d => ({
-            date: d.date,
-            open: +(d.open * ratio).toFixed(2), close: +(d.close * ratio).toFixed(2),
-            high: +(d.high * ratio).toFixed(2), low: +(d.low * ratio).toFixed(2),
-            volume: d.volume
-        }));
-    }
-
-    const correctDir = trendScore(correctCont).pct > 0 ? 'up' : 'down';
     const wrongConts = [];
     const used = new Set([stock.code + '-' + startIdx]);
     let wa = 0;
+    const CONT_DAYS = correctCont.length;
     while (wrongConts.length < 3 && wa < 200) {
         wa++;
         const ws = stocks[Math.floor(Math.random() * stocks.length)];
-        if (ws.kline.length < CONT_DAYS + 5) continue;
+        if (!ws?.kline || ws.kline.length < CONT_DAYS + 5) continue;
         const wi = Math.floor(Math.random() * (ws.kline.length - CONT_DAYS));
         const key = ws.code + '-' + wi;
         if (used.has(key)) continue;
@@ -211,10 +92,10 @@ function genPracticalQuestion() {
     if (wrongConts.length < 3) return null;
 
     const options = shuffleArray([
-        { data: normalize(correctCont), isCorrect: true },
-        ...wrongConts.map(d => ({ data: normalize(d), isCorrect: false }))
+        { data: normalizeContinuation(correctCont, lastClose), isCorrect: true },
+        ...wrongConts.map((d) => ({ data: normalizeContinuation(d, lastClose), isCorrect: false }))
     ]);
-    const correctIndex = options.findIndex(o => o.isCorrect);
+    const correctIndex = options.findIndex((o) => o.isCorrect);
 
     const labels = ['A', 'B', 'C', 'D'];
     const techAnalysis = analyzeTechnical(shownData, correctCont);
@@ -228,13 +109,15 @@ function genPracticalQuestion() {
 
 export function startQuiz() {
     disposeQuizCharts();
-    quizState.questions = [];
-    quizState.currentIndex = 0;
-    quizState.score = 0;
-    quizState.answers = [];
-    quizState.answered = false;
+    const fresh = createEmptyQuizSession();
+    quizState.questions = fresh.questions;
+    quizState.currentIndex = fresh.currentIndex;
+    quizState.score = fresh.score;
+    quizState.answers = fresh.answers;
+    quizState.answered = fresh.answered;
     quizState.charts = [];
 
+    const stocks = gameState.stocksData || [];
     const allP = QUIZ_PATTERNS;
     const shuffledP = shuffleArray([...allP]);
     const theoryCount = 5 + Math.floor(Math.random() * 2);
@@ -251,7 +134,7 @@ export function startQuiz() {
     }
 
     for (let i = 0; i < practicalCount; i++) {
-        const pq = genPracticalQuestion();
+        const pq = genPracticalQuestion(stocks);
         if (pq) quizState.questions.push(pq);
     }
 
@@ -415,19 +298,13 @@ export function renderQuestion() {
 }
 
 export function selectAnswer(optionIndex) {
-    if (quizState.answered) return;
-    quizState.answered = true;
-    quizState.answers[quizState.currentIndex] = optionIndex;
-
+    const patch = applyQuizAnswer(quizState, optionIndex);
+    if (!patch.ok) return;
+    quizState.answered = patch.answered;
+    quizState.answers = patch.answers;
+    quizState.score = patch.score;
+    const isCorrect = patch.isCorrect;
     const q = quizState.questions[quizState.currentIndex];
-    let isCorrect = false;
-
-    if (q.type === 'practical') {
-        isCorrect = optionIndex === q.correctIndex;
-    } else {
-        isCorrect = q._options[optionIndex] === q.correct;
-    }
-    if (isCorrect) quizState.score++;
 
     document.querySelectorAll('.quiz-option').forEach((el, i) => {
         el.style.pointerEvents = 'none';
@@ -449,8 +326,10 @@ export function selectAnswer(optionIndex) {
 }
 
 export function quizNext() {
-    if (quizState.currentIndex >= 9) { showQuizResults(); return; }
-    quizState.currentIndex++;
+    const next = advanceQuizSession(quizState, { lastIndex: 9 });
+    if (next.done) { showQuizResults(); return; }
+    quizState.currentIndex = next.currentIndex;
+    quizState.answered = next.answered;
     renderQuestion();
 }
 
@@ -460,44 +339,29 @@ export function showQuizResults() {
     disposeQuizCharts();
 
     const score = quizState.score;
-    let scoreCls, comment;
-    if (score >= 8) { scoreCls = 'high'; comment = '你的炒股知识非常扎实，可以去实战中检验了！'; }
-    else if (score >= 5) { scoreCls = 'medium'; comment = '基础还不错，但还需要加强学习。建议去知识区复习薄弱环节。'; }
-    else { scoreCls = 'low'; comment = '还需要多多学习哦！建议先去知识区系统学习各种形态。'; }
+    const { scoreCls, comment } = gradeQuizScore(score, 10);
 
     document.getElementById('quizResultCard').innerHTML =
         '<h2 style="font-family:\'Bodoni Moda\',serif;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
         '<div class="quiz-score ' + scoreCls + '">' + score + ' / 10</div>' +
         '<p style="color:var(--text-secondary);font-size:0.92rem;margin:12px 0 0">' + comment + '</p>';
 
-    const labels = ['A', 'B', 'C', 'D'];
+    const details = buildQuizResultDetails(quizState);
     let detailsHtml = '';
-    quizState.questions.forEach((q, i) => {
-        const userAns = quizState.answers[i];
-        let isCorrect, userText, correctText;
-        if (q.type === 'practical') {
-            isCorrect = userAns === q.correctIndex;
-            userText = userAns !== undefined ? labels[userAns] : '未作答';
-            correctText = labels[q.correctIndex];
-        } else {
-            isCorrect = q._options && q._options[userAns] === q.correct;
-            userText = userAns !== undefined && q._options ? q._options[userAns] : '未作答';
-            correctText = q.correct;
-        }
-        const typeName = q.type === 'practical' ? '实操题' : '理论题';
-        const icon = isCorrect ? '&#10003;' : '&#10007;';
-        const color = isCorrect ? '#3db86a' : '#e05252';
+    details.forEach((row) => {
+        const icon = row.isCorrect ? '&#10003;' : '&#10007;';
+        const color = row.isCorrect ? '#3db86a' : '#e05252';
 
-        detailsHtml += '<div class="quiz-result-item ' + (isCorrect ? 'correct-item' : 'wrong') + '">' +
+        detailsHtml += '<div class="quiz-result-item ' + (row.isCorrect ? 'correct-item' : 'wrong') + '">' +
             '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
             '<span style="font-family:\'JetBrains Mono\';font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
-            '<span style="font-size:0.82rem;color:var(--text-muted)">' + typeName + ' · 第 ' + (i+1) + ' 题</span></div>' +
-            '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + q.question + '</div>';
-        if (!isCorrect) {
+            '<span style="font-size:0.82rem;color:var(--text-muted)">' + row.typeName + ' · 第 ' + (row.index + 1) + ' 题</span></div>' +
+            '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + row.question + '</div>';
+        if (!row.isCorrect) {
             detailsHtml += '<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px">' +
-                '你的答案：<span style="color:#e05252">' + userText + '</span> | ' +
-                '正确答案：<span style="color:#3db86a">' + correctText + '</span></div>' +
-                '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-top:6px">' + q.explanation + '</div>';
+                '你的答案：<span style="color:#e05252">' + row.userText + '</span> | ' +
+                '正确答案：<span style="color:#3db86a">' + row.correctText + '</span></div>' +
+                '<div style="font-size:0.82rem;color:var(--text-muted);line-height:1.6;margin-top:6px">' + row.explanation + '</div>';
         }
         detailsHtml += '</div>';
     });
