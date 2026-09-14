@@ -15,8 +15,15 @@ const {
   readBackupStatus,
   getBackupAgeSeconds,
   pruneBackups,
+  restoreBackupFile,
 } = await import("../src/lib/backup.js");
 const { openDb, closeDb, getDbPath } = await import("../src/db/connection.js");
+const {
+  listActiveTombstonesFromLedger,
+  getTombstoneLedgerPath,
+  replayUserTombstones,
+} = await import("../src/lib/tombstones.js");
+const { softDeleteUser } = await import("../src/lib/users.js");
 
 
 test("online backup is consistent and updates status", async () => {
@@ -60,6 +67,85 @@ test("prune keeps recent timestamped backups", () => {
 
 test("restore-check rejects missing file", () => {
   assert.throws(() => checkBackupIntegrity(path.join(os.tmpdir(), "no-such-backup.sqlite")));
+});
+
+/**
+ * R2 acceptance: external tombstone ledger survives main-DB restore.
+ * Flow: create user → online backup → soft-delete (ledger write) → restore
+ * backup to temp target → auto-replay from external ledger → user stays deleted.
+ * Uses only temp dirs from prepareTestEnv / mkdtemp — never prod paths.
+ */
+test("external ledger survives restore: backup → delete → restore → replay keeps deleted", async () => {
+  const stamp = Date.now().toString(36);
+  const username = `r2tomb${stamp}`;
+  const db = openDb();
+  const info = db
+    .prepare(
+      `INSERT INTO users (username_normalized, password_hash, nickname, avatar_id, leaderboard_opt_in, status)
+       VALUES (?, ?, ?, 1, 0, 'active')`
+    )
+    .run(username, "hash-alive", `R2${stamp}`);
+  const userId = Number(info.lastInsertRowid);
+
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "stockgame-r2-bk-"));
+  const backupPath = path.join(outDir, "pre-delete.sqlite");
+  await createOnlineBackup({ outputPath: backupPath, updateStatus: false });
+
+  softDeleteUser(userId, { wipeCredentials: true, source: "self", reason: "r2-test" });
+  const live = openDb().prepare("SELECT status, password_hash FROM users WHERE id = ?").get(userId);
+  assert.equal(live.status, "deleted");
+
+  const ledgerBefore = listActiveTombstonesFromLedger().filter((t) => t.user_id === userId);
+  assert.equal(ledgerBefore.length, 1);
+  assert.ok(fs.existsSync(getTombstoneLedgerPath()));
+  const ledgerBytes = fs.readFileSync(getTombstoneLedgerPath(), "utf8");
+  assert.match(ledgerBytes, new RegExp(`"user_id":${userId}`));
+
+  // Restore into a separate temp DB so we prove ledger is outside the sqlite file.
+  const restoreTarget = path.join(outDir, "restored.sqlite");
+  const result = await restoreBackupFile({
+    backupPath,
+    targetPath: restoreTarget,
+    autoReplay: true,
+  });
+  assert.ok(result.replay);
+  assert.equal(result.replay.source, "external-ledger");
+  assert.ok(result.replay.applied >= 1, JSON.stringify(result.replay));
+
+  // Point connection at restored DB and assert user cannot be active.
+  closeDb();
+  process.env.STOCKGAME_DB_PATH = restoreTarget;
+  const restored = openDb().prepare("SELECT status, password_hash FROM users WHERE id = ?").get(userId);
+  assert.ok(restored, "user row exists in restored backup");
+  assert.equal(restored.status, "deleted");
+  assert.equal(restored.password_hash, "!");
+
+  // Ledger file under original data dir was not replaced by restore.
+  assert.ok(fs.existsSync(getTombstoneLedgerPath()));
+  assert.equal(
+    listActiveTombstonesFromLedger().filter((t) => t.user_id === userId).length,
+    1
+  );
+
+  // Restore without auto-replay would resurrect; prove manual replay still works.
+  closeDb();
+  const restoreTarget2 = path.join(outDir, "restored-manual.sqlite");
+  await restoreBackupFile({
+    backupPath,
+    targetPath: restoreTarget2,
+    autoReplay: false,
+  });
+  process.env.STOCKGAME_DB_PATH = restoreTarget2;
+  const resurrected = openDb().prepare("SELECT status FROM users WHERE id = ?").get(userId);
+  assert.equal(resurrected.status, "active");
+  const manual = replayUserTombstones();
+  assert.ok(manual.applied >= 1);
+  const after = openDb().prepare("SELECT status FROM users WHERE id = ?").get(userId);
+  assert.equal(after.status, "deleted");
+
+  // Restore connection env for remaining tests in this file.
+  closeDb();
+  process.env.STOCKGAME_DB_PATH = env.dbPath;
 });
 
 test("teardown closes db", () => {

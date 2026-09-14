@@ -1,4 +1,13 @@
 /** Stage 2 account client: session cookie + CSRF + avatar/nickname settings */
+import {
+  AUTH_STATUS,
+  createInitialAuthState,
+  transitionAuth,
+  isUnauthorized,
+  selectIsAuthenticated,
+  selectAuthChromeMode,
+} from "./auth-state.js";
+
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";
 const AVATAR_MAX_EDGE = 192;
@@ -18,11 +27,24 @@ const NICK_B = [
   "筹码", "心肝", "账户", "信仰", "持仓", "夜盘", "本金怪", "韭菜盒", "子弹怪", "仓位怪",
 ];
 
-let authState = {
-  user: null,
-  csrfToken: null,
-  ready: false,
-};
+/** Single mutable snapshot — UI reads via getAuthState(); only this module transitions. */
+let authState = createInitialAuthState();
+
+/** Coalesce concurrent refreshMe() callers onto one in-flight /me. */
+let refreshInflight = null;
+
+function applyAuth(event) {
+  const next = transitionAuth(authState, event);
+  authState.status = next.status;
+  authState.user = next.user;
+  authState.csrfToken = next.csrfToken;
+  authState.ready = next.ready;
+  authState.error = next.error;
+}
+
+function clearSessionLocal(reason) {
+  applyAuth({ type: "SESSION_CLEARED", reason });
+}
 
 function perfEnabled() {
   try {
@@ -105,6 +127,12 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
     err.code = json?.error?.code;
     err.status = res.status;
     err.payload = json;
+    // Session gone — clear chrome so UI never looks logged-in without a cookie.
+    // Do not clear on INVALID_CREDENTIALS / BAD_PASSWORD (login / password forms).
+    if (isUnauthorized(err) && authState.user) {
+      clearSessionLocal("api_401");
+      renderAuthChrome();
+    }
     throw err;
   }
   return { ok: true, status: res.status, data: json.data, requestId: json.requestId };
@@ -126,6 +154,10 @@ async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
     const err = new Error(json?.error?.message || `HTTP ${res.status}`);
     err.code = json?.error?.code;
     err.status = res.status;
+    if (isUnauthorized(err) && authState.user) {
+      clearSessionLocal("api_multipart_401");
+      renderAuthChrome();
+    }
     throw err;
   }
   return { ok: true, status: res.status, data: json.data };
@@ -135,18 +167,36 @@ export function getAuthState() {
   return authState;
 }
 
-export async function refreshMe() {
+export { AUTH_STATUS, selectIsAuthenticated, selectAuthChromeMode };
+
+async function refreshMeOnce() {
+  applyAuth({ type: "REFRESH_START" });
+  renderAuthChrome();
   try {
     const { data } = await api("/me");
-    authState.user = data.user;
-    authState.csrfToken = data.csrfToken;
-  } catch {
-    authState.user = null;
-    authState.csrfToken = null;
+    applyAuth({
+      type: "REFRESH_SUCCESS",
+      user: data?.user ?? null,
+      csrfToken: data?.csrfToken ?? null,
+    });
+  } catch (e) {
+    applyAuth({
+      type: "REFRESH_FAILURE",
+      status: e?.status,
+      code: e?.code,
+      message: e?.message,
+    });
   }
-  authState.ready = true;
   renderAuthChrome();
   return authState;
+}
+
+export async function refreshMe() {
+  if (refreshInflight) return refreshInflight;
+  refreshInflight = refreshMeOnce().finally(() => {
+    refreshInflight = null;
+  });
+  return refreshInflight;
 }
 
 function el(html) {
@@ -213,7 +263,7 @@ function ensureAuthDom() {
   if (!document.getElementById("authChip")) {
     const chip = el(`<div class="auth-chip" id="authChip">
       <button type="button" class="announcements-btn" id="announcementsBtn" title="系统公告" aria-label="系统公告">公告</button>
-      <button type="button" class="auth-login-btn" id="authLoginBtn">登录 / 注册</button>
+      <button type="button" class="auth-login-btn" id="authLoginBtn" hidden>登录 / 注册</button>
       <button type="button" class="auth-user-btn" id="authUserBtn" hidden>
         <img class="auth-avatar" id="authAvatarImg" alt="">
         <span id="authNickname"></span>
@@ -551,18 +601,26 @@ export function closeAuthModal() {
 
 function renderAuthChrome() {
   ensureAuthDom();
-  const logged = !!authState.user;
+  const mode = selectAuthChromeMode(authState);
   const loginBtn = document.getElementById("authLoginBtn");
   const userBtn = document.getElementById("authUserBtn");
-  loginBtn.hidden = logged;
-  userBtn.hidden = !logged;
   const nickEl = document.getElementById("authNickname");
   const img = document.getElementById("authAvatarImg");
-  if (logged) {
+
+  if (mode === "pending") {
+    // Bootstrap / refresh without a confirmed user — claim neither guest nor user.
+    loginBtn.hidden = true;
+    userBtn.hidden = true;
+  } else if (mode === "user") {
+    loginBtn.hidden = true;
+    userBtn.hidden = false;
     nickEl.textContent = authState.user.nickname;
     img.src = displayAvatarUrl(authState.user);
     img.alt = AVATAR_LABELS[authState.user.avatarId] || "avatar";
   } else {
+    // guest (anonymous | error)
+    loginBtn.hidden = false;
+    userBtn.hidden = true;
     // Fully reset chrome so logout never leaves stale nickname/avatar visible
     nickEl.textContent = "";
     img.removeAttribute("src");
@@ -570,7 +628,11 @@ function renderAuthChrome() {
   }
   try {
     document.dispatchEvent(new CustomEvent("stockgame:auth-changed", {
-      detail: { user: authState.user },
+      detail: {
+        user: authState.user,
+        status: authState.status,
+        ready: authState.ready,
+      },
     }));
   } catch { /* ignore */ }
 }
@@ -596,8 +658,11 @@ async function onLogin(ev) {
       method: "POST",
       body: { username: fd.get("username"), password: fd.get("password") },
     });
-    authState.user = data.user;
-    authState.csrfToken = data.csrfToken;
+    applyAuth({
+      type: "SESSION_ESTABLISHED",
+      user: data.user,
+      csrfToken: data.csrfToken,
+    });
     renderAuthChrome();
     closeAuthModal();
     showToast("登录成功", "success");
@@ -642,11 +707,17 @@ async function onRegister(ev) {
         leaderboardOptIn: true,
       },
     });
-    authState.user = data.user;
-    authState.csrfToken = data.csrfToken;
+    applyAuth({
+      type: "SESSION_ESTABLISHED",
+      user: data.user,
+      csrfToken: data.csrfToken,
+    });
     if (pendingRegisterFile) {
       try {
-        authState.user = await uploadPendingAvatar(pendingRegisterFile);
+        applyAuth({
+          type: "USER_UPDATED",
+          user: await uploadPendingAvatar(pendingRegisterFile),
+        });
       } catch (upErr) {
         showToast(upErr.message || "头像上传失败，可稍后在设置中重试", "error");
       }
@@ -684,7 +755,10 @@ async function onSaveSettings() {
   const t0 = performance.now();
   try {
     if (pendingSettingsFile) {
-      authState.user = await uploadPendingAvatar(pendingSettingsFile);
+      applyAuth({
+        type: "USER_UPDATED",
+        user: await uploadPendingAvatar(pendingSettingsFile),
+      });
       pendingSettingsFile = null;
       if (pendingSettingsObjectUrl) {
         URL.revokeObjectURL(pendingSettingsObjectUrl);
@@ -699,7 +773,7 @@ async function onSaveSettings() {
         leaderboardOptIn: document.getElementById("settingsOptIn").checked,
       },
     });
-    authState.user = data.user;
+    applyAuth({ type: "USER_UPDATED", user: data.user });
     renderAuthChrome();
     setSettingsAvatar(authState.user.avatarId || 1, authState.user.avatarUrl);
     setSuccess("已保存");
@@ -730,7 +804,7 @@ async function onLogout() {
   setBusy(btn, true, "退出中…");
   const csrf = authState.csrfToken;
   // Optimistic chrome clear — do not wait on network for perceived logout.
-  authState.user = null;
+  clearSessionLocal("logout");
   renderAuthChrome();
   closeAuthModal();
   showToast("已退出登录", "success");
@@ -739,13 +813,14 @@ async function onLogout() {
   } catch {
     /* ignore — local session already cleared */
   } finally {
-    authState.csrfToken = null;
     setBusy(btn, false);
   }
 }
 
 export async function initAuth() {
   ensureAuthDom();
+  // First paint: neither guest nor user until /me settles.
+  renderAuthChrome();
   const t0 = performance.now();
   await refreshMe();
   perfLog("auth.init", performance.now() - t0);
