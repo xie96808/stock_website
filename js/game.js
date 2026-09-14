@@ -3,7 +3,6 @@ import { chartRefs } from './state.js';
 import {
     getSession,
     getStocksCatalog,
-    resetSession,
     patchSession,
     selectVisibleKline,
     selectGameWindow,
@@ -26,12 +25,15 @@ import {
     applyServerDecisionState,
     resumeLocalActions,
     settleLocalSession,
+    prepareSessionSeed,
+    evaluateRewindEligibility,
+    buildRewindPreview,
+    applyRewindServerResult,
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip } from './puzzle-goals-copy.js';
-import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
 import {
     ensureEcharts,
     markChartLoading,
@@ -68,148 +70,14 @@ function syncMobileIntelDefaults() {
 }
 
 
-/** Feed #gameScreen from puzzle snapshot bars (short window + optional history). */
-function seedPuzzleSession(cloud) {
-    const bars = Array.isArray(cloud.bars) ? cloud.bars : [];
-    const history = Array.isArray(cloud.history) ? cloud.history : [];
-    const gameDays = Number.isInteger(cloud.gameDays) ? cloud.gameDays : bars.length;
-    const historyDays = Number.isInteger(cloud.historyLength)
-        ? cloud.historyLength
-        : history.length;
-    if (!bars.length || bars.length !== gameDays) {
-        throw new Error('残局行情快照无效');
-    }
-    const init = cloud.initialState || {
-        cash: 100000,
-        qty: 0,
-        cost: 0,
-        buyFillDay: null,
-        firstSellableDay: 1,
-    };
-    const takeoverMark = bars[0].open;
-    const takeoverNav = Number(init.cash) + Number(init.qty || 0) * takeoverMark;
-    const day1Close = bars[0].close;
-    const equity0 = Number(init.cash) + Number(init.qty || 0) * day1Close;
-    const qty = Number(init.qty) || 0;
-    const firstSellable = Number(init.firstSellableDay) || 1;
-    let position = 'empty';
-    if (qty > 0) {
-        position = firstSellable > 1 ? 'locked' : 'holding';
-    }
-    const currentStock = {
-        code: cloud.stockCode || 'PUZZLE',
-        name: cloud.stockName || '残局挑战',
-        kline: history.concat(bars),
-    };
-    patchSession({
-        cloudMode: true,
-        cloudGameId: cloud.gameId,
-        datasetVersion: cloud.datasetVersion || null,
-        ruleVersion: cloud.ruleVersion || 'puzzle-mtm-v1',
-        fillMode: cloud.fillMode || 'next_open',
-        protocolVersion: cloud.protocolVersion || 'legacy-batch',
-        gameKind: 'puzzle',
-        gameDays,
-        currentDay: 1,
-        actions: [],
-        tradeHistory: [],
-        initialState: init,
-        firstSellableDay: firstSellable,
-        maxOrders: cloud.maxOrders ?? null,
-        puzzleLevelKey: cloud.levelKey || cloud.puzzleLevelKey || null,
-        puzzleGoals: cloud.goals || null,
-        puzzleOpenStateHint: cloud.openStateHint || null,
-        puzzleTeachingBrief: cloud.teachingBrief || null,
-        puzzleTheme: cloud.theme || null,
-        puzzleResult: null,
-        takeoverNav,
-        revision: cloud.revision ?? 0,
-        undoCount: 0,
-        assistClass: cloud.assistClass || 'legacy',
-        currentStock,
-        historyLength: historyDays,
-        gameKline: history.concat(bars),
-        position,
-        costBasis: qty > 0 ? Number(init.cost) || 0 : 0,
-        lastBuyFillDay: init.buyFillDay != null ? init.buyFillDay : null,
-        totalReturn: takeoverNav > 0 ? equity0 / takeoverNav : 1,
-        practiceOnly: false,
-    });
-}
-
 export async function startGame(options = {}) {
-    // Reset session fields through the game-session seam (preserves stocksData).
-    resetSession({
+    // Use-case owns reset + seed (puzzle / window DTO / pack / local); view owns chrome.
+    prepareSessionSeed({
+        cloud: options.cloud || null,
+        catalog: getStocksCatalog(),
         practiceOnly: !!options.practiceOnly,
         fillMode: readFillModeFromUi(),
     });
-
-    const cloud = options.cloud || null;
-    const catalog = getStocksCatalog();
-    const isPuzzle =
-        !!cloud &&
-        (cloud.gameKind === 'puzzle' ||
-            (Array.isArray(cloud.bars) && cloud.bars.length >= 6 && cloud.gameKind !== 'classic'));
-
-    if (isPuzzle) {
-        seedPuzzleSession(cloud);
-    } else if (cloud && hasGameWindowDto(cloud)) {
-        // R5: prefer GameWindowDTO — pack/catalog not required to enter the board.
-        seedClassicFromWindow(cloud);
-    } else {
-        const gameDays = 30;
-        if (cloud && Number.isInteger(cloud.stockIndex) && catalog[cloud.stockIndex]) {
-            const currentStock = catalog[cloud.stockIndex];
-            const historyDays = Number.isInteger(cloud.historyLength)
-                ? cloud.historyLength
-                : Math.min(30, currentStock.kline.length - gameDays);
-            const gameStartIndex = Number.isInteger(cloud.windowStartIndex)
-                ? cloud.windowStartIndex
-                : historyDays;
-            patchSession({
-                cloudMode: true,
-                cloudGameId: cloud.gameId,
-                datasetVersion: cloud.datasetVersion || null,
-                ruleVersion: cloud.ruleVersion || getSession().ruleVersion,
-                fillMode: cloud.fillMode || getSession().fillMode,
-                protocolVersion: cloud.protocolVersion || null,
-                gameKind: cloud.gameKind || null,
-                gameDays: 30,
-                revision: cloud.revision ?? 0,
-                undoCount: cloud.undoCount ?? 0,
-                assistClass: cloud.assistClass || null,
-                currentStock,
-                historyLength: historyDays,
-                gameKline: currentStock.kline.slice(
-                    gameStartIndex - historyDays,
-                    gameStartIndex + gameDays
-                ),
-            });
-        } else {
-            // Local practice: pick random stock and window (30 game days).
-            if (!catalog.length) {
-                throw new Error('股票资源未就绪');
-            }
-            const stockIndex = Math.floor(Math.random() * catalog.length);
-            const currentStock = catalog[stockIndex];
-            const klineLen = currentStock.kline.length;
-            const historyDays = Math.min(30, klineLen - gameDays);
-            const minStart = historyDays;
-            const maxStart = klineLen - gameDays; // inclusive
-            const span = Math.max(1, maxStart - minStart + 1);
-            const gameStartIndex = minStart + Math.floor(Math.random() * span);
-            patchSession({
-                currentStock,
-                historyLength: historyDays,
-                gameDays: 30,
-                gameKline: currentStock.kline.slice(
-                    gameStartIndex - historyDays,
-                    gameStartIndex + gameDays
-                ),
-                practiceOnly: true,
-            });
-        }
-    }
 
     // Switch screens first so the fill-mode modal can close over a painted shell.
     prepareScreen(Route.GAME);
@@ -484,17 +352,15 @@ async function ensureRewindFeatures() {
 
 export async function openRewindConfirm() {
     const session = getSession();
-    if (!session.cloudMode || session.protocolVersion !== 'event-v1' || session.gameKind === 'daily' || session.gameKind === 'puzzle') return;
-    if (session.undoCount >= 1 || session.rewindBusy) return;
-    if (!session.actions || session.actions.length < 1) return;
     const feats = await ensureRewindFeatures();
-    if (!feats.gameRewind) return;
+    if (!evaluateRewindEligibility(session, feats).eligible) return;
 
     const auth = getAuthState();
-    const bal = Number(auth.user?.jiuCoinBalance ?? 0);
-    const cost = 50;
-    const after = bal - cost;
-    const targetDay = session.actions.length; // back to day n submit cursor → display day n
+    const preview = buildRewindPreview(session, {
+        balance: Number(auth.user?.jiuCoinBalance ?? 0),
+        cost: 50,
+    });
+    const { cost, balance: bal, after, targetDay, canAfford } = preview;
 
     ensureRewindModal();
     const body = document.getElementById('rewindConfirmBody');
@@ -503,10 +369,10 @@ export async function openRewindConfirm() {
             `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
             `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
             `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
-            (after < 0 ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '');
+            (!canAfford ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '');
     }
     const confirmBtn = document.getElementById('rewindConfirmBtn');
-    if (confirmBtn) confirmBtn.disabled = after < 0;
+    if (confirmBtn) confirmBtn.disabled = !canAfford;
     const modal = document.getElementById('rewindConfirmModal');
     if (modal) {
         modal.hidden = false;
@@ -564,15 +430,18 @@ export async function confirmRewind() {
         const { data } = await rewindCloudGame(session.revision ?? 0, {
             idempotencyKey: rewindIdempotencyKey,
         });
-        applyServerStateActions(data);
-        patchSession({
-            undoCount: data.undoCount ?? 1,
-            assistClass: data.assistClass || 'undo',
-            revision: data.revision,
-        });
-        if (data.balanceAfter != null) {
+        const applied = applyRewindServerResult(data, { bars: getGameBars() });
+        if (!applied.ok) {
+            showToast('反悔状态同步失败', 'error');
+            return;
+        }
+        persistCurrentCloudDraft();
+        updateUI();
+        updateChart();
+        renderWaveAnalysis();
+        if (applied.balanceAfter != null) {
             const auth = getAuthState();
-            if (auth.user) auth.user.jiuCoinBalance = data.balanceAfter;
+            if (auth.user) auth.user.jiuCoinBalance = applied.balanceAfter;
         }
         await refreshJiuCoinStatus().catch(() => {});
         await refreshMe().catch(() => {});
@@ -798,20 +667,10 @@ export function updateUI() {
         }
     }
 
-    // F03 rewind: only event-v1 classic cloud, flag on, once, ≥1 decision (incl. day-30 pending settle).
-    // Daily challenge (game_kind=daily) never shows rewind UI.
+    // F03 rewind: eligibility from use-case; button chrome stays in view.
     void (async () => {
         const feats = await ensureRewindFeatures();
-        const eligible =
-            !!feats.gameRewind &&
-            session.cloudMode &&
-            session.gameKind !== 'daily' &&
-            session.gameKind !== 'puzzle' &&
-            session.protocolVersion === 'event-v1' &&
-            (session.undoCount ?? 0) < 1 &&
-            Array.isArray(session.actions) &&
-            session.actions.length >= 1 &&
-            session.actions.length <= (sessionGameDays(session) - 1);
+        const eligible = evaluateRewindEligibility(session, feats).eligible;
         if (rewindBtn) {
             rewindBtn.hidden = !eligible;
             rewindBtn.dataset.eligible = eligible ? '1' : '';

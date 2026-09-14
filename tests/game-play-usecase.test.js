@@ -13,6 +13,17 @@ import {
   buildCloudFinishBody,
   sessionPatchFromCloudFinish,
   puzzlePositionFromState,
+  detectSeedKind,
+  prepareSessionSeed,
+  seedLocalPractice,
+  seedPuzzleSession,
+  evaluateRewindEligibility,
+  buildRewindPreview,
+  applyRewindServerResult,
+  shouldPersistCloudSettle,
+  persistSettledCloudGame,
+  createCloudSession,
+  abandonCloudSession,
 } from '../js/game-play-usecase.js';
 
 function seedClassicWindow({ fillMode = 'next_open', actions = [] } = {}) {
@@ -197,4 +208,179 @@ test('puzzlePositionFromState encodes T+1 lock', () => {
   assert.equal(puzzlePositionFromState(0, 1, null, 1), 'empty');
   assert.equal(puzzlePositionFromState(100, 1, 1, 2), 'locked');
   assert.equal(puzzlePositionFromState(100, 2, 1, 2), 'holding');
+});
+
+
+function ohlcv(n, volBase = 1000) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const c = 10 + i * 0.01;
+    out.push({
+      date: `2024-01-${String((i % 28) + 1).padStart(2, '0')}`,
+      open: c,
+      high: c + 0.1,
+      low: c - 0.1,
+      close: c,
+      volume: volBase + i,
+    });
+  }
+  return out;
+}
+
+test('detectSeedKind classifies puzzle / window / pack / local', () => {
+  assert.equal(detectSeedKind(null), 'local');
+  assert.equal(detectSeedKind({ gameKind: 'puzzle', bars: ohlcv(8) }), 'puzzle');
+  assert.equal(
+    detectSeedKind({ window: { bars: ohlcv(30), history: ohlcv(30) } }),
+    'window'
+  );
+  assert.equal(detectSeedKind({ stockIndex: 0, gameId: 'g' }), 'pack');
+});
+
+test('prepareSessionSeed seeds local practice with injected random', () => {
+  const catalog = [
+    { code: 'AAA', name: '甲', kline: ohlcv(80) },
+    { code: 'BBB', name: '乙', kline: ohlcv(80) },
+  ];
+  const { kind, session } = prepareSessionSeed({
+    catalog,
+    practiceOnly: true,
+    fillMode: 'next_open',
+    random: () => 0, // always first stock / min start
+  });
+  assert.equal(kind, 'local');
+  assert.equal(session.practiceOnly, true);
+  assert.equal(session.currentStock.code, 'AAA');
+  assert.equal(session.gameDays, 30);
+  assert.equal(session.gameKline.length, 60);
+});
+
+test('prepareSessionSeed seeds puzzle from cloud snapshot', () => {
+  const bars = ohlcv(8);
+  const history = ohlcv(5, 50);
+  const { kind, session } = prepareSessionSeed({
+    cloud: {
+      gameId: 'pz1',
+      gameKind: 'puzzle',
+      bars,
+      history,
+      historyLength: 5,
+      gameDays: 8,
+      initialState: { cash: 100000, qty: 100, cost: 10, buyFillDay: 0, firstSellableDay: 2 },
+      levelKey: 'ch1-01',
+    },
+    catalog: [],
+  });
+  assert.equal(kind, 'puzzle');
+  assert.equal(session.gameKind, 'puzzle');
+  assert.equal(session.cloudGameId, 'pz1');
+  assert.equal(session.gameDays, 8);
+  assert.equal(session.puzzleLevelKey, 'ch1-01');
+  assert.equal(session.position, 'locked');
+});
+
+test('prepareSessionSeed prefers GameWindowDTO over pack', () => {
+  const history = ohlcv(30, 500);
+  const bars = ohlcv(30, 900);
+  const { kind, session } = prepareSessionSeed({
+    cloud: {
+      gameId: 'win1',
+      stockCode: '600000',
+      stockName: '窗口股',
+      window: { v: 1, historyLength: 30, gameDays: 30, history, bars },
+    },
+    catalog: [{ code: 'NOPE', name: 'x', kline: ohlcv(80) }],
+  });
+  assert.equal(kind, 'window');
+  assert.equal(session.cloudGameId, 'win1');
+  assert.equal(session.currentStock.code, '600000');
+  assert.equal(session.gameKline.length, 60);
+});
+
+test('evaluateRewindEligibility / buildRewindPreview', () => {
+  resetSession();
+  patchSession({
+    cloudMode: true,
+    protocolVersion: 'event-v1',
+    gameKind: 'classic',
+    undoCount: 0,
+    actions: ['buy', 'hold'],
+    gameDays: 30,
+  });
+  assert.equal(evaluateRewindEligibility(getSession(), { gameRewind: true }).eligible, true);
+  assert.equal(evaluateRewindEligibility(getSession(), { gameRewind: false }).eligible, false);
+  patchSession({ gameKind: 'daily' });
+  assert.equal(evaluateRewindEligibility(getSession(), { gameRewind: true }).eligible, false);
+  patchSession({ gameKind: 'classic', undoCount: 1 });
+  assert.equal(evaluateRewindEligibility(getSession(), { gameRewind: true }).eligible, false);
+
+  patchSession({ undoCount: 0, actions: ['buy', 'sell', 'hold'] });
+  const preview = buildRewindPreview(getSession(), { balance: 80, cost: 50 });
+  assert.equal(preview.targetDay, 3);
+  assert.equal(preview.canAfford, true);
+  assert.equal(preview.after, 30);
+  assert.equal(buildRewindPreview(getSession(), { balance: 10, cost: 50 }).canAfford, false);
+});
+
+test('applyRewindServerResult patches undo + assistClass', () => {
+  const bars = seedClassicWindow();
+  assert.equal(applyLocalDecision('buy', { bars }).ok, true);
+  assert.equal(applyLocalDecision('hold', { bars }).ok, true);
+  patchSession({ protocolVersion: 'event-v1', revision: 2, undoCount: 0 });
+  const r = applyRewindServerResult(
+    {
+      actions: ['buy'],
+      revision: 3,
+      undoCount: 1,
+      assistClass: 'undo',
+      balanceAfter: 450,
+      protocolVersion: 'event-v1',
+    },
+    { bars }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.balanceAfter, 450);
+  assert.deepEqual(gameState.actions, ['buy']);
+  assert.equal(gameState.undoCount, 1);
+  assert.equal(gameState.assistClass, 'undo');
+  assert.equal(gameState.revision, 3);
+});
+
+test('shouldPersistCloudSettle + persistSettledCloudGame inject finishCloud', async () => {
+  resetSession();
+  assert.equal(shouldPersistCloudSettle(getSession()), false);
+  patchSession({ cloudMode: true, cloudGameId: 'g1' });
+  assert.equal(shouldPersistCloudSettle(getSession()), true);
+  let called = 0;
+  const out = await persistSettledCloudGame({
+    finishCloud: async () => {
+      called += 1;
+      return { data: { ok: 1 }, status: 200 };
+    },
+  });
+  assert.equal(called, 1);
+  assert.equal(out.status, 200);
+});
+
+test('createCloudSession / abandonCloudSession inject HTTP', async () => {
+  const created = await createCloudSession('next_open', {
+    createHttp: async (fm) => ({ gameId: 'new', fillMode: fm }),
+    clearDraft: () => {},
+  });
+  assert.equal(created.gameId, 'new');
+  const cleared = [];
+  const abandoned = await abandonCloudSession('old', {
+    abandonHttp: async (id) => id,
+    clearDraft: (id) => cleared.push(id),
+  });
+  assert.equal(abandoned, 'old');
+  assert.deepEqual(cleared, ['old']);
+});
+
+test('seedPuzzleSession rejects bad bars', () => {
+  assert.throws(() => seedPuzzleSession({ bars: [], gameDays: 8 }), /残局/);
+});
+
+test('seedLocalPractice throws when catalog empty', () => {
+  assert.throws(() => seedLocalPractice([]), /股票资源未就绪/);
 });

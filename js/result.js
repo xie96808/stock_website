@@ -6,6 +6,7 @@ import { buildKlineOption } from './kline-option.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { calcGrade } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
+import { persistSettledCloudGame, shouldPersistCloudSettle } from './game-play-usecase.js';
 import {
     showPuzzleSettleModal,
     paintPuzzleResultDebrief,
@@ -68,6 +69,10 @@ function paintPuzzleGradeHero({ stars, pending, reward }) {
 }
 
 
+/**
+ * Result view: paint settle chrome / share / review.
+ * Cloud persist goes through persistSettledCloudGame (use-case boundary) → finishCloudGame HTTP.
+ */
 export function endGame() {
     // Settlement P&L / valuation already applied by finishSettle() via shared engine.
     // Do not invent a day-30 sell fill here.
@@ -238,9 +243,9 @@ export function endGame() {
     updateSaveStatusUi();
     clearShareRankMeta();
     updateShareRankHint();
-    if (settled.cloudMode && settled.cloudGameId) {
-        // Always persist cloud / puzzle settle — even if analysis steps above threw.
-        finishCloudGame().then(async (res) => {
+    if (shouldPersistCloudSettle(settled)) {
+        // Single settle→persist hook (use-case); HTTP/retry remain in game-sync.
+        persistSettledCloudGame({ finishCloud: finishCloudGame }).then(async (res) => {
             // Refresh return display from authoritative server result if present.
             const live = getSession();
             const finalReturnEl = document.getElementById('finalReturn');
