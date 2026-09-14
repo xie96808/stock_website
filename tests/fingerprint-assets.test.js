@@ -9,6 +9,7 @@ import {
   rmSync,
   mkdirSync,
   readdirSync,
+  statSync,
 } from 'node:fs';
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -220,8 +221,9 @@ test('fingerprint: cyclic ESM imports all get hashed filenames', () => {
 });
 
 test('fingerprint: soft dynamic cycle still rewrites static imports (game→result)', () => {
-  // Mirrors prod bug shape: dynamic import() soft-cycle must not leave
-  // `from './result.js'` bare in game.js.
+  // Minimal repro of incident 2026-09-14: soft-cycle via dynamic import()
+  // must not leave bare `from './result.js'` / `./jiu-coin.js` in game.js.
+  // Full “never again” gate: see incident test below.
   const dir = mkdtempSync(join(tmpdir(), 'sw-fp-soft-cycle-'));
   try {
     mkdirSync(join(dir, 'js'));
@@ -348,6 +350,147 @@ test('fingerprint: real package tree game.js has no bare ./result.js', () => {
     assert.ok(!/from\s+['"]\.\/jiu-coin\.js['"]/.test(gameText), 'no bare ./jiu-coin.js');
     assert.match(gameText, /from\s+['"]\.\/result\.[a-f0-9]+\.js['"]/);
     assert.match(gameText, /from\s+['"]\.\/jiu-coin\.[a-f0-9]+\.js['"]/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('incident 2026-09-14: fingerprinted release must not keep bare local ESM/CSS imports', () => {
+  // 事故 2026-09-14：Wave A R1 内容哈希上线后，成环/软成环 ESM 图里部分 import
+  // 未被改写（尤其 game.*.js 仍含 from './result.js'、from './jiu-coin.js'），
+  // 浏览器 404 → 整棵 type=module 启动中止 → 登录芯片消失、window.* 点击处理器
+  // 未定义（按钮全死）。#106 用不动点指纹修复。本断言每次跑测强制：指纹后的
+  // 发布树里不得再残留任何裸本地 .js/.mjs/.css 引用。
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-incident-20260914-'));
+  try {
+    mkdirSync(join(dir, 'js'), { recursive: true });
+    mkdirSync(join(dir, 'css'), { recursive: true });
+    mkdirSync(join(dir, 'shared'), { recursive: true });
+
+    // Real package tree: full js/ + shared/*.js + css/ so game/auth/result
+    // closure and index styles fingerprint as a real release (skip missing).
+    for (const sub of ['js', 'css']) {
+      const srcDir = join(ROOT, sub);
+      if (!existsSync(srcDir)) continue;
+      for (const name of readdirSync(srcDir)) {
+        if (!/\.(js|mjs|css)$/i.test(name)) continue;
+        writeFileSync(join(dir, sub, name), readFileSync(join(srcDir, name)));
+      }
+    }
+    const sharedDir = join(ROOT, 'shared');
+    if (existsSync(sharedDir)) {
+      for (const name of readdirSync(sharedDir)) {
+        if (!/\.(js|mjs)$/i.test(name)) continue;
+        writeFileSync(join(dir, 'shared', name), readFileSync(join(sharedDir, name)));
+      }
+    }
+
+    writeFileSync(
+      join(dir, 'index.html'),
+      `<!doctype html>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/auth.css">
+<link rel="stylesheet" href="css/jiu-coin.css">
+<script type="module">
+  import { startGame } from './js/game.js';
+  import { initAuth } from './js/auth.js';
+  import { initJiuCoin } from './js/jiu-coin.js';
+  import { endGame } from './js/result.js';
+  import { showPuzzleChapter } from './js/puzzle-chapter.js';
+</script>
+`
+    );
+
+    fingerprintRelease(dir, { fingerprintImages: false });
+
+    function walkAssetAndHtmlFiles(rootDir, out = []) {
+      for (const name of readdirSync(rootDir)) {
+        if (name === '.DS_Store') continue;
+        const p = join(rootDir, name);
+        if (statSync(p).isDirectory()) {
+          walkAssetAndHtmlFiles(p, out);
+          continue;
+        }
+        if (/\.(js|mjs|css)$/i.test(name) || name === 'index.html') out.push(p);
+      }
+      return out;
+    }
+
+    function collectLocalJsCssSpecs(body, { html = false } = {}) {
+      const specs = [];
+      const push = (s) => {
+        if (s) specs.push(s);
+      };
+      let m;
+      const fromRe = /\bfrom\s*['"]([^'"]+)['"]/g;
+      while ((m = fromRe.exec(body)) !== null) push(m[1]);
+      const importCallRe = /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+      while ((m = importCallRe.exec(body)) !== null) push(m[1]);
+      const sideImportRe = /\bimport\s*['"]([^'"]+)['"]/g;
+      while ((m = sideImportRe.exec(body)) !== null) push(m[1]);
+      const urlRe = /new\s+URL\s*\(\s*['"]([^'"]+)['"]\s*,\s*import\.meta\.url/g;
+      while ((m = urlRe.exec(body)) !== null) push(m[1]);
+      const atImportRe = /@import\s+(?:url\s*\(\s*)?['"]?([^'";\)]+)/g;
+      while ((m = atImportRe.exec(body)) !== null) push(m[1].trim());
+      if (html) {
+        const hrefSrcRe = /\b(?:href|src)\s*=\s*['"]([^'"]+)['"]/gi;
+        while ((m = hrefSrcRe.exec(body)) !== null) push(m[1]);
+      }
+      return specs;
+    }
+
+    function isLocalJsOrCssSpec(spec) {
+      if (!spec) return false;
+      if (/^(https?:|data:|blob:|\/\/)/i.test(spec)) return false;
+      const pathPart = spec.split(/[?#]/)[0];
+      // Relative or root-local only
+      if (!(pathPart.startsWith('.') || pathPart.startsWith('/') || /^[\w.-]+\//.test(pathPart))) {
+        return false;
+      }
+      return /\.(js|mjs|css)$/i.test(pathPart);
+    }
+
+    function isFingerprintedAssetSpec(spec) {
+      const pathPart = spec.split(/[?#]/)[0];
+      return isAlreadyHashedName(basename(pathPart));
+    }
+
+    const bareHits = [];
+    for (const filePath of walkAssetAndHtmlFiles(dir)) {
+      const rel = filePath.slice(dir.length + 1);
+      const body = readFileSync(filePath, 'utf8');
+      const html = basename(filePath) === 'index.html';
+      for (const spec of collectLocalJsCssSpecs(body, { html })) {
+        if (!isLocalJsOrCssSpec(spec)) continue;
+        if (isFingerprintedAssetSpec(spec)) continue;
+        bareHits.push(`${rel}: ${spec}`);
+      }
+    }
+
+    assert.equal(
+      bareHits.length,
+      0,
+      `bare local ESM/CSS refs remain after fingerprint (incident 2026-09-14):\n${bareHits.join('\n')}`
+    );
+
+    const jsNames = readdirSync(join(dir, 'js'));
+    const gameHashed = jsNames.find((n) => /^game\.[a-f0-9]{8,12}\.js$/.test(n));
+    assert.ok(gameHashed, 'hashed game.*.js must exist');
+    const gameText = readFileSync(join(dir, 'js', gameHashed), 'utf8');
+    for (const bare of [
+      "from './result.js'",
+      "from './jiu-coin.js'",
+      "from './game-sync.js'",
+      "from './daily-quiz.js'",
+      "from './puzzle-chapter.js'",
+    ]) {
+      assert.ok(
+        !gameText.includes(bare),
+        `${gameHashed} must not contain production smoking-gun ${bare}`
+      );
+    }
+    assert.match(gameText, /from\s+['"]\.\/result\.[a-f0-9]{8,12}\.js['"]/);
+    assert.match(gameText, /from\s+['"]\.\/jiu-coin\.[a-f0-9]{8,12}\.js['"]/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
