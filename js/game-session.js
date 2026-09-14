@@ -57,6 +57,8 @@ export const SESSION_KEYS = Object.freeze([
   'puzzleLevelKey',
   'puzzleGoals',
   'puzzleOpenStateHint',
+  'puzzleTeachingBrief',
+  'puzzleTheme',
   'puzzleResult',
   'takeoverNav',
   'shareRank',
@@ -123,6 +125,8 @@ export function buildFreshSessionFields({
     puzzleLevelKey: null,
     puzzleGoals: null,
     puzzleOpenStateHint: null,
+    puzzleTeachingBrief: null,
+    puzzleTheme: null,
     puzzleResult: null,
     takeoverNav: null,
     revision: 0,
@@ -291,6 +295,12 @@ export function selectSettleView(s = getSession()) {
     undoCount: s.undoCount,
     puzzleResult: s.puzzleResult || null,
     puzzleLevelKey: s.puzzleLevelKey || null,
+    puzzleGoals: s.puzzleGoals || null,
+    puzzleOpenStateHint: s.puzzleOpenStateHint || null,
+    puzzleTeachingBrief: s.puzzleTeachingBrief || null,
+    puzzleTheme: s.puzzleTheme || null,
+    initialState: s.initialState || null,
+    maxOrders: s.maxOrders ?? null,
   };
 }
 

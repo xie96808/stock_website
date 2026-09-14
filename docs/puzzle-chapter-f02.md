@@ -70,7 +70,7 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
   - 行情来自条目响应里的 **snapshot `bars` + `history`**（实盘短窗 + 约 30 根前置 K）；缺 `bars` 时抛错并恢复关卡列表 + toast
   - `ACTIVE_GAME_EXISTS`：确认框可选 **继续原局** 或 **放弃并开新局**；本地已走到末日的草稿会丢弃以免只能「结束并结算」
   - **无反悔**（`gameKind===puzzle` 隐藏 rewind）
-  - 结算走 `POST /puzzles/games/:gameId/finish`，结果屏展示星级 / 首通韭币
+  - 结算走 `POST /puzzles/games/:gameId/finish`，结果屏展示星级 / 首通韭币；**残局专属复盘**（对照买持、星级拆解、情境叙述）替换经典 BS/波段分析
 - 非法动作：客户端禁用「已有持仓再买 / 空仓或 T+1 未到就卖」；服务端错误文案中文化（如「已有持仓，不能再买入」）
 - **不**改动首页「悔棋局」hindsight 入口
 

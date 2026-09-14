@@ -1,7 +1,9 @@
 /**
  * F02 puzzle settle celebration modal — paper shell (mirrors F11 dailyQuizResultModal).
+ * Includes 残局专属复盘 section when puzzleResult / session context is available.
  */
 import { formatPuzzleSettleModal } from './puzzle-settle-copy.js';
+import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 
 function modalEl() {
@@ -14,6 +16,111 @@ function escapeHtml(s) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/**
+ * Build HTML for debrief block (modal or result screen).
+ * @param {ReturnType<typeof formatPuzzleDebrief>} debrief
+ */
+export function renderPuzzleDebriefHtml(debrief) {
+  if (!debrief) return '';
+  const parts = [];
+  parts.push(`<div class="puzzle-debrief" data-status="${escapeHtml(debrief.status)}">`);
+  parts.push(`<div class="puzzle-debrief-title">${escapeHtml(debrief.sectionTitle || '复盘')}</div>`);
+
+  if (debrief.buyHoldCompare) {
+    const c = debrief.buyHoldCompare;
+    parts.push('<div class="puzzle-debrief-block puzzle-debrief-buyhold">');
+    parts.push('<div class="puzzle-debrief-label">对照买持</div>');
+    parts.push(`<div class="puzzle-debrief-summary">${escapeHtml(c.summaryLine)}</div>`);
+    parts.push(`<p class="puzzle-debrief-p">${escapeHtml(c.paragraph)}</p>`);
+    parts.push('</div>');
+  }
+
+  if (debrief.starBreakdown) {
+    const s = debrief.starBreakdown;
+    parts.push('<div class="puzzle-debrief-block puzzle-debrief-stars">');
+    parts.push('<div class="puzzle-debrief-label">星级拆解</div>');
+    parts.push('<ul class="puzzle-debrief-star-list">');
+    for (const line of s.lines || []) {
+      parts.push(`<li>${escapeHtml(line)}</li>`);
+    }
+    parts.push('</ul>');
+    if (s.paragraph) {
+      parts.push(`<p class="puzzle-debrief-p">${escapeHtml(s.paragraph)}</p>`);
+    }
+    parts.push('</div>');
+  }
+
+  if (debrief.situationParagraphs?.length) {
+    parts.push('<div class="puzzle-debrief-block puzzle-debrief-situation">');
+    parts.push('<div class="puzzle-debrief-label">本关情境</div>');
+    for (const para of debrief.situationParagraphs) {
+      parts.push(`<p class="puzzle-debrief-p">${escapeHtml(para)}</p>`);
+    }
+    parts.push('</div>');
+  }
+
+  if (debrief.bsNote) {
+    parts.push(`<p class="puzzle-debrief-bs-note">${escapeHtml(debrief.bsNote)}</p>`);
+  }
+
+  parts.push('</div>');
+  return parts.join('');
+}
+
+/**
+ * Paint result-screen debrief host; suppress classic BS shell for puzzle.
+ * @param {ReturnType<typeof formatPuzzleDebrief>|null} debrief
+ */
+export function paintPuzzleResultDebrief(debrief) {
+  const host = document.getElementById('puzzleDebrief');
+  const bsReport = document.getElementById('bsReport');
+  const klineAnalysis = document.getElementById('klineAnalysis');
+  const bsScoreDisplay = document.getElementById('bsScoreDisplay');
+
+  if (bsScoreDisplay) bsScoreDisplay.textContent = '--';
+
+  if (host) {
+    if (debrief) {
+      host.hidden = false;
+      host.innerHTML = renderPuzzleDebriefHtml(debrief);
+    } else {
+      host.hidden = true;
+      host.innerHTML = '';
+    }
+  }
+
+  if (bsReport) {
+    if (debrief) {
+      bsReport.hidden = true;
+      bsReport.innerHTML = '';
+    } else {
+      bsReport.hidden = false;
+    }
+  }
+
+  if (klineAnalysis) {
+    if (debrief) {
+      klineAnalysis.hidden = true;
+      klineAnalysis.innerHTML = '';
+    } else {
+      klineAnalysis.hidden = false;
+    }
+  }
+}
+
+/** Clear puzzle debrief hosts when leaving puzzle result (classic next). */
+export function clearPuzzleResultDebrief() {
+  const host = document.getElementById('puzzleDebrief');
+  if (host) {
+    host.hidden = true;
+    host.innerHTML = '';
+  }
+  const bsReport = document.getElementById('bsReport');
+  if (bsReport) bsReport.hidden = false;
+  const klineAnalysis = document.getElementById('klineAnalysis');
+  if (klineAnalysis) klineAnalysis.hidden = false;
 }
 
 function ensureBound() {
@@ -30,6 +137,13 @@ function ensureBound() {
  *   status?: 'pending'|'ok'|'fail',
  *   puzzleResult?: object|null,
  *   saveError?: string|null,
+ *   theme?: string|null,
+ *   teachingBrief?: string|null,
+ *   openStateHint?: string|null,
+ *   initialState?: object|null,
+ *   maxOrders?: number|null,
+ *   tradeHistory?: array,
+ *   gameDays?: number|null,
  * }} state
  */
 export function showPuzzleSettleModal(state) {
@@ -37,6 +151,7 @@ export function showPuzzleSettleModal(state) {
   const modal = modalEl();
   if (!modal) return;
   const copy = formatPuzzleSettleModal(state || { status: 'pending' });
+  const debrief = formatPuzzleDebrief(state || { status: 'pending' });
   const titleEl = document.getElementById('puzzleSettleTitle');
   const starsEl = document.getElementById('puzzleSettleStars');
   const headlineEl = document.getElementById('puzzleSettleHeadline');
@@ -45,6 +160,7 @@ export function showPuzzleSettleModal(state) {
   const edgeEl = document.getElementById('puzzleSettleEdge');
   const hintEl = document.getElementById('puzzleSettleHint');
   const failEl = document.getElementById('puzzleSettleFail');
+  const debriefEl = document.getElementById('puzzleSettleDebrief');
   const body = document.getElementById('puzzleSettleBody');
 
   if (titleEl) titleEl.textContent = copy.title;
@@ -92,6 +208,14 @@ export function showPuzzleSettleModal(state) {
       edgeEl.textContent = '';
     }
   }
+
+  if (debriefEl) {
+    debriefEl.hidden = false;
+    debriefEl.innerHTML = renderPuzzleDebriefHtml(debrief);
+  }
+
+  // Also paint result-screen host when modal updates after finish.
+  paintPuzzleResultDebrief(debrief);
 
   if (hintEl) {
     if (copy.hintLine) {

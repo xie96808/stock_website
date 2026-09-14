@@ -283,6 +283,8 @@
 /* F02 settle celebration modal (reuses jiu-coin paper shell) */
 .puzzle-settle-dialog {
   width: min(440px, 100%);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
 }
 .puzzle-settle-title {
   margin: 0 28px 8px 0;
@@ -363,4 +365,67 @@
 .puzzle-settle-actions {
   margin-top: 14px;
   justify-content: center;
+}
+
+
+/* F02 残局专属复盘 */
+.puzzle-settle-debrief {
+  margin: 10px 0 4px;
+  text-align: left;
+}
+.puzzle-debrief-host {
+  margin: 16px 0 8px;
+}
+.puzzle-debrief {
+  border: 1px solid color-mix(in srgb, var(--ink, #222) 12%, transparent);
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+  background: color-mix(in srgb, var(--paper, #f7f1e8) 88%, #fff);
+}
+[data-theme="dark"] .puzzle-debrief {
+  background: color-mix(in srgb, #1c1916 90%, #333);
+  border-color: color-mix(in srgb, #fff 10%, transparent);
+}
+.puzzle-debrief-title {
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-size: 1.1rem;
+  letter-spacing: 0.14em;
+  margin: 0 0 10px;
+  color: var(--ink, #222);
+}
+.puzzle-debrief-block {
+  margin: 0 0 12px;
+}
+.puzzle-debrief-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--mute, #8a7f70);
+  margin: 0 0 4px;
+}
+.puzzle-debrief-summary {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink, #222);
+  margin: 0 0 6px;
+}
+.puzzle-debrief-p {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--ink-soft, #5a5248);
+  text-align: justify;
+}
+.puzzle-debrief-star-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--ink-soft, #5a5248);
+}
+.puzzle-debrief-bs-note {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--mute, #8a7f70);
 }

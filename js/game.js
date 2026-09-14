@@ -118,6 +118,8 @@ function seedPuzzleSession(cloud) {
         puzzleLevelKey: cloud.levelKey || cloud.puzzleLevelKey || null,
         puzzleGoals: cloud.goals || null,
         puzzleOpenStateHint: cloud.openStateHint || null,
+        puzzleTeachingBrief: cloud.teachingBrief || null,
+        puzzleTheme: cloud.theme || null,
         puzzleResult: null,
         takeoverNav,
         revision: cloud.revision ?? 0,
