@@ -28,6 +28,7 @@ import {
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
+import { formatPuzzlePlayTip } from './puzzle-goals-copy.js';
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -115,6 +116,8 @@ function seedPuzzleSession(cloud) {
         firstSellableDay: firstSellable,
         maxOrders: cloud.maxOrders ?? null,
         puzzleLevelKey: cloud.levelKey || cloud.puzzleLevelKey || null,
+        puzzleGoals: cloud.goals || null,
+        puzzleOpenStateHint: cloud.openStateHint || null,
         puzzleResult: null,
         takeoverNav,
         revision: cloud.revision ?? 0,
@@ -783,8 +786,32 @@ export function updateUI() {
     if (totalDaysEl) totalDaysEl.textContent = String(gameDays);
     const moodEl = document.getElementById('progressMood');
     if (moodEl) {
-        const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
-        moodEl.textContent = MOODS[moodIdx];
+        if (session.gameKind === 'puzzle') {
+            moodEl.textContent = '残局挑战 · 对照星级目标出手';
+        } else {
+            const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
+            moodEl.textContent = MOODS[moodIdx];
+        }
+    }
+    const tipEl = document.getElementById('puzzlePlayTip');
+    if (tipEl) {
+        if (session.gameKind === 'puzzle') {
+            const tip = formatPuzzlePlayTip({
+                goals: session.puzzleGoals,
+                openStateHint: session.puzzleOpenStateHint,
+                maxOrders: session.maxOrders,
+            });
+            if (tip) {
+                tipEl.hidden = false;
+                tipEl.textContent = tip;
+            } else {
+                tipEl.hidden = true;
+                tipEl.textContent = '';
+            }
+        } else {
+            tipEl.hidden = true;
+            tipEl.textContent = '';
+        }
     }
 
     // Chart subtitle — mask identity until endGame

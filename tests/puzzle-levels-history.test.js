@@ -32,3 +32,20 @@ test('buildLevelSnapshot includes real-pack history for all chapter-1 defs (v3)'
   // Distinct real windows — not identical synthetic junk.
   assert.ok(opens.size >= 5, `expected distinct day1 opens, got ${[...opens]}`);
 });
+
+test('ch1-02…06 teachingBrief each teach one clear lesson; goals format readable', async () => {
+  const { formatLevelGoalLines } = await import('../js/puzzle-goals-copy.js');
+  const byKey = Object.fromEntries(CHAPTER1_LEVEL_DEFS.map((d) => [d.levelKey, d]));
+  assert.match(byKey['ch1-02'].teachingBrief, /落袋|浮盈/);
+  assert.match(byKey['ch1-03'].teachingBrief, /两笔|第三笔/);
+  assert.match(byKey['ch1-04'].teachingBrief, /T\+1/);
+  assert.match(byKey['ch1-04'].openStateHint, /T\+1/);
+  assert.match(byKey['ch1-05'].teachingBrief, /少动|震荡/);
+  assert.match(byKey['ch1-06'].teachingBrief, /末日|短窗/);
+  for (const def of CHAPTER1_LEVEL_DEFS) {
+    const lines = formatLevelGoalLines(def.goals);
+    assert.ok(lines.length >= 1, def.levelKey);
+    assert.match(lines[0], /^二星：/);
+    if (lines[1]) assert.match(lines[1], /^三星：/);
+  }
+});

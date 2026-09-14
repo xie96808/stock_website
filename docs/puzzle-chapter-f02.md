@@ -33,11 +33,11 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 | 关 | 主题 | 开局提示 |
 |----|------|----------|
 | ch1-01 第一天站岗 | 买入后已有浮亏 | 开局已满仓浮亏，可卖可持 |
-| ch1-02 到手的利润 | 初始持仓处于浮盈 | 开局已满仓浮盈，可卖可持 |
+| ch1-02 到手的利润 | 初始持仓处于浮盈 | 开局满仓浮盈，可卖可持 |
 | ch1-03 两笔机会 | 空仓、最多两笔成交 | 开局空仓，订单上限 2 笔 |
-| ch1-04 明天才好卖 | 刚买入的 T+1 锁定 | 开局已满仓且 T+1 锁定，首日不可卖 |
-| ch1-05 震荡磨人 | 已有持仓、窄幅行情 | 开局已满仓，订单上限 2 笔 |
-| ch1-06 最后几个交易日 | 短窗末日估值 | 开局已满仓，末日仅估值 |
+| ch1-04 明天才好卖 | 刚买入的 T+1 锁定 | 开局满仓且 T+1 锁定，首日不可卖 |
+| ch1-05 震荡磨人 | 已有持仓、窄幅行情 | 开局满仓；震荡少动，上限 2 笔 |
+| ch1-06 最后几个交易日 | 短窗末日估值 | 开局满仓，末日仅估值 |
 
 每关附 `teachingBrief`（1～2 句中文）+ `openStateHint`，经 `GET /puzzles` 下发并显示在关卡列表。初始持仓均为残局刻意设定。
 
@@ -62,7 +62,8 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 
 - 模拟盘 hub「残局挑战」**入口卡**（`index.html` + `js/puzzle-chapter.js` + `css/puzzle-chapter.css`）；flag 关闭则隐藏
 - **关卡列表在独立全屏 `#puzzleScreen`**（返回模拟盘 hub），**不**在 hub 内联展开；章节进度条用 `GET /puzzles` 的 levels/stars
-- 关卡行展示教学短文案 + 开局状态提示（满仓浮亏/浮盈/T+1/空仓等）
+- 关卡行展示教学短文案 + 开局状态提示（满仓浮亏/浮盈/T+1/空仓等）+ 可读二星/三星条件
+- 局内 HUD（`#puzzlePlayTip`）提醒开局状态与星级目标
 - Hub 左侧猫插画：左栏 `minmax(200px,340px)` + `.frame` 定宽 `min(100%,340px)` + `aspect-ratio: 3/4`（避免 absolute 图把左轨塌成 0）
 - **开局后进入完整 `#gameScreen` 模拟盘**（与经典云局同一套 K 线 / 买卖观望 / 结算按钮）
   - `POST /puzzles/:levelKey/entries` 成功后调用 `startGame({ cloud })`（`window.__puzzleStartGame`）

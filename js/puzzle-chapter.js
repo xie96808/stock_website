@@ -9,6 +9,7 @@ import {
   deactivateScreen,
   setHeaderChrome,
 } from './screen-router.js';
+import { formatLevelGoalLines } from './puzzle-goals-copy.js';
 
 const ENTRY_TIMEOUT_MS = 20000;
 
@@ -249,6 +250,12 @@ function renderLevelList(body, data) {
       const hint = lv.openStateHint
         ? `<div class="puzzle-level-hint">${escapeHtml(lv.openStateHint)}</div>`
         : '';
+      const goalLines = formatLevelGoalLines(lv.goals);
+      const goalsHtml = goalLines.length
+        ? `<div class="puzzle-level-goals">${goalLines
+            .map((g) => `<div class="puzzle-level-goal">${escapeHtml(g)}</div>`)
+            .join('')}</div>`
+        : '';
       return `<button type="button" class="puzzle-level-row" data-level="${escapeHtml(lv.levelKey)}">
         <span class="puzzle-level-idx">${String(lv.levelIndex).padStart(2, '0')}</span>
         <span class="puzzle-level-copy">
@@ -256,6 +263,7 @@ function renderLevelList(body, data) {
           <small>${escapeHtml(lv.theme)} · ${lv.gameDays} 日 · ${granted}</small>
           ${teaching}
           ${hint}
+          ${goalsHtml}
         </span>
         <span class="puzzle-level-stars" aria-label="${best}星">${starsText(best)}</span>
       </button>`;

@@ -254,6 +254,31 @@
   color: var(--accent, #7dd3fc);
   font-weight: 500;
 }
+.puzzle-level-goals {
+  margin-top: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+.puzzle-level-goal {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  color: var(--terra, #c45c26);
+  font-weight: 500;
+}
+.puzzle-play-tip {
+  margin: 0.35rem 0 0;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-soft, #5a5248);
+  background: color-mix(in srgb, var(--terra, #c45c26) 10%, transparent);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--terra, #c45c26) 28%, transparent);
+}
+.puzzle-play-tip[hidden] {
+  display: none !important;
+}
 
 /* F02 settle celebration modal (reuses jiu-coin paper shell) */
 .puzzle-settle-dialog {

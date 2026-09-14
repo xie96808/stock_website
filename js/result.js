@@ -92,9 +92,9 @@ export function endGame() {
             } else if (reward?.grantedThisTime) {
                 verdictElEarly.textContent = `首通奖励 +${reward.amount} 韭币`;
             } else if (reward?.alreadyClaimed) {
-                verdictElEarly.textContent = '本关首通奖励已领取';
+                verdictElEarly.textContent = '本关首通韭币已领过';
             } else if (stars != null && stars < 2) {
-                verdictElEarly.textContent = '未达二星，无首通奖励';
+                verdictElEarly.textContent = '未达二星：首通韭币需 ≥2★';
             } else {
                 verdictElEarly.textContent = '短窗残局 · 不计入经典榜';
             }
@@ -203,9 +203,9 @@ export function endGame() {
                         if (reward?.grantedThisTime) {
                             verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
                         } else if (reward?.alreadyClaimed) {
-                            verdictEl.textContent = '本关首通奖励已领取';
+                            verdictEl.textContent = '本关首通韭币已领过';
                         } else if (stars != null && stars < 2) {
-                            verdictEl.textContent = '未达二星，无首通奖励';
+                            verdictEl.textContent = '未达二星：首通韭币需 ≥2★';
                         } else {
                             verdictEl.textContent = '短窗残局 · 不计入经典榜';
                         }

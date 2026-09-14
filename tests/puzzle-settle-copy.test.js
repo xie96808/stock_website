@@ -37,8 +37,8 @@ test('goal summaries from goals DTO', () => {
     twoStar: { beatBuyHoldPp: 3 },
     threeStar: { maxMddPct: 30, maxOrders: 1 },
   };
-  assert.equal(formatTwoStarSummary(goals), '二星：相对买入持有至少 +3pp');
-  assert.equal(formatThreeStarSummary(goals), '三星条件：回撤≤30% · 下单≤1次');
+  assert.equal(formatTwoStarSummary(goals), '二星：收益比买持好 ≥3 个百分点');
+  assert.equal(formatThreeStarSummary(goals), '三星：回撤≤30% 且成交≤1笔');
   assert.equal(formatThreeStarSummary(null), null);
 });
 
@@ -86,8 +86,8 @@ test('formatPuzzleSettleModal ok 3★ first clear', () => {
   assert.equal(c.rewardAmount, 20);
   assert.match(c.headline, /三星/);
   assert.ok(c.goalLines.some((l) => l.includes('✓') && l.includes('1★')));
-  assert.ok(c.goalLines.some((l) => l.includes('✓') && l.includes('2★')));
-  assert.ok(c.goalLines.some((l) => l.includes('三星条件')));
+  assert.ok(c.goalLines.some((l) => l.includes('✓') && l.includes('二星')));
+  assert.ok(c.goalLines.some((l) => l.includes('✓') && l.includes('三星')));
   assert.equal(c.edgeLine, '相对买入持有 +8.20pp');
 });
 
@@ -102,7 +102,7 @@ test('formatPuzzleSettleModal ok already claimed', () => {
     },
   });
   assert.equal(c.rewardGranted, false);
-  assert.match(c.rewardLine, /已领取/);
+  assert.match(c.rewardLine, /已领/);
 });
 
 test('formatPuzzleSettleModal ok 1★ no reward', () => {
