@@ -2,7 +2,7 @@
 
 ## 状态日期 / Status
 
-- **日期**：2026-09-14（C2 complete：game use-case / view）
+- **日期**：2026-09-14（C3 complete：theme 去偷渡）
 - **基线**：约 `0a84741`；`main` 在合并 [#66](https://github.com/xie96808/stock_website/pull/66) 之后（merge `c0dc52e`）
 - **服务器**：昵称 **29**（`121.199.33.29`），**不是** 39
 - **测试账号**：`aaaa` / `1111`
@@ -71,7 +71,7 @@
 
 1. 抽出 auth HTTP — **已实现**：见 `docs/c1-auth-http.md` + `js/auth-http.js`
 2. game / game-sync / result 的 use-case / view 分层 — **已完成**：见 `docs/c2-game-usecase-view.md` + `js/game-play-usecase.js`（seed / action / resume / settle / rewind / create·abandon·persist hooks）；`game.js` / `result.js` 为 view；`game-sync.js` HTTP + injectable save-status
-3. theme 去偷渡（de-smuggle）
+3. theme 去偷渡（de-smuggle）— **已完成**：见 `docs/c3-theme-desmuggle.md` + `js/theme.js`（`getTheme` / `onThemeChange` / `applyChartTheme(theme)`）；game/result/quiz/hindsight 订阅，不再 DOM 偷渡
 4. 随后再纯化 hindsight / quiz
 
 ---
@@ -104,4 +104,5 @@
 - **R5 实现**（已合 main [#108](https://github.com/xie96808/stock_website/pull/108)）：`docs/r5-game-window-dto.md` + create/active/state `window` + classic cloud seed without full-pack gate。
 - **R6 实现**（已合 main [#109](https://github.com/xie96808/stock_website/pull/109)）：`docs/r6-nonblocking-echarts.md` + `js/echarts-loader.js`；hub/start 不阻塞于 ECharts。
 - **C1 实现**（已合 main [#110](https://github.com/xie96808/stock_website/pull/110)）：`docs/c1-auth-http.md` + `js/auth-http.js`。
-- **C2 实现**（本分支）：`docs/c2-game-usecase-view.md` + `js/game-play-usecase.js` 全量；Wave C §2 **done**。
+- **C2 实现**（已合 main [#111](https://github.com/xie96808/stock_website/pull/111) / [#112](https://github.com/xie96808/stock_website/pull/112)）：`docs/c2-game-usecase-view.md` + `js/game-play-usecase.js`；Wave C §2 **done**。
+- **C3 实现**（本分支）：`docs/c3-theme-desmuggle.md` + `js/theme.js` owner；Wave C §3 **done**。

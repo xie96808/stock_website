@@ -1,6 +1,6 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
 import { gameState } from './state.js';
-import { calculateMA, applyChartTheme } from './utils.js';
+import { calculateMA } from './utils.js';
 import { ensureStocksLoaded } from './pack-store.js';
 import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
 import {
@@ -9,10 +9,83 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+import { getTheme, onThemeChange, THEME_DARK } from './theme.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
 let filteredKline  = [];
+
+/** Hindsight line-chart palette derived from explicit theme (not DOM scrape). */
+function hindsightPalette(theme = getTheme()) {
+    const isDark = theme === THEME_DARK;
+    return {
+        axisClr:  isDark ? 'rgba(180,160,120,0.18)' : 'rgba(0,0,0,0.1)',
+        lblClr:   isDark ? '#7a7068' : '#AAAAAA',
+        lineClr:  isDark ? 'rgba(200,160,80,0.75)' : 'rgba(60,60,80,0.55)',
+        fillClr:  isDark ? 'rgba(200,160,80,0.06)' : 'rgba(60,60,80,0.04)',
+        ttBg:     isDark ? 'rgba(20,18,14,0.96)' : 'rgba(255,255,255,0.97)',
+        ttTxt:    isDark ? '#D4CFC8' : '#1a1a1a',
+        ttBorder: isDark ? 'rgba(160,120,40,0.3)' : '#DCDCDC',
+        labelBg:  isDark ? 'rgba(20,18,14,0.88)' : 'rgba(255,255,255,0.94)',
+    };
+}
+
+function applyHindsightChartTheme(theme = getTheme()) {
+    if (!hindsightChart || hindsightChart.isDisposed()) return;
+    const p = hindsightPalette(theme);
+    hindsightChart.setOption({
+        tooltip: {
+            axisPointer: { lineStyle: { color: p.axisClr } },
+            backgroundColor: p.ttBg,
+            borderColor: p.ttBorder,
+            textStyle: { color: p.ttTxt },
+        },
+        xAxis: {
+            axisLine: { lineStyle: { color: p.axisClr } },
+            axisLabel: { color: p.lblClr },
+        },
+        yAxis: {
+            splitLine: { lineStyle: { color: p.axisClr } },
+            axisLabel: { color: p.lblClr },
+        },
+        series: [
+            {
+                lineStyle: { color: p.lineClr },
+                areaStyle: { color: p.fillClr },
+                markPoint: {
+                    data: [
+                        { label: { backgroundColor: p.labelBg } },
+                        { label: { backgroundColor: p.labelBg } },
+                    ],
+                },
+            },
+            {
+                label: { backgroundColor: p.labelBg },
+            },
+        ],
+    });
+}
+
+onThemeChange((theme) => {
+    applyHindsightChartTheme(theme);
+});
+
+/** Hub teaser mock dates (was previously smuggled into theme.js). */
+function patchHindsightTeaserDates() {
+    if (typeof document === 'undefined') return;
+    document.querySelectorAll('.oracle-input-mock span').forEach((el) => {
+        if (el.textContent && el.textContent.includes('2020-01-01')) {
+            el.textContent = '2024-01-01 → 2024-06-01';
+        }
+    });
+}
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', patchHindsightTeaserDates);
+    } else {
+        patchHindsightTeaserDates();
+    }
+}
 
 export function showHindsight(opts = {}) {
     const { updateHash = false } = opts;
@@ -420,17 +493,11 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
     clearChartLoading(chartDom);
     if (hindsightChart && !hindsightChart.isDisposed()) hindsightChart.dispose();
     hindsightChart = echartsApi.init(chartDom);
-    const isDark   = document.documentElement.getAttribute('data-theme') === 'dark';
-    const axisClr  = isDark ? 'rgba(180,160,120,0.18)' : 'rgba(0,0,0,0.1)';
-    const lblClr   = isDark ? '#7a7068' : '#AAAAAA';
-    const lineClr  = isDark ? 'rgba(200,160,80,0.75)' : 'rgba(60,60,80,0.55)';
-    const fillClr  = isDark ? 'rgba(200,160,80,0.06)' : 'rgba(60,60,80,0.04)';
-    const ttBg     = isDark ? 'rgba(20,18,14,0.96)' : 'rgba(255,255,255,0.97)';
-    const ttTxt    = isDark ? '#D4CFC8' : '#1a1a1a';
-    const ttBorder = isDark ? 'rgba(160,120,40,0.3)' : '#DCDCDC';
+    const {
+        axisClr, lblClr, lineClr, fillClr, ttBg, ttTxt, ttBorder, labelBg,
+    } = hindsightPalette(getTheme());
     const dates  = kline.map(d => d.date);
     const closes = kline.map(d => d.close);
-    const labelBg = isDark ? 'rgba(20,18,14,0.88)' : 'rgba(255,255,255,0.94)';
     const buySellMarks = [
         {
             name:       '买入',

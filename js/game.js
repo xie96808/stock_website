@@ -8,7 +8,7 @@ import {
     selectGameWindow,
     selectTodayBar,
 } from './game-session.js';
-import { applyChartTheme } from './utils.js';
+import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { buildKlineOption } from './kline-option.js';
 import { endGame } from './result.js';
 import {
@@ -40,6 +40,12 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+
+// Theme owner notifies; game view rethemes its kline chart only.
+onThemeChange((theme) => {
+    applyChartTheme(chartRefs.klineChart, theme);
+});
+
 
 const MOODS = [
     '市场在等待你的判断…',
@@ -267,7 +273,7 @@ export function updateChart() {
     });
 
     chartRefs.klineChart.setOption(option);
-    applyChartTheme(chartRefs.klineChart);
+    applyChartTheme(chartRefs.klineChart, getTheme());
 }
 
 export function getGameBars() {
