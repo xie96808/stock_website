@@ -157,3 +157,161 @@ test('fingerprintRelease export: dep change busts parent filename', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('fingerprint: cyclic leftover still rewrites static imports (game→result)', () => {
+  // Mirrors prod bug: parent processed before child in Kahn leftovers left
+  // `from './result.js'` bare → 404 → type=module boot dead.
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-cycle-'));
+  try {
+    mkdirSync(join(dir, 'js'));
+    // Soft cycle via dynamic import() (excluded from topo) + static parent→child.
+    writeFileSync(
+      join(dir, 'js', 'result.js'),
+      "import { A } from './auth.js';\nexport function endGame() { return A; }\n"
+    );
+    writeFileSync(
+      join(dir, 'js', 'jiu-coin.js'),
+      "import { A } from './auth.js';\nexport const coin = A;\n"
+    );
+    writeFileSync(
+      join(dir, 'js', 'auth.js'),
+      "export const A = 1;\nexport function invalidate() { return import('./leaderboard.js'); }\n"
+    );
+    writeFileSync(
+      join(dir, 'js', 'leaderboard.js'),
+      "import { A } from './auth.js';\nexport function board() { return A; }\n"
+    );
+    writeFileSync(
+      join(dir, 'js', 'game.js'),
+      "import { endGame } from './result.js';\nimport { coin } from './jiu-coin.js';\nexport const g = endGame() + coin;\n"
+    );
+    writeFileSync(
+      join(dir, 'index.html'),
+      `<!doctype html><script type="module">import { g } from './js/game.js';</script>\n`
+    );
+
+    fingerprintRelease(dir, { fingerprintImages: false });
+
+    const jsNames = readdirSync(join(dir, 'js'));
+    assert.ok(!jsNames.includes('game.js'), 'game.js must be renamed');
+    assert.ok(!jsNames.includes('result.js'));
+    assert.ok(!jsNames.includes('jiu-coin.js'));
+    const gameHashed = jsNames.find((n) => n.startsWith('game.') && n.endsWith('.js'));
+    const resultHashed = jsNames.find((n) => n.startsWith('result.') && n.endsWith('.js'));
+    const jiuHashed = jsNames.find((n) => n.startsWith('jiu-coin.') && n.endsWith('.js'));
+    assert.ok(gameHashed && resultHashed && jiuHashed);
+    const gameText = readFileSync(join(dir, 'js', gameHashed), 'utf8');
+    assert.match(gameText, new RegExp(`from '\\./${resultHashed.replace(/\./g, '\\.')}'`));
+    assert.match(gameText, new RegExp(`from '\\./${jiuHashed.replace(/\./g, '\\.')}'`));
+    assert.ok(!gameText.includes("from './result.js'"), 'must not leave bare result.js');
+    assert.ok(!gameText.includes("from './jiu-coin.js'"), 'must not leave bare jiu-coin.js');
+
+    const authHashed = jsNames.find((n) => n.startsWith('auth.') && n.endsWith('.js'));
+    const lbHashed = jsNames.find((n) => n.startsWith('leaderboard.') && n.endsWith('.js'));
+    const authText = readFileSync(join(dir, 'js', authHashed), 'utf8');
+    assert.match(
+      authText,
+      new RegExp(`import\\('\\./${lbHashed.replace(/\./g, '\\.')}'\\)`)
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fingerprint: real package tree game.js has no bare ./result.js', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-real-'));
+  try {
+    // Minimal copy of the modules that formed the prod boot graph.
+    mkdirSync(join(dir, 'js'));
+    mkdirSync(join(dir, 'css'));
+    mkdirSync(join(dir, 'shared'));
+    const root = fileURLToPath(new URL('..', import.meta.url));
+    for (const rel of [
+      'js/game.js',
+      'js/result.js',
+      'js/jiu-coin.js',
+      'js/auth.js',
+      'js/auth-state.js',
+      'js/state.js',
+      'js/game-session.js',
+      'js/game-sync.js',
+      'js/utils.js',
+      'js/kline-option.js',
+      'js/screen-router.js',
+      'js/puzzle-goals-copy.js',
+      'js/cloud-draft.js',
+      'js/leaderboard.js',
+      'js/time.js',
+      'js/analysis.js',
+      'js/analysis-pure.js',
+      'js/puzzle-settle-modal.js',
+      'js/puzzle-debrief-copy.js',
+      'js/puzzle-settle-copy.js',
+      'js/result-share.js',
+      'js/daily-challenge.js',
+      'js/home-ia.js',
+      'js/puzzle-chapter.js',
+      'js/pack-store.js',
+      'js/pack-url.js',
+      'shared/engine.js',
+      'shared/puzzleEngine.js',
+      'shared/rules.js',
+      'css/style.css',
+      'css/base.css',
+      'css/start.css',
+      'css/game.css',
+      'css/result.css',
+      'css/academy.css',
+      'css/hindsight.css',
+      'css/fill-mode.css',
+      'css/puzzle-chapter.css',
+    ]) {
+      const src = join(root, rel);
+      if (!existsSync(src)) continue;
+      writeFileSync(join(dir, rel), readFileSync(src));
+    }
+    writeFileSync(
+      join(dir, 'index.html'),
+      `<!doctype html>
+<link rel="stylesheet" href="css/style.css">
+<script type="module">
+  import { startGame } from './js/game.js';
+  import { initAuth } from './js/auth.js';
+</script>
+`
+    );
+    fingerprintRelease(dir, { fingerprintImages: false });
+    const jsNames = readdirSync(join(dir, 'js'));
+    const gameHashed = jsNames.find((n) => /^game\.[a-f0-9]+\.js$/.test(n));
+    assert.ok(gameHashed, 'fingerprinted game.js');
+    const gameText = readFileSync(join(dir, 'js', gameHashed), 'utf8');
+    assert.ok(!/from\s+['"]\.\/result\.js['"]/.test(gameText), 'no bare ./result.js');
+    assert.ok(!/from\s+['"]\.\/jiu-coin\.js['"]/.test(gameText), 'no bare ./jiu-coin.js');
+    assert.match(gameText, /from\s+['"]\.\/result\.[a-f0-9]+\.js['"]/);
+    assert.match(gameText, /from\s+['"]\.\/jiu-coin\.[a-f0-9]+\.js['"]/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fingerprint: static import cycle fails closed', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-static-cycle-'));
+  try {
+    mkdirSync(join(dir, 'js'));
+    writeFileSync(
+      join(dir, 'js', 'a.js'),
+      "import { B } from './b.js';\nexport const A = B;\n"
+    );
+    writeFileSync(
+      join(dir, 'js', 'b.js'),
+      "import { A } from './a.js';\nexport const B = A;\n"
+    );
+    writeFileSync(join(dir, 'index.html'), '<html></html>');
+    assert.throws(
+      () => fingerprintRelease(dir, { fingerprintImages: false }),
+      /static import cycle/
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

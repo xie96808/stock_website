@@ -4,10 +4,13 @@
 //
 // Algorithm (dependency-aware so ESM graphs stay cache-correct):
 //   1. Collect assets under the release dir
-//   2. Parse static local deps (from / import() / new URL / @import / HTML href|src)
-//   3. Topo-process leaves -> roots: rewrite refs to already-fingerprinted deps,
-//      hash rewritten bytes, rename file to name.<8-12hex>.ext
-//   4. Rewrite HTML entry points (index.html not renamed; stays bustable)
+//   2. Topo-sort on STATIC deps only (from / new URL / @import) — dynamic
+//      import() is excluded so soft cycles like auth↔leaderboard do not scramble
+//      order (that bug left bare ./result.js in game.js on prod Wave A).
+//   3. Rewrite static refs → hash → rename, leaves before roots
+//   4. Final in-place rewrite of dynamic import() (no re-hash; avoids oscillation)
+//   5. Fail closed if any bare unhashed local .js import remains
+//   6. Rewrite HTML entry points (index.html not renamed; stays bustable)
 //
 // Skips remote/data/blob URLs. Does not double-hash already-fingerprinted names.
 // Local dev without packaging keeps unhashed sources.
@@ -118,6 +121,39 @@ function collectSpecsFromJs(text) {
   return specs;
 }
 
+/** Static ESM edges only — dynamic import() must not create topo cycles. */
+function collectStaticSpecsFromJs(text) {
+  const specs = [];
+  const push = (url) => {
+    if (isLocalSpec(url, ASSET_EXT_RE)) specs.push(url);
+  };
+  text.replace(/\bfrom\s*(['"])([^'"]+)\1/g, (_, __, url) => {
+    push(url);
+    return _;
+  });
+  text.replace(
+    /new\s+URL\s*\(\s*(['"])([^'"]+)\1\s*,\s*import\.meta\.url\s*\)/g,
+    (_, __, url) => {
+      push(url);
+      return _;
+    }
+  );
+  return specs;
+}
+
+function listBareLocalJsImports(root, fromFile, text) {
+  const bare = [];
+  for (const spec of collectSpecsFromJs(text)) {
+    if (!isLocalSpec(spec, /\.(js|mjs)$/i)) continue;
+    const name = basename(stripQueryHash(spec).pathPart);
+    if (HASHED_NAME_RE.test(name)) continue;
+    const resolved = resolveLocal(root, fromFile, spec);
+    if (!resolved) continue;
+    bare.push({ spec, abs: resolved.abs });
+  }
+  return bare;
+}
+
 function collectSpecsFromCss(text) {
   const specs = [];
   const push = (url) => {
@@ -178,13 +214,15 @@ function rewriteSpec(root, fromFile, spec, mapping) {
   return newRel + resolved.hash;
 }
 
-function rewriteJs(root, fromFile, text, mapping) {
+function rewriteJs(root, fromFile, text, mapping, { includeDynamic = true } = {}) {
   let out = text.replace(/\bfrom\s*(['"])([^'"]+)\1/g, (full, q, url) => {
     return `from ${q}${rewriteSpec(root, fromFile, url, mapping)}${q}`;
   });
-  out = out.replace(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g, (full, q, url) => {
-    return `import(${q}${rewriteSpec(root, fromFile, url, mapping)}${q})`;
-  });
+  if (includeDynamic) {
+    out = out.replace(/\bimport\s*\(\s*(['"])([^'"]+)\1\s*\)/g, (full, q, url) => {
+      return `import(${q}${rewriteSpec(root, fromFile, url, mapping)}${q})`;
+    });
+  }
   out = out.replace(
     /new\s+URL\s*\(\s*(['"])([^'"]+)\1\s*,\s*import\.meta\.url\s*\)/g,
     (full, q, url) =>
@@ -265,7 +303,7 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
   for (const [file, text] of textAssets) {
     const ext = extname(file).toLowerCase();
     const specs =
-      ext === ".css" ? collectSpecsFromCss(text) : collectSpecsFromJs(text);
+      ext === ".css" ? collectSpecsFromCss(text) : collectStaticSpecsFromJs(text);
     const resolved = [];
     for (const spec of specs) {
       const r = resolveLocal(rootResolved, file, spec);
@@ -298,8 +336,20 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
       if (indeg.get(parent) === 0) queue.push(parent);
     }
   }
+  const leftovers = [];
   for (const f of textAssets.keys()) {
-    if (!order.includes(f)) order.push(f);
+    if (!order.includes(f)) leftovers.push(f);
+  }
+  // Static cycles are unsupported for content-hash filenames (hash would
+  // oscillate). Fail closed rather than ship bare imports.
+  if (leftovers.length) {
+    throw new Error(
+      "fingerprint-assets: static import cycle (content-hash cannot converge):\n  " +
+        leftovers
+          .slice(0, 20)
+          .map((f) => relative(rootResolved, f))
+          .join("\n  ")
+    );
   }
 
   const mapping = new Map();
@@ -327,7 +377,7 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     text =
       ext === ".css"
         ? rewriteCss(rootResolved, file, text, mapping)
-        : rewriteJs(rootResolved, file, text, mapping);
+        : rewriteJs(rootResolved, file, text, mapping, { includeDynamic: false });
 
     if (isAlreadyHashedName(file)) {
       if (text !== textAssets.get(file)) writeFileSync(file, text);
@@ -348,6 +398,37 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     mapping.set(file, newAbs);
     textAssets.delete(file);
     textAssets.set(newAbs, text);
+  }
+
+  // Final pass: rewrite dynamic import() in place (no re-hash).
+  for (const curAbs of [...new Set(mapping.values())]) {
+    if (!existsSync(curAbs)) continue;
+    const ext = extname(curAbs).toLowerCase();
+    if (ext !== ".js" && ext !== ".mjs") continue;
+    const prev = readFileSync(curAbs, "utf8");
+    const next = rewriteJs(rootResolved, curAbs, prev, mapping, {
+      includeDynamic: true,
+    });
+    if (next !== prev) writeFileSync(curAbs, next);
+  }
+
+  const bareProblems = [];
+  for (const curAbs of new Set(mapping.values())) {
+    if (!existsSync(curAbs)) continue;
+    const ext = extname(curAbs).toLowerCase();
+    if (ext !== ".js" && ext !== ".mjs") continue;
+    const body = readFileSync(curAbs, "utf8");
+    for (const { spec, abs } of listBareLocalJsImports(rootResolved, curAbs, body)) {
+      if (mapping.has(abs) || existsSync(abs)) {
+        bareProblems.push(`${relative(rootResolved, curAbs)} -> ${spec}`);
+      }
+    }
+  }
+  if (bareProblems.length) {
+    throw new Error(
+      "fingerprint-assets: bare unhashed JS imports remain:\n  " +
+        bareProblems.slice(0, 20).join("\n  ")
+    );
   }
 
   let rewrittenHtml = 0;
