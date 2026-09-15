@@ -20,6 +20,9 @@ import {
   evaluateRewindEligibility,
   buildRewindPreview,
   applyRewindServerResult,
+  applyServerDecisionState,
+  isRevisionConflictError,
+  syncEventV1Decision,
   shouldPersistCloudSettle,
   persistSettledCloudGame,
   createCloudSession,
@@ -76,6 +79,10 @@ test('validatePlayAction rejects illegal buy/sell and allows hold', () => {
 
   patchSession({ rewindBusy: true, position: 'empty' });
   assert.equal(validatePlayAction(getSession(), 'hold').ok, false);
+
+  patchSession({ rewindBusy: false, decisionBusy: true });
+  assert.equal(validatePlayAction(getSession(), 'hold').ok, false);
+  assert.equal(validatePlayAction(getSession(), 'hold').errorZh, '忙碌中');
 });
 
 test('puzzle T+1 sell guard before firstSellableDay', () => {
@@ -405,4 +412,167 @@ test('seedPuzzleSession stores title and theme for HUD', () => {
 
 test('seedLocalPractice throws when catalog empty', () => {
   assert.throws(() => seedLocalPractice([]), /股票资源未就绪/);
+});
+
+
+test('applyServerDecisionState accepts empty actions and updates revision', () => {
+  const bars = seedClassicWindow({ actions: ['buy', 'hold'] });
+  patchSession({ revision: 2, protocolVersion: 'event-v1', fillMode: 'next_open' });
+  const r = applyServerDecisionState(
+    { actions: [], revision: 5, protocolVersion: 'event-v1', undoCount: 1, assistClass: 'undo' },
+    { bars }
+  );
+  assert.equal(r.ok, true);
+  assert.deepEqual(gameState.actions, []);
+  assert.equal(gameState.currentDay, 1);
+  assert.equal(gameState.revision, 5);
+  assert.equal(gameState.undoCount, 1);
+  assert.equal(gameState.position, 'empty');
+});
+
+test('applyServerDecisionState applies mid-game actions + revision', () => {
+  const bars = seedClassicWindow();
+  patchSession({ revision: 0, protocolVersion: 'event-v1', fillMode: 'next_open' });
+  const r = applyServerDecisionState(
+    {
+      actions: ['buy', 'hold', 'sell'],
+      revision: 3,
+      protocolVersion: 'event-v1',
+      undoCount: 0,
+      assistClass: 'clean',
+    },
+    { bars }
+  );
+  assert.equal(r.ok, true);
+  assert.deepEqual(gameState.actions, ['buy', 'hold', 'sell']);
+  assert.equal(gameState.currentDay, 4);
+  assert.equal(gameState.revision, 3);
+  assert.equal(gameState.position, 'empty');
+  assert.equal(gameState.tradeHistory.length, 2);
+});
+
+test('isRevisionConflictError detects API conflict', () => {
+  assert.equal(isRevisionConflictError({ code: 'REVISION_CONFLICT', status: 409 }), true);
+  assert.equal(isRevisionConflictError({ code: 'OTHER', status: 400 }), false);
+  assert.equal(isRevisionConflictError(null), false);
+});
+
+test('syncEventV1Decision recovers once on REVISION_CONFLICT', async () => {
+  const bars = seedClassicWindow({ actions: ['hold'] });
+  patchSession({
+    cloudMode: true,
+    cloudGameId: 'g-rev',
+    protocolVersion: 'event-v1',
+    revision: 1,
+    fillMode: 'next_open',
+    actions: ['hold'],
+    currentDay: 2,
+  });
+
+  let appendCalls = 0;
+  let fetchCalls = 0;
+  const conflict = new Error('revision 不匹配，请重新拉取状态');
+  conflict.code = 'REVISION_CONFLICT';
+  conflict.status = 409;
+
+  const result = await syncEventV1Decision('hold', {
+    expectedRevision: 1,
+    bars,
+    appendDecision: async () => {
+      appendCalls += 1;
+      throw conflict;
+    },
+    fetchState: async (id) => {
+      fetchCalls += 1;
+      assert.equal(id, 'g-rev');
+      return {
+        actions: ['hold', 'hold', 'buy'],
+        revision: 3,
+        protocolVersion: 'event-v1',
+        undoCount: 0,
+        assistClass: 'clean',
+      };
+    },
+  });
+
+  assert.equal(appendCalls, 1);
+  assert.equal(fetchCalls, 1);
+  assert.equal(result.ok, false);
+  assert.equal(result.recovered, true);
+  assert.equal(gameState.revision, 3);
+  assert.deepEqual(gameState.actions, ['hold', 'hold', 'buy']);
+  assert.equal(gameState.currentDay, 4);
+});
+
+test('syncEventV1Decision success path applies state without fetch', async () => {
+  const bars = seedClassicWindow();
+  patchSession({
+    cloudMode: true,
+    cloudGameId: 'g-ok',
+    protocolVersion: 'event-v1',
+    revision: 0,
+    fillMode: 'next_open',
+  });
+  let fetchCalls = 0;
+  const result = await syncEventV1Decision('buy', {
+    expectedRevision: 0,
+    bars,
+    appendDecision: async (action, rev) => {
+      assert.equal(action, 'buy');
+      assert.equal(rev, 0);
+      return {
+        actions: ['buy'],
+        revision: 1,
+        protocolVersion: 'event-v1',
+        undoCount: 0,
+        assistClass: 'clean',
+      };
+    },
+    fetchState: async () => {
+      fetchCalls += 1;
+      throw new Error('should not fetch');
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(fetchCalls, 0);
+  assert.equal(gameState.revision, 1);
+  assert.deepEqual(gameState.actions, ['buy']);
+  assert.equal(gameState.currentDay, 2);
+});
+
+test('syncEventV1Decision recovers when append ok but local apply fails', async () => {
+  const bars = seedClassicWindow();
+  patchSession({
+    cloudMode: true,
+    cloudGameId: 'g-apply-fail',
+    protocolVersion: 'event-v1',
+    revision: 0,
+    fillMode: 'next_open',
+  });
+  let fetchCalls = 0;
+  const result = await syncEventV1Decision('buy', {
+    expectedRevision: 0,
+    bars,
+    appendDecision: async () => ({
+      // invalid action enum → applyServerDecisionState fails
+      actions: ['nope'],
+      revision: 1,
+      protocolVersion: 'event-v1',
+    }),
+    fetchState: async () => {
+      fetchCalls += 1;
+      return {
+        actions: ['buy'],
+        revision: 1,
+        protocolVersion: 'event-v1',
+        undoCount: 0,
+        assistClass: 'clean',
+      };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.recovered, true);
+  assert.equal(fetchCalls, 1);
+  assert.equal(gameState.revision, 1);
+  assert.deepEqual(gameState.actions, ['buy']);
 });

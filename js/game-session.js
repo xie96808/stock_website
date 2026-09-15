@@ -45,6 +45,7 @@ export const SESSION_KEYS = Object.freeze([
   'saveError',
   'practiceOnly',
   'rewindBusy',
+  'decisionBusy',
   'assistClass',
   'undoCount',
   'revision',
@@ -135,6 +136,7 @@ export function buildFreshSessionFields({
     undoCount: 0,
     assistClass: null,
     rewindBusy: false,
+    decisionBusy: false,
   };
 }
 

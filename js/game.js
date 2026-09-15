@@ -15,6 +15,7 @@ import {
     persistCurrentCloudDraft,
     appendCloudDecision,
     rewindCloudGame,
+    fetchGameState,
     fetchServerConfigFeatures,
 } from './game-sync.js';
 import {
@@ -29,6 +30,7 @@ import {
     evaluateRewindEligibility,
     buildRewindPreview,
     applyRewindServerResult,
+    syncEventV1Decision,
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
@@ -122,9 +124,23 @@ export async function startGame(options = {}) {
         return;
     }
 
-    if (resumeActions && resumeActions.length) {
+    const seeded = getSession();
+    if (
+        seeded.cloudMode &&
+        seeded.protocolVersion === 'event-v1' &&
+        seeded.cloudGameId &&
+        !isPuzzleSession(seeded)
+    ) {
+        // Authoritative resume: never trust draft alone for revision/day (avoids stuck mismatch).
+        const ok = await resyncCloudGameFromServer();
+        if (!ok && resumeActions && resumeActions.length) {
+            applyCloudResume(resumeActions);
+        } else if (!ok) {
+            persistCurrentCloudDraft();
+        }
+    } else if (resumeActions && resumeActions.length) {
         applyCloudResume(resumeActions);
-    } else if (getSession().cloudMode) {
+    } else if (seeded.cloudMode) {
         persistCurrentCloudDraft();
     }
 }
@@ -156,6 +172,28 @@ export function applyCloudResume(actions) {
     renderWaveAnalysis();
     persistCurrentCloudDraft();
     return true;
+}
+
+/** Pull GET /games/:id/state and apply; one recovery path for revision mismatch / failed local apply. */
+export async function resyncCloudGameFromServer() {
+    const session = getSession();
+    const gameId = session.cloudGameId;
+    if (!gameId) return false;
+    try {
+        const state = await fetchGameState(gameId);
+        const bars = getGameBars();
+        const result = applyServerDecisionState(state, { bars });
+        if (!result.ok) return false;
+        persistCurrentCloudDraft();
+        updateUI();
+        updateChart();
+        resetOHLCToToday();
+        renderWaveAnalysis();
+        return true;
+    } catch (err) {
+        console.warn('cloud state resync failed', err);
+        return false;
+    }
 }
 
 export async function initChart() {
@@ -294,17 +332,6 @@ function applyLocalAction(action) {
     return true;
 }
 
-function applyServerStateActions(state) {
-    const bars = getGameBars();
-    const result = applyServerDecisionState(state, { bars });
-    if (!result.ok) return false;
-    persistCurrentCloudDraft();
-    updateUI();
-    updateChart();
-    renderWaveAnalysis();
-    return true;
-}
-
 export async function handleAction(action) {
     const session = getSession();
     const guard = validatePlayAction(session, action);
@@ -326,13 +353,39 @@ export async function handleAction(action) {
     if (bars.length < sessionGameDays(session)) return;
 
     if (session.cloudMode && session.protocolVersion === 'event-v1' && !isPuzzleSession(session)) {
+        patchSession({ decisionBusy: true });
+        setActionControlsLocked(true);
         try {
-            setActionControlsLocked(true);
-            const state = await appendCloudDecision(action, session.revision ?? 0);
-            applyServerStateActions(state);
+            const result = await syncEventV1Decision(action, {
+                expectedRevision: session.revision ?? 0,
+                bars,
+                appendDecision: appendCloudDecision,
+                fetchState: fetchGameState,
+            });
+            if (result.ok) {
+                persistCurrentCloudDraft();
+                updateUI();
+                updateChart();
+                renderWaveAnalysis();
+                if (result.recovered) {
+                    showToast('状态已重新同步', 'success');
+                }
+                return;
+            }
+            if (result.recovered) {
+                // Conflict: resynced day + chart once — do not spam the raw mismatch toast.
+                persistCurrentCloudDraft();
+                updateUI();
+                updateChart();
+                renderWaveAnalysis();
+                showToast('状态已重新同步，请再试', 'success');
+                return;
+            }
+            showToast(result.error?.message || '决策同步失败', 'error');
         } catch (e) {
             showToast(e.message || '决策同步失败', 'error');
         } finally {
+            patchSession({ decisionBusy: false });
             setActionControlsLocked(false);
             updateUI();
         }
@@ -455,13 +508,19 @@ export async function confirmRewind() {
         closeRewindConfirm();
         rewindIdempotencyKey = null;
     } catch (e) {
-        showToast(e.message || '反悔失败', 'error');
-        if (e.code === 'INSUFFICIENT_FUNDS' || e.status === 402) {
+        if (e.code === 'REVISION_CONFLICT') {
+            const ok = await resyncCloudGameFromServer();
+            showToast(ok ? '状态已重新同步，请再试' : (e.message || '反悔失败'), ok ? 'success' : 'error');
             rewindIdempotencyKey = null;
-        }
-        // keep key on timeout/5xx for retry same result
-        if (e.status && e.status < 500 && e.status !== 429) {
-            rewindIdempotencyKey = null;
+        } else {
+            showToast(e.message || '反悔失败', 'error');
+            if (e.code === 'INSUFFICIENT_FUNDS' || e.status === 402) {
+                rewindIdempotencyKey = null;
+            }
+            // keep key on timeout/5xx for retry same result
+            if (e.status && e.status < 500 && e.status !== 429) {
+                rewindIdempotencyKey = null;
+            }
         }
     } finally {
         patchSession({ rewindBusy: false });
@@ -692,7 +751,7 @@ export function updateUI() {
     const finishBtn = document.getElementById('finishBtn');
 
     const rewindBtn = document.getElementById('rewindBtn');
-    const busy = !!session.rewindBusy;
+    const busy = !!(session.rewindBusy || session.decisionBusy);
 
     if (settleDay) {
         if (buyBtn) { buyBtn.disabled = true; buyBtn.hidden = true; }
