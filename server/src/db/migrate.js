@@ -23,7 +23,8 @@ export function migrate(db = openDb()) {
     const sql = fs.readFileSync(path.join(migrationsDir, file), "utf8");
     // SQLite cannot ALTER CHECK; 016 rebuilds game_sessions. PRAGMA foreign_keys
     // cannot change *inside* a transaction, so drop FKs around that file only.
-    const rebuildSessions = file === "016_oneshot_modifiers.sql";
+    const rebuildSessions =
+      file === "016_oneshot_modifiers.sql" || file === "017_ghost_duel.sql";
     if (rebuildSessions) db.pragma("foreign_keys = OFF");
     const tx = db.transaction(() => {
       db.exec(sql);

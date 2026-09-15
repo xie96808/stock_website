@@ -387,6 +387,15 @@
                         <span class="survival-nav-meter__bust" title="爆仓线 −20%"></span>
                     </div>
                 </div>
+                <div class="ghost-hud-chip" id="ghostHudChip" hidden aria-hidden="true">
+                    <span class="ghost-hud-chip__label" id="ghostHudLabel">幽灵</span>
+                    <img class="ghost-hud-chip__avatar" id="ghostHudAvatar" src="images/avatars/01.png" alt="" width="32" height="32" decoding="async">
+                    <div class="ghost-hud-chip__text">
+                        <strong class="ghost-hud-chip__name" id="ghostHudName">—</strong>
+                        <span class="ghost-hud-chip__compare" id="ghostHudCompare">你 — · 幽灵 —</span>
+                        <span class="ghost-hud-chip__action" id="ghostHudAction" hidden></span>
+                    </div>
+                </div>
                 <div class="game-progress-meta">
                     <span class="game-progress-label" id="gameProgressDayLabel">
                         <span id="gameDayLabelLead">第</span>
@@ -1002,6 +1011,14 @@
           hideDailyChallengeBoard,
         } from './js/daily-challenge.js';
         import {
+          refreshGhostDuelFlag,
+          fetchGhostPreview,
+          renderGhostDuelEntryHtml,
+          wireGhostDuelEntry,
+          syncGhostHud,
+          onGhostDuelStartClick,
+        } from './js/ghost-duel.js';
+        import {
             refreshPuzzleChapterFlag,
             refreshPuzzleChapterCard,
             onPuzzleChapterCardClick,
@@ -1062,6 +1079,7 @@
         window.onDailyChallengeBoardClick = onDailyChallengeBoardClick;
         window.showDailyChallengeBoard = showDailyChallengeBoard;
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
+        window.onGhostDuelStartClick = onGhostDuelStartClick;
         window.startClassicPractice = function () {
           if (typeof window.startGame === 'function') window.startGame();
         };

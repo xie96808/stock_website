@@ -4,6 +4,7 @@ import {
   refreshDailyChallengeFlag,
   refreshDailyChallengeCard,
 } from "./daily-challenge.js";
+import { refreshGhostDuelFlag } from "./ghost-duel.js";
 import {
   refreshPuzzleChapterFlag,
   refreshPuzzleChapterCard,
@@ -130,6 +131,7 @@ export function showPlayModes() {
   refreshDailyChallengeFlag()
     .then(() => refreshDailyChallengeCard())
     .catch(() => {});
+  refreshGhostDuelFlag().catch(() => {});
   refreshOneshotModeCard().catch(() => {});
   refreshSurvivalModeCard().catch(() => {});
 }

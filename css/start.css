@@ -768,3 +768,83 @@
         padding-right: 8px;
     }
 }
+
+/* Ghost duel entry inside day-board modal */
+.ghost-duel-entry {
+    margin-top: 0.85rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--mode-ghost) 50%, var(--line));
+    border-radius: 10px;
+    background:
+      linear-gradient(
+        160deg,
+        color-mix(in srgb, var(--mode-ghost) 12%, var(--card)) 0%,
+        var(--card) 65%
+      );
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+.ghost-duel-entry--empty {
+    opacity: 0.85;
+}
+.ghost-duel-entry__who {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.ghost-duel-entry__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid color-mix(in srgb, var(--mode-ghost) 55%, var(--line));
+    flex: 0 0 auto;
+}
+.ghost-duel-entry__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+.ghost-duel-entry__ribbon {
+    align-self: flex-start;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0.08rem 0.35rem;
+    border-radius: 999px;
+    color: var(--mode-ghost-ink);
+    background: color-mix(in srgb, var(--mode-ghost) 88%, #1e1b4b);
+}
+.ghost-duel-entry__name {
+    font-size: 0.95rem;
+    color: var(--ink);
+}
+.ghost-duel-entry__sub,
+.ghost-duel-entry__empty,
+.ghost-duel-entry__label {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+}
+.ghost-duel-entry__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid color-mix(in srgb, var(--mode-ghost) 60%, var(--line));
+    background: color-mix(in srgb, var(--mode-ghost) 18%, var(--card));
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--mode-ghost) 35%, var(--line));
+}
+.ghost-duel-entry__cta:hover {
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--mode-ghost) 42%, var(--line));
+}

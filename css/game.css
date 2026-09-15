@@ -906,3 +906,135 @@
     background: #b91c1c;
     opacity: 0.85;
 }
+
+/* Ghost duel (幽灵对局) — muted indigo/slate accents */
+.game-mode-badge[data-kind="ghost"] {
+    color: var(--mode-ghost-ink);
+    background: color-mix(in srgb, var(--mode-ghost) 88%, #2a2a40);
+    border-color: color-mix(in srgb, var(--mode-ghost) 55%, var(--line));
+}
+.game-progress-shell--ghost {
+    border-color: color-mix(in srgb, var(--mode-ghost) 35%, var(--line));
+}
+.ghost-hud-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin: 0.35rem 0 0.15rem;
+    padding: 0.4rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--mode-ghost) 45%, var(--line));
+    border-radius: 10px;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--mode-ghost) 14%, var(--card)) 0%,
+        color-mix(in srgb, var(--mode-ghost) 4%, var(--card)) 70%,
+        var(--card) 100%
+      );
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--mode-ghost) 28%, var(--line));
+}
+.ghost-hud-chip[hidden] {
+    display: none !important;
+}
+.ghost-hud-chip__label {
+    flex: 0 0 auto;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    color: var(--mode-ghost-ink);
+    background: color-mix(in srgb, var(--mode-ghost) 85%, #1e1b4b);
+    border: 1px solid color-mix(in srgb, var(--mode-ghost) 50%, var(--line));
+}
+.ghost-hud-chip__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid color-mix(in srgb, var(--mode-ghost) 55%, var(--line));
+    background: var(--paper-2, #f5f0e6);
+    flex: 0 0 auto;
+}
+.ghost-hud-chip__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+}
+.ghost-hud-chip__name {
+    font-size: 0.92rem;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ghost-hud-chip__compare {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ghost-hud-chip__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.12rem;
+    padding: 0.08rem 0.45rem;
+    width: fit-content;
+    max-width: 100%;
+    font-size: 0.74rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    color: var(--mode-ghost-ink, #312e81);
+    background: color-mix(in srgb, var(--mode-ghost, #6366f1) 18%, var(--paper-2, #f5f0e6));
+    border: 1px dashed color-mix(in srgb, var(--mode-ghost, #6366f1) 50%, var(--line));
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ghost-hud-chip__action[hidden] {
+    display: none !important;
+}
+.ghost-hud-chip__action.is-flash {
+    animation: ghost-reveal-flash 0.85s ease-out;
+}
+@keyframes ghost-reveal-flash {
+    0% {
+        background: color-mix(in srgb, var(--mode-ghost, #6366f1) 42%, #fff8e7);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--mode-ghost, #6366f1) 35%, transparent);
+        transform: translateY(-1px);
+    }
+    100% {
+        background: color-mix(in srgb, var(--mode-ghost, #6366f1) 18%, var(--paper-2, #f5f0e6));
+        box-shadow: none;
+        transform: none;
+    }
+}
+.log-item.ghost {
+    border-left: 3px solid color-mix(in srgb, var(--mode-ghost, #6366f1) 65%, var(--line));
+    background: color-mix(in srgb, var(--mode-ghost, #6366f1) 8%, transparent);
+}
+.log-item.ghost .log-ghost-who {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-right: 0.35rem;
+}
+.log-item.ghost .log-ghost-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid color-mix(in srgb, var(--mode-ghost, #6366f1) 45%, var(--line));
+    vertical-align: middle;
+}
+.log-item.ghost .log-ghost-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--mode-ghost-ink, #312e81);
+}

@@ -115,12 +115,33 @@ export function formatPlayHudChrome(input = {}) {
   const isPuzzle = input.gameKind === 'puzzle';
   const isOneshot = input.gameKind === 'oneshot';
   const isSurvival = input.gameKind === 'survival';
+  const isGhost = input.gameKind === 'ghost';
+  if (isGhost) {
+    const ghostName = input.ghostName || '幽灵选手';
+    return {
+      isPuzzle: false,
+      isOneshot: false,
+      isSurvival: false,
+      isGhost: true,
+      kind: 'ghost',
+      badge: '幽灵对局',
+      subtitle: `对手 · ${ghostName}`,
+      mood: '幽灵对局 · 昨日第一回放',
+      dayLead: '第',
+      dayUnit: '天',
+      remainLabel: '',
+      boardKicker: 'GHOST · 幽灵对局',
+      stageKicker: '幽灵 · K-LINE',
+      stageTitle: '实时走势',
+    };
+  }
   if (isSurvival) {
     const floatLabel = input.survivalFloat?.label || '相对开局 · 爆仓线 −20%';
     return {
       isPuzzle: false,
       isOneshot: false,
       isSurvival: true,
+      isGhost: false,
       kind: 'survival',
       badge: '活过三十日',
       subtitle: floatLabel,
@@ -141,6 +162,7 @@ export function formatPlayHudChrome(input = {}) {
       isPuzzle: false,
       isOneshot: true,
       isSurvival: false,
+      isGhost: false,
       kind: 'oneshot',
       badge: '一把梭',
       subtitle: `买入剩余 ${buysLeft} · 卖出剩余 ${sellsLeft}`,
@@ -158,6 +180,7 @@ export function formatPlayHudChrome(input = {}) {
       isPuzzle: false,
       isOneshot: false,
       isSurvival: false,
+      isGhost: false,
       kind: 'classic',
       badge: '模拟盘',
       subtitle: '',
@@ -177,6 +200,7 @@ export function formatPlayHudChrome(input = {}) {
     isPuzzle: true,
     isOneshot: false,
     isSurvival: false,
+    isGhost: false,
     kind: 'puzzle',
     badge: '残局',
     subtitle,

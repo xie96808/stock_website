@@ -111,6 +111,13 @@ export const config = {
   survivalModeEnabled:
     process.env.SURVIVAL_MODE_ENABLED === "1" || process.env.SURVIVAL_MODE_ENABLED === "true",
   /**
+   * Phase C 幽灵对局. Default OFF.
+   * When false, /daily-challenge/ghost* returns FEATURE_DISABLED and entry stays hidden.
+   * Set GHOST_DUEL_ENABLED=1 to enable after Phase C deploy.
+   */
+  ghostDuelEnabled:
+    process.env.GHOST_DUEL_ENABLED === "1" || process.env.GHOST_DUEL_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {
