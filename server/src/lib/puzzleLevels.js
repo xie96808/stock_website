@@ -15,7 +15,12 @@ import {
 export const PUZZLE_CHAPTER_ID = "ch1";
 export const PUZZLE_FIRST_CLEAR_REWARD = 20;
 export const PUZZLE_CHAPTER_MAX_REWARD = 120;
+/** Legacy default / first attempt: free. Retry after a settled run uses PUZZLE_RETRY_FEE. */
 export const PUZZLE_CREATE_FEE = 0;
+/** Retry fee after a settled run on the same rewardFamilyId (deduct on new entry). */
+export const PUZZLE_RETRY_FEE = 10;
+/** First time reaching 3★ on a family — once, independent of 2★ first-clear. */
+export const PUZZLE_THREE_STAR_REWARD = 15;
 
 /** Masked identity shown to players (classic ******). Real code lives in snapshot. */
 export const PUZZLE_PUBLIC_STOCK_CODE = "******";
@@ -646,6 +651,10 @@ export function puzzleVersionId(def) {
 
 export function firstClearRewardKey(rewardFamilyId) {
   return `puzzle:first-clear:${rewardFamilyId}`;
+}
+
+export function threeStarRewardKey(rewardFamilyId) {
+  return `puzzle:three-star:${rewardFamilyId}`;
 }
 
 export { CHAPTER2_LEVEL_DEFS, PUZZLE_CHAPTER2_ID };

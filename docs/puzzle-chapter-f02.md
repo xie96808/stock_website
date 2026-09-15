@@ -46,9 +46,9 @@ PUZZLE_CHAPTER_ENABLED=1 npm --prefix server start
 1. 单标的；空仓／满仓；固定 `next_open`；规则 id `puzzle-mtm-v1`；**不进经典榜**。
 2. 初始状态：cash / qty / cost / buyFillDay / firstSellableDay，与 day1 open 接管净值一致；T+1 按成交日。
 3. 窗口 6～10 日；前置约 30 根同标的历史 K；末日仅估值；决策次数 = days − 1。
-4. 第一章免费重玩（`createFee=0`，不走经典 −10）；登录存进度；无反悔。
+4. 首局免费（`createFee=0`）；同 family 结算后再开扣 **10** 韭币（确认后入账）；登录存进度；无反悔。详见 `docs/puzzle-replay-economy-weekly.md`。
 5. 星级：1★ 合法结算；2★ 主目标（如相对买入持有 +X pp）；3★ + MDD/订单约束。目标写在关卡配置。
-6. 收益/MDD 相对接管 NAV；首次达 2★ +20 韭币，`reward_key=puzzle:first-clear:<rewardFamilyId>`；本章每账号最多 120；更高星只更新纪录；版本 bump 不重置 family id。
+6. 收益/MDD 相对接管 NAV；首次达 2★ +20（`puzzle:first-clear:<familyId>`，本章最多 120）；首次达 3★ +15（`puzzle:three-star:<familyId>`，独立）；更高星只更新纪录；版本 bump 不重置 family id。
 
 ## API（需 flag ON）
 

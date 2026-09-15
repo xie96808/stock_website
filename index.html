@@ -240,6 +240,15 @@
                             </span>
                             <span class="cta cta-fill">进入第二章</span>
                         </button>
+                        <button type="button" class="lane puzzle-weekly-lane" id="puzzleWeeklyL3Card" hidden onclick="showPuzzleWeeklyBoard()">
+                            <span class="mark">周</span>
+                            <span class="copy">
+                                <small>残局 · 同题周榜</small>
+                                <strong>本周同题</strong>
+                                <p>上海时区 ISO 周 · 精选一关比收益率</p>
+                            </span>
+                            <span class="cta cta-wash">查看周榜</span>
+                        </button>
                         <button type="button" class="lane is-disabled puzzle-chapter-soon" id="puzzleChapter3Card" disabled aria-disabled="true">
                             <span class="mark">三</span>
                             <span class="copy">
@@ -918,6 +927,7 @@
             </div>
             <div class="jiu-coin-modal-actions puzzle-settle-actions">
                 <button type="button" class="jiu-coin-secondary" onclick="returnToPuzzleListFromSettleModal()">返回残局列表</button>
+                <button type="button" class="jiu-coin-secondary" id="puzzleSettleWeeklyBtn" onclick="showPuzzleWeeklyBoard()">本周同题榜</button>
                 <button type="button" class="jiu-coin-primary" onclick="closePuzzleSettleModal()">继续复盘</button>
             </div>
         </div>
@@ -1028,6 +1038,9 @@
             showPuzzleScreen,
             hidePuzzleScreen,
             hidePuzzlePanel,
+            showPuzzleWeeklyBoard,
+            hidePuzzleWeeklyBoard,
+            isPuzzleWeeklyEnabled,
         } from './js/puzzle-chapter.js';
         import { showHindsight, hideHindsight, onHindsightInput, onHindsightBlur, submitHindsight, resizeHindsightChart, hindsightShare, hindsightCopy, hindsightReset } from './js/hindsight.js';
         import { scheduleIdleEchartsPrefetch } from './js/echarts-loader.js';
@@ -1090,6 +1103,9 @@
         window.showPuzzleScreen = showPuzzleScreen;
         window.hidePuzzleScreen = hidePuzzleScreen;
         window.hidePuzzlePanel = hidePuzzlePanel;
+        window.showPuzzleWeeklyBoard = showPuzzleWeeklyBoard;
+        window.hidePuzzleWeeklyBoard = hidePuzzleWeeklyBoard;
+        window.isPuzzleWeeklyEnabled = isPuzzleWeeklyEnabled;
         window.__dailyStartGame = startGame;
         window.__puzzleStartGame = startGame;
         initPageZoom();

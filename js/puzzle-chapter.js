@@ -1,5 +1,5 @@
 /** F02 残局挑战 (ch1/ch2) — hub entry card + dedicated #puzzleScreen */
-import { getAuthState, openAuthModal, showToast } from './auth.js';
+import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
 import { loadCloudGameDraft, clearCloudGameDraft } from './cloud-draft.js';
 import { abandonCloudGame } from './game-sync.js';
 import {
@@ -10,12 +10,15 @@ import {
   setHeaderChrome,
 } from './screen-router.js';
 import { formatLevelGoalLines } from './puzzle-goals-copy.js';
+import { amountWithCoinHtml } from './jiu-coin.js';
 
 const ENTRY_TIMEOUT_MS = 20000;
 
 let puzzleEnabled = false;
+let puzzleWeeklyEnabled = false;
 let chapterCache = null;
 let activeChapterId = 'ch1';
+let confirmResolver = null;
 
 export function isPuzzleChapterEnabled() {
   return puzzleEnabled;
@@ -29,10 +32,17 @@ export async function refreshPuzzleChapterFlag() {
     });
     const json = await res.json().catch(() => ({}));
     puzzleEnabled = !!(json?.data?.features?.puzzleChapter);
+    puzzleWeeklyEnabled = !!(json?.data?.features?.puzzleWeekly);
   } catch {
     puzzleEnabled = false;
+    puzzleWeeklyEnabled = false;
   }
+  syncWeeklyUiVisibility();
   return puzzleEnabled;
+}
+
+export function isPuzzleWeeklyEnabled() {
+  return puzzleWeeklyEnabled;
 }
 
 function cardEl() {
@@ -90,7 +100,7 @@ export async function refreshPuzzleChapterCard() {
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.textContent = '第一、二章已开放 · 六关免费 · 首通二星 +20 韭币';
+    if (meta) meta.textContent = '第一、二章已开放 · 首局免费 · 重开 10 韭币 · 二星 +20 / 三星 +15';
     if (stateEl) {
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
     }
@@ -281,7 +291,10 @@ function renderLevelList(body, data) {
   const rows = data.levels
     .map((lv) => {
       const best = lv.progress?.bestStars || 0;
-      const granted = lv.firstClearGranted ? '已领首通' : '首通二星 +20';
+      const fee = Number(lv.entryFee) || 0;
+      const feeBit = fee > 0 ? `重开 ${fee} 韭币` : '首局免费';
+      const granted = lv.firstClearGranted ? '已领二星' : '首通二星 +20';
+      const threeBit = lv.threeStarGranted ? '已领三星' : '三星 +15';
       const teaching = lv.teachingBrief
         ? `<div class="puzzle-level-teaching">${escapeHtml(lv.teachingBrief)}</div>`
         : '';
@@ -294,11 +307,11 @@ function renderLevelList(body, data) {
             .map((g) => `<div class="puzzle-level-goal">${escapeHtml(g)}</div>`)
             .join('')}</div>`
         : '';
-      return `<button type="button" class="puzzle-level-row" data-level="${escapeHtml(lv.levelKey)}">
+      return `<button type="button" class="puzzle-level-row" data-level="${escapeHtml(lv.levelKey)}" data-entry-fee="${fee}">
         <span class="puzzle-level-idx">${String(lv.levelIndex).padStart(2, '0')}</span>
         <span class="puzzle-level-copy">
           <strong>${escapeHtml(lv.title)}</strong>
-          <small>${escapeHtml(lv.theme)} · ${lv.gameDays} 日 · ${granted}</small>
+          <small>${escapeHtml(lv.theme)} · ${lv.gameDays} 日 · ${feeBit} · ${granted} · ${threeBit}</small>
           ${teaching}
           ${hint}
           ${goalsHtml}
@@ -307,14 +320,24 @@ function renderLevelList(body, data) {
       </button>`;
     })
     .join('');
+  const weeklyBtn = puzzleWeeklyEnabled
+    ? `<button type="button" class="puzzle-weekly-link" id="puzzleWeeklyBoardBtn">本周同题榜</button>`
+    : '';
   body.innerHTML = `
     <div class="puzzle-list-head">
-      <p>免费重玩 · 无反悔 · 达二星首次 +20 韭币（本章最多 120）· 实盘短窗残局 · 开局持仓均为刻意设定</p>
+      <p>首局免费 · 结算后再开扣 10 韭币 · 无反悔 · 二星首次 +20（本章最多 120）· 三星首次 +15 · 实盘短窗残局</p>
+      ${weeklyBtn}
     </div>
     <div class="puzzle-level-list">${rows}</div>`;
   body.querySelectorAll('.puzzle-level-row').forEach((btn) => {
-    btn.addEventListener('click', () => startPuzzleLevel(btn.getAttribute('data-level')));
+    btn.addEventListener('click', () =>
+      startPuzzleLevel(btn.getAttribute('data-level'), {
+        entryFee: Number(btn.getAttribute('data-entry-fee')) || 0,
+      })
+    );
   });
+  const wb = body.querySelector('#puzzleWeeklyBoardBtn');
+  if (wb) wb.addEventListener('click', () => showPuzzleWeeklyBoard());
 }
 
 function restoreLevelListUi(body) {
@@ -408,8 +431,21 @@ async function abandonThenRetry(levelKey, activeGameId) {
   return startPuzzleLevel(levelKey, { afterAbandon: true });
 }
 
-async function startPuzzleLevel(levelKey, { afterAbandon = false } = {}) {
+async function startPuzzleLevel(levelKey, { afterAbandon = false, entryFee = null } = {}) {
   const body = bodyEl();
+  let fee = entryFee;
+  if (fee == null && chapterCache?.levels) {
+    const lv = chapterCache.levels.find((x) => x.levelKey === levelKey);
+    fee = Number(lv?.entryFee) || 0;
+  }
+  fee = Number(fee) || 0;
+  if (fee > 0) {
+    const okPay = await askPuzzleRetryConfirm(fee);
+    if (!okPay) {
+      restoreLevelListUi(bodyEl());
+      return;
+    }
+  }
   if (body) body.innerHTML = '<p class="puzzle-muted">开局中…</p>';
   const key = `puzzle-${levelKey}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
@@ -458,13 +494,20 @@ async function startPuzzleLevel(levelKey, { afterAbandon = false } = {}) {
       return;
     }
     if (!res.ok) {
-      showToast(json?.error?.message || '开局失败', 'error');
+      if (json?.error?.code === 'INSUFFICIENT_FUNDS') {
+        showToast(json?.error?.message || '韭币不足，无法重开残局', 'error');
+      } else {
+        showToast(json?.error?.message || '开局失败', 'error');
+      }
       restoreLevelListUi(body);
       return;
     }
     const game = json.data?.game;
     if (!game) {
       throw new Error('开局响应缺少对局数据');
+    }
+    if (json.data?.charged) {
+      await refreshMe().catch(() => {});
     }
     // Ensure levelKey available for result / replay UX.
     if (!game.levelKey) game.levelKey = levelKey;
@@ -473,5 +516,198 @@ async function startPuzzleLevel(levelKey, { afterAbandon = false } = {}) {
   } catch (e) {
     showToast(e.message || '开局失败', 'error');
     restoreLevelListUi(body);
+  }
+}
+
+function ensurePuzzleRetryConfirmModal() {
+  if (document.getElementById('puzzleRetryConfirmModal')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'puzzleRetryConfirmModal';
+  wrap.className = 'jiu-coin-modal puzzle-retry-confirm-modal';
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="puzzleRetryConfirmTitle">
+      <button type="button" class="jiu-coin-close-x" id="puzzleRetryConfirmCloseX" aria-label="关闭">×</button>
+      <h2 id="puzzleRetryConfirmTitle">再开一局残局</h2>
+      <p class="jiu-coin-modal-body" id="puzzleRetryConfirmBody">本关已结算过。再次开局将扣除韭币（首局免费）。</p>
+      <p class="daily-challenge-confirm-cost" id="puzzleRetryConfirmCost"></p>
+      <div class="jiu-coin-modal-actions">
+        <button type="button" class="jiu-coin-secondary" id="puzzleRetryConfirmCancel">取消</button>
+        <button type="button" class="jiu-coin-primary" id="puzzleRetryConfirmOk">确认开局</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = () => resolvePuzzleConfirm(false);
+  document.getElementById('puzzleRetryConfirmCancel')?.addEventListener('click', close);
+  document.getElementById('puzzleRetryConfirmCloseX')?.addEventListener('click', close);
+  document.getElementById('puzzleRetryConfirmOk')?.addEventListener('click', () => resolvePuzzleConfirm(true));
+  wrap.addEventListener('click', (e) => {
+    if (e.target === wrap) close();
+  });
+}
+
+function resolvePuzzleConfirm(ok) {
+  const modal = document.getElementById('puzzleRetryConfirmModal');
+  if (modal) modal.hidden = true;
+  if (!confirmResolver) return;
+  const r = confirmResolver;
+  confirmResolver = null;
+  r(ok);
+}
+
+function askPuzzleRetryConfirm(cost) {
+  ensurePuzzleRetryConfirmModal();
+  const modal = document.getElementById('puzzleRetryConfirmModal');
+  const costEl = document.getElementById('puzzleRetryConfirmCost');
+  const auth = getAuthState();
+  const bal = auth?.user?.jiuCoinBalance;
+  const balBit =
+    bal == null || Number.isNaN(Number(bal))
+      ? ''
+      : ` · 当前余额 ${amountWithCoinHtml(bal, { size: 14 })}`;
+  if (costEl) {
+    costEl.innerHTML = `本次消耗 ${amountWithCoinHtml(cost, { size: 14 })}${balBit}`;
+  }
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+    if (modal) {
+      modal.hidden = false;
+      document.getElementById('puzzleRetryConfirmOk')?.focus();
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+function syncWeeklyUiVisibility() {
+  const l3 = document.getElementById('puzzleWeeklyL3Card');
+  if (l3) l3.hidden = !(puzzleEnabled && puzzleWeeklyEnabled);
+}
+
+function ensurePuzzleWeeklyBoardModal() {
+  if (document.getElementById('puzzleWeeklyBoardModal')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'puzzleWeeklyBoardModal';
+  wrap.className = 'jiu-coin-modal puzzle-weekly-board-modal';
+  wrap.hidden = true;
+  wrap.setAttribute('aria-hidden', 'true');
+  wrap.innerHTML = `
+    <div class="jiu-coin-dialog puzzle-weekly-board-dialog" role="dialog" aria-modal="true" aria-labelledby="puzzleWeeklyBoardTitle">
+      <button type="button" class="jiu-coin-close-x" id="puzzleWeeklyBoardCloseX" aria-label="关闭">×</button>
+      <div class="puzzle-weekly-board" id="puzzleWeeklyBoard">
+        <div class="puzzle-weekly-board-head">
+          <strong id="puzzleWeeklyBoardTitle">本周同题榜</strong>
+        </div>
+        <div id="puzzleWeeklyBoardBody"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = () => hidePuzzleWeeklyBoard();
+  document.getElementById('puzzleWeeklyBoardCloseX')?.addEventListener('click', close);
+  wrap.addEventListener('click', (e) => {
+    if (e.target === wrap) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !wrap.hidden) close();
+  });
+}
+
+export function hidePuzzleWeeklyBoard() {
+  const modal = document.getElementById('puzzleWeeklyBoardModal');
+  if (!modal) return;
+  modal.hidden = true;
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function presetAvatarUrl(entry) {
+  const id = entry?.avatarId || 'zodiac-rat';
+  return `/images/avatars/${encodeURIComponent(id)}.png`;
+}
+
+function avatarUrl(entry) {
+  return entry?.avatarUrl || presetAvatarUrl(entry);
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/'/g, '&#39;');
+}
+
+export async function showPuzzleWeeklyBoard() {
+  if (!puzzleWeeklyEnabled) {
+    showToast('本周同题榜暂未开放', 'error');
+    return;
+  }
+  ensurePuzzleWeeklyBoardModal();
+  const modal = document.getElementById('puzzleWeeklyBoardModal');
+  const body = document.getElementById('puzzleWeeklyBoardBody');
+  const title = document.getElementById('puzzleWeeklyBoardTitle');
+  if (modal) {
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  if (body) body.innerHTML = '<p class="puzzle-muted">加载中…</p>';
+  try {
+    const res = await fetch('/api/v1/puzzles/weekly/board', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (body) {
+        body.innerHTML = `<p class="puzzle-muted">${escapeHtml(json?.error?.message || '加载失败')}</p>`;
+      }
+      return;
+    }
+    const data = json.data || {};
+    const lv = data.level;
+    if (title) {
+      title.textContent = data.ready
+        ? `本周同题榜 · ${data.weekId}${lv?.title ? ' · ' + lv.title : ''}`
+        : '本周同题榜';
+    }
+    if (!data.ready) {
+      if (body) body.innerHTML = `<p class="puzzle-muted">${escapeHtml(data.message || '准备中')}</p>`;
+      return;
+    }
+    const mineBit = data.mine
+      ? `<p class="puzzle-weekly-mine">我的最佳：收益 ${escapeHtml(String(data.mine.returnPct))}%${
+          data.mine.rank != null ? ` · 第 ${data.mine.rank} 名` : ''
+        }</p>`
+      : '<p class="puzzle-weekly-mine puzzle-muted">本周尚未在同题关卡结算</p>';
+    if (!data.entries?.length) {
+      if (body) {
+        body.innerHTML = `${mineBit}<p class="puzzle-muted">暂无上榜成绩（参与 ${data.total || 0}）· 本周关卡「${escapeHtml(
+          lv?.title || lv?.levelKey || ''
+        )}」</p>`;
+      }
+      return;
+    }
+    const rows = data.entries
+      .map((e) => {
+        const mdd = e.mddPpm == null ? '—' : (e.mddPpm / 10000).toFixed(2) + '%';
+        return `<tr>
+          <td>${e.rank}</td>
+          <td class="puzzle-weekly-nick-cell">
+            <span class="puzzle-weekly-nick-inner">
+              <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
+              <span>${escapeHtml(e.nickname || '玩家')}</span>
+            </span>
+          </td>
+          <td>${escapeHtml(String(e.returnPct))}%</td>
+          <td>${mdd}</td>
+        </tr>`;
+      })
+      .join('');
+    if (body) {
+      body.innerHTML = `
+        ${mineBit}
+        <p class="puzzle-weekly-board-meta">同题「${escapeHtml(lv?.title || '')}」· 上榜 ${data.total} 人 · 最佳收益率↓ · 上海时区 ISO 周</p>
+        <table class="puzzle-weekly-table daily-challenge-table">
+          <thead><tr><th>名次</th><th>昵称</th><th>收益</th><th>最大回撤</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+  } catch (e) {
+    if (body) body.innerHTML = `<p class="puzzle-muted">${escapeHtml(e.message || '加载失败')}</p>`;
   }
 }

@@ -135,7 +135,7 @@ export function formatPuzzleSettleModal(input = {}) {
       goalItems,
       goalLines: goalItems.map(goalItemPlain),
       edgeLine: null,
-      hintLine: '星级：一星合法完成；二星达主目标可领首通；三星再加回撤/笔数约束。',
+      hintLine: '星级：一星合法完成；二星达主目标可领首通 +20；三星再加回撤/笔数约束并可领 +15。',
       failNote: null,
     };
   }
@@ -165,18 +165,32 @@ export function formatPuzzleSettleModal(input = {}) {
   const starInfo = renderStarIcons(pr?.stars, { pending: false });
   const { glyph, starN, ariaLabel: starsAriaLabel } = starInfo;
   const reward = pr?.reward;
+  const threeReward = pr?.threeStarReward;
   let rewardLine = null;
   let rewardAmount = null;
   let rewardGranted = false;
+  const lines = [];
   if (reward?.grantedThisTime) {
-    rewardAmount = Number(reward.amount) || 20;
+    const amt = Number(reward.amount) || 20;
+    lines.push(`首通二星 +${amt} 韭币`);
+    rewardAmount = (rewardAmount || 0) + amt;
     rewardGranted = true;
-    rewardLine = `首通奖励 +${rewardAmount} 韭币`;
   } else if (reward?.alreadyClaimed) {
-    rewardLine = '本关首通韭币已领过';
+    lines.push('本关二星首通已领过');
   } else if (starN != null && starN < 2) {
-    rewardLine = '未达二星：首通韭币需 ≥二星';
+    lines.push('未达二星：首通韭币需 ≥二星');
   }
+  if (threeReward?.grantedThisTime) {
+    const amt = Number(threeReward.amount) || 15;
+    lines.push(`三星奖励 +${amt} 韭币`);
+    rewardAmount = (rewardAmount || 0) + amt;
+    rewardGranted = true;
+  } else if (threeReward?.alreadyClaimed) {
+    lines.push('本关三星奖励已领过');
+  } else if (starN != null && starN >= 2 && starN < 3) {
+    lines.push('达三星可再领 +15 韭币（每关一次）');
+  }
+  rewardLine = lines.length ? lines.join(' · ') : null;
 
   let headline = '残局结算';
   if (starN >= 3) headline = '三星通关！';
