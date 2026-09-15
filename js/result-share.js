@@ -306,9 +306,11 @@ export function openResultLeaderboard() {
         void showDailyChallengeBoard();
         return;
     }
-    if (session?.gameKind === 'oneshot') {
+    const mode = selectShareView().fillMode === 'same_close' ? 'same_close' : 'next_open';
+    const kind = session?.gameKind;
+    if (kind === 'oneshot' || kind === 'survival') {
+        showLeaderboard({ fillMode: mode, gameKind: kind });
         return;
     }
-    const mode = selectShareView().fillMode === 'same_close' ? 'same_close' : 'next_open';
     showLeaderboard(mode);
 }

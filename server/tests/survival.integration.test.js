@@ -10,6 +10,7 @@ process.env.GAME_REWIND_ENABLED = "1";
 
 const { getSessionRow } = await import("../src/lib/games.js");
 const { openDb } = await import("../src/db/connection.js");
+const { forceResultRanking, invalidateLeaderboardCache } = await import("../src/lib/leaderboard.js");
 const { getJiuCoinBalance } = await import("../src/lib/jiuCoin.js");
 
 const ctx = await startTestServer();
@@ -214,8 +215,103 @@ test("survival rewind rejected; not on classic leaderboard after survive", async
 
   const board = await api("/api/v1/leaderboard?fillMode=same_close");
   assert.equal(board.status, 200);
+  assert.equal(board.json.data.gameKind, "classic");
   assert.equal(board.json.data.myRank, null);
   const stats = await api("/api/v1/me/stats?fillMode=same_close");
   assert.equal(stats.status, 200);
   assert.equal(stats.json.data.count, 0);
+
+  // Hold-only has trade_count=0 → still not on survival board eligibility.
+  const survEmpty = await api("/api/v1/leaderboard?fillMode=same_close&gameKind=survival");
+  assert.equal(survEmpty.status, 200);
+  assert.equal(survEmpty.json.data.gameKind, "survival");
+  assert.equal(survEmpty.json.data.myRank, null);
+});
+
+test("survival board: only survival kind; 活穿 ranks above 爆仓", async () => {
+  const stamp = Date.now().toString(36);
+
+  async function settleSurvivalBuy(auth, keySuffix, plantFn) {
+    const create = await createKind(auth, "survival", `svlb-${keySuffix}-${stamp}`);
+    assert.equal(create.status, 201, JSON.stringify(create.json));
+    const gameId = create.json.data.gameId;
+    plantFn(gameId);
+    const db = openDb();
+    const actions = ["buy", ...holds(28)];
+    db.prepare(`UPDATE game_sessions SET canonical_actions_json = ?, revision = 29 WHERE id = ?`).run(
+      JSON.stringify(actions),
+      gameId
+    );
+    const finish = await api(`/api/v1/games/${gameId}/finish`, {
+      method: "POST",
+      csrf: auth.csrfToken,
+      headers: { "Idempotency-Key": `svlb-f-${keySuffix}-${stamp}` },
+      body: { finish: true, expectedRevision: 29 },
+    });
+    // Crash path may auto-bust earlier; accept settled 201 or already settled from bust.
+    assert.ok([200, 201].includes(finish.status) || finish.json?.data?.busted != null, JSON.stringify(finish.json));
+    return gameId;
+  }
+
+  // Survivor with modest return
+  const aliveAuth = await register(`sva${stamp}`);
+  await api("/api/v1/me", {
+    method: "PATCH",
+    csrf: aliveAuth.csrfToken,
+    body: { leaderboardOptIn: true },
+  });
+  const aliveId = await settleSurvivalBuy(aliveAuth, "alive", plantFlatBars);
+  // Ensure valuation marks survived; force modest return
+  {
+    const db = openDb();
+    const row = db.prepare(`SELECT valuation_json FROM game_results WHERE game_id = ?`).get(aliveId);
+    let val = row?.valuation_json ? JSON.parse(row.valuation_json) : { kind: "valuation" };
+    val = { ...val, busted: false };
+    db.prepare(
+      `UPDATE game_results SET return_ppm = ?, trade_count = MAX(trade_count, 1), valuation_json = ?, validity = 'valid', leaderboard_hidden = 0 WHERE game_id = ?`
+    ).run(50000, JSON.stringify(val), aliveId);
+    forceResultRanking(aliveId, { returnPpm: 50000, finishedAt: "2026-09-10T10:00:00.000Z" });
+  }
+
+  // Bust with higher return — still ranks below survivor
+  const bustAuth = await register(`svb${stamp}`);
+  await api("/api/v1/me", {
+    method: "PATCH",
+    csrf: bustAuth.csrfToken,
+    body: { leaderboardOptIn: true },
+  });
+  const bustId = await settleSurvivalBuy(bustAuth, "bust", plantCrashBars);
+  {
+    const db = openDb();
+    const val = { kind: "bust", busted: true, day: 2 };
+    db.prepare(
+      `UPDATE game_results SET return_ppm = ?, trade_count = MAX(trade_count, 1), valuation_json = ?, validity = 'valid', leaderboard_hidden = 0 WHERE game_id = ?`
+    ).run(400000, JSON.stringify(val), bustId);
+    forceResultRanking(bustId, { returnPpm: 400000, finishedAt: "2026-09-10T09:00:00.000Z" });
+  }
+
+  invalidateLeaderboardCache();
+
+  const classic = await api("/api/v1/leaderboard?fillMode=same_close&gameKind=classic");
+  assert.equal(classic.status, 200);
+  assert.equal(classic.json.data.myRank, null); // logged in as bustAuth from jar — still not classic
+
+  const oneshot = await api("/api/v1/leaderboard?fillMode=same_close&gameKind=oneshot");
+  assert.equal(oneshot.status, 200);
+  assert.equal(oneshot.json.data.total, 0);
+
+  // Guest board — check ordering by nicknames
+  for (const k of Object.keys(ctx.jar)) delete ctx.jar[k];
+  const surv = await api("/api/v1/leaderboard?fillMode=same_close&gameKind=survival&metric=best");
+  assert.equal(surv.status, 200);
+  assert.equal(surv.json.data.gameKind, "survival");
+  assert.ok(surv.json.data.total >= 2, JSON.stringify(surv.json.data));
+  const top = surv.json.data.top10;
+  const aliveRow = top.find((r) => r.returnPpm === 50000);
+  const bustRow = top.find((r) => r.returnPpm === 400000);
+  assert.ok(aliveRow, "survivor on board");
+  assert.ok(bustRow, "bust on board");
+  assert.equal(aliveRow.busted, false);
+  assert.equal(bustRow.busted, true);
+  assert.ok(aliveRow.rank < bustRow.rank, `alive #${aliveRow.rank} should beat bust #${bustRow.rank}`);
 });

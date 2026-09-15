@@ -157,10 +157,59 @@ test("oneshot settle buy+sell+holds; not on classic leaderboard", async () => {
 
   const board = await api("/api/v1/leaderboard?fillMode=next_open");
   assert.equal(board.status, 200);
+  assert.equal(board.json.data.gameKind, "classic");
   assert.equal(board.json.data.myRank, null);
   const stats = await api("/api/v1/me/stats?fillMode=next_open");
   assert.equal(stats.status, 200);
   assert.equal(stats.json.data.count, 0);
+
+  const oneshotBoard = await api("/api/v1/leaderboard?fillMode=next_open&gameKind=oneshot");
+  assert.equal(oneshotBoard.status, 200);
+  assert.equal(oneshotBoard.json.data.gameKind, "oneshot");
+  assert.equal(oneshotBoard.json.data.assistClass, null);
+  assert.notEqual(oneshotBoard.json.data.myRank, null);
+  assert.ok(oneshotBoard.json.data.total >= 1);
+});
+
+test("oneshot board excludes classic; invalid gameKind rejected", async () => {
+  const auth = await register(`osx${Date.now().toString(36)}`);
+  await api("/api/v1/me", {
+    method: "PATCH",
+    csrf: auth.csrfToken,
+    body: { leaderboardOptIn: true },
+  });
+  const create = await createKind(auth, "classic", `osx-c-${Date.now()}`);
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+  const db = openDb();
+  const actions = ["buy", "sell", ...holds(27)];
+  db.prepare(`UPDATE game_sessions SET canonical_actions_json = ?, revision = 29 WHERE id = ?`).run(
+    JSON.stringify(actions),
+    gameId
+  );
+  const finish = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `osx-f-${Date.now()}` },
+    body: { finish: true, expectedRevision: 29 },
+  });
+  assert.equal(finish.status, 201, JSON.stringify(finish.json));
+
+  const classic = await api("/api/v1/leaderboard?fillMode=next_open&gameKind=classic");
+  assert.equal(classic.status, 200);
+  assert.notEqual(classic.json.data.myRank, null);
+
+  const oneshot = await api("/api/v1/leaderboard?fillMode=next_open&gameKind=oneshot");
+  assert.equal(oneshot.status, 200);
+  assert.equal(oneshot.json.data.myRank, null);
+
+  const survival = await api("/api/v1/leaderboard?fillMode=next_open&gameKind=survival");
+  assert.equal(survival.status, 200);
+  assert.equal(survival.json.data.myRank, null);
+
+  const bad = await api("/api/v1/leaderboard?fillMode=next_open&gameKind=daily");
+  assert.equal(bad.status, 400);
+  assert.equal(bad.json.error.code, "INVALID_GAME_KIND");
 });
 
 test("classic still allows a second buy after sell", async () => {

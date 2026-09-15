@@ -227,3 +227,69 @@
   background: #f3ebe0;
   color: #1c1915;
 }
+
+
+/* Play-kind tabs (classic / oneshot / survival) — paper aesthetic + mode accents */
+.leaderboard-kind-tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+.leaderboard-kind-tab {
+  border: 1px dashed color-mix(in srgb, currentColor 35%, transparent);
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.92rem;
+}
+.leaderboard-kind-tab.active {
+  border-style: solid;
+  font-weight: 700;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+.leaderboard-kind-tab.lb-kind-tab-oneshot.active,
+.leaderboard-screen.lb-kind-oneshot .leaderboard-kind-tab.lb-kind-tab-oneshot {
+  border-color: color-mix(in srgb, var(--mode-oneshot) 70%, var(--line));
+  background: color-mix(in srgb, var(--mode-oneshot) 16%, var(--card));
+  color: color-mix(in srgb, var(--mode-oneshot) 75%, var(--ink));
+}
+.leaderboard-kind-tab.lb-kind-tab-survival.active,
+.leaderboard-screen.lb-kind-survival .leaderboard-kind-tab.lb-kind-tab-survival {
+  border-color: color-mix(in srgb, var(--mode-survival) 70%, var(--line));
+  background: color-mix(in srgb, var(--mode-survival) 14%, var(--card));
+  color: color-mix(in srgb, var(--mode-survival) 75%, var(--ink));
+}
+.leaderboard-screen.lb-kind-oneshot .leaderboard-head h2 {
+  color: color-mix(in srgb, var(--mode-oneshot) 55%, var(--ink));
+}
+.leaderboard-screen.lb-kind-survival .leaderboard-head h2 {
+  color: color-mix(in srgb, var(--mode-survival) 55%, var(--ink));
+}
+.lb-survive-badge {
+  display: inline-block;
+  margin-top: 0.1rem;
+  margin-right: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  width: fit-content;
+}
+.lb-survive-ok {
+  color: color-mix(in srgb, var(--mode-survival) 70%, var(--ink));
+  background: color-mix(in srgb, var(--mode-survival) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mode-survival) 40%, transparent);
+}
+.lb-survive-bust {
+  color: var(--mute);
+  background: color-mix(in srgb, var(--mute) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mute) 30%, transparent);
+}
+.leaderboard-row.lb-row-survive {
+  border-color: color-mix(in srgb, var(--mode-survival) 28%, var(--line));
+}

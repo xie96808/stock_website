@@ -29,8 +29,19 @@ EVENT_PROTOCOL_ENABLED=1 SURVIVAL_MODE_ENABLED=1 npm --prefix server start
 1. 费用 **20 韭币**（与经典一致；一把梭 30，今日挑战 50）。
 2. 与经典 / 一把梭共用 **ACTIVE 互斥**。
 3. 反悔关闭：`REWIND_NOT_ALLOWED`。
-4. 成绩 **不进** 默认经典练习榜。无独立生存榜（Phase C）。
+4. 成绩 **不进** 默认经典练习榜。独立生存榜：`GET /api/v1/leaderboard?gameKind=survival`（最佳单局：先「是否活穿」再收益率）。
 
 ## 入口
 
 L3 玩法页「活过三十日」卡（flag 开才显示），CTA「开始生存模式」。
+
+## Phase C — 独立排行榜
+
+`GET /api/v1/leaderboard` 增加可选 `gameKind=classic|oneshot|survival`（默认 `classic`，旧客户端不变）。
+
+- 经典练习榜仍只含 `game_kind=classic`（可叠 `assistClass`）。
+- `gameKind=survival`：仅生存局；**最佳单局**排序先未爆仓（活穿），再 `return_ppm`。
+- 前端练习榜在 flag 开启时显示「一把梭 / 活过三十日」页签；结算页可直达对应榜。
+
+部署：API + static 同发。
+

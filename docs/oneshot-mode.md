@@ -33,7 +33,7 @@ EVENT_PROTOCOL_ENABLED=1 ONESHOT_MODE_ENABLED=1 npm --prefix server start
 2. 与经典共用 **ACTIVE 互斥**（`idx_game_sessions_one_active`）。
 3. 服务端在 append decision / legacy finish 前校验买卖次数，超出 → `409 ORDER_LIMIT`；盘面不变。
 4. 反悔关闭：`POST /games/:id/rewind` → `409 REWIND_NOT_ALLOWED`；HUD 无反悔按钮。
-5. 成绩 **不进** 默认经典练习榜 / `me/stats`（查询钉 `game_kind=classic`）。无独立一把梭榜。
+5. 成绩 **不进** 默认经典练习榜 / `me/stats`（查询钉 `game_kind=classic`）。独立一把梭榜：`GET /api/v1/leaderboard?gameKind=oneshot`（按收益率，与经典练习一致）。
 6. 未买入结束 = 收益 0；买了没卖 = 持仓盯市到末日（引擎不变）。
 
 ## API
