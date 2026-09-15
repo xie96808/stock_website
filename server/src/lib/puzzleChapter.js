@@ -1,5 +1,5 @@
 /**
- * F02 六关残局挑战首章 — server logic (flag default OFF).
+ * F02 残局挑战 (ch1 + ch2) — server logic (flag default OFF).
  * Locked rules: docs/puzzle-chapter-f02.md / PRD §4.3.
  */
 import crypto from "node:crypto";
@@ -24,8 +24,8 @@ import {
   PUZZLE_ACTIONS,
 } from "../../../shared/puzzleEngine.js";
 import {
-  CHAPTER1_LEVEL_DEFS,
   PUZZLE_CHAPTER_ID,
+  PUZZLE_CHAPTER2_ID,
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
@@ -34,16 +34,20 @@ import {
   puzzleVersionId,
   firstClearRewardKey,
   levelDefByKey,
+  levelDefsForChapter,
+  chapterTitle,
 } from "./puzzleLevels.js";
 
 const ACTION_SET = new Set(PUZZLE_ACTIONS);
 
 export {
   PUZZLE_CHAPTER_ID,
+  PUZZLE_CHAPTER2_ID,
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
   firstClearRewardKey,
+  chapterTitle,
 };
 
 export function requirePuzzleChapterEnabled() {
@@ -147,9 +151,10 @@ function sessionPublicFromRow(row) {
   return out;
 }
 
-/** Seed / upsert published chapter-1 levels (idempotent on version id). */
-export function seedPuzzleChapter1(db = openDb()) {
+/** Seed published levels for one chapter (idempotent on version id). */
+export function seedPuzzleChapter(chapterId, db = openDb()) {
   ensureDatasetLoaded();
+  const defs = levelDefsForChapter(chapterId);
   let created = 0;
   let skipped = 0;
   const insert = db.prepare(
@@ -161,7 +166,7 @@ export function seedPuzzleChapter1(db = openDb()) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   const tx = db.transaction(() => {
-    for (const def of CHAPTER1_LEVEL_DEFS) {
+    for (const def of defs) {
       const id = puzzleVersionId(def);
       const { snapshot, snapshotJson, snapshotSha256 } = buildLevelSnapshot(def);
       const histLen = Number.isInteger(snapshot.historyLength)
@@ -169,7 +174,7 @@ export function seedPuzzleChapter1(db = openDb()) {
         : (Array.isArray(snapshot.history) ? snapshot.history.length : 0);
       const info = insert.run(
         id,
-        PUZZLE_CHAPTER_ID,
+        chapterId,
         def.levelIndex,
         def.levelKey,
         def.rewardFamilyId,
@@ -197,7 +202,24 @@ export function seedPuzzleChapter1(db = openDb()) {
     }
   });
   tx();
-  return { created, skipped, total: CHAPTER1_LEVEL_DEFS.length };
+  return { created, skipped, total: defs.length, chapterId };
+}
+
+/** Seed / upsert published chapter-1 levels (idempotent on version id). */
+export function seedPuzzleChapter1(db = openDb()) {
+  return seedPuzzleChapter(PUZZLE_CHAPTER_ID, db);
+}
+
+/** Seed / upsert published chapter-2 levels (idempotent on version id). */
+export function seedPuzzleChapter2(db = openDb()) {
+  return seedPuzzleChapter(PUZZLE_CHAPTER2_ID, db);
+}
+
+/** Seed all authored chapters when flag is on. */
+export function seedAllPuzzleChapters(db = openDb()) {
+  const ch1 = seedPuzzleChapter1(db);
+  const ch2 = seedPuzzleChapter2(db);
+  return { ch1, ch2 };
 }
 
 function latestPublishedLevels(chapterId, db) {
@@ -227,19 +249,20 @@ function progressForUser(userId, chapterId, db) {
   return new Map(rows.map((r) => [r.level_key, r]));
 }
 
-function chapterRewardGrantedCount(userId, db) {
+function chapterRewardGrantedCount(userId, chapterId, db) {
   const rows = db
     .prepare(
       `SELECT reward_key FROM reward_claims WHERE user_id = ? AND reward_key LIKE 'puzzle:first-clear:%'`
     )
     .all(userId);
-  // Cap is per chapter families; count ch1 families only.
-  return rows.filter((r) => String(r.reward_key).startsWith("puzzle:first-clear:ch1-")).length;
+  // Cap is per chapter families (ch1-01… / ch2-01…); do not mix chapters.
+  const prefix = `puzzle:first-clear:${chapterId}-`;
+  return rows.filter((r) => String(r.reward_key).startsWith(prefix)).length;
 }
 
 export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID } = {}) {
   requirePuzzleChapterEnabled();
-  seedPuzzleChapter1();
+  seedAllPuzzleChapters();
   const db = openDb();
   const levels = latestPublishedLevels(chapterId, db);
   if (!levels.length) {
@@ -256,11 +279,11 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
     };
   }
   const prog = progressForUser(userId, chapterId, db);
-  const grantedCount = userId ? chapterRewardGrantedCount(userId, db) : 0;
+  const grantedCount = userId ? chapterRewardGrantedCount(userId, chapterId, db) : 0;
   return {
     chapterId,
     status: "ready",
-    title: "残局挑战 · 第一章",
+    title: chapterTitle(chapterId),
     createFee: PUZZLE_CREATE_FEE,
     rewindEnabled: false,
     levels: levels.map((row) => {
@@ -347,7 +370,7 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
       },
     };
   }
-  seedPuzzleChapter1();
+  seedAllPuzzleChapters();
   const db = openDb();
   const level = getLevelRow(levelKey, db);
   if (!level || level.status === "preparing") {
@@ -794,7 +817,7 @@ export function finishPuzzleGame(userId, gameId, body) {
           )
           .get(userId, rewardKey);
         if (!already) {
-          const grantedFamilies = chapterRewardGrantedCount(userId, db);
+          const grantedFamilies = chapterRewardGrantedCount(userId, chapterId, db);
           if (grantedFamilies < PUZZLE_CHAPTER_MAX_REWARD / PUZZLE_FIRST_CLEAR_REWARD) {
             grantResult = grantRewardClaim(db, {
               userId,

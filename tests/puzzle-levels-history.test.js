@@ -2,9 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CHAPTER1_LEVEL_DEFS,
+  CHAPTER2_LEVEL_DEFS,
   buildContextHistory,
   buildLevelSnapshot,
   PUZZLE_PUBLIC_STOCK_CODE,
+  levelDefByKey,
 } from '../server/src/lib/puzzleLevels.js';
 
 test('buildContextHistory yields ordered bars ending near day-1 open', () => {
@@ -61,5 +63,42 @@ test('ch1-02…06 teachingBrief each teach one clear lesson; goals format readab
     assert.ok(lines.length >= 1, def.levelKey);
     assert.match(lines[0], /^二星：/);
     if (lines[1]) assert.match(lines[1], /^三星：/);
+  }
+});
+
+test('buildLevelSnapshot includes real-pack history for all chapter-2 defs', () => {
+  const opens = new Set();
+  assert.equal(CHAPTER2_LEVEL_DEFS.length, 6);
+  for (const def of CHAPTER2_LEVEL_DEFS) {
+    const { snapshot } = buildLevelSnapshot(def);
+    assert.equal(snapshot.levelKey, def.levelKey);
+    assert.equal(snapshot.bars.length, def.gameDays);
+    assert.ok(snapshot.historyLength >= 20);
+    assert.equal(snapshot.history.length, snapshot.historyLength);
+    assert.equal(def.version, 1, `${def.levelKey} version`);
+    assert.ok(def.packRef && Number.isInteger(def.packRef.stockIndex));
+    assert.ok(def.teachingBrief && def.openStateHint);
+    assert.equal(def.stockCode, PUZZLE_PUBLIC_STOCK_CODE);
+    assert.ok(String(def.rewardFamilyId).startsWith('ch2-'));
+    assert.equal(levelDefByKey(def.levelKey)?.levelKey, def.levelKey);
+    opens.add(snapshot.bars[0].open);
+  }
+  assert.ok(opens.size >= 5, `expected distinct day1 opens, got ${[...opens]}`);
+  assert.match(CHAPTER2_LEVEL_DEFS[0].title, /追高/);
+  assert.match(CHAPTER2_LEVEL_DEFS[1].title, /回马枪/);
+  assert.match(CHAPTER2_LEVEL_DEFS[2].title, /一枪/);
+  assert.match(CHAPTER2_LEVEL_DEFS[3].title, /假突破/);
+  assert.match(CHAPTER2_LEVEL_DEFS[4].title, /阴跌/);
+  assert.match(CHAPTER2_LEVEL_DEFS[5].title, /逃顶/);
+});
+
+test('ch2 teachingBrief / goals readable; buy-hold not trivial 3★ path', async () => {
+  const { formatLevelGoalLines } = await import('../js/puzzle-goals-copy.js');
+  for (const def of CHAPTER2_LEVEL_DEFS) {
+    const lines = formatLevelGoalLines(def.goals);
+    assert.ok(lines.length >= 1, def.levelKey);
+    assert.match(lines[0], /^二星：/);
+    if (lines[1]) assert.match(lines[1], /^三星：/);
+    assert.ok(def.goals?.twoStar?.beatBuyHoldPp >= 5, def.levelKey);
   }
 });

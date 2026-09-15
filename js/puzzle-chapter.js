@@ -1,4 +1,4 @@
-/** F02 残局挑战首章 — hub entry card + dedicated #puzzleScreen */
+/** F02 残局挑战 (ch1/ch2) — hub entry card + dedicated #puzzleScreen */
 import { getAuthState, openAuthModal, showToast } from './auth.js';
 import { loadCloudGameDraft, clearCloudGameDraft } from './cloud-draft.js';
 import { abandonCloudGame } from './game-sync.js';
@@ -15,6 +15,7 @@ const ENTRY_TIMEOUT_MS = 20000;
 
 let puzzleEnabled = false;
 let chapterCache = null;
+let activeChapterId = 'ch1';
 
 export function isPuzzleChapterEnabled() {
   return puzzleEnabled;
@@ -84,12 +85,12 @@ export async function refreshPuzzleChapterCard() {
     }
     chapterCache = json.data;
     if (chapterCache.status === 'preparing' || !chapterCache.levels?.length) {
-      if (meta) meta.textContent = '第一章 · 准备中';
+      if (meta) meta.textContent = '残局 · 准备中';
       if (stateEl) stateEl.textContent = chapterCache.message || '残局准备中';
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.textContent = '第一章已开放 · 六关免费 · 首通二星 +20 韭币';
+    if (meta) meta.textContent = '第一、二章已开放 · 六关免费 · 首通二星 +20 韭币';
     if (stateEl) {
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
     }
@@ -115,10 +116,10 @@ export function onPuzzleChapterCardClick() {
   showPuzzleScreen();
 }
 
-/** L3 chapter card → open chapter levels (only ch1 wired). */
+/** L3 chapter card → open chapter levels (ch1/ch2; ch3 soon). */
 export function onPuzzleChapterSelect(chapterIndex) {
   const idx = Number(chapterIndex) || 0;
-  if (idx !== 1) {
+  if (idx !== 1 && idx !== 2) {
     showToast('该章节即将推出', 'error');
     return;
   }
@@ -129,6 +130,7 @@ export function onPuzzleChapterSelect(chapterIndex) {
     openAuthModal?.();
     return;
   }
+  activeChapterId = idx === 2 ? 'ch2' : 'ch1';
   showPuzzleScreen();
 }
 
@@ -138,11 +140,16 @@ export async function showPuzzleScreen() {
   activateScreen(Route.PUZZLE);
   const backBtn = screen?.querySelector?.('#puzzleScreenBackBtn');
   if (backBtn) backBtn.textContent = '← 返回章节';
+  const titleEl = screen?.querySelector?.('.puzzle-panel-title');
+  if (titleEl) {
+    titleEl.textContent =
+      activeChapterId === 'ch2' ? '残局挑战 · 第二章' : '残局挑战 · 第一章';
+  }
   const body = bodyEl();
   if (body) body.innerHTML = '<p class="puzzle-muted">加载关卡…</p>';
   renderProgressPlaceholder();
   try {
-    const res = await fetch('/api/v1/puzzles?chapter=ch1', {
+    const res = await fetch(`/api/v1/puzzles?chapter=${encodeURIComponent(activeChapterId)}`, {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     });
@@ -153,6 +160,8 @@ export async function showPuzzleScreen() {
       return;
     }
     chapterCache = json.data;
+    if (titleEl && chapterCache?.title) titleEl.textContent = chapterCache.title;
+    if (chapterCache?.chapterId) activeChapterId = chapterCache.chapterId;
     renderProgressBar(chapterCache);
     if (body) renderLevelList(body, chapterCache);
   } catch (e) {

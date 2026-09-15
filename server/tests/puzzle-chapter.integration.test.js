@@ -10,12 +10,15 @@ const { config } = await import("../src/lib/config.js");
 const { getJiuCoinBalance, JIU_COIN_REGISTER_GRANT } = await import("../src/lib/jiuCoin.js");
 const {
   seedPuzzleChapter1,
+  seedPuzzleChapter2,
+  seedAllPuzzleChapters,
   finishPuzzleGame,
   insertLevelVersionBump,
   firstClearRewardKey,
   PUZZLE_FIRST_CLEAR_REWARD,
+  chapterTitle,
 } = await import("../src/lib/puzzleChapter.js");
-const { CHAPTER1_LEVEL_DEFS } = await import("../src/lib/puzzleLevels.js");
+const { CHAPTER1_LEVEL_DEFS, CHAPTER2_LEVEL_DEFS } = await import("../src/lib/puzzleLevels.js");
 const { hasRewardClaim } = await import("../src/lib/rewardClaims.js");
 
 const ctx = await startTestServer();
@@ -247,4 +250,68 @@ test("T+1 day1 sell illegal on ch1-04 via finish API", async () => {
   const fin = await finishLevel(auth, st.json.data.game.gameId, bad);
   assert.equal(fin.status, 422);
   assert.equal(fin.json.error.code, "INVALID_ACTION_SEQUENCE");
+});
+
+test("seed publishes 6 chapter-2 levels; list/start ch2", async () => {
+  const seeded = seedPuzzleChapter2();
+  assert.equal(seeded.created + seeded.skipped, 6);
+  assert.equal(seeded.chapterId, "ch2");
+  const n = openDb()
+    .prepare(`SELECT COUNT(*) AS c FROM puzzle_versions WHERE chapter_id='ch2' AND version=1`)
+    .get().c;
+  assert.equal(n, 6);
+  const list = await api("/api/v1/puzzles?chapter=ch2");
+  assert.equal(list.status, 200);
+  assert.equal(list.json.data.status, "ready");
+  assert.equal(list.json.data.chapterId, "ch2");
+  assert.equal(list.json.data.title, chapterTitle("ch2"));
+  assert.equal(list.json.data.levels.length, 6);
+  assert.equal(list.json.data.levels[0].levelKey, "ch2-01");
+  assert.equal(list.json.data.levels[0].version, CHAPTER2_LEVEL_DEFS[0].version);
+  assert.ok(list.json.data.levels[0].teachingBrief);
+  assert.equal(list.json.data.reward.chapterMax, 120);
+
+  const auth = await register(`pzch2${Date.now().toString(36)}`);
+  const start = await startLevel(auth, "ch2-01", `ch2-start-${auth.user.id}`);
+  assert.equal(start.status, 201, JSON.stringify(start.json));
+  assert.equal(start.json.data.game.levelKey, "ch2-01");
+  assert.ok(Array.isArray(start.json.data.game.bars) && start.json.data.game.bars.length >= 6);
+});
+
+test("ch1 list still ready after ch2 seed (regression)", async () => {
+  seedAllPuzzleChapters();
+  const list = await api("/api/v1/puzzles?chapter=ch1");
+  assert.equal(list.status, 200);
+  assert.equal(list.json.data.chapterId, "ch1");
+  assert.equal(list.json.data.levels.length, 6);
+  assert.equal(list.json.data.levels[0].levelKey, "ch1-01");
+});
+
+test("ch2 first-clear cap is separate from ch1 families", async () => {
+  const auth = await register(`pzcap${Date.now().toString(36)}`);
+  const bal0 = getJiuCoinBalance(auth.user.id);
+  // Clear one ch1 and one ch2 at 3★ — both should grant (+20 each).
+  const ch1 = CHAPTER1_LEVEL_DEFS[1];
+  const ch2 = CHAPTER2_LEVEL_DEFS[0];
+  const s1 = await startLevel(auth, ch1.levelKey, `cap-ch1-${auth.user.id}`);
+  assert.equal(s1.status, 201);
+  const f1 = await finishLevel(auth, s1.json.data.game.gameId, ch1.validatedThreeStarActions);
+  assert.equal(f1.status, 201, JSON.stringify(f1.json));
+  assert.equal(f1.json.data.stars, 3);
+  assert.equal(f1.json.data.reward.grantedThisTime, true);
+
+  const s2 = await startLevel(auth, ch2.levelKey, `cap-ch2-${auth.user.id}`);
+  assert.equal(s2.status, 201, JSON.stringify(s2.json));
+  const f2 = await finishLevel(auth, s2.json.data.game.gameId, ch2.validatedThreeStarActions);
+  assert.equal(f2.status, 201, JSON.stringify(f2.json));
+  assert.equal(f2.json.data.stars, 3);
+  assert.equal(f2.json.data.reward.grantedThisTime, true);
+  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD * 2);
+
+  const list2 = await api("/api/v1/puzzles?chapter=ch2");
+  assert.equal(list2.status, 200);
+  assert.equal(list2.json.data.reward.grantedCount, 1);
+  const list1 = await api("/api/v1/puzzles?chapter=ch1");
+  assert.equal(list1.status, 200);
+  assert.equal(list1.json.data.reward.grantedCount, 1);
 });

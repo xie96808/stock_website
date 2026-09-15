@@ -19,7 +19,7 @@ import puzzleRoutes from "./routes/puzzles.js";
 import { openDb } from "./db/connection.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 import { seedNearDailyChallenges } from "./lib/dailyChallenge.js";
-import { seedPuzzleChapter1 } from "./lib/puzzleChapter.js";
+import { seedAllPuzzleChapters } from "./lib/puzzleChapter.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -36,7 +36,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   }
   if (config.puzzleChapterEnabled) {
     try {
-      seedPuzzleChapter1();
+      seedAllPuzzleChapters();
     } catch (e) {
       console.warn("puzzle chapter seed failed:", e.message || e);
     }

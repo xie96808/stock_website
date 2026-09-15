@@ -91,8 +91,12 @@ node scripts/run-tests.mjs
 
 覆盖：资金守恒与 T+1、订单预算第三笔拒绝且不改状态、1/2/3 星、首通 +20 一次、重复/并发/版本 bump 不双发、仅 1★ 不发币、flag OFF。
 
+## 第二章
+
+见 `docs/puzzle-chapter-2.md`（同一 flag；独立 `ch2-*` family cap）。
+
 ## 内容缺口 / 风险（刻意延期）
 
 - 局内已复用经典 `#gameScreen` + K 线（snapshot bars）；尚未做逐步 event-v1 服务端决策协议。
 - 未做章节付费解锁、反悔、成就墙（F12）。
-- 更多章节与「显然占优」筛查跟进。
+- 第三章与「显然占优」筛查跟进。

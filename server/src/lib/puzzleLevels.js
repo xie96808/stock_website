@@ -1,5 +1,5 @@
 /**
- * F02 chapter-1 authored level catalog — real A-share pack windows (v3).
+ * F02 authored puzzle level catalogs — ch1 (v4) + re-exports ch2 (v1).
  * Each level pins stockIndex + windowStartIndex; bars/history embedded for
  * offline tests / mini fixtures. buildLevelSnapshot prefers live pack slice
  * when the dataset can resolve the pin.
@@ -7,6 +7,10 @@
 import crypto from "node:crypto";
 import { PUZZLE_RULE_VERSION, PUZZLE_FILL_MODE } from "../../../shared/puzzleEngine.js";
 import { pickPuzzleWindow } from "./dataset.js";
+import {
+  CHAPTER2_LEVEL_DEFS,
+  PUZZLE_CHAPTER2_ID,
+} from "./puzzleLevelsCh2.js";
 
 export const PUZZLE_CHAPTER_ID = "ch1";
 export const PUZZLE_FIRST_CLEAR_REWARD = 20;
@@ -644,6 +648,25 @@ export function firstClearRewardKey(rewardFamilyId) {
   return `puzzle:first-clear:${rewardFamilyId}`;
 }
 
+export { CHAPTER2_LEVEL_DEFS, PUZZLE_CHAPTER2_ID };
+
+export const ALL_PUZZLE_LEVEL_DEFS = [...CHAPTER1_LEVEL_DEFS, ...CHAPTER2_LEVEL_DEFS];
+
+export const PUZZLE_CHAPTER_TITLES = {
+  ch1: "残局挑战 · 第一章",
+  ch2: "残局挑战 · 第二章",
+};
+
+export function chapterTitle(chapterId) {
+  return PUZZLE_CHAPTER_TITLES[chapterId] || "残局挑战";
+}
+
+/** Levels for a chapter id (`ch1` / `ch2`). */
+export function levelDefsForChapter(chapterId) {
+  if (chapterId === PUZZLE_CHAPTER2_ID || chapterId === "ch2") return CHAPTER2_LEVEL_DEFS;
+  return CHAPTER1_LEVEL_DEFS;
+}
+
 export function levelDefByKey(levelKey) {
-  return CHAPTER1_LEVEL_DEFS.find((d) => d.levelKey === levelKey) || null;
+  return ALL_PUZZLE_LEVEL_DEFS.find((d) => d.levelKey === levelKey) || null;
 }
