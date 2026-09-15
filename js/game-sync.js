@@ -59,13 +59,15 @@ async function apiWithHeaders(path, { method = "GET", body, headers = {} } = {})
 }
 
 /** Create a cloud game for the logged-in user. */
-export async function createCloudGame(fillMode) {
+export async function createCloudGame(fillMode, { gameKind } = {}) {
   const auth = getAuthState();
   if (!auth.user) throw new Error("未登录，无法创建云端对局");
   const key = newIdempotencyKey();
+  const body = { fillMode };
+  if (gameKind && gameKind !== "classic") body.gameKind = gameKind;
   const { data, status } = await apiWithHeaders("/games", {
     method: "POST",
-    body: { fillMode },
+    body,
     headers: { "Idempotency-Key": key },
   });
   if (!data?.gameId) throw new Error("开局响应无效");

@@ -46,22 +46,25 @@ function boardEl() {
   return document.getElementById('dailyChallengeBoard');
 }
 
+function boardModalEl() {
+  return document.getElementById('dailyChallengeBoardModal');
+}
+
+function boardBtnEl() {
+  return document.getElementById('dailyChallengeBoardBtn');
+}
+
 function hideSurfaces() {
   const card = cardEl();
   if (card) card.hidden = true;
-  const board = boardEl();
-  if (board) board.hidden = true;
+  const btn = boardBtnEl();
+  if (btn) btn.hidden = true;
+  hideDailyChallengeBoard();
 }
 
-
-/** Toggle day board when CTA is「查看日榜」and board already open. */
-async function toggleOrShowDailyChallengeBoard() {
-  const board = boardEl();
-  if (board && !board.hidden) {
-    hideDailyChallengeBoard();
-    return;
-  }
-  await showDailyChallengeBoard();
+function isBoardModalOpen() {
+  const modal = boardModalEl();
+  return !!(modal && !modal.hidden);
 }
 
 
@@ -115,6 +118,8 @@ export async function refreshDailyChallengeCard() {
     return;
   }
   card.hidden = false;
+  const boardBtn = boardBtnEl();
+  if (boardBtn) boardBtn.hidden = false;
   const meta = document.getElementById('dailyChallengeCardMeta');
   const stateEl = document.getElementById('dailyChallengeCardState');
   const ctaEl = document.getElementById('dailyChallengeCardCta');
@@ -153,10 +158,10 @@ export async function refreshDailyChallengeCard() {
     const ppm = d.attempt.returnPpm;
     const pct = ppm == null ? '—' : (ppm / 10000).toFixed(2) + '%';
     if (stateEl) stateEl.textContent = `已结算 · 收益 ${pct}`;
-    if (ctaEl) ctaEl.textContent = '查看日榜';
+    if (ctaEl) ctaEl.textContent = '查看结果';
   } else if (d.remainingChance === 0) {
     if (stateEl) stateEl.textContent = '今日机会已用完';
-    if (ctaEl) ctaEl.textContent = '查看日榜';
+    if (ctaEl) ctaEl.textContent = '查看结果';
   } else {
     if (stateEl) stateEl.textContent = '剩余正式机会 1 次 · 无反悔';
     if (ctaEl) ctaEl.textContent = '开始今日挑战';
@@ -395,9 +400,9 @@ export async function onDailyChallengeCardClick() {
     return;
   }
 
-  // Settled / late → day board only (CTA is「查看日榜」); do not fall through to start.
+  // Settled / late → 查看结果 (not the day board; 查看日榜 is a separate control).
   if (d.attempt && (d.attempt.status === 'settled' || d.attempt.status === 'settle_late')) {
-    await toggleOrShowDailyChallengeBoard();
+    await viewSettledDailyResult();
     return;
   }
 
@@ -408,7 +413,7 @@ export async function onDailyChallengeCardClick() {
   }
 
   if (d.remainingChance === 0) {
-    await toggleOrShowDailyChallengeBoard();
+    await viewSettledDailyResult();
     return;
   }
 
@@ -432,7 +437,7 @@ export async function onDailyChallengeCardClick() {
     }
     if (e.code === 'DAILY_CHANCE_USED') {
       showToast(e.message || '今日机会已用完', 'error');
-      await toggleOrShowDailyChallengeBoard();
+      await viewSettledDailyResult();
       return;
     }
     showToast(e.message || '开局失败', 'error');
@@ -452,11 +457,67 @@ function avatarUrl(row) {
   return presetAvatarUrl(row);
 }
 
+async function viewSettledDailyResult() {
+  const gameId = statusCache?.attempt?.gameId;
+  if (!gameId) {
+    showToast('暂无结算结果', 'error');
+    return;
+  }
+  try {
+    const data = (await dailyApi(`/games/${gameId}`)).data;
+    if (!data) {
+      showToast('暂无结算结果', 'error');
+      return;
+    }
+    const actions = Array.isArray(data.actions) ? data.actions : [];
+    await startCloudFromMeta({ ...data, resumeActions: actions });
+    if (data.status === 'settled' && typeof window.finishSettle === 'function') {
+      window.finishSettle();
+    }
+  } catch (e) {
+    const ppm = statusCache?.attempt?.returnPpm;
+    const pct = ppm == null ? '' : `收益 ${(ppm / 10000).toFixed(2)}%`;
+    showToast(e.message || pct || '无法打开结算', 'error');
+  }
+}
+
+export function onDailyChallengeBoardClick(ev) {
+  if (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  if (isBoardModalOpen()) {
+    hideDailyChallengeBoard();
+    return;
+  }
+  void showDailyChallengeBoard();
+}
+
+let boardModalWired = false;
+function ensureBoardModalDismiss() {
+  if (boardModalWired) return;
+  const modal = boardModalEl();
+  if (!modal) return;
+  boardModalWired = true;
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) hideDailyChallengeBoard();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isBoardModalOpen()) hideDailyChallengeBoard();
+  });
+}
+
 export async function showDailyChallengeBoard() {
   if (!dailyChallengeEnabled) return;
+  ensureBoardModalDismiss();
   const board = boardEl();
-  if (!board) return;
-  board.hidden = false;
+  const modal = boardModalEl();
+  if (!board && !modal) return;
+  if (board) board.hidden = false;
+  if (modal) {
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+  }
   const body = document.getElementById('dailyChallengeBoardBody');
   const title = document.getElementById('dailyChallengeBoardTitle');
   if (body) body.innerHTML = '<p class="daily-challenge-board-loading">加载中…</p>';
@@ -507,6 +568,11 @@ export async function showDailyChallengeBoard() {
 export function hideDailyChallengeBoard() {
   const board = boardEl();
   if (board) board.hidden = true;
+  const modal = boardModalEl();
+  if (modal) {
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+  }
 }
 
 function escapeHtml(s) {

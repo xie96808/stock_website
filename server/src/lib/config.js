@@ -95,6 +95,14 @@ export const config = {
   puzzleChapterEnabled:
     process.env.PUZZLE_CHAPTER_ENABLED === "1" || process.env.PUZZLE_CHAPTER_ENABLED === "true",
   /**
+   * Phase A 一把梭. Default OFF.
+   * When false, POST /games with gameKind=oneshot returns FEATURE_DISABLED
+   * and the L3 card stays hidden.
+   * Set ONESHOT_MODE_ENABLED=1 to enable. Prod can turn this on after deploy.
+   */
+  oneshotModeEnabled:
+    process.env.ONESHOT_MODE_ENABLED === "1" || process.env.ONESHOT_MODE_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

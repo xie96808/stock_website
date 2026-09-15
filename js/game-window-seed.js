@@ -107,6 +107,7 @@ export function seedClassicFromWindow(cloud) {
     fillMode: cloud.fillMode || getSession().fillMode,
     protocolVersion: cloud.protocolVersion || null,
     gameKind: cloud.gameKind || 'classic',
+    modifiers: cloud.modifiers || null,
     gameDays,
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,

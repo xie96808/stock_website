@@ -203,7 +203,8 @@ function seatsCte(metric, board) {
 }
 
 function assistSql(board) {
-  if (!board.assistClass) return "";
+  // Default practice board is classic-only (oneshot/daily/puzzle never mix in).
+  if (!board.assistClass) return " AND s.game_kind = 'classic'";
   // Per-game assist classification; classic only on assist boards.
   if (board.assistClass === ASSIST_ALL) {
     // 总榜: clean ∪ undo (post-migration; no legacy population advertised).
