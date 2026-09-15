@@ -57,7 +57,8 @@ depends on the frozen hash.
 | `GET /api/v1/games/active` | Full GameWindowDTO |
 | `GET /api/v1/games/:id` (owner) | Full GameWindowDTO when session public |
 | `GET /api/v1/games/:id/state` | Full GameWindowDTO (legacy-batch and event-v1 owners) |
-| Daily challenge create / active game DTO | Same `window` field |
+| Daily challenge create / active game DTO / status `activeGame` | Same `window` field |
+| `GET /api/v1/games/:id/state` for daily sessions | Same `window` field (via shared session public) |
 | Puzzle create / session public | Also sets `window` (puzzle already exposed flat `bars`/`history`; keep both) |
 
 Backward compatible: clients that ignore `window` keep the pack-slice path.
@@ -67,6 +68,9 @@ Backward compatible: clients that ignore `window` keep the pack-slice path.
 - Classic cloud `startGame` / resume: if `cloud.window` (or top-level
   `history`+`bars` with lengths) is present, seed the board from the DTO — **no
   catalog entry required**.
+- Daily challenge start/resume (`js/daily-challenge.js`): same rule — prefer
+  `window` via `prepareSessionSeed` / `hasGameWindowDto`; do **not** await the
+  full pack before entering when the DTO is present (classic start-flow parity).
 - Pack `ensureStocksLoaded` may still run in parallel for local/offline,
   leaderboard aesthetics, academy, etc., but must **not block** entering the board
   when a window DTO is available.

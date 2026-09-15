@@ -72,3 +72,26 @@ test('seedClassicFromWindow rejects length mismatch', () => {
     /历史窗口无效/
   );
 });
+
+test('seedClassicFromWindow preserves daily gameKind', () => {
+  gameState.stocksData = [];
+  resetSession({ practiceOnly: false, fillMode: 'next_open' });
+  seedClassicFromWindow({
+    gameId: 'g-daily',
+    stockCode: '000001',
+    stockName: '日挑战',
+    fillMode: 'next_open',
+    gameKind: 'daily',
+    window: {
+      v: 1,
+      historyLength: 30,
+      gameDays: 30,
+      history: ohlcv(30),
+      bars: ohlcv(30),
+    },
+  });
+  const s = getSession();
+  assert.equal(s.gameKind, 'daily');
+  assert.equal(s.cloudGameId, 'g-daily');
+  assert.equal(s.fillMode, 'next_open');
+});

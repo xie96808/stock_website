@@ -5,6 +5,7 @@ import {
   abandonActiveCloudGame,
   loadCloudGameDraft,
 } from './game-sync.js';
+import { hasGameWindowDto } from './game-window-seed.js';
 
 /** Must match server DAILY_CHALLENGE_COST (classic create stays 20). */
 export const DAILY_CHALLENGE_COST_UI = 50;
@@ -290,7 +291,14 @@ async function startCloudFromMeta(cloud) {
   }
   const { ensureStocksLoaded } = await import('./pack-store.js');
   const { gameState } = await import('./state.js');
-  await ensureStocksLoaded(gameState);
+  // R5: GameWindowDTO seeds the board; pack must not block enter (classic start-flow parity).
+  if (hasGameWindowDto(cloud)) {
+    ensureStocksLoaded(gameState).catch((err) => {
+      console.warn('pack load (non-blocking, daily)', err);
+    });
+  } else {
+    await ensureStocksLoaded(gameState);
+  }
   const auth = getAuthState();
   const draft = loadCloudGameDraft({
     gameId: cloud.gameId,
@@ -330,9 +338,16 @@ async function runFreshDailyStart() {
     const packPromise = ensureStocksLoaded(gameState, (ratio) => {
       setFillProgress(18 + Math.max(0, Math.min(1, ratio)) * 50, '股票资源加载中…');
     });
-    const createPromise = createOrResumeDaily();
-    const [game] = await Promise.all([createPromise, packPromise]);
-    setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+    const game = await createOrResumeDaily();
+    if (hasGameWindowDto(game)) {
+      packPromise.catch((err) => {
+        console.warn('pack load (non-blocking, daily)', err);
+      });
+      setFillProgress(88, '进入模拟盘…');
+    } else {
+      await packPromise;
+      setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+    }
     await refreshMe().catch(() => {});
     await startCloudFromMeta(game);
     setFillProgress(100, '即将进入…');

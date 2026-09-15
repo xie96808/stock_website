@@ -286,6 +286,29 @@ test('prepareSessionSeed seeds puzzle from cloud snapshot', () => {
   assert.equal(session.position, 'locked');
 });
 
+test('prepareSessionSeed daily + window prefers GameWindowDTO (empty catalog)', () => {
+  const history = ohlcv(30, 400);
+  const bars = ohlcv(30, 800);
+  const { kind, session } = prepareSessionSeed({
+    cloud: {
+      gameId: 'daily-win1',
+      stockCode: '600519',
+      stockName: '挑战股',
+      gameKind: 'daily',
+      fillMode: 'next_open',
+      window: { v: 1, historyLength: 30, gameDays: 30, history, bars },
+    },
+    catalog: [],
+  });
+  assert.equal(kind, 'window');
+  assert.equal(session.gameKind, 'daily');
+  assert.equal(session.cloudGameId, 'daily-win1');
+  assert.equal(session.currentStock.code, '600519');
+  assert.equal(session.gameKline.length, 60);
+  assert.equal(session.gameKline[0].volume, 400);
+  assert.equal(session.gameKline[30].volume, 800);
+});
+
 test('prepareSessionSeed prefers GameWindowDTO over pack', () => {
   const history = ohlcv(30, 500);
   const bars = ohlcv(30, 900);
