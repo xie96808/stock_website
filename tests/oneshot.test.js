@@ -102,7 +102,7 @@ test('L2/L3 hub IA copy: 选择玩法, no L2 立即开始, no embedded daily tab
   assert.doesNotMatch(play, /立即开始/);
 });
 
-test('L3 puzzle chapters: chapter picker before level list; ch2/ch3 soon', () => {
+test('L3 puzzle chapters: chapter picker before level list; ch1–ch4 open', () => {
   const sim = html.split('id="simHub"')[1].split('id="playModes"')[0];
   const chapters = html.split('id="puzzleChapters"')[1].split('</section>')[0];
   assert.match(sim, /选择章节/);
@@ -110,10 +110,15 @@ test('L3 puzzle chapters: chapter picker before level list; ch2/ch3 soon', () =>
   assert.match(sim, /onPuzzleChapterCardClick/);
   assert.match(chapters, /返回模拟盘/);
   assert.match(chapters, /进入第一章/);
+  assert.match(chapters, /进入第二章/);
+  assert.match(chapters, /进入第三章/);
+  assert.match(chapters, /进入第四章/);
   assert.match(chapters, /onPuzzleChapterSelect\(1\)/);
-  assert.match(chapters, /即将推出/);
+  assert.match(chapters, /onPuzzleChapterSelect\(3\)/);
+  assert.match(chapters, /onPuzzleChapterSelect\(4\)/);
   assert.match(chapters, /id="puzzleChapter2Card"/);
-  assert.match(chapters, /disabled/);
+  assert.match(chapters, /id="puzzleChapter4Card"/);
+  assert.doesNotMatch(chapters, /即将推出/);
   assert.match(html, /← 返回章节/);
   assert.match(html, /mascot-l1-day\.jpg/);
   assert.match(html, /mascot-l2-day\.jpg/);

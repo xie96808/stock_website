@@ -1,5 +1,5 @@
 /**
- * F02 残局挑战 (ch1 + ch2) — server logic (flag default OFF).
+ * F02 残局挑战 (ch1…ch4) — server logic (flag default OFF).
  * Locked rules: docs/puzzle-chapter-f02.md / PRD §4.3.
  */
 import crypto from "node:crypto";
@@ -26,6 +26,8 @@ import {
 import {
   PUZZLE_CHAPTER_ID,
   PUZZLE_CHAPTER2_ID,
+  PUZZLE_CHAPTER3_ID,
+  PUZZLE_CHAPTER4_ID,
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
@@ -47,6 +49,8 @@ const ACTION_SET = new Set(PUZZLE_ACTIONS);
 export {
   PUZZLE_CHAPTER_ID,
   PUZZLE_CHAPTER2_ID,
+  PUZZLE_CHAPTER3_ID,
+  PUZZLE_CHAPTER4_ID,
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
@@ -222,11 +226,23 @@ export function seedPuzzleChapter2(db = openDb()) {
   return seedPuzzleChapter(PUZZLE_CHAPTER2_ID, db);
 }
 
+/** Seed / upsert published chapter-3 levels (idempotent on version id). */
+export function seedPuzzleChapter3(db = openDb()) {
+  return seedPuzzleChapter(PUZZLE_CHAPTER3_ID, db);
+}
+
+/** Seed / upsert published chapter-4 levels (idempotent on version id). */
+export function seedPuzzleChapter4(db = openDb()) {
+  return seedPuzzleChapter(PUZZLE_CHAPTER4_ID, db);
+}
+
 /** Seed all authored chapters when flag is on. */
 export function seedAllPuzzleChapters(db = openDb()) {
   const ch1 = seedPuzzleChapter1(db);
   const ch2 = seedPuzzleChapter2(db);
-  return { ch1, ch2 };
+  const ch3 = seedPuzzleChapter3(db);
+  const ch4 = seedPuzzleChapter4(db);
+  return { ch1, ch2, ch3, ch4 };
 }
 
 function latestPublishedLevels(chapterId, db) {
@@ -262,7 +278,7 @@ function chapterRewardGrantedCount(userId, chapterId, db) {
       `SELECT reward_key FROM reward_claims WHERE user_id = ? AND reward_key LIKE 'puzzle:first-clear:%'`
     )
     .all(userId);
-  // Cap is per chapter families (ch1-01… / ch2-01…); do not mix chapters.
+  // Cap is per chapter families (ch1-01… / ch4-01…); do not mix chapters.
   const prefix = `puzzle:first-clear:${chapterId}-`;
   return rows.filter((r) => String(r.reward_key).startsWith(prefix)).length;
 }

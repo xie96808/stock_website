@@ -46,21 +46,21 @@ test('mascot L1/L2/L3 day+night assets exist', () => {
   }
 });
 
-test('index.html opens chapter 2 card; chapter 3 stays soon', () => {
+test('index.html opens chapter 2/3/4 cards', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.match(html, /id="puzzleChapter2Card"[^>]*onclick="onPuzzleChapterSelect\(2\)"/);
+  assert.match(html, /id="puzzleChapter3Card"[^>]*onclick="onPuzzleChapterSelect\(3\)"/);
+  assert.match(html, /id="puzzleChapter4Card"[^>]*onclick="onPuzzleChapterSelect\(4\)"/);
   assert.doesNotMatch(
-    html.slice(html.indexOf('id="puzzleChapter2Card"'), html.indexOf('id="puzzleChapter3Card"')),
+    html.slice(html.indexOf('id="puzzleChapter2Card"'), html.indexOf('id="puzzleChapter4Card"') + 400),
     /即将推出/
   );
-  const ch3 = html.slice(html.indexOf('id="puzzleChapter3Card"'), html.indexOf('id="puzzleChapter3Card"') + 500);
-  assert.match(ch3, /即将推出/);
-  assert.match(ch3, /is-disabled|disabled/);
 });
 
-test('puzzle-chapter select wires ch1 and ch2; fetches chapter query', () => {
+test('puzzle-chapter select wires ch1…ch4; fetches chapter query', () => {
   const src = fs.readFileSync(path.join(ROOT, 'js/puzzle-chapter.js'), 'utf8');
-  assert.match(src, /activeChapterId = idx === 2 \? 'ch2' : 'ch1'/);
+  assert.match(src, /chapterMap = \{ 1: 'ch1', 2: 'ch2', 3: 'ch3', 4: 'ch4' \}/);
   assert.match(src, /puzzles\?chapter=\$\{encodeURIComponent\(activeChapterId\)\}/);
-  assert.match(src, /残局挑战 · 第二章/);
+  assert.match(src, /残局挑战 · 第三章/);
+  assert.match(src, /残局挑战 · 第四章/);
 });

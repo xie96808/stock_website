@@ -11,6 +11,8 @@ const { getJiuCoinBalance, JIU_COIN_REGISTER_GRANT } = await import("../src/lib/
 const {
   seedPuzzleChapter1,
   seedPuzzleChapter2,
+  seedPuzzleChapter3,
+  seedPuzzleChapter4,
   seedAllPuzzleChapters,
   finishPuzzleGame,
   insertLevelVersionBump,
@@ -21,7 +23,12 @@ const {
   PUZZLE_THREE_STAR_REWARD,
   chapterTitle,
 } = await import("../src/lib/puzzleChapter.js");
-const { CHAPTER1_LEVEL_DEFS, CHAPTER2_LEVEL_DEFS } = await import("../src/lib/puzzleLevels.js");
+const {
+  CHAPTER1_LEVEL_DEFS,
+  CHAPTER2_LEVEL_DEFS,
+  CHAPTER3_LEVEL_DEFS,
+  CHAPTER4_LEVEL_DEFS,
+} = await import("../src/lib/puzzleLevels.js");
 const { hasRewardClaim } = await import("../src/lib/rewardClaims.js");
 
 const ctx = await startTestServer();
@@ -349,4 +356,92 @@ test("ch2 first-clear cap is separate from ch1 families", async () => {
   const list1 = await api("/api/v1/puzzles?chapter=ch1");
   assert.equal(list1.status, 200);
   assert.equal(list1.json.data.reward.grantedCount, 1);
+});
+
+test("seed publishes 6 chapter-3 levels; list/start ch3", async () => {
+  const seeded = seedPuzzleChapter3();
+  assert.equal(seeded.created + seeded.skipped, 6);
+  assert.equal(seeded.chapterId, "ch3");
+  const n = openDb()
+    .prepare(`SELECT COUNT(*) AS c FROM puzzle_versions WHERE chapter_id='ch3' AND version=1`)
+    .get().c;
+  assert.equal(n, 6);
+  const list = await api("/api/v1/puzzles?chapter=ch3");
+  assert.equal(list.status, 200);
+  assert.equal(list.json.data.status, "ready");
+  assert.equal(list.json.data.chapterId, "ch3");
+  assert.equal(list.json.data.title, chapterTitle("ch3"));
+  assert.equal(list.json.data.levels.length, 6);
+  assert.equal(list.json.data.levels[0].levelKey, "ch3-01");
+  assert.equal(list.json.data.levels[0].version, CHAPTER3_LEVEL_DEFS[0].version);
+  assert.ok(list.json.data.levels[0].teachingBrief);
+  assert.equal(list.json.data.reward.chapterMax, 120);
+
+  const auth = await register(`pzch3${Date.now().toString(36)}`);
+  const start = await startLevel(auth, "ch3-01", `ch3-start-${auth.user.id}`);
+  assert.equal(start.status, 201, JSON.stringify(start.json));
+  assert.equal(start.json.data.game.levelKey, "ch3-01");
+  assert.ok(Array.isArray(start.json.data.game.bars) && start.json.data.game.bars.length >= 6);
+});
+
+test("seed publishes 6 chapter-4 levels; list/start ch4", async () => {
+  const seeded = seedPuzzleChapter4();
+  assert.equal(seeded.created + seeded.skipped, 6);
+  assert.equal(seeded.chapterId, "ch4");
+  const n = openDb()
+    .prepare(`SELECT COUNT(*) AS c FROM puzzle_versions WHERE chapter_id='ch4' AND version=1`)
+    .get().c;
+  assert.equal(n, 6);
+  const list = await api("/api/v1/puzzles?chapter=ch4");
+  assert.equal(list.status, 200);
+  assert.equal(list.json.data.status, "ready");
+  assert.equal(list.json.data.chapterId, "ch4");
+  assert.equal(list.json.data.title, chapterTitle("ch4"));
+  assert.equal(list.json.data.levels.length, 6);
+  assert.equal(list.json.data.levels[0].levelKey, "ch4-01");
+  assert.equal(list.json.data.levels[0].version, CHAPTER4_LEVEL_DEFS[0].version);
+
+  const auth = await register(`pzch4${Date.now().toString(36)}`);
+  const start = await startLevel(auth, "ch4-01", `ch4-start-${auth.user.id}`);
+  assert.equal(start.status, 201, JSON.stringify(start.json));
+  assert.equal(start.json.data.game.levelKey, "ch4-01");
+});
+
+test("ch1/ch2 list still ready after ch3+ch4 seed (regression)", async () => {
+  seedAllPuzzleChapters();
+  for (const ch of ["ch1", "ch2", "ch3", "ch4"]) {
+    const list = await api(`/api/v1/puzzles?chapter=${ch}`);
+    assert.equal(list.status, 200, ch);
+    assert.equal(list.json.data.chapterId, ch);
+    assert.equal(list.json.data.levels.length, 6, ch);
+  }
+});
+
+test("ch3/ch4 first-clear caps are separate families", async () => {
+  const auth = await register(`pzcap34${Date.now().toString(36)}`);
+  const bal0 = getJiuCoinBalance(auth.user.id);
+  const ch3 = CHAPTER3_LEVEL_DEFS[0];
+  const ch4 = CHAPTER4_LEVEL_DEFS[0];
+  const s3 = await startLevel(auth, ch3.levelKey, `cap-ch3-${auth.user.id}`);
+  assert.equal(s3.status, 201);
+  const f3 = await finishLevel(auth, s3.json.data.game.gameId, ch3.validatedThreeStarActions);
+  assert.equal(f3.status, 201, JSON.stringify(f3.json));
+  assert.equal(f3.json.data.stars, 3);
+  assert.equal(f3.json.data.reward.grantedThisTime, true);
+
+  const s4 = await startLevel(auth, ch4.levelKey, `cap-ch4-${auth.user.id}`);
+  assert.equal(s4.status, 201, JSON.stringify(s4.json));
+  const f4 = await finishLevel(auth, s4.json.data.game.gameId, ch4.validatedThreeStarActions);
+  assert.equal(f4.status, 201, JSON.stringify(f4.json));
+  assert.equal(f4.json.data.stars, 3);
+  assert.equal(f4.json.data.reward.grantedThisTime, true);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 + PUZZLE_FIRST_CLEAR_REWARD * 2 + PUZZLE_THREE_STAR_REWARD * 2
+  );
+
+  const list3 = await api("/api/v1/puzzles?chapter=ch3");
+  assert.equal(list3.json.data.reward.grantedCount, 1);
+  const list4 = await api("/api/v1/puzzles?chapter=ch4");
+  assert.equal(list4.json.data.reward.grantedCount, 1);
 });

@@ -99,4 +99,4 @@ node scripts/run-tests.mjs
 
 - 局内已复用经典 `#gameScreen` + K 线（snapshot bars）；尚未做逐步 event-v1 服务端决策协议。
 - 未做章节付费解锁、反悔、成就墙（F12）。
-- 第三章与「显然占优」筛查跟进。
+- 「显然占优」筛查跟进；第三/四章见 `docs/puzzle-chapter-3-4.md`。

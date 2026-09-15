@@ -21,7 +21,13 @@ const {
   featuredLevelKeyForWeek,
   getPuzzleWeeklyBoard,
 } = await import("../src/lib/puzzleWeekly.js");
-const { CHAPTER1_LEVEL_DEFS, CHAPTER2_LEVEL_DEFS } = await import("../src/lib/puzzleLevels.js");
+const {
+  CHAPTER1_LEVEL_DEFS,
+  CHAPTER2_LEVEL_DEFS,
+  CHAPTER3_LEVEL_DEFS,
+  CHAPTER4_LEVEL_DEFS,
+  ALL_PUZZLE_LEVEL_DEFS,
+} = await import("../src/lib/puzzleLevels.js");
 
 const ctx = await startTestServer();
 const { api, register, stop } = ctx;
@@ -56,8 +62,7 @@ async function finishLevel(auth, gameId, actions) {
 
 function levelDef(levelKey) {
   return (
-    CHAPTER1_LEVEL_DEFS.find((d) => d.levelKey === levelKey) ||
-    CHAPTER2_LEVEL_DEFS.find((d) => d.levelKey === levelKey)
+    ALL_PUZZLE_LEVEL_DEFS.find((d) => d.levelKey === levelKey)
   );
 }
 
