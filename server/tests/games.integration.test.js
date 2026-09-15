@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareTestEnv, startTestServer, holds, actionsObj } from "./helpers.js";
+import {
+  assertGameWindowDtoShape,
+  assertGameWindowDtoMatch,
+} from "./assert-game-window-dto.js";
 
 prepareTestEnv();
 
@@ -475,25 +479,20 @@ test("R5 create returns GameWindowDTO with OHLCV; active/state match; finish sti
   });
   assertOk(create.status, create.json, 201);
   const win = create.json.data.window;
-  assert.ok(win, "create must include window");
-  assert.equal(win.v, 1);
-  assert.equal(win.historyLength, 30);
-  assert.equal(win.gameDays, 30);
-  assert.equal(win.history.length, 30);
-  assert.equal(win.bars.length, 30);
-  assert.ok(Number.isFinite(win.bars[0].volume), "bars include volume");
-  assert.ok(Number.isFinite(win.history[0].volume), "history include volume");
+  assertGameWindowDtoShape(win, {
+    historyLength: 30,
+    gameDays: 30,
+    label: "classic create.window",
+  });
 
   const gameId = create.json.data.gameId;
   const active = await api("/api/v1/games/active", { csrf: auth.csrfToken });
   assertOk(active.status, active.json, 200);
-  assert.equal(active.json.data.window.bars.length, 30);
-  assert.equal(active.json.data.window.bars[0].close, win.bars[0].close);
+  assertGameWindowDtoMatch(active.json.data.window, win, "classic active.window");
 
   const state = await api(`/api/v1/games/${gameId}/state`, { csrf: auth.csrfToken });
   assertOk(state.status, state.json, 200);
-  assert.ok(state.json.data.window);
-  assert.equal(state.json.data.window.gameDays, 30);
+  assertGameWindowDtoMatch(state.json.data.window, win, "classic state.window");
 
   const actions = ["buy", "sell", ...holds(27)];
   const finish = await api(`/api/v1/games/${gameId}/finish`, {

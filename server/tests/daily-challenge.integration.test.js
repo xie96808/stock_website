@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareTestEnv, startTestServer, holds, actionsObj } from "./helpers.js";
+import {
+  assertGameWindowDtoShape,
+  assertGameWindowDtoMatch,
+} from "./assert-game-window-dto.js";
 
 prepareTestEnv();
 process.env.DAILY_CHALLENGE_ENABLED = "1";
@@ -205,29 +209,19 @@ test("R5 daily create/activeGame expose GameWindowDTO (classic shape)", async ()
   const game = started.json.data.game;
   assert.equal(game.gameKind, "daily");
   const win = game.window;
-  assert.ok(win, "daily create must include window");
-  assert.equal(win.v, 1);
-  assert.equal(win.historyLength, game.historyLength);
-  assert.equal(win.gameDays, game.gameDays);
-  assert.equal(win.history.length, win.historyLength);
-  assert.equal(win.bars.length, win.gameDays);
-  assert.ok(Number.isFinite(win.bars[0].volume), "bars include volume");
-  assert.ok(Number.isFinite(win.history[0].volume), "history include volume");
-  for (const k of ["date", "open", "high", "low", "close", "volume"]) {
-    assert.ok(k in win.bars[0], `bar missing ${k}`);
-    assert.ok(k in win.history[0], `history missing ${k}`);
-  }
+  assertGameWindowDtoShape(win, {
+    historyLength: game.historyLength,
+    gameDays: game.gameDays,
+    label: "daily create.window",
+  });
 
   const st = await api("/api/v1/daily-challenge");
   assert.equal(st.status, 200);
-  assert.ok(st.json.data.activeGame?.window);
-  assert.equal(st.json.data.activeGame.window.bars[0].close, win.bars[0].close);
+  assertGameWindowDtoMatch(st.json.data.activeGame?.window, win, "daily status.activeGame.window");
 
   const state = await api(`/api/v1/games/${game.gameId}/state`, { csrf: auth.csrfToken });
   assert.equal(state.status, 200);
-  assert.ok(state.json.data.window);
-  assert.equal(state.json.data.window.gameDays, win.gameDays);
-  assert.equal(state.json.data.window.bars[0].close, win.bars[0].close);
+  assertGameWindowDtoMatch(state.json.data.window, win, "daily state.window");
 });
 
 test("flag off returns 404", async () => {

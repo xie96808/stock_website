@@ -327,6 +327,63 @@ test('prepareSessionSeed prefers GameWindowDTO over pack', () => {
   assert.equal(session.gameKline.length, 60);
 });
 
+test('prepareSessionSeed daily without window needs pack (empty catalog fails)', () => {
+  // Pre-R5 / no window: detectSeedKind → pack, then falls through to local practice.
+  assert.throws(
+    () =>
+      prepareSessionSeed({
+        cloud: {
+          gameId: 'daily-pack1',
+          gameKind: 'daily',
+          stockIndex: 0,
+          windowStartIndex: 30,
+          historyLength: 30,
+        },
+        catalog: [],
+      }),
+    /股票资源未就绪/
+  );
+});
+
+test('prepareSessionSeed daily + window preserves gameKind through seed', () => {
+  const history = ohlcv(30, 11);
+  const bars = ohlcv(30, 22);
+  const { kind, session } = prepareSessionSeed({
+    cloud: {
+      gameId: 'daily-kind',
+      stockCode: '000002',
+      stockName: '日股',
+      gameKind: 'daily',
+      fillMode: 'next_open',
+      window: { v: 1, historyLength: 30, gameDays: 30, history, bars },
+    },
+    catalog: [],
+  });
+  assert.equal(kind, 'window');
+  assert.equal(session.gameKind, 'daily');
+  assert.equal(session.fillMode, 'next_open');
+  assert.equal(session.practiceOnly, false);
+});
+
+test('prepareSessionSeed pack path works for daily when catalog present (no window)', () => {
+  const catalog = [{ code: 'PACK1', name: '包股', kline: ohlcv(80) }];
+  const { kind, session } = prepareSessionSeed({
+    cloud: {
+      gameId: 'daily-pack-ok',
+      gameKind: 'daily',
+      stockIndex: 0,
+      windowStartIndex: 30,
+      historyLength: 30,
+      fillMode: 'next_open',
+    },
+    catalog,
+  });
+  assert.equal(kind, 'pack');
+  assert.equal(session.gameKind, 'daily');
+  assert.equal(session.currentStock.code, 'PACK1');
+  assert.equal(session.gameKline.length, 60);
+});
+
 test('evaluateRewindEligibility / buildRewindPreview', () => {
   resetSession();
   patchSession({
