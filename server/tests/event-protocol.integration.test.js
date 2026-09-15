@@ -126,6 +126,11 @@ test("create + state hides identity/future bars; thin advance + idempotency", as
   });
   assert.equal(revConflict.status, 409);
   assert.equal(revConflict.json.error.code, "REVISION_CONFLICT");
+  assert.deepEqual(revConflict.json.error.details, { expected: 0, actual: 1 });
+
+  // Same Idempotency-Key + same payload: safe retry (no false permanent stuck).
+  assert.equal(replay.json.data.revision, d1.json.data.revision);
+  assert.deepEqual(replay.json.data.actions, d1.json.data.actions);
 });
 
 test("event-v1 finish from canonical actions with curve metrics; client actions conflict", async () => {
@@ -227,6 +232,122 @@ test("event-v1 finish from canonical actions with curve metrics; client actions 
   assert.equal(stateDone.status, 200);
   assert.equal(stateDone.json.data.status, "settled");
   assert.equal(stateDone.json.data.stockCode, data.stockCode);
+});
+
+
+test("decision REVISION_CONFLICT returns 409 + details expected/actual", async () => {
+  const auth = await register(`revd${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `revd-create-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+
+  const ok = await api(`/api/v1/games/${gameId}/decisions`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `revd-ok-${Date.now()}` },
+    body: { expectedRevision: 0, action: "hold" },
+  });
+  assert.equal(ok.status, 200, JSON.stringify(ok.json));
+  assert.equal(ok.json.data.revision, 1);
+
+  const stale = await api(`/api/v1/games/${gameId}/decisions`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `revd-stale-${Date.now()}` },
+    body: { expectedRevision: 0, action: "buy" },
+  });
+  assert.equal(stale.status, 409);
+  assert.equal(stale.json.error.code, "REVISION_CONFLICT");
+  assert.deepEqual(stale.json.error.details, { expected: 0, actual: 1 });
+
+  // Authoritative state still advanced only by the successful write.
+  const state = await api(`/api/v1/games/${gameId}/state`);
+  assert.equal(state.status, 200);
+  assert.equal(state.json.data.revision, 1);
+  assert.deepEqual(state.json.data.actions, ["hold"]);
+});
+
+test("finish REVISION_CONFLICT returns 409 + details expected/actual", async () => {
+  const auth = await register(`revf${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `revf-create-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+
+  const db = openDb();
+  const actions = holds(29);
+  db.prepare(
+    `UPDATE game_sessions SET canonical_actions_json = ?, revision = 29 WHERE id = ?`
+  ).run(JSON.stringify(actions), gameId);
+
+  const badRev = await api(`/api/v1/games/${gameId}/finish`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `revf-bad-${Date.now()}` },
+    body: { expectedRevision: 28, finish: true },
+  });
+  assert.equal(badRev.status, 409);
+  assert.equal(badRev.json.error.code, "REVISION_CONFLICT");
+  assert.deepEqual(badRev.json.error.details, { expected: 28, actual: 29 });
+
+  const sess = getSessionRow(gameId);
+  assert.equal(sess.status, "active");
+  assert.equal(sess.revision, 29);
+});
+
+test("decision idempotent retry same key+payload does not advance revision", async () => {
+  const auth = await register(`idemp${Date.now().toString(36)}`);
+  const create = await api("/api/v1/games", {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": `idemp-create-${Date.now()}` },
+    body: {
+      fillMode: "next_open",
+      pick: { stockIndex: 0, windowStartIndex: 30, historyLength: 30 },
+    },
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  const gameId = create.json.data.gameId;
+  const key = `idemp-dec-${Date.now()}`;
+  const body = { expectedRevision: 0, action: "hold" };
+
+  const first = await api(`/api/v1/games/${gameId}/decisions`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": key },
+    body,
+  });
+  assert.equal(first.status, 200, JSON.stringify(first.json));
+  assert.equal(first.json.data.revision, 1);
+
+  const retry = await api(`/api/v1/games/${gameId}/decisions`, {
+    method: "POST",
+    csrf: auth.csrfToken,
+    headers: { "Idempotency-Key": key },
+    body,
+  });
+  assert.equal(retry.status, 200);
+  assert.equal(retry.json.data.revision, 1);
+  assert.deepEqual(retry.json.data.actions, ["hold"]);
+
+  const state = await api(`/api/v1/games/${gameId}/state`);
+  assert.equal(state.json.data.revision, 1);
+  assert.deepEqual(state.json.data.actions, ["hold"]);
 });
 
 test("decisions require auth", async () => {
