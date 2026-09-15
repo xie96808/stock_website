@@ -507,29 +507,47 @@
 }
 .daily-challenge-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: 13px;
 }
 .daily-challenge-table th,
 .daily-challenge-table td {
-    padding: 6px 4px;
+    padding: 8px 6px;
     text-align: left;
+    vertical-align: middle;
     border-bottom: 1px solid var(--line);
+    box-sizing: border-box;
 }
-.daily-challenge-table th:first-child,
-.daily-challenge-table td:first-child {
-    width: 3em;
+.daily-challenge-table th:nth-child(1),
+.daily-challenge-table td:nth-child(1) {
+    width: 3.5em;
 }
+.daily-challenge-table th:nth-child(3),
+.daily-challenge-table td:nth-child(3) {
+    width: 5.5em;
+}
+.daily-challenge-table th:nth-child(4),
+.daily-challenge-table td:nth-child(4) {
+    width: 6.5em;
+}
+/* Flex must NOT be on <td> — breaks row border alignment across columns. */
 .daily-challenge-nick-cell {
+    min-width: 0;
+    overflow: hidden;
+}
+.daily-challenge-nick-inner {
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
+    max-width: 100%;
 }
-.daily-challenge-nick-cell span {
+.daily-challenge-nick-inner > span {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
 }
 .dc-avatar {
     width: 28px;
@@ -538,6 +556,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+    display: block;
 }
 
 @media (max-width: 640px) {

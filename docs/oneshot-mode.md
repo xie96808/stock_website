@@ -29,7 +29,7 @@ EVENT_PROTOCOL_ENABLED=1 ONESHOT_MODE_ENABLED=1 npm --prefix server start
 
 ## 规则
 
-1. 费用 **20 韭币**（与经典 `JIU_COIN_GAME_CREATE_COST` 相同）。
+1. 费用 **30 韭币**（`JIU_COIN_ONESHOT_CREATE_COST`；经典仍为 `JIU_COIN_GAME_CREATE_COST=20`，今日挑战 50）。
 2. 与经典共用 **ACTIVE 互斥**（`idx_game_sessions_one_active`）。
 3. 服务端在 append decision / legacy finish 前校验买卖次数，超出 → `409 ORDER_LIMIT`；盘面不变。
 4. 反悔关闭：`POST /games/:id/rewind` → `409 REWIND_NOT_ALLOWED`；HUD 无反悔按钮。

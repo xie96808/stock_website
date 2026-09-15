@@ -47,7 +47,7 @@ test("config exposes oneshotMode when enabled", async () => {
   assert.equal(cfg.json.data.features.survivalMode, false);
 });
 
-test("create oneshot: 20 韭币, modifiers, event-v1, ACTIVE mutex", async () => {
+test("create oneshot: 30 韭币, modifiers, event-v1, ACTIVE mutex", async () => {
   const auth = await register(`os${Date.now().toString(36)}`);
   const bal0 = getJiuCoinBalance(auth.user.id);
   const create = await createKind(auth, "oneshot", `os-c-${Date.now()}`);
@@ -58,7 +58,7 @@ test("create oneshot: 20 韭币, modifiers, event-v1, ACTIVE mutex", async () =>
   assert.equal(row.game_kind, "oneshot");
   assert.equal(row.modifiers, JSON.stringify({ maxBuys: 1, maxSells: 1 }));
   assert.equal(row.protocol_version, "event-v1");
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - 20);
+  assert.equal(getJiuCoinBalance(auth.user.id), bal0 - 30);
 
   const classic = await createKind(auth, "classic", `os-cl-${Date.now()}`);
   assert.equal(classic.status, 409);

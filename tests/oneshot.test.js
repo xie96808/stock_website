@@ -96,6 +96,7 @@ test('L2/L3 hub IA copy: 选择玩法, no L2 立即开始, no embedded daily tab
   assert.match(play, /开始今日挑战/);
   assert.match(play, /开始经典练习/);
   assert.match(play, /开始一把梭/);
+  assert.match(play, /data-jiu-price="30"/);
   assert.match(play, /查看日榜/);
   assert.match(html, /id="dailyChallengeBoardModal"/);
   assert.doesNotMatch(play, /立即开始/);

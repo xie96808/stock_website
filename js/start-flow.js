@@ -21,6 +21,7 @@ import {
   packReady,
   scheduleDeferredPrefetch,
 } from './pack-store.js';
+import { amountWithCoinHtml } from './jiu-coin.js';
 
 function perfEnabled() {
   try {
@@ -139,10 +140,21 @@ export function attachDeferredStart(startGame, gameState) {
     r(choice);
   }
 
+  function syncCreateCostNote() {
+    const note = document.getElementById('playModeGuestNote');
+    if (!note) return;
+    const cost = pendingGameKind === 'oneshot' ? 30 : 20;
+    note.innerHTML =
+      '云端对局每次新建消耗 ' +
+      amountWithCoinHtml(cost, { size: 14 }) +
+      '；继续未完成对局不扣费。放弃不退款。';
+  }
+
   function openModal() {
     const modal = modalEl();
     if (!modal) return;
     showChooseView();
+    syncCreateCostNote();
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
     prefetchStocksPack(gameState);
