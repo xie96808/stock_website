@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/jiu-coin.css">
     <link rel="stylesheet" href="css/announcements.css">
+    <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
@@ -999,6 +1000,7 @@
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
         import { initAnnouncements } from './js/announcements.js';
+        import { initFeedback } from './js/feedback.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
@@ -1095,6 +1097,7 @@
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
+        initFeedback();
         (function () {
           const start = document.getElementById('startScreen');
           if (!start) return;

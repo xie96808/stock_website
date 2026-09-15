@@ -9,6 +9,7 @@ const runs = [
   ["node", ["--test", "server/tests/leaderboard.integration.test.js"]],
   ["node", ["--test", "server/tests/admin.integration.test.js"]],
   ["node", ["--test", "server/tests/announcements.integration.test.js"]],
+  ["node", ["--test", "server/tests/feedback.integration.test.js"]],
   ["node", ["--test", "server/tests/jiu-coin.integration.test.js"]],
   ["node", ["--test", "server/tests/reward-claims.integration.test.js"]],
   ["node", ["--test", "server/tests/quiz-rewards.integration.test.js"]],

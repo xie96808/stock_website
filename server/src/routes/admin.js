@@ -26,6 +26,14 @@ import {
   updateAnnouncement,
   archiveAnnouncement,
 } from "../lib/announcements.js";
+import {
+  listAdminFeedback,
+  getAdminFeedback,
+  updateFeedbackStatus,
+  resolveFeedbackImage,
+} from "../lib/feedback.js";
+import { detectImageMime } from "../lib/avatars.js";
+import fs from "node:fs";
 import { ok, fail } from "../lib/http.js";
 import {
   requireAdminGate,
@@ -275,6 +283,69 @@ router.post("/admin/announcements/:id/archive", requireAdminVerified, (req, res)
     return fail(res, result.error.status, result.error.code, result.error.message);
   }
   return ok(res, result.data, result.status);
+});
+
+
+function parseFeedbackId(raw) {
+  const id = Number(raw);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return id;
+}
+
+router.get("/admin/feedback", (req, res) => {
+  const data = listAdminFeedback({
+    status: req.query.status,
+    limit: req.query.limit,
+    cursor: req.query.cursor,
+  });
+  if (data.error) {
+    return fail(res, data.error.status, data.error.code, data.error.message);
+  }
+  return ok(res, data);
+});
+
+router.get("/admin/feedback/:id", (req, res) => {
+  const id = parseFeedbackId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "反馈 ID 无效");
+  const data = getAdminFeedback(id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "反馈不存在");
+  return ok(res, { feedback: data });
+});
+
+router.patch("/admin/feedback/:id", requireAdminVerified, (req, res) => {
+  const id = parseFeedbackId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "反馈 ID 无效");
+  const result = updateFeedbackStatus({
+    actorId: req.user.id,
+    id,
+    status: req.body?.status,
+    requestId: res.locals.requestId,
+  });
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message);
+  }
+  return ok(res, result.data, result.status);
+});
+
+router.get("/admin/feedback-images/:filename", (req, res) => {
+  const resolved = resolveFeedbackImage(req.params.filename);
+  if (!resolved) return fail(res, 404, "NOT_FOUND", "图片不存在");
+  let mime = resolved.mime || "application/octet-stream";
+  try {
+    const fd = fs.openSync(resolved.filePath, "r");
+    try {
+      const head = Buffer.alloc(12);
+      const n = fs.readSync(fd, head, 0, 12, 0);
+      mime = detectImageMime(head.subarray(0, n)) || mime;
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return fail(res, 404, "NOT_FOUND", "图片不存在");
+  }
+  res.setHeader("Content-Type", mime);
+  res.setHeader("Cache-Control", "private, max-age=3600");
+  return res.sendFile(resolved.filePath);
 });
 
 

@@ -134,7 +134,7 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
   }
 }
 
-async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
+export async function apiMultipart(path, formData, { method = "POST", csrf } = {}) {
   const t0 = performance.now();
   try {
     const result = await apiMultipartRequest(path, formData, {
@@ -322,6 +322,7 @@ function ensureAuthDom() {
           </div>
           <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜</label>
           <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
+          <button type="button" class="auth-secondary" id="settingsFeedbackBtn">反馈</button>
           <hr>
           <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
         </div>
