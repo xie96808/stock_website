@@ -186,32 +186,35 @@
                             <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
                         </button>
                         <button type="button" class="hub-board-link" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
-                        <button type="button" class="lane" onclick="startClassicPractice()">
-                            <span class="mark">典</span>
+                        <button type="button" class="lane classic-mode-lane" onclick="startClassicPractice()">
+                            <span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span>
+                            <span class="mark classic-mode-mark">练</span>
                             <span class="copy">
                                 <small>经典练习</small>
                                 <strong>三十日随机盘<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
                             </span>
-                            <span class="cta cta-fill">开始经典练习</span>
+                            <span class="cta cta-fill classic-mode-cta">开始经典练习</span>
                         </button>
                         <button type="button" class="lane oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
-                            <span class="mark">梭</span>
+                            <span class="oneshot-mode-ribbon" aria-hidden="true">一击</span>
+                            <span class="mark oneshot-mode-mark">梭</span>
                             <span class="copy">
                                 <small>一把梭</small>
                                 <strong>只买一次 · 只卖一次<span class="jiu-price-badge jiu-price-paid" data-jiu-price="30" aria-label="消耗 30 韭币"></span></strong>
                                 <p>三十个交易日里各限一买一卖，观望不限。纯择时，不可反悔。</p>
                             </span>
-                            <span class="cta cta-fill">开始一把梭</span>
+                            <span class="cta cta-fill oneshot-mode-cta">开始一把梭</span>
                         </button>
                         <button type="button" class="lane survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
-                            <span class="mark">生</span>
+                            <span class="survival-mode-ribbon" aria-hidden="true">风险</span>
+                            <span class="mark survival-mode-mark">生</span>
                             <span class="copy">
                                 <small>活过三十日</small>
                                 <strong>爆仓线 −20%<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>买卖不限，相对开局净值触及 −20% 立即强制结束。活穿三十日即胜利。</p>
                             </span>
-                            <span class="cta cta-fill">开始生存模式</span>
+                            <span class="cta cta-fill survival-mode-cta">开始生存模式</span>
                         </button>
                     </div>
 
