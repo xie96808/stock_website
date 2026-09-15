@@ -107,19 +107,27 @@ export function endGame() {
 
     const assistEl = document.getElementById('assistClassLabel');
     if (assistEl) {
-        const a = view.assistClass;
-        if (a === 'undo') {
+        if (view.gameKind === 'oneshot') {
             assistEl.hidden = false;
-            assistEl.textContent = '辅助：反悔局';
-        } else if (a === 'clean') {
+            assistEl.textContent = '玩法：一把梭';
+        } else if (view.gameKind === 'daily') {
             assistEl.hidden = false;
-            assistEl.textContent = '辅助：纯净局';
-        } else if (a === 'legacy') {
-            assistEl.hidden = false;
-            assistEl.textContent = '辅助：旧协议局';
+            assistEl.textContent = '玩法：今日挑战';
         } else {
-            assistEl.hidden = true;
-            assistEl.textContent = '';
+            const a = view.assistClass;
+            if (a === 'undo') {
+                assistEl.hidden = false;
+                assistEl.textContent = '辅助：反悔局';
+            } else if (a === 'clean') {
+                assistEl.hidden = false;
+                assistEl.textContent = '辅助：纯净局';
+            } else if (a === 'legacy') {
+                assistEl.hidden = false;
+                assistEl.textContent = '辅助：旧协议局';
+            } else {
+                assistEl.hidden = true;
+                assistEl.textContent = '';
+            }
         }
     }
 
@@ -155,9 +163,14 @@ export function endGame() {
     } else {
         clearPuzzleResultDebrief();
         const lbBtn = document.getElementById('resultLeaderboardBtn');
-        if (lbBtn) lbBtn.hidden = false;
+        if (lbBtn) lbBtn.hidden = view.gameKind === 'oneshot' || view.gameKind === 'daily';
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
         if (playBtn && playBtn.textContent.includes('残局')) {
+            playBtn.textContent = '再来一局';
+        }
+        if (playBtn && view.gameKind === 'oneshot') {
+            playBtn.textContent = '再来一把梭';
+        } else if (playBtn && playBtn.textContent === '再来一把梭') {
             playBtn.textContent = '再来一局';
         }
     }
@@ -498,6 +511,14 @@ export function playAgain() {
             // Re-open level list after returning to hub.
             setTimeout(() => window.onPuzzleChapterCardClick(), 0);
         }
+        return;
+    }
+    if (session.gameKind === 'oneshot' && typeof window.startOneshotGame === 'function') {
+        window.startOneshotGame();
+        return;
+    }
+    if (session.gameKind === 'daily' && typeof window.showPlayModes === 'function') {
+        window.showPlayModes();
         return;
     }
     if (typeof window.startGame === "function") {

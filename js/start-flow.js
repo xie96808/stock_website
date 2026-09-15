@@ -186,7 +186,10 @@ export function attachDeferredStart(startGame, gameState) {
     });
   }
 
-  window.startGame = async function () {
+  let pendingGameKind = 'classic';
+
+  async function openStartModal(gameKind) {
+    pendingGameKind = gameKind === 'oneshot' ? 'oneshot' : 'classic';
     if (locked) return;
     let auth = getAuthState();
     // Avoid "not logged in" during unknown/refreshing bootstrap.
@@ -198,6 +201,14 @@ export function attachDeferredStart(startGame, gameState) {
       return;
     }
     openModal();
+  }
+
+  window.startGame = async function () {
+    return openStartModal('classic');
+  };
+
+  window.startOneshotGame = async function () {
+    return openStartModal('oneshot');
   };
 
   window.cancelFillModeModal = function () {
@@ -250,6 +261,7 @@ export function attachDeferredStart(startGame, gameState) {
         cloudPromise = createCloudSession(fillMode, {
           createHttp: createCloudGame,
           clearDraft: clearCloudGameDraft,
+          gameKind: pendingGameKind,
         });
       }
 
@@ -306,6 +318,7 @@ export function attachDeferredStart(startGame, gameState) {
               cloud = await createCloudSession(fillMode, {
                 createHttp: createCloudGame,
                 clearDraft: clearCloudGameDraft,
+                gameKind: pendingGameKind,
               });
               resumeActions = null;
             }

@@ -17,6 +17,8 @@ import {
 } from './game-session.js';
 import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
 import { replayGame, settleGame } from '../shared/engine.js';
+import { oneshotAmmoFromActions } from '../shared/oneshot.js';
+export { oneshotAmmoFromActions };
 import {
   replayPuzzle,
   settlePuzzle,
@@ -108,6 +110,15 @@ export function validatePlayAction(session, action) {
   if (session.currentDay >= gameDays) return { ok: false, errorZh: '已到结算日' };
   if (action !== 'buy' && action !== 'sell' && action !== 'hold') {
     return { ok: false, errorZh: '非法操作' };
+  }
+  if (session.gameKind === 'oneshot') {
+    const ammo = oneshotAmmoFromActions(session.actions, session.modifiers);
+    if (action === 'buy' && ammo.buysLeft <= 0) {
+      return { ok: false, errorZh: '一把梭买入次数已用完' };
+    }
+    if (action === 'sell' && ammo.sellsLeft <= 0) {
+      return { ok: false, errorZh: '一把梭卖出次数已用完' };
+    }
   }
   if (action === 'buy' && session.position !== 'empty') {
     return { ok: false, errorZh: '已有持仓，不能再买入' };
@@ -421,7 +432,7 @@ export function detectSeedKind(cloud) {
   if (!cloud) return 'local';
   const isPuzzle =
     cloud.gameKind === 'puzzle' ||
-    (Array.isArray(cloud.bars) && cloud.bars.length >= 6 && cloud.gameKind !== 'classic');
+    (!cloud.gameKind && Array.isArray(cloud.bars) && cloud.bars.length >= 6 && cloud.bars.length <= 10);
   if (isPuzzle) return 'puzzle';
   if (hasGameWindowDto(cloud)) return 'window';
   return 'pack';
@@ -525,6 +536,7 @@ export function seedClassicFromPack(cloud, catalog) {
     fillMode: cloud.fillMode || getSession().fillMode,
     protocolVersion: cloud.protocolVersion || null,
     gameKind: cloud.gameKind || null,
+    modifiers: cloud.modifiers || null,
     gameDays: 30,
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,
@@ -616,6 +628,8 @@ export function evaluateRewindEligibility(session = getSession(), features = {})
   if (!session?.cloudMode) return { eligible: false, reason: 'not_cloud' };
   if (session.gameKind === 'daily') return { eligible: false, reason: 'daily' };
   if (session.gameKind === 'puzzle') return { eligible: false, reason: 'puzzle' };
+  if (session.gameKind === 'oneshot') return { eligible: false, reason: 'oneshot' };
+  if (session.gameKind === 'survival') return { eligible: false, reason: 'survival' };
   if (session.protocolVersion !== 'event-v1') {
     return { eligible: false, reason: 'protocol' };
   }
@@ -706,11 +720,13 @@ export async function abandonCloudSession(gameId, { abandonHttp, clearDraft } = 
 /**
  * Create cloud game then clear stale drafts (start-flow / use-case entry).
  */
-export async function createCloudSession(fillMode, { createHttp, clearDraft } = {}) {
+export async function createCloudSession(fillMode, { createHttp, clearDraft, gameKind } = {}) {
   if (typeof createHttp !== 'function') {
     throw new Error('createCloudSession requires createHttp');
   }
-  const cloud = await createHttp(fillMode);
+  const cloud = gameKind
+    ? await createHttp(fillMode, { gameKind })
+    : await createHttp(fillMode);
   if (typeof clearDraft === 'function') clearDraft();
   return cloud;
 }

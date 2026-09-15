@@ -365,8 +365,50 @@
 /* HTML hidden must beat .lanes { display:flex } (UA [hidden] loses to author CSS) */
 .start-screen .lanes[hidden],
 .start-screen #simHub[hidden],
+.start-screen #playModes[hidden],
 .start-screen #homeLanes[hidden] {
     display: none !important;
+}
+
+.start-screen .hub-board-link {
+    align-self: flex-end;
+    margin: -4px 4px 4px 0;
+    padding: 2px 4px;
+    border: none;
+    background: transparent;
+    font-family: var(--kaiti);
+    font-size: 0.88rem;
+    letter-spacing: 0.12em;
+    color: var(--mute);
+    cursor: pointer;
+    box-shadow: none;
+}
+.start-screen .hub-board-link:hover {
+    color: var(--ink);
+}
+.start-screen .hub-board-link[hidden] {
+    display: none !important;
+}
+
+.start-screen .oneshot-mode-lane {
+    border-color: color-mix(in srgb, var(--terra) 70%, var(--line));
+}
+.start-screen .oneshot-mode-lane[hidden] {
+    display: none !important;
+}
+
+.daily-challenge-board-modal .daily-challenge-board-dialog {
+    max-width: min(560px, calc(100vw - 32px));
+    width: 100%;
+}
+.daily-challenge-board-modal .daily-challenge-board {
+    margin: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+.daily-challenge-board-modal .daily-challenge-board[hidden] {
+    display: block !important;
 }
 
 

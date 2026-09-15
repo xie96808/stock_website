@@ -125,9 +125,51 @@
                         </button>
                     </div>
 
-                    <!-- Scheme A: 模拟盘二级 hub -->
+                    <!-- Scheme A: 模拟盘二级 hub — row1 玩法入口, row2 残局 -->
                     <div class="lanes sim-hub-lanes" id="simHub" hidden>
                         <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                        <button type="button" class="lane" id="playModesEntryCard" onclick="showPlayModes()">
+                            <span class="mark">玩</span>
+                            <span class="copy">
+                                <small>选择玩法</small>
+                                <strong>模拟盘玩法</strong>
+                                <p>今日挑战、经典练习、一把梭，从这里进入。</p>
+                            </span>
+                            <span class="cta cta-fill">选择玩法</span>
+                        </button>
+                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
+                            <span class="mark">残</span>
+                            <span class="copy">
+                                <small>残局挑战</small>
+                                <strong>第一章 · 六关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
+                                <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
+                                <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
+                            </span>
+                            <span class="cta cta-wash" id="puzzleChapterCardCta">进入残局</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showMyGames()">
+                            <span class="mark">绩</span>
+                            <span class="copy">
+                                <small>云端战绩</small>
+                                <strong>我的战绩</strong>
+                                <p>登录后查看已保存对局与基础统计。</p>
+                            </span>
+                            <span class="cta cta-wash">查看战绩</span>
+                        </button>
+                        <button type="button" class="lane" onclick="showLeaderboard()">
+                            <span class="mark">榜</span>
+                            <span class="copy">
+                                <small>练习榜</small>
+                                <strong>双模式练习榜</strong>
+                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
+                            </span>
+                            <span class="cta cta-wash">查看榜单</span>
+                        </button>
+                    </div>
+
+                    <!-- L3 玩法选择（与二级同构 lanes） -->
+                    <div class="lanes sim-hub-lanes play-modes-lanes" id="playModes" hidden>
+                        <button type="button" class="hub-back" onclick="showSimHub()">← 返回模拟盘</button>
                         <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
                             <span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span>
                             <span class="mark daily-challenge-mark">日</span>
@@ -139,55 +181,43 @@
                             </span>
                             <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
                         </button>
-                        <div class="daily-challenge-board" id="dailyChallengeBoard" hidden>
-                            <div class="daily-challenge-board-head">
-                                <strong id="dailyChallengeBoardTitle">今日挑战榜</strong>
-                                <button type="button" class="hub-back" onclick="hideDailyChallengeBoard()">收起</button>
-                            </div>
-                            <div id="dailyChallengeBoardBody"></div>
-                        </div>
-                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
-                            <span class="mark">残</span>
+                        <button type="button" class="hub-board-link" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                        <button type="button" class="lane" onclick="startClassicPractice()">
+                            <span class="mark">典</span>
                             <span class="copy">
-                                <small>残局挑战</small>
-                                <strong>第一章 · 六关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
-                                <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
-                            </span>
-                            <span class="cta cta-wash" id="puzzleChapterCardCta">进入残局</span>
-                        </button>
-                        <button type="button" class="lane" onclick="startGame()">
-                            <span class="mark">一</span>
-                            <span class="copy">
-                                <small>开始练习</small>
-                                <strong>开始游戏<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
+                                <small>经典练习</small>
+                                <strong>三十日随机盘<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
                             </span>
-                            <span class="cta cta-fill">立即开始</span>
+                            <span class="cta cta-fill">开始经典练习</span>
                         </button>
-                        <button type="button" class="lane" onclick="showMyGames()">
-                            <span class="mark">二</span>
+                        <button type="button" class="lane oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
+                            <span class="mark">梭</span>
                             <span class="copy">
-                                <small>云端战绩</small>
-                                <strong>我的战绩</strong>
-                                <p>登录后查看已保存对局与基础统计。</p>
+                                <small>一把梭</small>
+                                <strong>只买一次 · 只卖一次<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
+                                <p>三十个交易日里各限一买一卖，观望不限。纯择时，不可反悔。</p>
                             </span>
-                            <span class="cta cta-wash">查看战绩</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showLeaderboard()">
-                            <span class="mark">三</span>
-                            <span class="copy">
-                                <small>练习榜</small>
-                                <strong>双模式练习榜</strong>
-                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
-                            </span>
-                            <span class="cta cta-wash">查看榜单</span>
+                            <span class="cta cta-fill">开始一把梭</span>
                         </button>
                     </div>
                 </div>
             </div>
 
         </section>
+
+        <!-- 今日挑战日榜弹窗（三级进入；二级不再内嵌表） -->
+        <div class="jiu-coin-modal daily-challenge-board-modal" id="dailyChallengeBoardModal" hidden>
+            <div class="jiu-coin-dialog daily-challenge-board-dialog" role="dialog" aria-modal="true" aria-labelledby="dailyChallengeBoardTitle">
+                <button type="button" class="jiu-coin-close-x" onclick="hideDailyChallengeBoard()" aria-label="关闭">×</button>
+                <div class="daily-challenge-board" id="dailyChallengeBoard">
+                    <div class="daily-challenge-board-head">
+                        <strong id="dailyChallengeBoardTitle">今日挑战榜</strong>
+                    </div>
+                    <div id="dailyChallengeBoardBody"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Academy Screen -->
         <section class="academy-screen" id="academyScreen">
@@ -907,11 +937,12 @@
         import { initAnnouncements } from './js/announcements.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
-        import { showHome, showSimHub, restoreSimShell } from './js/home-ia.js';
+        import { showHome, showSimHub, showPlayModes, restoreSimShell } from './js/home-ia.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
           onDailyChallengeCardClick,
+          onDailyChallengeBoardClick,
           showDailyChallengeBoard,
           hideDailyChallengeBoard,
         } from './js/daily-challenge.js';
@@ -968,10 +999,15 @@
         window.hideLeaderboard = hideLeaderboard;
         window.showHome = showHome;
         window.showSimHub = showSimHub;
+        window.showPlayModes = showPlayModes;
         window.restoreSimShell = restoreSimShell;
         window.onDailyChallengeCardClick = onDailyChallengeCardClick;
+        window.onDailyChallengeBoardClick = onDailyChallengeBoardClick;
         window.showDailyChallengeBoard = showDailyChallengeBoard;
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
+        window.startClassicPractice = function () {
+          if (typeof window.startGame === 'function') window.startGame();
+        };
         window.onPuzzleChapterCardClick = onPuzzleChapterCardClick;
         window.showPuzzleScreen = showPuzzleScreen;
         window.hidePuzzleScreen = hidePuzzleScreen;

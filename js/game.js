@@ -31,6 +31,7 @@ import {
     buildRewindPreview,
     applyRewindServerResult,
     syncEventV1Decision,
+    oneshotAmmoFromActions,
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
@@ -569,30 +570,36 @@ export function updateUI() {
     if (fillEl) fillEl.style.width = pct + '%';
 
     // Day counter, mode chrome & mood (残局 vs 模拟盘)
+    const oneshotAmmo = session.gameKind === 'oneshot'
+        ? oneshotAmmoFromActions(session.actions, session.modifiers)
+        : null;
     const hud = formatPlayHudChrome({
         gameKind: session.gameKind,
         title: session.puzzleTitle,
         theme: session.puzzleTheme,
         currentDay: session.currentDay,
         gameDays,
+        ammo: oneshotAmmo,
     });
     const gameScreenEl = document.getElementById('gameScreen');
     if (gameScreenEl) {
         gameScreenEl.classList.toggle('game-screen--puzzle', hud.isPuzzle);
-        gameScreenEl.classList.toggle('game-screen--classic', !hud.isPuzzle);
+        gameScreenEl.classList.toggle('game-screen--oneshot', !!hud.isOneshot);
+        gameScreenEl.classList.toggle('game-screen--classic', !hud.isPuzzle && !hud.isOneshot);
     }
     const progressShell = document.getElementById('gameProgressShell');
     if (progressShell) {
         progressShell.classList.toggle('game-progress-shell--puzzle', hud.isPuzzle);
+        progressShell.classList.toggle('game-progress-shell--oneshot', !!hud.isOneshot);
     }
     const badgeEl = document.getElementById('gameModeBadge');
     if (badgeEl) {
         badgeEl.textContent = hud.badge;
-        badgeEl.dataset.kind = hud.isPuzzle ? 'puzzle' : 'classic';
+        badgeEl.dataset.kind = hud.kind || (hud.isPuzzle ? 'puzzle' : 'classic');
     }
     const modeSubEl = document.getElementById('gameModeSubtitle');
     if (modeSubEl) {
-        if (hud.isPuzzle && hud.subtitle) {
+        if (hud.subtitle) {
             modeSubEl.hidden = false;
             modeSubEl.textContent = hud.subtitle;
         } else {
@@ -619,7 +626,7 @@ export function updateUI() {
     }
     const moodEl = document.getElementById('progressMood');
     if (moodEl) {
-        if (hud.isPuzzle && hud.mood) {
+        if (hud.mood) {
             moodEl.textContent = hud.mood;
         } else {
             const moodIdx = Math.min(Math.floor((session.currentDay - 1) / 3), MOODS.length - 1);
@@ -764,7 +771,8 @@ export function updateUI() {
     } else {
         if (buyBtn) {
             buyBtn.hidden = false;
-            buyBtn.disabled = busy || session.position !== 'empty';
+            const oneshotBuyBlocked = session.gameKind === 'oneshot' && oneshotAmmo && oneshotAmmo.buysLeft <= 0;
+            buyBtn.disabled = busy || session.position !== 'empty' || oneshotBuyBlocked;
         }
         if (sellBtn) {
             sellBtn.hidden = false;
@@ -772,7 +780,8 @@ export function updateUI() {
             const sellBlocked = isPuzzleSession(session)
                 ? session.position === 'empty' || session.position === 'locked'
                 : session.position === 'empty';
-            sellBtn.disabled = busy || sellBlocked;
+            const oneshotSellBlocked = session.gameKind === 'oneshot' && oneshotAmmo && oneshotAmmo.sellsLeft <= 0;
+            sellBtn.disabled = busy || sellBlocked || oneshotSellBlocked;
         }
         if (holdBtn) {
             holdBtn.hidden = false;

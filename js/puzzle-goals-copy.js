@@ -113,9 +113,31 @@ export function formatPuzzleRemainLabel(currentDay, gameDays) {
  */
 export function formatPlayHudChrome(input = {}) {
   const isPuzzle = input.gameKind === 'puzzle';
+  const isOneshot = input.gameKind === 'oneshot';
+  if (isOneshot) {
+    const ammo = input.ammo || {};
+    const buysLeft = ammo.buysLeft == null ? 1 : ammo.buysLeft;
+    const sellsLeft = ammo.sellsLeft == null ? 1 : ammo.sellsLeft;
+    return {
+      isPuzzle: false,
+      isOneshot: true,
+      kind: 'oneshot',
+      badge: '一把梭',
+      subtitle: `买入剩余 ${buysLeft} · 卖出剩余 ${sellsLeft}`,
+      mood: '一把梭 · 各限一买一卖',
+      dayLead: '第',
+      dayUnit: '天',
+      remainLabel: '',
+      boardKicker: 'ONESHOT · 一把梭',
+      stageKicker: '一把梭 · K-LINE',
+      stageTitle: '实时走势',
+    };
+  }
   if (!isPuzzle) {
     return {
       isPuzzle: false,
+      isOneshot: false,
+      kind: 'classic',
       badge: '模拟盘',
       subtitle: '',
       mood: null, // view keeps rotating MOODS
@@ -132,6 +154,8 @@ export function formatPlayHudChrome(input = {}) {
   const subtitle = [title, theme].filter(Boolean).join(' · ') || '残局挑战';
   return {
     isPuzzle: true,
+    isOneshot: false,
+    kind: 'puzzle',
     badge: '残局',
     subtitle,
     mood: '残局挑战 · 对照星级目标出手',

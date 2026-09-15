@@ -14,8 +14,10 @@ import {
   DECISION_ACTION_SET,
   ASSIST_CLEAN,
   GAME_KIND_CLASSIC,
+  GAME_KIND_ONESHOT,
   SCORE_VERSION_CURVE_V1,
 } from "../../../shared/protocol.js";
+import { checkOneshotNextAction, parseModifiers } from "../../../shared/oneshot.js";
 import {
   settleCurveMetrics,
   revealedGameDay,
@@ -91,6 +93,7 @@ export function buildStateDto(row) {
     gameId: row.id,
     protocolVersion,
     gameKind: row.game_kind || GAME_KIND_CLASSIC,
+    modifiers: parseModifiers(row.modifiers),
     revision: row.revision ?? 0,
     undoCount: row.undo_count ?? 0,
     assistClass: row.assist_class || "legacy",
@@ -245,6 +248,19 @@ export function appendDecision(userId, gameId, body, commandKey) {
   }
 
   const prevActions = parseActionsJson(row.canonical_actions_json);
+  if ((row.game_kind || GAME_KIND_CLASSIC) === GAME_KIND_ONESHOT) {
+    const lim = checkOneshotNextAction(prevActions, action, row.modifiers);
+    if (!lim.ok) {
+      return {
+        error: {
+          status: 409,
+          code: lim.code,
+          message: lim.message,
+          details: lim.details,
+        },
+      };
+    }
+  }
   if (prevActions.length >= DECISION_DAYS) {
     return {
       error: {
@@ -682,13 +698,13 @@ export function finishEventV1(userId, gameId, body, commandKey) {
 }
 
 /** Column values when issuing a new event-v1 classic session (flag ON). */
-export function eventV1CreateColumns() {
+export function eventV1CreateColumns({ gameKind = GAME_KIND_CLASSIC } = {}) {
   return {
     protocol_version: PROTOCOL_EVENT_V1,
     revision: 0,
     undo_count: 0,
     assist_class: ASSIST_CLEAN,
     canonical_actions_json: "[]",
-    game_kind: GAME_KIND_CLASSIC,
+    game_kind: gameKind || GAME_KIND_CLASSIC,
   };
 }

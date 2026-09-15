@@ -37,7 +37,7 @@ router.post("/games", requireUser, (req, res) => {
       historyLength: req.body.pick.historyLength,
     };
   }
-  const result = createGame(req.user.id, { fillMode, createKey, pickOpts });
+  const result = createGame(req.user.id, { fillMode, gameKind: req.body?.gameKind, createKey, pickOpts });
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
   }
@@ -154,6 +154,8 @@ export function gamesConfigPayload() {
       dailyChallenge: !!config.dailyChallengeEnabled,
       gameRewind: !!config.gameRewindEnabled,
       puzzleChapter: !!config.puzzleChapterEnabled,
+      oneshotMode: !!config.oneshotModeEnabled,
+      survivalMode: false,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

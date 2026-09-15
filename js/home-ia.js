@@ -1,4 +1,4 @@
-/** Homepage IA Scheme A: root (模拟盘/知识馆/悔棋局) + 模拟盘二级 hub */
+/** Homepage IA Scheme A: root + 模拟盘二级 hub + 三级玩法选择 */
 
 import {
   refreshDailyChallengeFlag,
@@ -18,6 +18,32 @@ import {
   parseRouteHash,
 } from "./screen-router.js";
 
+function playModesEl() {
+  return document.getElementById("playModes");
+}
+
+function hidePlayModesPanel() {
+  const modes = playModesEl();
+  if (modes) modes.hidden = true;
+}
+
+async function refreshOneshotModeCard() {
+  const card = document.getElementById("oneshotModeCard");
+  if (!card) return;
+  let on = false;
+  try {
+    const res = await fetch("/api/v1/config", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const json = await res.json().catch(() => ({}));
+    on = !!(json?.data?.features?.oneshotMode);
+  } catch {
+    on = false;
+  }
+  card.hidden = !on;
+}
+
 /** Root home: three primary entries only */
 export function showHome() {
   prepareScreen(Route.HOME);
@@ -25,10 +51,11 @@ export function showHome() {
   const hub = document.getElementById("simHub");
   if (home) home.hidden = false;
   if (hub) hub.hidden = true;
+  hidePlayModesPanel();
   setRouteHash(Route.HOME);
 }
 
-/** 模拟盘二级 hub: 开始游戏 / 我的战绩 / 练习榜 */
+/** 模拟盘二级 hub: 玩法入口 / 残局 / 我的战绩 / 练习榜 */
 export function showSimHub(opts = {}) {
   const { updateHash = true } = opts;
   prepareScreen(Route.SIM);
@@ -36,15 +63,30 @@ export function showSimHub(opts = {}) {
   const hub = document.getElementById("simHub");
   if (home) home.hidden = true;
   if (hub) hub.hidden = false;
+  hidePlayModesPanel();
   if (updateHash) setRouteHash(Route.SIM);
   // Intent to play: warm pack immediately (don't wait for Start / idle timer).
+  prefetchStocksPack(gameState);
+  refreshPuzzleChapterFlag()
+    .then(() => refreshPuzzleChapterCard())
+    .catch(() => {});
+}
+
+/** 三级玩法选择：今日挑战 / 经典 / 一把梭（hash 仍为 sim） */
+export function showPlayModes() {
+  prepareScreen(Route.SIM);
+  const home = document.getElementById("homeLanes");
+  const hub = document.getElementById("simHub");
+  const modes = playModesEl();
+  if (home) home.hidden = true;
+  if (hub) hub.hidden = true;
+  if (modes) modes.hidden = false;
+  setRouteHash(Route.SIM);
   prefetchStocksPack(gameState);
   refreshDailyChallengeFlag()
     .then(() => refreshDailyChallengeCard())
     .catch(() => {});
-  refreshPuzzleChapterFlag()
-    .then(() => refreshPuzzleChapterCard())
-    .catch(() => {});
+  refreshOneshotModeCard().catch(() => {});
 }
 
 /**
@@ -91,6 +133,7 @@ export function initHomeIaRouting() {
     const hub = document.getElementById("simHub");
     if (home) home.hidden = false;
     if (hub) hub.hidden = true;
+    hidePlayModesPanel();
   } else if (h !== "leaderboard") {
     applyHomeHashRoute(h);
   }

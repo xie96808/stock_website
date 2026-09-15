@@ -7,7 +7,8 @@ import { deductGameCreate } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
-import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
+import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_SURVIVAL, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
+import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "../../../shared/oneshot.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 
@@ -117,6 +118,7 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
     expiresAt: row.expires_at,
     finishedAt: row.finished_at || null,
     gameKind: row.game_kind || "classic",
+    modifiers: parseModifiers(row.modifiers),
     challengeId: row.challenge_id || null,
     protocolVersion: row.protocol_version || "legacy-batch",
     undoCount: row.undo_count ?? 0,
@@ -163,10 +165,42 @@ export function getActiveGame(userId) {
 /**
  * Create a cloud game. opts may include pick overrides for tests.
  */
-export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
+function resolveCreateGameKind(raw) {
+  const kind = raw == null || raw === "" ? GAME_KIND_CLASSIC : String(raw);
+  if (kind === GAME_KIND_CLASSIC) return { ok: true, kind };
+  if (kind === GAME_KIND_ONESHOT) {
+    if (!config.oneshotModeEnabled) {
+      return {
+        error: {
+          status: 403,
+          code: "FEATURE_DISABLED",
+          message: "一把梭暂未开放",
+        },
+      };
+    }
+    return { ok: true, kind };
+  }
+  if (kind === GAME_KIND_SURVIVAL) {
+    return {
+      error: {
+        status: 403,
+        code: "FEATURE_DISABLED",
+        message: "生存模式暂未开放",
+      },
+    };
+  }
+  return {
+    error: { status: 400, code: "INVALID_GAME_KIND", message: "gameKind 无效" },
+  };
+}
+
+export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {} }) {
   if (!FILL_SET.has(fillMode)) {
     return { error: { status: 400, code: "INVALID_FILL_MODE", message: "fillMode 无效" } };
   }
+  const kindRes = resolveCreateGameKind(gameKind);
+  if (kindRes.error) return { error: kindRes.error };
+  const kind = kindRes.kind;
   if (!createKey || typeof createKey !== "string" || createKey.length < 8 || createKey.length > 128) {
     return {
       error: { status: 400, code: "INVALID_IDEMPOTENCY_KEY", message: "Idempotency-Key 必填（8-128）" },
@@ -174,7 +208,10 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
   }
 
   ensureDatasetLoaded();
-  const payloadHash = hashPayload({ fillMode });
+  const payloadHash =
+    kind === GAME_KIND_CLASSIC
+      ? hashPayload({ fillMode })
+      : hashPayload({ fillMode, gameKind: kind });
   const db = openDb();
   const now = nowIso();
 
@@ -219,15 +256,17 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
         err.activeGame = sessionPublic(active);
         throw err;
       }
-      const proto = config.protocolEventV1Enabled ? eventV1CreateColumns() : null;
+      const proto = config.protocolEventV1Enabled ? eventV1CreateColumns({ gameKind: kind }) : null;
+      const modifiersJson = kind === GAME_KIND_ONESHOT ? oneshotModifiersJson() : null;
       if (proto) {
         db.prepare(
           `INSERT INTO game_sessions (
             id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
             fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
             game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at,
-            game_kind, protocol_version, revision, undo_count, assist_class, canonical_actions_json
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?)`
+            game_kind, protocol_version, revision, undo_count, assist_class, canonical_actions_json,
+            modifiers
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).run(
           id,
           userId,
@@ -251,7 +290,37 @@ export function createGame(userId, { fillMode, createKey, pickOpts = {} }) {
           proto.revision,
           proto.undo_count,
           proto.assist_class,
-          proto.canonical_actions_json
+          proto.canonical_actions_json,
+          modifiersJson
+        );
+      } else if (kind === GAME_KIND_ONESHOT) {
+        db.prepare(
+          `INSERT INTO game_sessions (
+            id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
+            fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
+            game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at,
+            game_kind, modifiers
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+        ).run(
+          id,
+          userId,
+          createKey,
+          payloadHash,
+          picked.ruleVersion,
+          picked.datasetVersion,
+          fillMode,
+          picked.stockCode,
+          picked.stockName,
+          picked.stockIndex,
+          picked.windowStartIndex,
+          picked.historyLength,
+          picked.gameDays,
+          picked.snapshotJson,
+          picked.snapshotSha256,
+          now,
+          expiresAt,
+          GAME_KIND_ONESHOT,
+          modifiersJson
         );
       } else {
         db.prepare(
@@ -447,6 +516,20 @@ export function finishGame(userId, gameId, body, commandKey) {
   const snapshot = JSON.parse(row.snapshot_json);
   const bars = snapshot.bars;
   // Replay outside write lock intent: compute first, then short tx
+  if ((row.game_kind || GAME_KIND_CLASSIC) === GAME_KIND_ONESHOT) {
+    const lim = checkOneshotActionList(actions, row.modifiers);
+    if (!lim.ok) {
+      return {
+        error: {
+          status: 409,
+          code: lim.code,
+          message: lim.message,
+          details: lim.details,
+        },
+      };
+    }
+  }
+
   const replay = settleGame({
     fillMode: row.fill_mode,
     bars,
@@ -749,6 +832,8 @@ export function myStats(userId, query = {}) {
   } else if (assistClass) {
     sql += ` AND s.assist_class = ? AND s.game_kind = 'classic'`;
     params.push(assistClass);
+  } else {
+    sql += ` AND s.game_kind = 'classic'`;
   }
 
   const rows = db.prepare(sql).all(...params);
