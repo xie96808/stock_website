@@ -103,6 +103,14 @@ export const config = {
   oneshotModeEnabled:
     process.env.ONESHOT_MODE_ENABLED === "1" || process.env.ONESHOT_MODE_ENABLED === "true",
   /**
+   * Phase B 爆仓生存. Default OFF.
+   * When false, POST /games with gameKind=survival returns FEATURE_DISABLED
+   * and the L3 card stays hidden.
+   * Set SURVIVAL_MODE_ENABLED=1 to enable after Phase B deploy.
+   */
+  survivalModeEnabled:
+    process.env.SURVIVAL_MODE_ENABLED === "1" || process.env.SURVIVAL_MODE_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

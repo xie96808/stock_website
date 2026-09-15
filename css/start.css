@@ -464,6 +464,12 @@
 .start-screen .oneshot-mode-lane[hidden] {
     display: none !important;
 }
+.start-screen .survival-mode-lane {
+    border-color: color-mix(in srgb, #b45309 70%, var(--line));
+}
+.start-screen .survival-mode-lane[hidden] {
+    display: none !important;
+}
 
 .daily-challenge-board-modal .daily-challenge-board-dialog {
     max-width: min(560px, calc(100vw - 32px));

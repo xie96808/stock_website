@@ -3,12 +3,13 @@ import { openDb } from "../db/connection.js";
 import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js";
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
-import { deductGameCreate, JIU_COIN_ONESHOT_CREATE_COST, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
+import { deductGameCreate, JIU_COIN_ONESHOT_CREATE_COST, JIU_COIN_SURVIVAL_CREATE_COST, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
 import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_SURVIVAL, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "../../../shared/oneshot.js";
+import { survivalModifiersJson } from "../../../shared/survival.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 
@@ -181,13 +182,16 @@ function resolveCreateGameKind(raw) {
     return { ok: true, kind };
   }
   if (kind === GAME_KIND_SURVIVAL) {
-    return {
-      error: {
-        status: 403,
-        code: "FEATURE_DISABLED",
-        message: "生存模式暂未开放",
-      },
-    };
+    if (!config.survivalModeEnabled) {
+      return {
+        error: {
+          status: 403,
+          code: "FEATURE_DISABLED",
+          message: "生存模式暂未开放",
+        },
+      };
+    }
+    return { ok: true, kind };
   }
   return {
     error: { status: 400, code: "INVALID_GAME_KIND", message: "gameKind 无效" },
@@ -257,7 +261,12 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
         throw err;
       }
       const proto = config.protocolEventV1Enabled ? eventV1CreateColumns({ gameKind: kind }) : null;
-      const modifiersJson = kind === GAME_KIND_ONESHOT ? oneshotModifiersJson() : null;
+      const modifiersJson =
+        kind === GAME_KIND_ONESHOT
+          ? oneshotModifiersJson()
+          : kind === GAME_KIND_SURVIVAL
+            ? survivalModifiersJson()
+            : null;
       if (proto) {
         db.prepare(
           `INSERT INTO game_sessions (
@@ -293,7 +302,7 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
           proto.canonical_actions_json,
           modifiersJson
         );
-      } else if (kind === GAME_KIND_ONESHOT) {
+      } else if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL) {
         db.prepare(
           `INSERT INTO game_sessions (
             id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
@@ -319,7 +328,7 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
           picked.snapshotSha256,
           now,
           expiresAt,
-          GAME_KIND_ONESHOT,
+          kind,
           modifiersJson
         );
       } else {
@@ -350,9 +359,13 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
         );
       }
       // Same TX: deduct create cost on successful CREATE only (no refund on abandon).
-      // Classic 20 / oneshot 30. Daily uses its own path with DAILY_CHALLENGE_COST=50.
+      // Classic/survival 20 / oneshot 30. Daily uses its own path with DAILY_CHALLENGE_COST=50.
       const createCost =
-        kind === GAME_KIND_ONESHOT ? JIU_COIN_ONESHOT_CREATE_COST : JIU_COIN_GAME_CREATE_COST;
+        kind === GAME_KIND_ONESHOT
+          ? JIU_COIN_ONESHOT_CREATE_COST
+          : kind === GAME_KIND_SURVIVAL
+            ? JIU_COIN_SURVIVAL_CREATE_COST
+            : JIU_COIN_GAME_CREATE_COST;
       deductGameCreate(userId, id, db, createCost);
     });
     tx();

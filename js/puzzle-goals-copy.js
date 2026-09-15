@@ -114,6 +114,25 @@ export function formatPuzzleRemainLabel(currentDay, gameDays) {
 export function formatPlayHudChrome(input = {}) {
   const isPuzzle = input.gameKind === 'puzzle';
   const isOneshot = input.gameKind === 'oneshot';
+  const isSurvival = input.gameKind === 'survival';
+  if (isSurvival) {
+    const floatLabel = input.survivalFloat?.label || '相对开局 · 爆仓线 −20%';
+    return {
+      isPuzzle: false,
+      isOneshot: false,
+      isSurvival: true,
+      kind: 'survival',
+      badge: '活过三十日',
+      subtitle: floatLabel,
+      mood: '生存模式 · 相对开局 −20% 爆仓',
+      dayLead: '第',
+      dayUnit: '天',
+      remainLabel: '',
+      boardKicker: 'SURVIVAL · 活过三十日',
+      stageKicker: '生存 · K-LINE',
+      stageTitle: '实时走势',
+    };
+  }
   if (isOneshot) {
     const ammo = input.ammo || {};
     const buysLeft = ammo.buysLeft == null ? 1 : ammo.buysLeft;
@@ -121,6 +140,7 @@ export function formatPlayHudChrome(input = {}) {
     return {
       isPuzzle: false,
       isOneshot: true,
+      isSurvival: false,
       kind: 'oneshot',
       badge: '一把梭',
       subtitle: `买入剩余 ${buysLeft} · 卖出剩余 ${sellsLeft}`,
@@ -137,6 +157,7 @@ export function formatPlayHudChrome(input = {}) {
     return {
       isPuzzle: false,
       isOneshot: false,
+      isSurvival: false,
       kind: 'classic',
       badge: '模拟盘',
       subtitle: '',
@@ -155,6 +176,7 @@ export function formatPlayHudChrome(input = {}) {
   return {
     isPuzzle: true,
     isOneshot: false,
+    isSurvival: false,
     kind: 'puzzle',
     badge: '残局',
     subtitle,

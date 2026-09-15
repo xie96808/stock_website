@@ -143,7 +143,7 @@ export function attachDeferredStart(startGame, gameState) {
   function syncCreateCostNote() {
     const note = document.getElementById('playModeGuestNote');
     if (!note) return;
-    const cost = pendingGameKind === 'oneshot' ? 30 : 20;
+    const cost = pendingGameKind === 'oneshot' ? 30 : 20; // survival also 20
     note.innerHTML =
       '云端对局每次新建消耗 ' +
       amountWithCoinHtml(cost, { size: 14 }) +
@@ -201,7 +201,8 @@ export function attachDeferredStart(startGame, gameState) {
   let pendingGameKind = 'classic';
 
   async function openStartModal(gameKind) {
-    pendingGameKind = gameKind === 'oneshot' ? 'oneshot' : 'classic';
+    pendingGameKind =
+      gameKind === 'oneshot' ? 'oneshot' : gameKind === 'survival' ? 'survival' : 'classic';
     if (locked) return;
     let auth = getAuthState();
     // Avoid "not logged in" during unknown/refreshing bootstrap.
@@ -221,6 +222,10 @@ export function attachDeferredStart(startGame, gameState) {
 
   window.startOneshotGame = async function () {
     return openStartModal('oneshot');
+  };
+
+  window.startSurvivalGame = async function () {
+    return openStartModal('survival');
   };
 
   window.cancelFillModeModal = function () {

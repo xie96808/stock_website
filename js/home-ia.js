@@ -65,6 +65,23 @@ async function refreshOneshotModeCard() {
   card.hidden = !on;
 }
 
+async function refreshSurvivalModeCard() {
+  const card = document.getElementById("survivalModeCard");
+  if (!card) return;
+  let on = false;
+  try {
+    const res = await fetch("/api/v1/config", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const json = await res.json().catch(() => ({}));
+    on = !!(json?.data?.features?.survivalMode);
+  } catch {
+    on = false;
+  }
+  card.hidden = !on;
+}
+
 /** Root home: three primary entries only */
 export function showHome() {
   prepareScreen(Route.HOME);
@@ -97,7 +114,7 @@ export function showSimHub(opts = {}) {
     .catch(() => {});
 }
 
-/** 三级玩法选择：今日挑战 / 经典 / 一把梭（hash 仍为 sim） */
+/** 三级玩法选择：今日挑战 / 经典 / 一把梭 / 生存（hash 仍为 sim） */
 export function showPlayModes() {
   prepareScreen(Route.SIM);
   const home = document.getElementById("homeLanes");
@@ -114,6 +131,7 @@ export function showPlayModes() {
     .then(() => refreshDailyChallengeCard())
     .catch(() => {});
   refreshOneshotModeCard().catch(() => {});
+  refreshSurvivalModeCard().catch(() => {});
 }
 
 /** 三级残局章节选择：第一章已开放 / 二、三章即将推出（hash 仍为 sim） */

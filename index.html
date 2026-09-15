@@ -137,7 +137,7 @@
                             <span class="copy">
                                 <small>选择玩法</small>
                                 <strong>模拟盘玩法</strong>
-                                <p>今日挑战、经典练习、一把梭，从这里进入。</p>
+                                <p>今日挑战、经典练习、一把梭、生存模式，从这里进入。</p>
                             </span>
                             <span class="cta cta-fill">选择玩法</span>
                         </button>
@@ -203,6 +203,15 @@
                                 <p>三十个交易日里各限一买一卖，观望不限。纯择时，不可反悔。</p>
                             </span>
                             <span class="cta cta-fill">开始一把梭</span>
+                        </button>
+                        <button type="button" class="lane survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
+                            <span class="mark">生</span>
+                            <span class="copy">
+                                <small>活过三十日</small>
+                                <strong>爆仓线 −20%<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
+                                <p>买卖不限，相对开局净值触及 −20% 立即强制结束。活穿三十日即胜利。</p>
+                            </span>
+                            <span class="cta cta-fill">开始生存模式</span>
                         </button>
                     </div>
 
@@ -367,6 +376,13 @@
                 <div class="game-progress-head">
                     <span class="game-mode-badge" id="gameModeBadge" data-kind="classic">模拟盘</span>
                     <span class="game-mode-subtitle" id="gameModeSubtitle" hidden></span>
+                </div>
+                <div class="survival-nav-meter" id="survivalNavMeter" hidden>
+                    <div class="survival-nav-meter__label" id="survivalNavLabel">相对开局 0.00%</div>
+                    <div class="survival-nav-meter__track" aria-hidden="true">
+                        <span class="survival-nav-meter__fill" id="survivalNavFill"></span>
+                        <span class="survival-nav-meter__bust" title="爆仓线 −20%"></span>
+                    </div>
                 </div>
                 <div class="game-progress-meta">
                     <span class="game-progress-label" id="gameProgressDayLabel">

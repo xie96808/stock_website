@@ -848,3 +848,61 @@
 [data-chart-failed] > .chart-pending-msg {
     color: var(--danger, #c43030);
 }
+
+
+/* Survival (活过三十日) HUD float vs start NAV */
+.game-mode-badge[data-kind="survival"] {
+    color: #b45309;
+    border-color: color-mix(in srgb, #b45309 55%, var(--line));
+    background: color-mix(in srgb, #fbbf24 18%, var(--card));
+}
+.survival-nav-meter {
+    margin: 0.35rem 0 0.15rem;
+    display: grid;
+    gap: 0.25rem;
+}
+.survival-nav-meter[hidden] {
+    display: none !important;
+}
+.survival-nav-meter__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+}
+.survival-nav-meter.is-warn .survival-nav-meter__label {
+    color: #b45309;
+}
+.survival-nav-meter.is-bust .survival-nav-meter__label {
+    color: #b91c1c;
+}
+.survival-nav-meter__track {
+    position: relative;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--line) 70%, var(--paper-2));
+    overflow: hidden;
+}
+.survival-nav-meter__fill {
+    display: block;
+    height: 100%;
+    width: 80%;
+    border-radius: inherit;
+    background: color-mix(in srgb, #16a34a 70%, var(--terra));
+    transition: width 0.2s ease, background 0.2s ease;
+}
+.survival-nav-meter.is-warn .survival-nav-meter__fill {
+    background: #f59e0b;
+}
+.survival-nav-meter.is-bust .survival-nav-meter__fill {
+    background: #dc2626;
+}
+.survival-nav-meter__bust {
+    position: absolute;
+    left: 0;
+    top: -1px;
+    bottom: -1px;
+    width: 2px;
+    background: #b91c1c;
+    opacity: 0.85;
+}

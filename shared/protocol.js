@@ -26,6 +26,9 @@ export const GAME_KINDS = Object.freeze([
 /** Default modifiers JSON for oneshot (TEXT on SQLite). */
 export const ONESHOT_MODIFIERS = Object.freeze({ maxBuys: 1, maxSells: 1 });
 
+/** Default modifiers JSON for survival (TEXT on SQLite). Bust vs start NAV, not peak MDD. */
+export const SURVIVAL_MODIFIERS = Object.freeze({ bustNavPpm: -200000, bustBasis: 'start_nav' });
+
 export const ASSIST_LEGACY = 'legacy';
 export const ASSIST_CLEAN = 'clean';
 export const ASSIST_UNDO = 'undo';

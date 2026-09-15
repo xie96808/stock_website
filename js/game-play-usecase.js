@@ -254,6 +254,37 @@ export function isRevisionConflictError(err) {
  *   recovered?: boolean
  * }>}
  */
+
+/**
+ * Apply server auto-settle for survival bust (or early settle payload on decision).
+ * Patches finished return fields so result screen can paint without day-30 finish.
+ */
+export function applySurvivalServerSettle(state, { session = getSession() } = {}) {
+  if (!state || typeof state !== 'object') return { ok: false };
+  const returnPpm = state.returnPpm != null ? state.returnPpm : state.navPpm;
+  const equityMultiple =
+    state.equityMultiple != null
+      ? Number(state.equityMultiple)
+      : returnPpm != null
+        ? 1 + returnPpm / 1e6
+        : session.totalReturn;
+  const returnPct =
+    state.returnPct != null
+      ? state.returnPct
+      : returnPpm != null
+        ? (returnPpm / 10000).toFixed(2)
+        : session.returnPct;
+  patchSession({
+    busted: !!state.busted,
+    returnPpm: returnPpm != null ? returnPpm : session.returnPpm,
+    returnPct,
+    totalReturn: Number.isFinite(equityMultiple) ? equityMultiple : session.totalReturn,
+    valuation: state.valuation || session.valuation,
+    saveStatus: state.status === 'settled' ? 'saved' : session.saveStatus,
+  });
+  return { ok: true };
+}
+
 export async function syncEventV1Decision(
   action,
   {
@@ -280,7 +311,21 @@ export async function syncEventV1Decision(
   try {
     const state = await appendDecision(action, rev);
     const applied = applyServerDecisionState(state, { bars, session: getSession() });
-    if (applied.ok) return { ok: true, state };
+    if (applied.ok) {
+      if (
+        state &&
+        (state.busted ||
+          (state.status === 'settled' &&
+            (state.gameKind === 'survival' || getSession().gameKind === 'survival')))
+      ) {
+        applySurvivalServerSettle(state);
+        return { ok: true, state, survivalSettled: true };
+      }
+      if (state && state.navPpm != null) {
+        patchSession({ returnPpm: state.navPpm });
+      }
+      return { ok: true, state };
+    }
     // Server accepted the write but local apply failed — pull authoritative state once.
     const fresh = await fetchState(gameId);
     const recovered = applyServerDecisionState(fresh, { bars, session: getSession() });
@@ -415,6 +460,7 @@ export function sessionPatchFromCloudFinish(data, { isPuzzle = false } = {}) {
     savedPatch.returnPpm = data.returnPpm;
     savedPatch.returnPct = data.returnPct;
   }
+  if (data.busted != null) savedPatch.busted = !!data.busted;
   if (data.assistClass) savedPatch.assistClass = data.assistClass;
   if (data.undoCount != null) savedPatch.undoCount = data.undoCount;
   if (isPuzzle) {

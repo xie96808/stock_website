@@ -17,7 +17,7 @@
 EVENT_PROTOCOL_ENABLED=1 ONESHOT_MODE_ENABLED=1 npm --prefix server start
 ```
 
-`features.survivalMode` 固定 `false`（Phase B 未实现）。未知 `gameKind` → `400 INVALID_GAME_KIND`，不会静默当成 classic。
+`features.survivalMode` 由 `SURVIVAL_MODE_ENABLED` 控制（Phase B，默认 OFF）。未知 `gameKind` → `400 INVALID_GAME_KIND`，不会静默当成 classic。
 
 ## Migration
 

@@ -155,7 +155,7 @@ export function gamesConfigPayload() {
       gameRewind: !!config.gameRewindEnabled,
       puzzleChapter: !!config.puzzleChapterEnabled,
       oneshotMode: !!config.oneshotModeEnabled,
-      survivalMode: false,
+      survivalMode: !!config.survivalModeEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

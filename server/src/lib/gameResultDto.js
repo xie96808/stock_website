@@ -12,13 +12,16 @@ export function resultDto(resultRow, sessionRow) {
   const equityCurve = resultRow.equity_curve_json
     ? JSON.parse(resultRow.equity_curve_json)
     : null;
+  const busted = !!(valuation && (valuation.kind === "bust" || valuation.busted === true));
   return {
     gameId: resultRow.game_id,
     ruleVersion: sessionRow?.rule_version || RULE_VERSION,
     datasetVersion: sessionRow?.dataset_version,
     fillMode: sessionRow?.fill_mode,
+    gameKind: sessionRow?.game_kind || null,
     returnPpm,
     returnPct,
+    busted,
     tradeCount: resultRow.trade_count,
     equityMultiple: resultRow.equity_multiple_decimal,
     valuation,
