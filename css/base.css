@@ -11,6 +11,13 @@
     /* F01 今日挑战 accent — cooler indigo/slate, distinct from classic CTA terra */
     --challenge: #3d5a80;
     --challenge-ink: #f3ead8;
+    /* L3 play-mode accents (classic / oneshot / survival) */
+    --mode-classic: #3a3530;
+    --mode-classic-ink: #f3ead8;
+    --mode-oneshot: #b8860b;
+    --mode-oneshot-ink: #f3ead8;
+    --mode-survival: #c94a4a;
+    --mode-survival-ink: #f3ead8;
     --wash: #c4a07a;
     --wash-ink: #3a3228;
     --line: #3a3530;
@@ -55,6 +62,13 @@
     /* F01 今日挑战 accent — cooler slate readable on dark paper */
     --challenge: #6b8fb5;
     --challenge-ink: #f3ead8;
+    /* L3 play-mode accents */
+    --mode-classic: #c8bca8;
+    --mode-classic-ink: #1c1a16;
+    --mode-oneshot: #d4a84b;
+    --mode-oneshot-ink: #1c1810;
+    --mode-survival: #e07070;
+    --mode-survival-ink: #1c1212;
     --wash: #8a6e4e;
     --wash-ink: #f0e6d4;
     --line: #c8bca8;
