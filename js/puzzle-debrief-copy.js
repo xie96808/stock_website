@@ -252,11 +252,38 @@ export function describeTradePath(trades, opts = {}) {
 }
 
 /**
+ * Soft-sanitize authored teachingBrief for desk-note tip UI.
+ * Strips common coach slogans; returns null when empty or hard-banned.
+ * @param {unknown} teachingBrief
+ * @returns {{ title: string, paragraph: string }|null}
+ */
+export function formatTeachingTip(teachingBrief) {
+  if (typeof teachingBrief !== 'string') return null;
+  let brief = teachingBrief.trim();
+  if (!brief) return null;
+
+  brief = brief
+    .replace(/关键(是|在于)/g, '重点在')
+    .replace(/记住[：:]?/g, '')
+    .replace(/值得注意的是[，,]?/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    // Drop leftover leading punctuation after slogan strips; keep trailing 。
+    .replace(/^[,，。、：:]+/, '')
+    .trim();
+
+  if (!brief) return null;
+  // Hard ban: drop entire tip rather than coach the player.
+  if (/应止损|完美操作|加油|你真棒|继续努力/.test(brief)) return null;
+
+  return { title: '本关提示', paragraph: brief };
+}
+
+/**
  * 本关情境叙述 — 1–2 measured paragraphs (template + facts).
- * Does not dump teachingBrief slogans; may weave theme as scene label.
+ * teachingBrief is first-class via formatTeachingTip — not pasted here.
  * @param {{
  *   theme?: string|null,
- *   teachingBrief?: string|null,
  *   openStateHint?: string|null,
  *   initialState?: object|null,
  *   maxOrders?: number|null,
@@ -299,20 +326,6 @@ export function formatSituationNarrative(input = {}) {
   }
   if (stars) {
     p2Chunks.push(stars.paragraph.replace(/^本关记/, '星级上，本关记').replace(/。$/, ''));
-  } else if (
-    typeof input.teachingBrief === 'string' &&
-    input.teachingBrief.trim()
-  ) {
-    // Soft scene cue only — strip coach-y stock phrases if present.
-    const brief = input.teachingBrief
-      .trim()
-      .replace(/关键(是|在于)/g, '重点在')
-      .replace(/记住[：:]?/g, '')
-      .replace(/值得注意的是/g, '')
-      .replace(/。$/, '');
-    if (brief && !/应止损|完美操作|加油/.test(brief)) {
-      p2Chunks.push(brief);
-    }
   }
 
   const paragraphs = [p1];
@@ -344,12 +357,15 @@ export const PUZZLE_BS_NOTE =
 export function formatPuzzleDebrief(input = {}) {
   const status = input.status || (input.puzzleResult ? 'ok' : 'pending');
 
+  const teachingTip = formatTeachingTip(input.teachingBrief);
+
   if (status === 'pending') {
     return {
       status: 'pending',
       sectionTitle: '复盘',
       buyHoldCompare: null,
       starBreakdown: null,
+      teachingTip,
       situationParagraphs: [
         '结算保存完成后，这里会对照买入持有、拆开星级条件，并按本关开局仓位与实际成交写一段窗口内的路径说明。',
       ],
@@ -365,6 +381,7 @@ export function formatPuzzleDebrief(input = {}) {
       sectionTitle: '复盘',
       buyHoldCompare: null,
       starBreakdown: null,
+      teachingTip,
       situationParagraphs: [
         err
           ? `云端进度未能写入（${err}）。本地仍可看 K 线与成交记录；星级与韭币以服务器确认后为准。`
@@ -380,7 +397,6 @@ export function formatPuzzleDebrief(input = {}) {
   const starBreakdown = formatStarBreakdown(pr);
   const situationParagraphs = formatSituationNarrative({
     theme: input.theme,
-    teachingBrief: input.teachingBrief,
     openStateHint: input.openStateHint,
     initialState: input.initialState,
     maxOrders: input.maxOrders ?? pr.maxOrders,
@@ -394,6 +410,7 @@ export function formatPuzzleDebrief(input = {}) {
     sectionTitle: '复盘',
     buyHoldCompare,
     starBreakdown,
+    teachingTip,
     situationParagraphs,
     bsNote: PUZZLE_BS_NOTE,
     failNote: null,

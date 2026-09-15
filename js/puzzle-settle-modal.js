@@ -68,6 +68,16 @@ export function renderPuzzleDebriefHtml(debrief) {
     parts.push('</div>');
   }
 
+  if (debrief.teachingTip?.paragraph) {
+    const tip = debrief.teachingTip;
+    parts.push('<div class="puzzle-debrief-block puzzle-debrief-tip">');
+    parts.push(
+      `<div class="puzzle-debrief-label">${escapeHtml(tip.title || '本关提示')}</div>`
+    );
+    parts.push(`<p class="puzzle-debrief-p">${escapeHtml(tip.paragraph)}</p>`);
+    parts.push('</div>');
+  }
+
   if (debrief.situationParagraphs?.length) {
     parts.push('<div class="puzzle-debrief-block puzzle-debrief-situation">');
     parts.push('<div class="puzzle-debrief-label">本关情境</div>');
