@@ -52,6 +52,7 @@ DAILY_CHALLENGE_ENABLED=1 GHOST_DUEL_ENABLED=1 npm --prefix server start
 4. 与经典 / 今日挑战 / 一把梭 / 生存共用 **ACTIVE 互斥**。
 5. 反悔关闭；成绩不进经典练习榜 / 日榜。
 6. HUD **全程**展示幽灵昵称 + 头像（`#ghostHudChip`），并对比当日深度收益。
+7. **揭示节奏（必须）**：玩家先锁定当日买卖/观望，**之后**再揭示幽灵同日操作（`modifiers.ghost.actions[i]`，`i = actions.length - 1`）。幽灵持仓日仍显示 **观望**，不得静默跳过。揭示出现在芯片下的 `#ghostHudAction`（纸感闪一下），并写入交易日志「幽灵」行（昵称 + 头像）。中途续玩按当前决策深度回放已揭示的最后一步，不提前偷看未到日。
 
 ## API
 

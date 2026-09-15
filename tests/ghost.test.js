@@ -9,6 +9,9 @@ import {
   ghostReturnAtDecisionCount,
   formatGhostReturnPct,
   ghostModifiersJson,
+  ghostActionLabelZh,
+  ghostRevealAfterPlayerDecisions,
+  ghostRevealedActions,
   GHOST_LABEL,
 } from '../shared/ghost.js';
 import { formatPlayHudChrome } from '../js/puzzle-goals-copy.js';
@@ -85,4 +88,45 @@ test('ghost rewind ineligible; HUD chip markup present', () => {
   assert.match(html, /id="ghostHudChip"/);
   assert.match(html, /id="ghostHudAvatar"/);
   assert.match(html, /id="ghostHudName"/);
+  assert.match(html, /id="ghostHudAction"/);
+});
+
+test('ghost action-index reveal only after player decision (incl. hold→观望)', () => {
+  const payload = {
+    nickname: '榜一哥',
+    actions: ['buy', 'hold', 'sell', 'hold'],
+  };
+  assert.equal(ghostActionLabelZh('hold'), '观望');
+  assert.equal(ghostRevealAfterPlayerDecisions(payload, 0), null);
+  assert.deepEqual(ghostRevealAfterPlayerDecisions(payload, 1), {
+    index: 0,
+    day: 1,
+    action: 'buy',
+    labelZh: '买入',
+  });
+  assert.deepEqual(ghostRevealAfterPlayerDecisions(payload, 2), {
+    index: 1,
+    day: 2,
+    action: 'hold',
+    labelZh: '观望',
+  });
+  assert.deepEqual(ghostRevealAfterPlayerDecisions(payload, 3), {
+    index: 2,
+    day: 3,
+    action: 'sell',
+    labelZh: '卖出',
+  });
+  // Past end of trajectory → null
+  assert.equal(ghostRevealAfterPlayerDecisions(payload, 99), null);
+
+  const revealed = ghostRevealedActions(payload, 2);
+  assert.equal(revealed.length, 2);
+  assert.equal(revealed[1].labelZh, '观望');
+  // Mid-game resume depth 4 shows last action (day 4 hold)
+  assert.deepEqual(ghostRevealAfterPlayerDecisions(payload, 4), {
+    index: 3,
+    day: 4,
+    action: 'hold',
+    labelZh: '观望',
+  });
 });

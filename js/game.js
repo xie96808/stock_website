@@ -37,7 +37,12 @@ import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
-import { syncGhostHud } from './ghost-duel.js';
+import {
+    syncGhostHud,
+    ghostIdentityFromModifiers,
+    ghostAvatarSrc,
+    ghostRevealedActions,
+} from './ghost-duel.js';
 import { survivalFloatHud } from '../shared/survival.js';
 import {
     ensureEcharts,
@@ -321,6 +326,24 @@ export function getGameBars() {
     return selectGameWindow();
 }
 
+
+function playerReturnPpmForHud(session) {
+    if (Number.isFinite(session.totalReturn)) {
+        return Math.round((session.totalReturn - 1) * 1e6);
+    }
+    return null;
+}
+
+/** After a committed player decision: flash same-day ghost action (player first → ghost). */
+function flashGhostDayReveal() {
+    const session = getSession();
+    if (session.gameKind !== 'ghost') return;
+    syncGhostHud(session, {
+        playerReturnPpm: playerReturnPpmForHud(session),
+        flashReveal: true,
+    });
+}
+
 function applyLocalAction(action) {
     const bars = getGameBars();
     const result = applyLocalDecision(action, { bars });
@@ -332,6 +355,7 @@ function applyLocalAction(action) {
     updateUI();
     updateChart();
     renderWaveAnalysis();
+    flashGhostDayReveal();
     return true;
 }
 
@@ -370,6 +394,7 @@ export async function handleAction(action) {
                     clearCloudGameDraftSafe();
                     updateUI();
                     updateChart();
+                    flashGhostDayReveal();
                     if (result.state?.busted) {
                         showToast('触及爆仓线，本局结束', 'error');
                     }
@@ -380,6 +405,7 @@ export async function handleAction(action) {
                 updateUI();
                 updateChart();
                 renderWaveAnalysis();
+                flashGhostDayReveal();
                 if (result.recovered) {
                     showToast('状态已重新同步', 'success');
                 }
@@ -685,11 +711,9 @@ export function updateUI() {
     const stageTitle = document.getElementById('stageTitle');
     if (stageTitle) stageTitle.textContent = hud.stageTitle;
 
-    // Ghost duel: persistent name + avatar chip (not a toast)
+    // Ghost duel: persistent name + avatar chip; last same-day reveal from decision depth
     syncGhostHud(session, {
-        playerReturnPpm: Number.isFinite(session.totalReturn)
-          ? Math.round((session.totalReturn - 1) * 1e6)
-          : null,
+        playerReturnPpm: playerReturnPpmForHud(session),
     });
     if (gameScreenEl) {
         gameScreenEl.classList.toggle('game-screen--ghost', !!hud.isGhost);
@@ -911,6 +935,14 @@ export function updateUI() {
 }
 
 
+function escapeLogHtml(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 export function updateTradeLog() {
     const session = getSession();
     const listEl = document.getElementById('historyList');
@@ -938,13 +970,51 @@ export function updateTradeLog() {
         });
     }
 
+    // Ghost duel: revealed same-day actions (after player lock-in; hold → 观望)
+    let ghostRevealCount = 0;
+    if (session.gameKind === 'ghost') {
+        const identity = ghostIdentityFromModifiers(session.modifiers);
+        const payload = session.modifiers?.ghost || null;
+        const decisionCount = Array.isArray(session.actions) ? session.actions.length : 0;
+        const revealed = ghostRevealedActions(payload, decisionCount);
+        ghostRevealCount = revealed.length;
+        if (identity && revealed.length) {
+            const src = ghostAvatarSrc(identity);
+            const preset = `images/avatars/${String(identity.avatarId || 1).padStart(2, '0')}.png`;
+            const name = escapeLogHtml(identity.nickname || '幽灵选手');
+            for (const g of revealed) {
+                rows.push({
+                    day: g.day,
+                    cls: `ghost ghost--${g.action}`,
+                    message:
+                        `<span class="log-ghost-who">` +
+                        `<img class="log-ghost-avatar" src="${escapeLogHtml(src)}" alt="" width="18" height="18" ` +
+                        `loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${escapeLogHtml(preset)}'">` +
+                        `<span class="log-ghost-tag">幽灵</span>` +
+                        `<strong>${name}</strong>` +
+                        `</span>` +
+                        `${escapeLogHtml(g.labelZh)}`,
+                });
+            }
+        }
+    }
+
     if (rows.length === 0) {
         listEl.innerHTML = '<div class="log-item empty">暂无交易记录</div>';
         if (countEl) countEl.textContent = '暂无记录';
         return;
     }
 
-    if (countEl) countEl.textContent = `${session.tradeHistory.length} 笔成交`;
+    if (countEl) {
+        const tradeN = session.tradeHistory.length;
+        if (ghostRevealCount > 0 && tradeN > 0) {
+            countEl.textContent = `${tradeN} 笔 · 幽灵 ${ghostRevealCount} 步`;
+        } else if (ghostRevealCount > 0) {
+            countEl.textContent = `幽灵 ${ghostRevealCount} 步`;
+        } else {
+            countEl.textContent = `${tradeN} 笔成交`;
+        }
+    }
 
     listEl.innerHTML = [...rows].reverse().map((row) => `
             <div class="log-item ${row.cls}">

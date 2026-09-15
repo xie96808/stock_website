@@ -110,6 +110,66 @@ export function formatGhostReturnPct(returnPpm) {
 }
 
 /**
+ * Chinese label for a ghost day-action. Hold still surfaces as 观望 (never skip).
+ * @param {string} action
+ * @returns {string}
+ */
+export function ghostActionLabelZh(action) {
+  if (action === 'buy') return '买入';
+  if (action === 'sell') return '卖出';
+  if (action === 'hold') return '观望';
+  return '—';
+}
+
+/**
+ * Same-day ghost action after the player has committed `decisionCount` decisions.
+ * Cadence: player locks day N first, then reveal ghost.actions[N-1] (incl. hold→观望).
+ *
+ * @param {object|null} ghostPayload
+ * @param {number} decisionCount — player actions.length after the commit (0..29)
+ * @returns {{ index: number, day: number, action: string, labelZh: string }|null}
+ */
+export function ghostRevealAfterPlayerDecisions(ghostPayload, decisionCount) {
+  const n = Math.max(0, Math.floor(Number(decisionCount) || 0));
+  if (n < 1 || !ghostPayload) return null;
+  const actions = Array.isArray(ghostPayload.actions) ? ghostPayload.actions : [];
+  const index = n - 1;
+  if (index < 0 || index >= actions.length) return null;
+  const action = actions[index];
+  if (action !== 'buy' && action !== 'sell' && action !== 'hold') return null;
+  return {
+    index,
+    day: index + 1,
+    action,
+    labelZh: ghostActionLabelZh(action),
+  };
+}
+
+/**
+ * All ghost day-actions revealed so far (for trade log / mid-game resume).
+ * @param {object|null} ghostPayload
+ * @param {number} decisionCount
+ * @returns {Array<{ index: number, day: number, action: string, labelZh: string }>}
+ */
+export function ghostRevealedActions(ghostPayload, decisionCount) {
+  const n = Math.max(0, Math.floor(Number(decisionCount) || 0));
+  if (n < 1 || !ghostPayload) return [];
+  const actions = Array.isArray(ghostPayload.actions) ? ghostPayload.actions : [];
+  const out = [];
+  for (let i = 0; i < Math.min(n, actions.length); i++) {
+    const action = actions[i];
+    if (action !== 'buy' && action !== 'sell' && action !== 'hold') continue;
+    out.push({
+      index: i,
+      day: i + 1,
+      action,
+      labelZh: ghostActionLabelZh(action),
+    });
+  }
+  return out;
+}
+
+/**
  * Build modifiers JSON string for a ghost duel session.
  * @param {object} ghost — identity + actions + optional equityCurve
  * @param {{ sourceChallengeId: string, sourceChallengeDate: string }} source

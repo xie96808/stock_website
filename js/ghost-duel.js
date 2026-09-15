@@ -11,10 +11,22 @@ import {
   ghostAvatarSrc,
   ghostReturnAtDecisionCount,
   formatGhostReturnPct,
+  ghostRevealAfterPlayerDecisions,
+  ghostRevealedActions,
+  ghostActionLabelZh,
   GHOST_LABEL,
 } from '../shared/ghost.js';
 
-export { ghostIdentityFromModifiers, ghostAvatarSrc, ghostReturnAtDecisionCount, formatGhostReturnPct, GHOST_LABEL };
+export {
+  ghostIdentityFromModifiers,
+  ghostAvatarSrc,
+  ghostReturnAtDecisionCount,
+  formatGhostReturnPct,
+  ghostRevealAfterPlayerDecisions,
+  ghostRevealedActions,
+  ghostActionLabelZh,
+  GHOST_LABEL,
+};
 
 let ghostDuelEnabled = false;
 let previewCache = null;
@@ -343,7 +355,7 @@ export async function onGhostDuelStartClick() {
 /**
  * Sync persistent HUD chip from session modifiers (name + avatar always visible).
  * @param {object} session
- * @param {{ playerReturnPpm?: number|null }} [opts]
+ * @param {{ playerReturnPpm?: number|null, flashReveal?: boolean }} [opts]
  */
 export function syncGhostHud(session, opts = {}) {
   const chip = document.getElementById('ghostHudChip');
@@ -352,6 +364,12 @@ export function syncGhostHud(session, opts = {}) {
   if (!identity || session?.gameKind !== 'ghost') {
     chip.hidden = true;
     chip.setAttribute('aria-hidden', 'true');
+    const actionEl = document.getElementById('ghostHudAction');
+    if (actionEl) {
+      actionEl.hidden = true;
+      actionEl.textContent = '';
+      actionEl.classList.remove('is-flash');
+    }
     return;
   }
   chip.hidden = false;
@@ -385,5 +403,29 @@ export function syncGhostHud(session, opts = {}) {
     const gStr = formatGhostReturnPct(ghostPpm);
     const pStr = formatGhostReturnPct(playerPpm);
     cmpEl.textContent = `你 ${pStr} · 幽灵 ${gStr}`;
+  }
+
+  // Same-day action reveal: only after player has locked that day (incl. hold → 观望).
+  const actionEl = document.getElementById('ghostHudAction');
+  const reveal = ghostRevealAfterPlayerDecisions(payload, decisionCount);
+  if (actionEl) {
+    if (reveal) {
+      actionEl.hidden = false;
+      actionEl.textContent = `第${reveal.day}日 · ${reveal.labelZh}`;
+      actionEl.dataset.action = reveal.action;
+      actionEl.dataset.day = String(reveal.day);
+      if (opts.flashReveal) {
+        actionEl.classList.remove('is-flash');
+        // Force reflow so repeated reveals re-trigger the paper flash.
+        void actionEl.offsetWidth;
+        actionEl.classList.add('is-flash');
+      }
+    } else {
+      actionEl.hidden = true;
+      actionEl.textContent = '';
+      actionEl.removeAttribute('data-action');
+      actionEl.removeAttribute('data-day');
+      actionEl.classList.remove('is-flash');
+    }
   }
 }
