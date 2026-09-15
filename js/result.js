@@ -163,7 +163,19 @@ export function endGame() {
     } else {
         clearPuzzleResultDebrief();
         const lbBtn = document.getElementById('resultLeaderboardBtn');
-        if (lbBtn) lbBtn.hidden = view.gameKind === 'oneshot' || view.gameKind === 'daily';
+        if (lbBtn) {
+            // Oneshot: no public board yet. Daily: open day-board modal (same as L3「查看日榜」).
+            if (view.gameKind === 'oneshot') {
+                lbBtn.hidden = true;
+                lbBtn.textContent = '查看排行榜';
+            } else if (view.gameKind === 'daily') {
+                lbBtn.hidden = false;
+                lbBtn.textContent = '查看日榜';
+            } else {
+                lbBtn.hidden = false;
+                lbBtn.textContent = '查看排行榜';
+            }
+        }
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
         if (playBtn && playBtn.textContent.includes('残局')) {
             playBtn.textContent = '再来一局';

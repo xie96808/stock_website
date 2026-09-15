@@ -3,7 +3,7 @@ import { openDb } from "../db/connection.js";
 import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js";
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
-import { deductGameCreate } from "./jiuCoin.js";
+import { deductGameCreate, JIU_COIN_ONESHOT_CREATE_COST, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
@@ -349,8 +349,11 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
           expiresAt
         );
       }
-      // Same TX: −20 韭币 on successful CREATE only (no refund on abandon).
-      deductGameCreate(userId, id, db);
+      // Same TX: deduct create cost on successful CREATE only (no refund on abandon).
+      // Classic 20 / oneshot 30. Daily uses its own path with DAILY_CHALLENGE_COST=50.
+      const createCost =
+        kind === GAME_KIND_ONESHOT ? JIU_COIN_ONESHOT_CREATE_COST : JIU_COIN_GAME_CREATE_COST;
+      deductGameCreate(userId, id, db, createCost);
     });
     tx();
   } catch (e) {

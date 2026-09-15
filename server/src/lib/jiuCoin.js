@@ -4,6 +4,8 @@ import { writeAuditLog } from "./audit.js";
 
 export const JIU_COIN_REGISTER_GRANT = 500;
 export const JIU_COIN_GAME_CREATE_COST = 20;
+/** Oneshot (一把梭) create cost — higher than classic. */
+export const JIU_COIN_ONESHOT_CREATE_COST = 30;
 export const JIU_COIN_GAME_REWIND_COST = 50;
 export const JIU_COIN_DAILY_MIN = 50;
 export const JIU_COIN_DAILY_MAX = 200;
@@ -117,10 +119,11 @@ export function deductGameCreateCost(userId, gameId, db, cost) {
 }
 
 /**
- * Classic practice create cost (20). Daily challenge uses DAILY_CHALLENGE_COST via deductGameCreateCost.
+ * Classic practice create cost (20). Oneshot uses JIU_COIN_ONESHOT_CREATE_COST (30).
+ * Daily challenge uses DAILY_CHALLENGE_COST via deductGameCreateCost.
  */
-export function deductGameCreate(userId, gameId, db) {
-  return deductGameCreateCost(userId, gameId, db, JIU_COIN_GAME_CREATE_COST);
+export function deductGameCreate(userId, gameId, db, cost = JIU_COIN_GAME_CREATE_COST) {
+  return deductGameCreateCost(userId, gameId, db, cost);
 }
 
 export function dailyClaimStatus(userId, db = openDb()) {

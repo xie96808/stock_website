@@ -544,8 +544,10 @@ export async function showDailyChallengeBoard() {
         return `<tr>
           <td>${e.rank}</td>
           <td class="daily-challenge-nick-cell">
-            <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
-            <span>${escapeHtml(e.nickname || '玩家')}</span>
+            <span class="daily-challenge-nick-inner">
+              <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
+              <span>${escapeHtml(e.nickname || '玩家')}</span>
+            </span>
           </td>
           <td>${e.returnPct}%</td>
           <td>${mdd}</td>
