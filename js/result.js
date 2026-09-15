@@ -110,6 +110,9 @@ export function endGame() {
         if (view.gameKind === 'oneshot') {
             assistEl.hidden = false;
             assistEl.textContent = '玩法：一把梭';
+        } else if (view.gameKind === 'survival') {
+            assistEl.hidden = false;
+            assistEl.textContent = view.busted ? '玩法：活过三十日 · 爆仓日' : '玩法：活过三十日 · 活穿';
         } else if (view.gameKind === 'daily') {
             assistEl.hidden = false;
             assistEl.textContent = '玩法：今日挑战';
@@ -165,7 +168,7 @@ export function endGame() {
         const lbBtn = document.getElementById('resultLeaderboardBtn');
         if (lbBtn) {
             // Oneshot: no public board yet. Daily: open day-board modal (same as L3「查看日榜」).
-            if (view.gameKind === 'oneshot') {
+            if (view.gameKind === 'oneshot' || view.gameKind === 'survival') {
                 lbBtn.hidden = true;
                 lbBtn.textContent = '查看排行榜';
             } else if (view.gameKind === 'daily') {
@@ -182,7 +185,9 @@ export function endGame() {
         }
         if (playBtn && view.gameKind === 'oneshot') {
             playBtn.textContent = '再来一把梭';
-        } else if (playBtn && playBtn.textContent === '再来一把梭') {
+        } else if (playBtn && view.gameKind === 'survival') {
+            playBtn.textContent = '再来生存模式';
+        } else if (playBtn && (playBtn.textContent === '再来一把梭' || playBtn.textContent === '再来生存模式')) {
             playBtn.textContent = '再来一局';
         }
     }
@@ -257,9 +262,21 @@ export function endGame() {
             }
         }
         const titleEl = document.getElementById('gradeTitle');
-        if (titleEl) titleEl.textContent = `${grade.letter}级 · ${grade.title}`;
+        if (titleEl) {
+            titleEl.textContent = settled.gameKind === 'survival'
+                ? (settled.busted ? '爆仓日' : '活穿')
+                : `${grade.letter}级 · ${grade.title}`;
+        }
         const verdictEl = document.getElementById('gradeVerdict');
-        if (verdictEl) verdictEl.textContent = grade.verdict;
+        if (verdictEl) {
+            if (settled.gameKind === 'survival') {
+                verdictEl.textContent = settled.busted
+                    ? '爆仓日：相对开局净值触及 −20%，本局强制结束。'
+                    : '活穿：撑过三十个交易日，未触及 −20% 爆仓线。';
+            } else {
+                verdictEl.textContent = grade.verdict;
+            }
+        }
     }
 
     const bsDisplayEl = document.getElementById('bsScoreDisplay');
@@ -523,6 +540,10 @@ export function playAgain() {
         if (typeof window.showPuzzleScreen === 'function') {
             setTimeout(() => window.showPuzzleScreen(), 0);
         }
+        return;
+    }
+    if (session.gameKind === 'survival' && typeof window.startSurvivalGame === 'function') {
+        window.startSurvivalGame();
         return;
     }
     if (session.gameKind === 'oneshot' && typeof window.startOneshotGame === 'function') {

@@ -37,6 +37,7 @@ import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
+import { survivalFloatHud } from '../shared/survival.js';
 import {
     ensureEcharts,
     markChartLoading,
@@ -364,6 +365,16 @@ export async function handleAction(action) {
                 fetchState: fetchGameState,
             });
             if (result.ok) {
+                if (result.survivalSettled || result.state?.busted || result.state?.status === 'settled') {
+                    clearCloudGameDraftSafe();
+                    updateUI();
+                    updateChart();
+                    if (result.state?.busted) {
+                        showToast('触及爆仓线，本局结束', 'error');
+                    }
+                    endGame();
+                    return;
+                }
                 persistCurrentCloudDraft();
                 updateUI();
                 updateChart();
@@ -573,6 +584,14 @@ export function updateUI() {
     const oneshotAmmo = session.gameKind === 'oneshot'
         ? oneshotAmmoFromActions(session.actions, session.modifiers)
         : null;
+    const survivalFloat = session.gameKind === 'survival'
+        ? survivalFloatHud(
+            session.returnPpm != null
+              ? session.returnPpm
+              : Math.round((session.totalReturn - 1) * 1e6),
+            session.modifiers
+          )
+        : null;
     const hud = formatPlayHudChrome({
         gameKind: session.gameKind,
         title: session.puzzleTitle,
@@ -580,17 +599,37 @@ export function updateUI() {
         currentDay: session.currentDay,
         gameDays,
         ammo: oneshotAmmo,
+        survivalFloat,
     });
     const gameScreenEl = document.getElementById('gameScreen');
     if (gameScreenEl) {
         gameScreenEl.classList.toggle('game-screen--puzzle', hud.isPuzzle);
         gameScreenEl.classList.toggle('game-screen--oneshot', !!hud.isOneshot);
-        gameScreenEl.classList.toggle('game-screen--classic', !hud.isPuzzle && !hud.isOneshot);
+        gameScreenEl.classList.toggle('game-screen--survival', !!hud.isSurvival);
+        gameScreenEl.classList.toggle(
+          'game-screen--classic',
+          !hud.isPuzzle && !hud.isOneshot && !hud.isSurvival
+        );
     }
     const progressShell = document.getElementById('gameProgressShell');
     if (progressShell) {
         progressShell.classList.toggle('game-progress-shell--puzzle', hud.isPuzzle);
         progressShell.classList.toggle('game-progress-shell--oneshot', !!hud.isOneshot);
+        progressShell.classList.toggle('game-progress-shell--survival', !!hud.isSurvival);
+    }
+    const navMeter = document.getElementById('survivalNavMeter');
+    if (navMeter) {
+        if (survivalFloat) {
+            navMeter.hidden = false;
+            navMeter.classList.toggle('is-warn', !!survivalFloat.warn && survivalFloat.navPpm > survivalFloat.bustNavPpm);
+            navMeter.classList.toggle('is-bust', survivalFloat.navPpm <= survivalFloat.bustNavPpm);
+            const lab = document.getElementById('survivalNavLabel');
+            if (lab) lab.textContent = survivalFloat.label;
+            const fill = document.getElementById('survivalNavFill');
+            if (fill) fill.style.width = `${Math.round(survivalFloat.progress01 * 100)}%`;
+        } else {
+            navMeter.hidden = true;
+        }
     }
     const badgeEl = document.getElementById('gameModeBadge');
     if (badgeEl) {

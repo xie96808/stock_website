@@ -7,7 +7,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 import { sha256Text } from "./dataset.js";
-import { replayGame, settleGame, DECISION_DAYS, GAME_DAYS } from "../../../shared/engine.js";
+import { replayGame, settleGame, DECISION_DAYS, GAME_DAYS, roundHalfUp } from "../../../shared/engine.js";
 import {
   PROTOCOL_EVENT_V1,
   PROTOCOL_LEGACY_BATCH,
@@ -15,11 +15,15 @@ import {
   ASSIST_CLEAN,
   GAME_KIND_CLASSIC,
   GAME_KIND_ONESHOT,
+  GAME_KIND_SURVIVAL,
   SCORE_VERSION_CURVE_V1,
 } from "../../../shared/protocol.js";
 import { checkOneshotNextAction, parseModifiers } from "../../../shared/oneshot.js";
+import { checkSurvivalBust } from "../../../shared/survival.js";
 import {
   settleCurveMetrics,
+  buildEquityCurveCash,
+  mddPpmFromCurve,
   revealedGameDay,
 } from "../../../shared/equityCurve.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
@@ -39,6 +43,109 @@ function parseActionsJson(raw) {
     return [];
   }
 }
+
+/**
+ * Early survival bust settle (partial actions). Bust return = MTM vs start NAV.
+ * Must run inside an open write transaction after actions/revision advance.
+ */
+function writeSurvivalBustSettle(db, {
+  gameId,
+  row,
+  actions,
+  bars,
+  replay,
+  revisionBefore,
+  revisionAfter,
+  commandId,
+  commandKey,
+  payloadHash,
+  eventJson,
+  now,
+}) {
+  const bustCheck = checkSurvivalBust(replay.returnPpm, row.modifiers);
+  const bustMeta = {
+    kind: "bust",
+    busted: true,
+    day: actions.length,
+    returnPpm: replay.returnPpm,
+    bustBasis: bustCheck.bustBasis,
+    bustNavPpm: bustCheck.bustNavPpm,
+  };
+  const cash = buildEquityCurveCash({
+    fillMode: row.fill_mode,
+    bars,
+    actions,
+    finish: false,
+  });
+  const equityCurve = cash.map((equity, day) => ({
+    day,
+    equity: roundHalfUp(equity),
+  }));
+  const submissionHash = hashPayload({
+    actions,
+    finish: true,
+    protocol: PROTOCOL_EVENT_V1,
+    busted: true,
+  });
+  const equityStr = String(replay.equityMultiple);
+  const assistClass = row.assist_class || ASSIST_CLEAN;
+
+  db.prepare(
+    `INSERT INTO game_results (
+      game_id, submission_hash, actions_json, trades_json, return_ppm,
+      equity_multiple_decimal, trade_count, valuation_json, validity,
+      mdd_ppm, benchmark_return_ppm, equity_curve_json, score_version, assist_class
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'valid', ?, ?, ?, ?, ?)`
+  ).run(
+    gameId,
+    submissionHash,
+    JSON.stringify(actions),
+    JSON.stringify(replay.trades),
+    replay.returnPpm,
+    equityStr,
+    replay.tradeCount,
+    JSON.stringify(bustMeta),
+    mddPpmFromCurve(cash),
+    null,
+    JSON.stringify(equityCurve),
+    SCORE_VERSION_CURVE_V1,
+    assistClass
+  );
+
+  db.prepare(
+    `UPDATE game_sessions
+     SET status = 'settled', finished_at = ?, revision = ?
+     WHERE id = ? AND status = 'active'`
+  ).run(now, revisionAfter, gameId);
+
+  const sess = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+  const result = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
+  const responseData = {
+    ...buildStateDto(sess),
+    ...resultDto(result, sess),
+    busted: true,
+    status: "settled",
+  };
+
+  db.prepare(
+    `INSERT INTO game_commands (
+      id, game_id, command_key, payload_hash, type,
+      revision_before, revision_after, event_json, response_json
+    ) VALUES (?, ?, ?, ?, 'advance', ?, ?, ?, ?)`
+  ).run(
+    commandId,
+    gameId,
+    commandKey,
+    payloadHash,
+    revisionBefore,
+    revisionAfter,
+    eventJson,
+    JSON.stringify(responseData)
+  );
+
+  return { sess, responseData };
+}
+
 
 function expireIfNeeded(db, row) {
   if (!row || row.status !== "active") return row;
@@ -296,6 +403,11 @@ export function appendDecision(userId, gameId, body, commandKey) {
   const commandId = crypto.randomUUID();
   const eventJson = JSON.stringify({ type: "advance", action, day: nextActions.length });
 
+  const isSurvival = (row.game_kind || GAME_KIND_CLASSIC) === GAME_KIND_SURVIVAL;
+  const survivalBust = isSurvival
+    ? checkSurvivalBust(replay.returnPpm, row.modifiers)
+    : { busted: false };
+
   try {
     const tx = db.transaction(() => {
       const fresh = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
@@ -326,8 +438,36 @@ export function appendDecision(userId, gameId, body, commandKey) {
          WHERE id = ? AND status = 'active' AND revision = ?`
       ).run(revisionAfter, JSON.stringify(nextActions), gameId, expectedRevision);
 
+      if (survivalBust.busted) {
+        const busted = writeSurvivalBustSettle(db, {
+          gameId,
+          row: fresh,
+          actions: nextActions,
+          bars: snapshot.bars,
+          replay,
+          revisionBefore,
+          revisionAfter,
+          commandId,
+          commandKey,
+          payloadHash,
+          eventJson: JSON.stringify({
+            type: "advance",
+            action,
+            day: nextActions.length,
+            busted: true,
+          }),
+          now: nowIso(),
+        });
+        return { responseData: busted.responseData, bustSettled: true, fillMode: fresh.fill_mode };
+      }
+
       const stateRow = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
       const responseData = buildStateDto(stateRow);
+      // Mid-game survival HUD: expose nav vs start (engine returnPpm).
+      if (isSurvival) {
+        responseData.navPpm = replay.returnPpm;
+        responseData.busted = false;
+      }
 
       db.prepare(
         `INSERT INTO game_commands (
@@ -345,10 +485,14 @@ export function appendDecision(userId, gameId, body, commandKey) {
         JSON.stringify(responseData)
       );
 
-      return responseData;
+      return { responseData, bustSettled: false };
     });
-    const data = tx();
-    return { status: 200, data };
+    const out = tx();
+    if (out.bustSettled) {
+      if (out.fillMode) invalidateLeaderboardCache(out.fillMode);
+      else invalidateLeaderboardCache();
+    }
+    return { status: 200, data: out.responseData };
   } catch (e) {
     if (e.code === "IDEMPOTENCY_HIT" && e.row?.response_json) {
       try {
@@ -563,6 +707,26 @@ export function finishEventV1(userId, gameId, body, commandKey) {
     bars,
     actions,
   });
+  const isSurvivalFinish = (row.game_kind || GAME_KIND_CLASSIC) === GAME_KIND_SURVIVAL;
+  const finishBust = isSurvivalFinish
+    ? checkSurvivalBust(replay.returnPpm, row.modifiers)
+    : { busted: false };
+  let valuationJson = replay.valuation ? JSON.stringify(replay.valuation) : null;
+  if (isSurvivalFinish && finishBust.busted) {
+    valuationJson = JSON.stringify({
+      kind: "bust",
+      busted: true,
+      day: GAME_DAYS,
+      returnPpm: replay.returnPpm,
+      bustBasis: finishBust.bustBasis,
+      bustNavPpm: finishBust.bustNavPpm,
+      underlying: replay.valuation || null,
+    });
+  } else if (isSurvivalFinish) {
+    // Survived full window — stamp busted:false on valuation envelope when present.
+    const base = replay.valuation ? { ...replay.valuation } : { kind: "valuation", day: GAME_DAYS };
+    valuationJson = JSON.stringify({ ...base, busted: false });
+  }
   const submissionHash = hashPayload({ actions, finish: true, protocol: PROTOCOL_EVENT_V1 });
   const equityStr = String(replay.equityMultiple);
   const revisionBefore = row.revision;
@@ -623,7 +787,7 @@ export function finishEventV1(userId, gameId, body, commandKey) {
         replay.returnPpm,
         equityStr,
         replay.tradeCount,
-        replay.valuation ? JSON.stringify(replay.valuation) : null,
+        valuationJson,
         metrics.mddPpm,
         metrics.benchmarkReturnPpm,
         JSON.stringify(metrics.equityCurve),

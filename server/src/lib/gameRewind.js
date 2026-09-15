@@ -12,6 +12,7 @@ import {
   ASSIST_UNDO,
   GAME_KIND_CLASSIC,
   GAME_KIND_ONESHOT,
+  GAME_KIND_SURVIVAL,
 } from "../../../shared/protocol.js";
 import { deductRewardClaim } from "./rewardClaims.js";
 import { JIU_COIN_GAME_REWIND_COST, getJiuCoinBalance } from "./jiuCoin.js";
@@ -150,6 +151,16 @@ export function rewindGame(userId, gameId, body, commandKey) {
         status: 409,
         code: "REWIND_NOT_ALLOWED",
         message: "一把梭模式不可反悔",
+        details: { gameKind: row.game_kind },
+      },
+    };
+  }
+  if ((row.game_kind || GAME_KIND_CLASSIC) === GAME_KIND_SURVIVAL) {
+    return {
+      error: {
+        status: 409,
+        code: "REWIND_NOT_ALLOWED",
+        message: "生存模式不可反悔",
         details: { gameKind: row.game_kind },
       },
     };
