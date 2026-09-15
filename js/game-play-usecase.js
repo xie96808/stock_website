@@ -103,7 +103,7 @@ export function applyPuzzleEngineResult(r, { finished = false, bars = null, sess
  */
 export function validatePlayAction(session, action) {
   if (!session) return { ok: false, errorZh: '无对局' };
-  if (session.rewindBusy) return { ok: false, errorZh: '忙碌中' };
+  if (session.rewindBusy || session.decisionBusy) return { ok: false, errorZh: '忙碌中' };
   const gameDays = sessionGameDays(session);
   if (session.currentDay >= gameDays) return { ok: false, errorZh: '已到结算日' };
   if (action !== 'buy' && action !== 'sell' && action !== 'hold') {
@@ -176,25 +176,124 @@ export function applyLocalDecision(action, { bars, session = getSession() } = {}
  * No DOM. Puzzle does not use this path today.
  */
 export function applyServerDecisionState(state, { bars, session = getSession() } = {}) {
+  if (!state || typeof state !== 'object') return { ok: false };
   const actions = Array.isArray(state.actions) ? state.actions.slice() : [];
+  const meta = {
+    pendingAction: null,
+    revision: state.revision ?? session.revision ?? 0,
+    undoCount: state.undoCount ?? session.undoCount ?? 0,
+    assistClass: state.assistClass ?? session.assistClass,
+    protocolVersion: state.protocolVersion || session.protocolVersion,
+  };
+
+  // Empty canonical actions = decision day 1 (create / rewind-to-start).
+  // replayGame rejects length 0; do not leave revision stale after a successful server write.
+  if (actions.length === 0) {
+    patchSession({
+      ...meta,
+      actions: [],
+      currentDay: 1,
+      tradeHistory: [],
+      valuation: null,
+      tradeGains: [],
+      holdingDays: 0,
+      position: 'empty',
+      costBasis: 0,
+      lastBuyFillDay: null,
+      totalReturn: 1,
+      returnPpm: null,
+      returnPct: null,
+    });
+    return { ok: true };
+  }
+
   const r = replayGame({
     fillMode: session.fillMode,
     bars,
     actions,
     finish: false,
   });
-  if (!r.ok) return { ok: false };
+  if (!r.ok) return { ok: false, engine: r };
   patchSession({
+    ...meta,
     actions,
-    pendingAction: null,
-    revision: state.revision ?? session.revision,
-    undoCount: state.undoCount ?? session.undoCount,
-    assistClass: state.assistClass ?? session.assistClass,
-    protocolVersion: state.protocolVersion || session.protocolVersion,
     currentDay: Math.min(actions.length + 1, sessionGameDays(session)),
   });
   applyEngineResult(r, { finished: false, bars });
   return { ok: true };
+}
+
+/** True when an HTTP/API error is a revision conflict (409 REVISION_CONFLICT). */
+export function isRevisionConflictError(err) {
+  if (!err) return false;
+  return err.code === 'REVISION_CONFLICT' || err.status === 409 && String(err.code || '').includes('REVISION');
+}
+
+/**
+ * event-v1 decision sync with one-shot recovery on revision conflict.
+ * Inject HTTP adapters so tests stay free of fetch/DOM.
+ *
+ * @returns {Promise<{
+ *   ok: true,
+ *   recovered?: boolean,
+ *   state?: object
+ * } | {
+ *   ok: false,
+ *   error: Error,
+ *   recovered?: boolean
+ * }>}
+ */
+export async function syncEventV1Decision(
+  action,
+  {
+    expectedRevision,
+    bars,
+    session = getSession(),
+    appendDecision,
+    fetchState,
+  } = {}
+) {
+  if (typeof appendDecision !== 'function') {
+    throw new Error('syncEventV1Decision requires appendDecision');
+  }
+  if (typeof fetchState !== 'function') {
+    throw new Error('syncEventV1Decision requires fetchState');
+  }
+  const gameId = session.cloudGameId;
+  if (!gameId) {
+    return { ok: false, error: new Error('无云端对局') };
+  }
+  const rev =
+    expectedRevision != null ? expectedRevision : session.revision ?? 0;
+
+  try {
+    const state = await appendDecision(action, rev);
+    const applied = applyServerDecisionState(state, { bars, session: getSession() });
+    if (applied.ok) return { ok: true, state };
+    // Server accepted the write but local apply failed — pull authoritative state once.
+    const fresh = await fetchState(gameId);
+    const recovered = applyServerDecisionState(fresh, { bars, session: getSession() });
+    if (recovered.ok) return { ok: true, recovered: true, state: fresh };
+    return {
+      ok: false,
+      error: new Error('决策已写入但本地状态无法应用，请刷新页面'),
+      recovered: false,
+    };
+  } catch (err) {
+    if (!isRevisionConflictError(err)) {
+      return { ok: false, error: err };
+    }
+    try {
+      const fresh = await fetchState(gameId);
+      const recovered = applyServerDecisionState(fresh, { bars, session: getSession() });
+      if (recovered.ok) {
+        return { ok: false, recovered: true, error: err, state: fresh };
+      }
+      return { ok: false, recovered: false, error: err };
+    } catch (fetchErr) {
+      return { ok: false, recovered: false, error: err, fetchError: fetchErr };
+    }
+  }
 }
 
 /**
