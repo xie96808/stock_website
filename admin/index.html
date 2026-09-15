@@ -135,6 +135,28 @@
       <p id="annMsg" class="msg"></p>
       <p class="note">写操作需二次验证。无 ID 时点「发布」且正文已填，将直接新建并上线。公开页仅展示 published；「今日关闭」由访客本地日历日记住。</p>
 
+
+      <h2>用户反馈 · 查看 / 已读 / 归档</h2>
+      <div class="row">
+        <select id="fbStatusFilter">
+          <option value="">全部</option>
+          <option value="new">new</option>
+          <option value="read">read</option>
+          <option value="archived">archived</option>
+        </select>
+        <button type="button" id="fbSearchBtn">刷新列表</button>
+      </div>
+      <div id="fbList" class="list"></div>
+      <div class="row">
+        <input id="fbId" placeholder="反馈 ID" style="max-width:7rem" />
+        <button type="button" id="fbLoadBtn">查看详情</button>
+        <button type="button" id="fbMarkReadBtn">标为已读</button>
+        <button type="button" id="fbArchiveBtn">归档</button>
+      </div>
+      <div id="fbDetail" class="list"></div>
+      <p id="fbMsg" class="msg"></p>
+      <p class="note">列表最新优先。详情含正文与图片（仅管理员可见）。改状态需二次验证。</p>
+
       <h2>审计日志</h2>
       <div class="row">
         <button type="button" id="auditBtn">刷新最近审计</button>

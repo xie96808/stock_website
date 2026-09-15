@@ -132,6 +132,10 @@ export const config = {
     createGamePerUserDay: envInt("RATE_CREATE_GAME_PER_USER_DAY", 100),
     createGameMinuteMs: envInt("RATE_CREATE_GAME_MINUTE_MS", 60 * 1000),
     createGameDayMs: envInt("RATE_CREATE_GAME_DAY_MS", 24 * 60 * 60 * 1000),
+    /** User feedback: per user / IP per hour (support channel, default on). */
+    feedbackPerUserHour: envInt("RATE_FEEDBACK_PER_USER_HOUR", 5),
+    feedbackPerIpHour: envInt("RATE_FEEDBACK_PER_IP_HOUR", 20),
+    feedbackHourMs: envInt("RATE_FEEDBACK_HOUR_MS", 60 * 60 * 1000),
   },
 };
 

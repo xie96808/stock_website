@@ -64,6 +64,8 @@ export async function startTestServer() {
   config.rateLimit.registerPerIpDay = 10_000;
   config.rateLimit.createGamePerUserMinute = 10_000;
   config.rateLimit.createGamePerUserDay = 10_000;
+  config.rateLimit.feedbackPerUserHour = 10_000;
+  config.rateLimit.feedbackPerIpHour = 10_000;
   resetRateLimitBuckets();
   const { createApp } = await import("../src/app.js");
   const app = createApp({ skipStatic: true });

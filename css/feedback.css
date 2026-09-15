@@ -1,0 +1,29 @@
+
+/* User feedback modal — paper/ink, matches auth/announcements */
+.feedback-modal{position:fixed;inset:0;background:rgba(20,16,12,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:16px}
+.feedback-modal[hidden]{display:none!important}
+.feedback-dialog{position:relative;width:min(460px,100%);max-height:90vh;overflow:auto;background:var(--paper,#f7f1e6);color:var(--ink,#222);
+  border:2px solid #2a2a2a;border-radius:16px;padding:20px 18px 18px;box-shadow:6px 6px 0 rgba(0,0,0,.18)}
+.feedback-close-x{position:absolute;right:10px;top:8px;border:none;background:transparent;font-size:22px;cursor:pointer;color:inherit}
+.feedback-dialog h2{margin:0 28px 6px 0;font-size:1.25rem}
+.feedback-hint{margin:0 0 10px;font-size:13px;opacity:.85;line-height:1.45}
+.feedback-error{color:#b33;background:#ffe8e0;border:1px solid #e8a090;padding:8px 10px;border-radius:8px;font-size:13px;margin:0 0 8px}
+.feedback-label{display:flex;flex-direction:column;gap:4px;font-size:13px;margin-bottom:10px}
+.feedback-label textarea{
+  border:1.5px solid #444;border-radius:8px;padding:8px 10px;background:#fffdf8;font:inherit;resize:vertical;min-height:6rem;line-height:1.45}
+.feedback-attach-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.feedback-attach-btn,.feedback-primary,.feedback-secondary{
+  font:inherit;cursor:pointer;border:1.5px solid var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
+  color:var(--ink,#2a2a2a);border-radius:999px;padding:6px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.12)
+}
+.feedback-attach-btn{border-style:dashed;box-shadow:1px 1px 0 rgba(0,0,0,.08)}
+.feedback-attach-meta{font-size:12px;opacity:.75}
+.feedback-previews{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.feedback-preview-item{position:relative;width:72px;height:72px}
+.feedback-preview-item img{width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid #666;background:#111;display:block}
+.feedback-preview-remove{
+  position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;
+  border:1.5px solid #2a2a2a;background:#f6d6d0;cursor:pointer;font-size:14px;line-height:1;padding:0
+}
+.feedback-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.feedback-primary.is-busy,.feedback-primary:disabled{opacity:.72;cursor:wait;box-shadow:none}

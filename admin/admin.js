@@ -541,4 +541,118 @@ $("annArchiveBtn").onclick = async () => {
 
 
 
+
+function renderFeedbackList(items) {
+  const host = $("fbList");
+  if (!host) return;
+  if (!items.length) {
+    host.innerHTML = "<p class=\"note\">暂无反馈</p>";
+    return;
+  }
+  host.innerHTML = items
+    .map(
+      (f) =>
+        `<div class="row between item">
+      #${f.id} · <code>${escapeHtml(f.status)}</code>
+      · 用户 #${f.userId} ${escapeHtml(f.nickname || "")} (${escapeHtml(f.username || "")})
+      · 图 ${f.imageCount || 0}
+      · ${escapeHtml((f.body || "").slice(0, 48))}
+      · ${escapeHtml(f.createdAt || "—")}
+      <button type="button" data-fbid="${f.id}">填入</button>
+    </div>`
+    )
+    .join("");
+  host.querySelectorAll("[data-fbid]").forEach((btn) => {
+    btn.onclick = () => {
+      $("fbId").value = btn.getAttribute("data-fbid");
+      $("fbLoadBtn").click();
+    };
+  });
+}
+
+function renderFeedbackDetail(f) {
+  const host = $("fbDetail");
+  if (!host || !f) {
+    if (host) host.innerHTML = "";
+    return;
+  }
+  const imgs = (f.images || [])
+    .map(
+      (img) =>
+        `<a href="${escapeHtml(img.url)}" target="_blank" rel="noopener">
+          <img src="${escapeHtml(img.url)}" alt="反馈图" style="max-width:160px;max-height:160px;border:1px solid #666;border-radius:8px;margin:4px;object-fit:cover" />
+        </a>`
+    )
+    .join("");
+  host.innerHTML = `<div class="item">
+    <p><strong>#${f.id}</strong> · <code>${escapeHtml(f.status)}</code>
+      · 用户 #${f.userId} ${escapeHtml(f.nickname || "")} (<code>${escapeHtml(f.username || "")}</code>)
+      · ${escapeHtml(f.createdAt || "")}</p>
+    <pre style="white-space:pre-wrap;font:inherit;background:#fffdf8;border:1px solid #ccc;border-radius:8px;padding:10px;margin:8px 0">${escapeHtml(f.body || "")}</pre>
+    <div>${imgs || "<span class=\"note\">无图片</span>"}</div>
+  </div>`;
+}
+
+function handleFbReauthRequired(r) {
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    setMsg($("fbMsg"), "请先二次验证管理员密码");
+    return true;
+  }
+  return false;
+}
+
+$("fbSearchBtn").onclick = async () => {
+  setMsg($("fbMsg"), "");
+  const st = $("fbStatusFilter").value;
+  const qs = st ? `status=${encodeURIComponent(st)}` : "";
+  const r = await api(`/admin/feedback${qs ? `?${qs}` : ""}`);
+  if (r.status !== 200) {
+    setMsg($("fbMsg"), r.json?.error?.message || "加载失败");
+    return;
+  }
+  renderFeedbackList(r.json.data.items || []);
+};
+
+$("fbLoadBtn").onclick = async () => {
+  setMsg($("fbMsg"), "");
+  const id = parsePositiveId($("fbId").value);
+  if (!id) {
+    setMsg($("fbMsg"), "请填入有效的反馈 ID");
+    return;
+  }
+  const r = await api(`/admin/feedback/${id}`);
+  if (r.status !== 200) {
+    setMsg($("fbMsg"), r.json?.error?.message || "加载失败");
+    return;
+  }
+  renderFeedbackDetail(r.json.data.feedback);
+  setMsg($("fbMsg"), `已加载 #${id}`, true);
+};
+
+async function patchFeedbackStatus(status) {
+  setMsg($("fbMsg"), "");
+  const id = parsePositiveId($("fbId").value);
+  if (!id) {
+    setMsg($("fbMsg"), "请填入有效的反馈 ID");
+    return;
+  }
+  const r = await api(`/admin/feedback/${id}`, {
+    method: "PATCH",
+    csrf: csrfToken,
+    body: { status },
+  });
+  if (handleFbReauthRequired(r)) return;
+  if (r.status !== 200) {
+    setMsg($("fbMsg"), r.json?.error?.message || "更新失败");
+    return;
+  }
+  renderFeedbackDetail(r.json.data.feedback);
+  setMsg($("fbMsg"), `反馈 #${id} 已标为 ${status}`, true);
+  $("fbSearchBtn").click();
+}
+
+$("fbMarkReadBtn").onclick = () => patchFeedbackStatus("read");
+$("fbArchiveBtn").onclick = () => patchFeedbackStatus("archived");
+
+
 refreshSession().catch(() => showLoggedOut());
