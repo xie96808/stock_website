@@ -32,6 +32,14 @@ test('formatThreeStarGoalLine human-readable', () => {
     formatThreeStarGoalLine({ threeStar: { maxMddPct: 12 } }),
     '三星：回撤≤12%'
   );
+  assert.equal(
+    formatThreeStarGoalLine({ threeStar: { maxMddPct: 8, maxOrders: 1, minReturnPpm: 327000 } }),
+    '三星：回撤≤8% 且成交≤1笔 且收益≥32.7%'
+  );
+  assert.equal(
+    formatThreeStarGoalLine({ threeStar: { minReturnPpm: 0 } }),
+    '三星：收益≥0%'
+  );
   assert.equal(formatThreeStarGoalLine(null), null);
 });
 

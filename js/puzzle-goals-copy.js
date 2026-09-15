@@ -27,6 +27,11 @@ export function formatThreeStarGoalLine(goals) {
   if (t.maxOrders != null && Number.isFinite(Number(t.maxOrders))) {
     parts.push(`成交≤${t.maxOrders}笔`);
   }
+  if (t.minReturnPpm != null && Number.isFinite(Number(t.minReturnPpm))) {
+    const pct = Number(t.minReturnPpm) / 10000;
+    const label = Number.isInteger(pct) ? String(pct) : String(+pct.toFixed(2));
+    parts.push(`收益≥${label}%`);
+  }
   if (!parts.length) return null;
   return `三星：${parts.join(' 且')}`;
 }

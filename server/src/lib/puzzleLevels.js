@@ -111,7 +111,7 @@ export const CHAPTER1_LEVEL_DEFS = [
     levelIndex: 2,
     levelKey: "ch1-02",
     rewardFamilyId: "ch1-02",
-    version: 3,
+    version: 4,
     title: "到手的利润",
     theme: "初始持仓处于浮盈",
     teachingBrief: "开局已浮盈。利润会吐回去——关键是把账面收益落袋，别贪到回吐。",
@@ -180,22 +180,22 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 5
+        "beatBuyHoldPp": 20
       },
       "threeStar": {
-        "maxMddPct": 20,
+        "maxMddPct": 5,
         "maxOrders": 1
       }
     },
     validatedThreeStarActions: ["sell","hold","hold","hold","hold","hold","hold"],
-    contentNote: "real pack window v3; take-profit theme",
+    contentNote: "real pack window v4; early take-profit 3★ only (beat≥20pp, MDD≤5%)",
     status: "published",
   },
   {
     levelIndex: 3,
     levelKey: "ch1-03",
     rewardFamilyId: "ch1-03",
-    version: 3,
+    version: 4,
     title: "两笔机会",
     theme: "空仓、最多两笔实际成交订单",
     teachingBrief: "空仓起步，本关只有两笔成交预算。先想好买卖节奏，第三笔直接拒绝。",
@@ -262,22 +262,22 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 5
+        "beatBuyHoldPp": 20
       },
       "threeStar": {
-        "maxMddPct": 25,
+        "maxMddPct": 1,
         "maxOrders": 2
       }
     },
     validatedThreeStarActions: ["buy","hold","sell","hold","hold"],
-    contentNote: "real pack window v3; 2-order budget",
+    contentNote: "real pack window v4; peak round-trip 3★ (beat≥20pp, MDD≤1%)",
     status: "published",
   },
   {
     levelIndex: 4,
     levelKey: "ch1-04",
     rewardFamilyId: "ch1-04",
-    version: 3,
+    version: 4,
     title: "明天才好卖",
     theme: "刚买入的锁定持仓",
     teachingBrief: "开局仓位受 T+1 锁定：首日不能卖，等到可卖日再决定持或走。",
@@ -346,22 +346,23 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 1
+        "beatBuyHoldPp": 12
       },
       "threeStar": {
-        "maxMddPct": 18,
-        "maxOrders": 1
+        "maxMddPct": 8,
+        "maxOrders": 1,
+        "minReturnPpm": 327000
       }
     },
     validatedThreeStarActions: ["hold","hold","sell","hold","hold","hold","hold"],
-    contentNote: "real pack window v3; T+1 lock",
+    contentNote: "real pack window v4; T+1 peak sell 3★ (beat≥12pp, MDD≤8%, ret≥32.7%)",
     status: "published",
   },
   {
     levelIndex: 5,
     levelKey: "ch1-05",
     rewardFamilyId: "ch1-05",
-    version: 3,
+    version: 4,
     title: "震荡磨人",
     theme: "已有持仓、窄幅行情",
     teachingBrief: "窄幅震荡易破位。少动为上——控制次数，别在磨人区来回挨打。",
@@ -430,22 +431,23 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 2
+        "beatBuyHoldPp": 20
       },
       "threeStar": {
         "maxMddPct": 12,
-        "maxOrders": 2
+        "maxOrders": 2,
+        "minReturnPpm": 0
       }
     },
     validatedThreeStarActions: ["hold","hold","hold","sell","hold","hold","hold"],
-    contentNote: "real pack window v3; chop theme",
+    contentNote: "real pack window v4; chop exit 3★ only if non-negative (beat≥20pp, ret≥0)",
     status: "published",
   },
   {
     levelIndex: 6,
     levelKey: "ch1-06",
     rewardFamilyId: "ch1-06",
-    version: 3,
+    version: 4,
     title: "最后几个交易日",
     theme: "带持仓进入短窗口",
     teachingBrief: "短窗末日只估值、不能下单。中途卖出 vs 扛到末日收盘，结果可能差一截。",
@@ -513,15 +515,15 @@ export const CHAPTER1_LEVEL_DEFS = [
     },
     goals: {
       "twoStar": {
-        "beatBuyHoldPp": 2
+        "beatBuyHoldPp": 25
       },
       "threeStar": {
-        "maxMddPct": 12,
+        "maxMddPct": 5,
         "maxOrders": 1
       }
     },
     validatedThreeStarActions: ["hold","hold","sell","hold","hold","hold"],
-    contentNote: "real pack window v3; terminal valuation",
+    contentNote: "real pack window v4; peak-before-dump 3★ (beat≥25pp, MDD≤5%)",
     status: "published",
   },
 ];
