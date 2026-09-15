@@ -6,6 +6,12 @@ import {
   loadCloudGameDraft,
 } from './game-sync.js';
 import { mustAwaitPackBeforeEnter } from './game-window-seed.js';
+import {
+  isGhostDuelEnabled,
+  fetchGhostPreview,
+  renderGhostDuelEntryHtml,
+  wireGhostDuelEntry,
+} from './ghost-duel.js';
 
 /** Must match server DAILY_CHALLENGE_COST (classic create stays 20). */
 export const DAILY_CHALLENGE_COST_UI = 50;
@@ -530,12 +536,14 @@ export async function showDailyChallengeBoard() {
     }
     if (!data.ready) {
       if (body) body.innerHTML = `<p>${data.message || '今日挑战准备中'}</p>`;
+      await appendGhostDuelEntry(body);
       return;
     }
     if (!data.entries?.length) {
       if (body) {
         body.innerHTML = `<p>暂无上榜成绩（参与 ${data.total || 0}）</p>`;
       }
+      await appendGhostDuelEntry(body);
       return;
     }
     const rows = data.entries
@@ -562,8 +570,22 @@ export async function showDailyChallengeBoard() {
           <tbody>${rows}</tbody>
         </table>`;
     }
+    await appendGhostDuelEntry(body);
   } catch (e) {
     if (body) body.innerHTML = `<p>${escapeHtml(e.message || '加载失败')}</p>`;
+  }
+}
+
+async function appendGhostDuelEntry(body) {
+  if (!body || !isGhostDuelEnabled()) return;
+  try {
+    const preview = await fetchGhostPreview();
+    const html = renderGhostDuelEntryHtml(preview);
+    if (!html) return;
+    body.insertAdjacentHTML('beforeend', html);
+    wireGhostDuelEntry(body);
+  } catch (err) {
+    console.warn('ghost duel entry', err);
   }
 }
 

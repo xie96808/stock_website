@@ -37,6 +37,7 @@ import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
+import { syncGhostHud } from './ghost-duel.js';
 import { survivalFloatHud } from '../shared/survival.js';
 import {
     ensureEcharts,
@@ -592,6 +593,10 @@ export function updateUI() {
             session.modifiers
           )
         : null;
+    const ghostName =
+        session.gameKind === 'ghost' && session.modifiers?.ghost?.nickname
+          ? session.modifiers.ghost.nickname
+          : null;
     const hud = formatPlayHudChrome({
         gameKind: session.gameKind,
         title: session.puzzleTitle,
@@ -600,6 +605,7 @@ export function updateUI() {
         gameDays,
         ammo: oneshotAmmo,
         survivalFloat,
+        ghostName,
     });
     const gameScreenEl = document.getElementById('gameScreen');
     if (gameScreenEl) {
@@ -608,7 +614,7 @@ export function updateUI() {
         gameScreenEl.classList.toggle('game-screen--survival', !!hud.isSurvival);
         gameScreenEl.classList.toggle(
           'game-screen--classic',
-          !hud.isPuzzle && !hud.isOneshot && !hud.isSurvival
+          !hud.isPuzzle && !hud.isOneshot && !hud.isSurvival && !hud.isGhost
         );
     }
     const progressShell = document.getElementById('gameProgressShell');
@@ -678,6 +684,19 @@ export function updateUI() {
     if (stageKicker) stageKicker.textContent = hud.stageKicker;
     const stageTitle = document.getElementById('stageTitle');
     if (stageTitle) stageTitle.textContent = hud.stageTitle;
+
+    // Ghost duel: persistent name + avatar chip (not a toast)
+    syncGhostHud(session, {
+        playerReturnPpm: Number.isFinite(session.totalReturn)
+          ? Math.round((session.totalReturn - 1) * 1e6)
+          : null,
+    });
+    if (gameScreenEl) {
+        gameScreenEl.classList.toggle('game-screen--ghost', !!hud.isGhost);
+    }
+    if (progressShell) {
+        progressShell.classList.toggle('game-progress-shell--ghost', !!hud.isGhost);
+    }
 
     const tipEl = document.getElementById('puzzlePlayTip');
     if (tipEl) {

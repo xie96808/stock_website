@@ -156,6 +156,7 @@ export function gamesConfigPayload() {
       puzzleChapter: !!config.puzzleChapterEnabled,
       oneshotMode: !!config.oneshotModeEnabled,
       survivalMode: !!config.survivalModeEnabled,
+      ghostDuel: !!config.ghostDuelEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

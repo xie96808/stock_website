@@ -676,6 +676,7 @@ export function evaluateRewindEligibility(session = getSession(), features = {})
   if (session.gameKind === 'puzzle') return { eligible: false, reason: 'puzzle' };
   if (session.gameKind === 'oneshot') return { eligible: false, reason: 'oneshot' };
   if (session.gameKind === 'survival') return { eligible: false, reason: 'survival' };
+  if (session.gameKind === 'ghost') return { eligible: false, reason: 'ghost' };
   if (session.protocolVersion !== 'event-v1') {
     return { eligible: false, reason: 'protocol' };
   }

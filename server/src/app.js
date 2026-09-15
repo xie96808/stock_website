@@ -27,7 +27,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   if (!skipMigrate) migrate();
   warmDataset();
-  if (config.dailyChallengeEnabled) {
+  if (config.dailyChallengeEnabled || config.ghostDuelEnabled) {
     try {
       seedNearDailyChallenges();
     } catch (e) {

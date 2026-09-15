@@ -14,6 +14,7 @@ export const GAME_KIND_ARCHIVE_PRACTICE = 'archive_practice';
 export const GAME_KIND_PUZZLE = 'puzzle';
 export const GAME_KIND_ONESHOT = 'oneshot';
 export const GAME_KIND_SURVIVAL = 'survival';
+export const GAME_KIND_GHOST = 'ghost';
 export const GAME_KINDS = Object.freeze([
   GAME_KIND_CLASSIC,
   GAME_KIND_DAILY,
@@ -21,6 +22,7 @@ export const GAME_KINDS = Object.freeze([
   GAME_KIND_PUZZLE,
   GAME_KIND_ONESHOT,
   GAME_KIND_SURVIVAL,
+  GAME_KIND_GHOST,
 ]);
 
 /** Default modifiers JSON for oneshot (TEXT on SQLite). */

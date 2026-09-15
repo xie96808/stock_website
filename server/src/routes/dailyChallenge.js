@@ -7,6 +7,7 @@ import {
   startDailyChallenge,
   getDailyLeaderboard,
 } from "../lib/dailyChallenge.js";
+import { getGhostDuelPreview, startGhostDuel } from "../lib/ghostDuel.js";
 import { checkCreateGameLimits, rateLimitFail } from "../lib/rateLimit.js";
 
 const router = Router();
@@ -65,6 +66,47 @@ router.get("/daily-challenge/leaderboard", (req, res) => {
     return ok(res, data);
   } catch (e) {
     return mapDailyError(res, e);
+  }
+});
+
+
+function guardGhostFlag(res) {
+  if (!config.ghostDuelEnabled) {
+    fail(res, 403, "FEATURE_DISABLED", "幽灵对局暂未开放");
+    return false;
+  }
+  return true;
+}
+
+/** GET /daily-challenge/ghost — yesterday #1 preview (auth optional). */
+router.get("/daily-challenge/ghost", (req, res) => {
+  if (!guardGhostFlag(res)) return;
+  try {
+    const data = getGhostDuelPreview(req.user?.id || null);
+    return ok(res, data);
+  } catch (e) {
+    const status = e.status || (e.code === "FEATURE_DISABLED" ? 403 : 500);
+    return fail(res, status, e.code || "INTERNAL", e.message || "服务器错误");
+  }
+});
+
+/** POST /daily-challenge/ghost/games — start/resume ghost duel. */
+router.post("/daily-challenge/ghost/games", requireUser, (req, res) => {
+  if (!guardGhostFlag(res)) return;
+  const gameLimit = checkCreateGameLimits(req.user.id);
+  if (gameLimit.limited) {
+    return rateLimitFail(res, gameLimit.retryAfterSec, gameLimit.message);
+  }
+  const createKey = req.get("idempotency-key") || req.get("Idempotency-Key");
+  try {
+    const result = startGhostDuel(req.user.id, { createKey });
+    if (result.error) {
+      return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+    }
+    return ok(res, result.data, result.status);
+  } catch (e) {
+    const status = e.status || (e.code === "FEATURE_DISABLED" ? 403 : 500);
+    return fail(res, status, e.code || "INTERNAL", e.message || "服务器错误");
   }
 });
 

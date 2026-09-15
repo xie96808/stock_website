@@ -18,6 +18,8 @@
     --mode-oneshot-ink: #f3ead8;
     --mode-survival: #c94a4a;
     --mode-survival-ink: #f3ead8;
+    --mode-ghost: #6366f1;
+    --mode-ghost-ink: #f3ead8;
     --wash: #c4a07a;
     --wash-ink: #3a3228;
     --line: #3a3530;
@@ -69,6 +71,8 @@
     --mode-oneshot-ink: #1c1810;
     --mode-survival: #e07070;
     --mode-survival-ink: #1c1212;
+    --mode-ghost: #818cf8;
+    --mode-ghost-ink: #12121c;
     --wash: #8a6e4e;
     --wash-ink: #f0e6d4;
     --line: #c8bca8;
