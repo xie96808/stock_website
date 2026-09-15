@@ -384,7 +384,7 @@ export function puzzleBuyHoldBenchmarkPpm({ bars, initialState }) {
  *
  * goals: {
  *   twoStar: { beatBuyHoldPp?: number },  // percentage points vs buy-hold
- *   threeStar: { maxMddPct?: number, maxOrders?: number }
+ *   threeStar: { maxMddPct?: number, maxOrders?: number, minReturnPpm?: number }
  * }
  */
 export function scorePuzzleStars({ returnPpm, mddPpm, orderCount, benchmarkReturnPpm, goals }) {
@@ -407,11 +407,14 @@ export function scorePuzzleStars({ returnPpm, mddPpm, orderCount, benchmarkRetur
     if (three.maxOrders != null) {
       threeOk = threeOk && orderCount <= Number(three.maxOrders);
     }
-    if (threeOk && (three.maxMddPct != null || three.maxOrders != null || twoOk)) {
-      // Require at least one explicit three-star constraint, or inherit two-star-only → still 2
-      if (three.maxMddPct != null || three.maxOrders != null) {
-        if (threeOk) stars = 3;
-      }
+    if (three.minReturnPpm != null) {
+      threeOk = threeOk && returnPpm >= roundHalfUp(Number(three.minReturnPpm));
+    }
+    const hasThreeConstraint =
+      three.maxMddPct != null || three.maxOrders != null || three.minReturnPpm != null;
+    // Require at least one explicit three-star constraint; two-star-only stays 2★
+    if (threeOk && hasThreeConstraint) {
+      stars = 3;
     }
   }
   return {

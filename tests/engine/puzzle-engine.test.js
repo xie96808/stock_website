@@ -414,3 +414,118 @@ test('qty * price NAV conservation on flat buy fill next_open', () => {
   const expectedNav = qty * lastClose;
   assert.ok(Math.abs(finalNav - expectedNav) / expectedNav < 1e-6);
 });
+
+function scorePath(def, actions) {
+  const bh = puzzleBuyHoldBenchmarkPpm({ bars: def.bars, initialState: def.initialState });
+  const settled = settlePuzzle({
+    bars: def.bars,
+    actions,
+    initialState: def.initialState,
+    maxOrders: def.maxOrders,
+  });
+  assert.equal(settled.ok, true, settled.message);
+  const s = scorePuzzleStars({
+    returnPpm: settled.returnPpm,
+    mddPpm: settled.mddPpm,
+    orderCount: settled.orderCount,
+    benchmarkReturnPpm: bh,
+    goals: def.goals,
+  });
+  return { settled, s, bh };
+}
+
+test('ch1-02 v4: day1-sell 3★; day2-sell 2★ near-miss (not 3★)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[1];
+  assert.equal(def.levelKey, 'ch1-02');
+  assert.equal(def.version, 4);
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 20);
+  assert.equal(def.goals.threeStar.maxMddPct, 5);
+  const best = scorePath(def, def.validatedThreeStarActions);
+  assert.equal(best.s.stars, 3);
+  const late = scorePath(def, ['hold', 'sell', ...holds(def.gameDays - 3)]);
+  assert.equal(late.s.stars, 2);
+  assert.equal(late.s.threeStarMet, false);
+  assert.ok(late.settled.mddPpm > 50_000);
+});
+
+test('ch1-03 v4: validated round-trip 3★; late sell@4 is 2★ not 3★', () => {
+  const def = CHAPTER1_LEVEL_DEFS[2];
+  assert.equal(def.levelKey, 'ch1-03');
+  assert.equal(def.version, 4);
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 20);
+  assert.equal(def.goals.threeStar.maxMddPct, 1);
+  const best = scorePath(def, def.validatedThreeStarActions);
+  assert.equal(best.s.stars, 3);
+  const late = scorePath(def, ['buy', 'hold', 'hold', 'sell', 'hold']);
+  assert.equal(late.s.stars, 2);
+  assert.equal(late.s.threeStarMet, false);
+  assert.ok(late.settled.mddPpm > 10_000);
+});
+
+test('ch1-04 v4: day3-sell 3★; day4-sell near-miss 2★ (minReturnPpm)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[3];
+  assert.equal(def.levelKey, 'ch1-04');
+  assert.equal(def.version, 4);
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 12);
+  assert.equal(def.goals.threeStar.minReturnPpm, 327000);
+  const best = scorePath(def, def.validatedThreeStarActions);
+  assert.equal(best.s.stars, 3);
+  assert.ok(best.settled.returnPpm >= 327000);
+  const near = scorePath(def, ['hold', 'hold', 'hold', 'sell', ...holds(3)]);
+  assert.equal(near.s.stars, 2);
+  assert.equal(near.s.threeStarMet, false);
+  assert.ok(near.settled.returnPpm < 327000);
+});
+
+test('ch1-05 v4: validated chop exit 3★; day2-sell 2★ (ret<0 misses minReturnPpm)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[4];
+  assert.equal(def.levelKey, 'ch1-05');
+  assert.equal(def.version, 4);
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 20);
+  assert.equal(def.goals.threeStar.minReturnPpm, 0);
+  const best = scorePath(def, def.validatedThreeStarActions);
+  assert.equal(best.s.stars, 3);
+  assert.ok(best.settled.returnPpm >= 0);
+  const early = scorePath(def, ['hold', 'sell', ...holds(def.gameDays - 3)]);
+  assert.equal(early.s.stars, 2);
+  assert.equal(early.s.threeStarMet, false);
+  assert.ok(early.settled.returnPpm < 0);
+});
+
+test('ch1-06 v4: peak sell day3=3★; day4-sell 2★ (MDD over cap)', () => {
+  const def = CHAPTER1_LEVEL_DEFS[5];
+  assert.equal(def.levelKey, 'ch1-06');
+  assert.equal(def.version, 4);
+  assert.equal(def.goals.twoStar.beatBuyHoldPp, 25);
+  assert.equal(def.goals.threeStar.maxMddPct, 5);
+  const best = scorePath(def, def.validatedThreeStarActions);
+  assert.equal(best.s.stars, 3);
+  const late = scorePath(def, ['hold', 'hold', 'hold', 'sell', 'hold', 'hold']);
+  assert.equal(late.s.stars, 2);
+  assert.equal(late.s.threeStarMet, false);
+  assert.ok(late.settled.mddPpm > 50_000);
+});
+
+test('scorePuzzleStars threeStar.minReturnPpm gate', () => {
+  const goals = {
+    twoStar: { beatBuyHoldPp: 1 },
+    threeStar: { maxMddPct: 50, maxOrders: 2, minReturnPpm: 100_000 },
+  };
+  const pass = scorePuzzleStars({
+    returnPpm: 100_000,
+    mddPpm: 10_000,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(pass.stars, 3);
+  const miss = scorePuzzleStars({
+    returnPpm: 99_999,
+    mddPpm: 10_000,
+    orderCount: 1,
+    benchmarkReturnPpm: 0,
+    goals,
+  });
+  assert.equal(miss.stars, 2);
+  assert.equal(miss.threeStarMet, false);
+});

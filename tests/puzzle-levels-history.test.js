@@ -29,11 +29,20 @@ test('buildLevelSnapshot includes real-pack history for all chapter-1 defs', () 
     assert.equal(def.stockCode, PUZZLE_PUBLIC_STOCK_CODE);
     opens.add(snapshot.bars[0].open);
   }
-  // ch1-01 v4: tightened star goals (beat≥8pp, MDD≤15%) so only early cut is 3★
+  // All chapter-1 levels published at v4 with differentiated star goals.
+  for (const def of CHAPTER1_LEVEL_DEFS) {
+    assert.equal(def.version, 4, `${def.levelKey} version`);
+  }
+  // ch1-01: early-cut 3★ only (beat≥8pp, MDD≤15%)
   assert.equal(CHAPTER1_LEVEL_DEFS[0].levelKey, 'ch1-01');
-  assert.equal(CHAPTER1_LEVEL_DEFS[0].version, 4);
   assert.equal(CHAPTER1_LEVEL_DEFS[0].goals.twoStar.beatBuyHoldPp, 8);
   assert.equal(CHAPTER1_LEVEL_DEFS[0].goals.threeStar.maxMddPct, 15);
+  // ch1-02…06 tightened thresholds (see contentNote / engine regressions)
+  assert.equal(CHAPTER1_LEVEL_DEFS[1].goals.twoStar.beatBuyHoldPp, 20);
+  assert.equal(CHAPTER1_LEVEL_DEFS[2].goals.threeStar.maxMddPct, 1);
+  assert.equal(CHAPTER1_LEVEL_DEFS[3].goals.threeStar.minReturnPpm, 327000);
+  assert.equal(CHAPTER1_LEVEL_DEFS[4].goals.threeStar.minReturnPpm, 0);
+  assert.equal(CHAPTER1_LEVEL_DEFS[5].goals.twoStar.beatBuyHoldPp, 25);
   // Distinct real windows — not identical synthetic junk.
   assert.ok(opens.size >= 5, `expected distinct day1 opens, got ${[...opens]}`);
 });
