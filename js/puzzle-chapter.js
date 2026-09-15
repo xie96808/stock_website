@@ -89,7 +89,7 @@ export async function refreshPuzzleChapterCard() {
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.textContent = '第一章 · 六关免费 · 首通二星 +20 韭币';
+    if (meta) meta.textContent = '第一章已开放 · 六关免费 · 首通二星 +20 韭币';
     if (stateEl) {
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
     }
@@ -98,8 +98,30 @@ export async function refreshPuzzleChapterCard() {
   }
 }
 
-/** Hub card → dedicated puzzle screen (not inline expand on hub). */
+/** Hub card → L3 章节选择（与玩法三级同构）. */
 export function onPuzzleChapterCardClick() {
+  if (!puzzleEnabled) return;
+  const auth = getAuthState();
+  if (!auth?.user) {
+    showToast('登录后可保存残局进度与领取首通奖励', 'error');
+    openAuthModal?.();
+    return;
+  }
+  if (typeof window.showPuzzleChapters === 'function') {
+    window.showPuzzleChapters();
+    return;
+  }
+  // Fallback if home-ia not wired yet
+  showPuzzleScreen();
+}
+
+/** L3 chapter card → open chapter levels (only ch1 wired). */
+export function onPuzzleChapterSelect(chapterIndex) {
+  const idx = Number(chapterIndex) || 0;
+  if (idx !== 1) {
+    showToast('该章节即将推出', 'error');
+    return;
+  }
   if (!puzzleEnabled) return;
   const auth = getAuthState();
   if (!auth?.user) {
@@ -114,6 +136,8 @@ export async function showPuzzleScreen() {
   prepareScreen(Route.PUZZLE);
   const screen = ensurePuzzleScreen();
   activateScreen(Route.PUZZLE);
+  const backBtn = screen?.querySelector?.('#puzzleScreenBackBtn');
+  if (backBtn) backBtn.textContent = '← 返回章节';
   const body = bodyEl();
   if (body) body.innerHTML = '<p class="puzzle-muted">加载关卡…</p>';
   renderProgressPlaceholder();
@@ -140,6 +164,11 @@ export async function showPuzzleScreen() {
 
 export function hidePuzzleScreen() {
   deactivateScreen(Route.PUZZLE);
+  // Prefer L3 chapter menu when leaving level list
+  if (typeof window.showPuzzleChapters === 'function') {
+    window.showPuzzleChapters();
+    return;
+  }
   if (typeof window.restoreSimShell === 'function') {
     window.restoreSimShell();
     return;
@@ -165,7 +194,7 @@ function ensurePuzzleScreen() {
     screen.innerHTML = `
     <div class="puzzle-screen-wrap">
       <div class="puzzle-screen-head">
-        <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn">← 返回模拟盘</button>
+        <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn">← 返回章节</button>
         <h2 class="puzzle-panel-title">残局挑战 · 第一章</h2>
       </div>
       <div class="puzzle-progress" id="puzzleProgress" hidden></div>

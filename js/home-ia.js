@@ -1,4 +1,4 @@
-/** Homepage IA Scheme A: root + 模拟盘二级 hub + 三级玩法选择 */
+/** Homepage IA Scheme A: root + 模拟盘二级 hub + 三级玩法/残局章节选择 */
 
 import {
   refreshDailyChallengeFlag,
@@ -22,9 +22,30 @@ function playModesEl() {
   return document.getElementById("playModes");
 }
 
+function puzzleChaptersEl() {
+  return document.getElementById("puzzleChapters");
+}
+
 function hidePlayModesPanel() {
   const modes = playModesEl();
   if (modes) modes.hidden = true;
+}
+
+function hidePuzzleChaptersPanel() {
+  const chapters = puzzleChaptersEl();
+  if (chapters) chapters.hidden = true;
+}
+
+/**
+ * Swap start-screen mascot art by hub depth.
+ * 1 = home, 2 = simHub, 3 = playModes | puzzleChapters
+ */
+export function setHubMascotLevel(level) {
+  const n = Math.max(1, Math.min(3, Number(level) || 1));
+  const start = document.getElementById("startScreen");
+  const frame = start?.querySelector?.(".frame");
+  if (start) start.setAttribute("data-hub-level", String(n));
+  if (frame) frame.setAttribute("data-hub-level", String(n));
 }
 
 async function refreshOneshotModeCard() {
@@ -52,6 +73,8 @@ export function showHome() {
   if (home) home.hidden = false;
   if (hub) hub.hidden = true;
   hidePlayModesPanel();
+  hidePuzzleChaptersPanel();
+  setHubMascotLevel(1);
   setRouteHash(Route.HOME);
 }
 
@@ -64,6 +87,8 @@ export function showSimHub(opts = {}) {
   if (home) home.hidden = true;
   if (hub) hub.hidden = false;
   hidePlayModesPanel();
+  hidePuzzleChaptersPanel();
+  setHubMascotLevel(2);
   if (updateHash) setRouteHash(Route.SIM);
   // Intent to play: warm pack immediately (don't wait for Start / idle timer).
   prefetchStocksPack(gameState);
@@ -80,13 +105,33 @@ export function showPlayModes() {
   const modes = playModesEl();
   if (home) home.hidden = true;
   if (hub) hub.hidden = true;
+  hidePuzzleChaptersPanel();
   if (modes) modes.hidden = false;
+  setHubMascotLevel(3);
   setRouteHash(Route.SIM);
   prefetchStocksPack(gameState);
   refreshDailyChallengeFlag()
     .then(() => refreshDailyChallengeCard())
     .catch(() => {});
   refreshOneshotModeCard().catch(() => {});
+}
+
+/** 三级残局章节选择：第一章已开放 / 二、三章即将推出（hash 仍为 sim） */
+export function showPuzzleChapters() {
+  prepareScreen(Route.SIM);
+  const home = document.getElementById("homeLanes");
+  const hub = document.getElementById("simHub");
+  const chapters = puzzleChaptersEl();
+  if (home) home.hidden = true;
+  if (hub) hub.hidden = true;
+  hidePlayModesPanel();
+  if (chapters) chapters.hidden = false;
+  setHubMascotLevel(3);
+  setRouteHash(Route.SIM);
+  prefetchStocksPack(gameState);
+  refreshPuzzleChapterFlag()
+    .then(() => refreshPuzzleChapterCard())
+    .catch(() => {});
 }
 
 /**
@@ -134,6 +179,8 @@ export function initHomeIaRouting() {
     if (home) home.hidden = false;
     if (hub) hub.hidden = true;
     hidePlayModesPanel();
+    hidePuzzleChaptersPanel();
+    setHubMascotLevel(1);
   } else if (h !== "leaderboard") {
     applyHomeHashRoute(h);
   }

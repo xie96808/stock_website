@@ -519,9 +519,9 @@ export function playAgain() {
         } else {
             resetGame();
         }
-        if (typeof window.onPuzzleChapterCardClick === 'function') {
-            // Re-open level list after returning to hub.
-            setTimeout(() => window.onPuzzleChapterCardClick(), 0);
+        // Re-open chapter-1 level list (not L3 chapter picker).
+        if (typeof window.showPuzzleScreen === 'function') {
+            setTimeout(() => window.showPuzzleScreen(), 0);
         }
         return;
     }

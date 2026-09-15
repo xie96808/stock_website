@@ -71,13 +71,17 @@
         </header>
 
         <!-- Start Screen — 手绘 notebook split -->
-        <section class="start-screen animate-in" id="startScreen">
+        <section class="start-screen animate-in" id="startScreen" data-hub-level="1">
 
             <div class="page">
                 <aside class="art">
-                    <div class="frame">
-                        <img class="day" src="images/mascot-day-sketch.jpg" alt="白天书桌前的后悔猫">
-                        <img class="night" src="images/mascot-night-sketch.jpg" alt="夜间书桌前的后悔猫">
+                    <div class="frame" data-hub-level="1">
+                        <img class="day mascot-l1" src="images/mascot-l1-day.jpg" alt="白天书桌前的后悔猫 · 首页">
+                        <img class="night mascot-l1" src="images/mascot-l1-night.jpg" alt="夜间书桌前的后悔猫 · 首页">
+                        <img class="day mascot-l2" src="images/mascot-l2-day.jpg" alt="白天书桌前的后悔猫 · 模拟盘" aria-hidden="true">
+                        <img class="night mascot-l2" src="images/mascot-l2-night.jpg" alt="夜间书桌前的后悔猫 · 模拟盘" aria-hidden="true">
+                        <img class="day mascot-l3" src="images/mascot-l3-day.jpg" alt="白天书桌前的后悔猫 · 三级菜单" aria-hidden="true">
+                        <img class="night mascot-l3" src="images/mascot-l3-night.jpg" alt="夜间书桌前的后悔猫 · 三级菜单" aria-hidden="true">
                         <svg class="scribble" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                             <path d="M4.2,9.5 C2.8,3.2 9.1,2.4 14,2.8 L86,3.6 C93.5,2.9 97.4,7.2 96.8,14 L96.2,86 C97.2,93.8 91.4,97.6 84,96.8 L14.5,96.1 C6.2,97.4 2.6,91.5 3.4,84 Z"/>
                         </svg>
@@ -141,11 +145,11 @@
                             <span class="mark">残</span>
                             <span class="copy">
                                 <small>残局挑战</small>
-                                <strong>第一章 · 六关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
+                                <strong>章节闯关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
                                 <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
                                 <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
                             </span>
-                            <span class="cta cta-wash" id="puzzleChapterCardCta">进入残局</span>
+                            <span class="cta cta-wash" id="puzzleChapterCardCta">选择章节</span>
                         </button>
                         <button type="button" class="lane" onclick="showMyGames()">
                             <span class="mark">绩</span>
@@ -199,6 +203,38 @@
                                 <p>三十个交易日里各限一买一卖，观望不限。纯择时，不可反悔。</p>
                             </span>
                             <span class="cta cta-fill">开始一把梭</span>
+                        </button>
+                    </div>
+
+                    <!-- L3 残局章节选择（与玩法三级同构） -->
+                    <div class="lanes sim-hub-lanes puzzle-chapters-lanes" id="puzzleChapters" hidden>
+                        <button type="button" class="hub-back" onclick="showSimHub()">← 返回模拟盘</button>
+                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapter1Card" onclick="onPuzzleChapterSelect(1)">
+                            <span class="mark">一</span>
+                            <span class="copy">
+                                <small>残局 · 第一章</small>
+                                <strong>已开放 · 六关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
+                                <p>短窗口 · 初始持仓 · 星级首通</p>
+                            </span>
+                            <span class="cta cta-fill">进入第一章</span>
+                        </button>
+                        <button type="button" class="lane is-disabled puzzle-chapter-soon" id="puzzleChapter2Card" disabled aria-disabled="true">
+                            <span class="mark">二</span>
+                            <span class="copy">
+                                <small>残局 · 第二章</small>
+                                <strong>即将推出</strong>
+                                <p>章节内容筹备中，敬请期待。</p>
+                            </span>
+                            <span class="cta cta-wash">即将推出</span>
+                        </button>
+                        <button type="button" class="lane is-disabled puzzle-chapter-soon" id="puzzleChapter3Card" disabled aria-disabled="true">
+                            <span class="mark">三</span>
+                            <span class="copy">
+                                <small>残局 · 第三章</small>
+                                <strong>即将推出</strong>
+                                <p>章节内容筹备中，敬请期待。</p>
+                            </span>
+                            <span class="cta cta-wash">即将推出</span>
                         </button>
                     </div>
                 </div>
@@ -315,7 +351,7 @@
         <section class="puzzle-screen" id="puzzleScreen" hidden aria-hidden="true">
             <div class="puzzle-screen-wrap">
                 <div class="puzzle-screen-head">
-                    <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn" onclick="hidePuzzleScreen()">← 返回模拟盘</button>
+                    <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn" onclick="hidePuzzleScreen()">← 返回章节</button>
                     <h2 class="puzzle-panel-title">残局挑战 · 第一章</h2>
                 </div>
                 <div class="puzzle-progress" id="puzzleProgress" hidden></div>
@@ -937,7 +973,7 @@
         import { initAnnouncements } from './js/announcements.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
-        import { showHome, showSimHub, showPlayModes, restoreSimShell } from './js/home-ia.js';
+        import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
@@ -950,6 +986,7 @@
             refreshPuzzleChapterFlag,
             refreshPuzzleChapterCard,
             onPuzzleChapterCardClick,
+            onPuzzleChapterSelect,
             showPuzzleScreen,
             hidePuzzleScreen,
             hidePuzzlePanel,
@@ -1000,6 +1037,7 @@
         window.showHome = showHome;
         window.showSimHub = showSimHub;
         window.showPlayModes = showPlayModes;
+        window.showPuzzleChapters = showPuzzleChapters;
         window.restoreSimShell = restoreSimShell;
         window.onDailyChallengeCardClick = onDailyChallengeCardClick;
         window.onDailyChallengeBoardClick = onDailyChallengeBoardClick;
@@ -1009,6 +1047,7 @@
           if (typeof window.startGame === 'function') window.startGame();
         };
         window.onPuzzleChapterCardClick = onPuzzleChapterCardClick;
+        window.onPuzzleChapterSelect = onPuzzleChapterSelect;
         window.showPuzzleScreen = showPuzzleScreen;
         window.hidePuzzleScreen = hidePuzzleScreen;
         window.hidePuzzlePanel = hidePuzzlePanel;
@@ -1038,8 +1077,12 @@
         if (!bootHash) {
             const home = document.getElementById('homeLanes');
             const hub = document.getElementById('simHub');
+            const modes = document.getElementById('playModes');
+            const chapters = document.getElementById('puzzleChapters');
             if (home) home.hidden = false;
             if (hub) hub.hidden = true;
+            if (modes) modes.hidden = true;
+            if (chapters) chapters.hidden = true;
             initAppHashRouting({ applyInitial: false });
         } else {
             initAppHashRouting();

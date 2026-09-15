@@ -84,17 +84,77 @@
     border-radius: 8px 12px 8px 10px;
 }
 
+/* Default: all mascot layers hidden; level + theme reveal one pair */
+.start-screen .frame img.day,
 .start-screen .frame img.night {
     opacity: 0;
     pointer-events: none;
 }
 
-[data-theme="dark"] .start-screen .frame img.day {
+/* L1 (home) day/night */
+.start-screen[data-hub-level="1"] .frame img.mascot-l1.day,
+.start-screen .frame[data-hub-level="1"] img.mascot-l1.day {
+    opacity: 1;
+    pointer-events: auto;
+}
+[data-theme="dark"] .start-screen[data-hub-level="1"] .frame img.mascot-l1.day,
+[data-theme="dark"] .start-screen .frame[data-hub-level="1"] img.mascot-l1.day {
     opacity: 0;
     pointer-events: none;
 }
+[data-theme="dark"] .start-screen[data-hub-level="1"] .frame img.mascot-l1.night,
+[data-theme="dark"] .start-screen .frame[data-hub-level="1"] img.mascot-l1.night {
+    opacity: 1;
+    pointer-events: auto;
+}
 
-[data-theme="dark"] .start-screen .frame img.night {
+/* L2 (simHub) */
+.start-screen[data-hub-level="2"] .frame img.mascot-l2.day,
+.start-screen .frame[data-hub-level="2"] img.mascot-l2.day {
+    opacity: 1;
+    pointer-events: auto;
+}
+[data-theme="dark"] .start-screen[data-hub-level="2"] .frame img.mascot-l2.day,
+[data-theme="dark"] .start-screen .frame[data-hub-level="2"] img.mascot-l2.day {
+    opacity: 0;
+    pointer-events: none;
+}
+[data-theme="dark"] .start-screen[data-hub-level="2"] .frame img.mascot-l2.night,
+[data-theme="dark"] .start-screen .frame[data-hub-level="2"] img.mascot-l2.night {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* L3 (playModes / puzzleChapters) */
+.start-screen[data-hub-level="3"] .frame img.mascot-l3.day,
+.start-screen .frame[data-hub-level="3"] img.mascot-l3.day {
+    opacity: 1;
+    pointer-events: auto;
+}
+[data-theme="dark"] .start-screen[data-hub-level="3"] .frame img.mascot-l3.day,
+[data-theme="dark"] .start-screen .frame[data-hub-level="3"] img.mascot-l3.day {
+    opacity: 0;
+    pointer-events: none;
+}
+[data-theme="dark"] .start-screen[data-hub-level="3"] .frame img.mascot-l3.night,
+[data-theme="dark"] .start-screen .frame[data-hub-level="3"] img.mascot-l3.night {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Fallback when data-hub-level missing: behave like L1 sketches */
+.start-screen:not([data-hub-level]) .frame img.mascot-l1.day,
+.start-screen .frame:not([data-hub-level]) img.day:not(.mascot-l2):not(.mascot-l3) {
+    opacity: 1;
+    pointer-events: auto;
+}
+[data-theme="dark"] .start-screen:not([data-hub-level]) .frame img.mascot-l1.day,
+[data-theme="dark"] .start-screen .frame:not([data-hub-level]) img.day:not(.mascot-l2):not(.mascot-l3) {
+    opacity: 0;
+    pointer-events: none;
+}
+[data-theme="dark"] .start-screen:not([data-hub-level]) .frame img.mascot-l1.night,
+[data-theme="dark"] .start-screen .frame:not([data-hub-level]) img.night:not(.mascot-l2):not(.mascot-l3) {
     opacity: 1;
     pointer-events: auto;
 }
@@ -366,8 +426,16 @@
 .start-screen .lanes[hidden],
 .start-screen #simHub[hidden],
 .start-screen #playModes[hidden],
+.start-screen #puzzleChapters[hidden],
 .start-screen #homeLanes[hidden] {
     display: none !important;
+}
+
+.start-screen .lane.is-disabled,
+.start-screen .lane.puzzle-chapter-soon:disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .start-screen .hub-board-link {
