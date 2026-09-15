@@ -35,9 +35,13 @@ let gameRewindEnabled = false;
 let activeMetric = "best";
 /** @type {"next_open"|"same_close"} */
 let activeFillMode = "next_open";
+/** @type {"classic"|"oneshot"|"survival"} */
+let activeGameKind = "classic";
+let oneshotModeEnabled = false;
+let survivalModeEnabled = false;
 
-function panelKey(metric, fillMode, assistClass = activeAssist) {
-  return `${metric}|${fillMode}|${assistClass || "_all"}`;
+function panelKey(metric, fillMode, assistClass = activeAssist, gameKind = activeGameKind) {
+  return `${metric}|${fillMode}|${assistClass || "_all"}|${gameKind || "classic"}`;
 }
 
 
@@ -97,7 +101,11 @@ function retLabel(metric) {
 function syncMetricNote(metric) {
   const note = document.getElementById("leaderboardMetricNote");
   if (!note) return;
-  if (metric === "average") {
+  if (activeGameKind === "survival" && metric === "best") {
+    note.hidden = false;
+    note.textContent =
+      "生存榜优先排「活穿」局（未爆仓），同档再按收益率。爆仓局仍可上榜，但排在活穿之后。";
+  } else if (metric === "average") {
     note.hidden = false;
     note.textContent =
       "平均收益 = 各有效上榜局 return 的算术平均（非百分比点相加），不等于一笔资金的连续复利结果。示例：+40% 与 −10% 两局，平均为 +15%，不是综合 +30%。";
@@ -115,16 +123,24 @@ function renderPanel(data) {
   syncMetricNote(metric);
   if (metaEl) {
     const metricLabel = metric === "average" ? "平均收益" : "最佳单局";
+    const kindLabel =
+      data.gameKind === "oneshot"
+        ? "一把梭"
+        : data.gameKind === "survival"
+          ? "活过三十日"
+          : "经典练习";
     const assistLabel =
-      data.assistClass === "undo"
-        ? "反悔"
-        : data.assistClass === "all"
-          ? "总榜"
-          : data.assistClass === "clean"
-            ? "纯净"
-            : null;
+      data.gameKind && data.gameKind !== "classic"
+        ? null
+        : data.assistClass === "undo"
+          ? "反悔"
+          : data.assistClass === "all"
+            ? "总榜"
+            : data.assistClass === "clean"
+              ? "纯净"
+              : null;
     const assistBit = assistLabel ? ` · ${escapeHtml(assistLabel)}` : "";
-    metaEl.innerHTML = `${escapeHtml(metricLabel)}${assistBit} · 规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
+    metaEl.innerHTML = `${escapeHtml(kindLabel)} · ${escapeHtml(metricLabel)}${assistBit} · 规则 <code>${escapeHtml(data.ruleVersion)}</code> · 行情 <code>${escapeHtml(
       String(data.datasetVersion || "").slice(0, 12)
     )}…</code> · 更新于 ${fmtFinished(data.asOf)}`;
   }
@@ -155,15 +171,21 @@ function renderPanel(data) {
     return;
   }
   const label = retLabel(metric);
+  const survivalBoard = data.gameKind === "survival";
   listEl.innerHTML = items
     .map((row) => {
       const cls =
         row.returnPpm > 0 ? "pos" : row.returnPpm < 0 ? "neg" : "";
       const stats = fmtWinStats(row.gameCount, row.winRate);
-      return `<li class="leaderboard-row">
+      const survBadge = survivalBoard
+        ? row.busted
+          ? `<small class="lb-survive-badge lb-survive-bust">爆仓</small>`
+          : `<small class="lb-survive-badge lb-survive-ok">活穿</small>`
+        : "";
+      return `<li class="leaderboard-row${survivalBoard ? (row.busted ? " lb-row-bust" : " lb-row-survive") : ""}">
           <span class="lb-rank">#${row.rank}</span>
           <img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">
-          <span class="lb-nick">${escapeHtml(row.nickname)}<small class="lb-stats">${escapeHtml(stats)}</small></span>
+          <span class="lb-nick">${escapeHtml(row.nickname)}${survBadge}<small class="lb-stats">${escapeHtml(stats)}</small></span>
           <span class="lb-ret ${cls}" title="${escapeHtml(label)}"><small class="lb-ret-label">${escapeHtml(label)}</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;
@@ -171,12 +193,12 @@ function renderPanel(data) {
     .join("");
 }
 
-async function fetchLeaderboard(metric, fillMode, assistClass = activeAssist) {
-  const key = panelKey(metric, fillMode, assistClass);
+async function fetchLeaderboard(metric, fillMode, assistClass = activeAssist, gameKind = activeGameKind) {
+  const key = panelKey(metric, fillMode, assistClass, gameKind);
   if (inflight.has(key)) return inflight.get(key);
   const p = (async () => {
-    const qs = new URLSearchParams({ fillMode, metric });
-    if (gameRewindEnabled && assistClass) qs.set("assistClass", assistClass);
+    const qs = new URLSearchParams({ fillMode, metric, gameKind: gameKind || "classic" });
+    if (gameKind === "classic" && gameRewindEnabled && assistClass) qs.set("assistClass", assistClass);
     const { data } = await api(`/leaderboard?${qs.toString()}`);
     panelCache.set(key, { data, fetchedAt: Date.now() });
     return data;
@@ -191,9 +213,9 @@ function prefetchOtherPanels(metric, fillMode) {
   for (const m of METRICS) {
     for (const mode of MODES) {
       if (m === metric && mode === fillMode) continue;
-      const key = panelKey(m, mode, activeAssist);
+      const key = panelKey(m, mode, activeAssist, activeGameKind);
       if (panelCache.has(key) || inflight.has(key)) continue;
-      fetchLeaderboard(m, mode, activeAssist).catch(() => {});
+      fetchLeaderboard(m, mode, activeAssist, activeGameKind).catch(() => {});
     }
   }
 }
@@ -229,10 +251,69 @@ function bindTabHandlers(screen) {
       loadLeaderboardPanel(activeMetric, activeFillMode);
     };
   });
+  screen.querySelectorAll(".leaderboard-kind-tab").forEach((btn) => {
+    btn.onclick = () => {
+      screen.querySelectorAll(".leaderboard-kind-tab").forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      const k = btn.dataset.kind;
+      activeGameKind = k === "oneshot" || k === "survival" ? k : "classic";
+      syncAssistTabsVisibility(screen);
+      loadLeaderboardPanel(activeMetric, activeFillMode);
+    };
+  });
 }
 
-/** @param {string} [preferredFillMode] next_open | same_close — selects matching tab when opening. */
-export async function showLeaderboard(preferredFillMode) {
+function syncAssistTabsVisibility(screen) {
+  const assistTabs = screen?.querySelector("#leaderboardAssistTabs");
+  if (!assistTabs) return;
+  const showAssist = activeGameKind === "classic" && gameRewindEnabled;
+  assistTabs.hidden = !showAssist;
+  if (!showAssist) {
+    /* keep activeAssist for when user returns to classic */
+  } else if (!activeAssist) {
+    activeAssist = "clean";
+  }
+}
+
+function syncKindTabsVisibility(screen) {
+  const wrap = screen?.querySelector("#leaderboardKindTabs");
+  if (!wrap) return;
+  const showExtra = oneshotModeEnabled || survivalModeEnabled;
+  wrap.hidden = !showExtra;
+  wrap.querySelectorAll('[data-kind="oneshot"]').forEach((b) => {
+    b.hidden = !oneshotModeEnabled;
+  });
+  wrap.querySelectorAll('[data-kind="survival"]').forEach((b) => {
+    b.hidden = !survivalModeEnabled;
+  });
+  if (activeGameKind === "oneshot" && !oneshotModeEnabled) activeGameKind = "classic";
+  if (activeGameKind === "survival" && !survivalModeEnabled) activeGameKind = "classic";
+  wrap.querySelectorAll(".leaderboard-kind-tab").forEach((b) => {
+    const on = b.dataset.kind === activeGameKind;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  screen?.classList.toggle("lb-kind-oneshot", activeGameKind === "oneshot");
+  screen?.classList.toggle("lb-kind-survival", activeGameKind === "survival");
+  screen?.classList.toggle("lb-kind-classic", activeGameKind === "classic");
+}
+
+/**
+ * @param {string|{fillMode?: string, gameKind?: string}} [preferred]
+ *   string = fillMode (next_open | same_close); object may set fillMode + gameKind.
+ */
+export async function showLeaderboard(preferred) {
+  let preferredFillMode;
+  let preferredGameKind;
+  if (preferred && typeof preferred === "object") {
+    preferredFillMode = preferred.fillMode;
+    preferredGameKind = preferred.gameKind;
+  } else {
+    preferredFillMode = preferred;
+  }
   prepareScreen(Route.LEADERBOARD);
   setRouteHash(Route.LEADERBOARD);
   let screen = document.getElementById("leaderboardScreen");
@@ -245,6 +326,11 @@ export async function showLeaderboard(preferredFillMode) {
         <div class="leaderboard-head">
           <button type="button" class="leaderboard-back" id="leaderboardBackBtn">← 返回</button>
           <h2>排行榜</h2>
+        </div>
+        <div class="leaderboard-kind-tabs" id="leaderboardKindTabs" role="tablist" aria-label="玩法榜" hidden>
+          <button type="button" class="leaderboard-kind-tab active" data-kind="classic" role="tab" aria-selected="true">经典练习</button>
+          <button type="button" class="leaderboard-kind-tab lb-kind-tab-oneshot" data-kind="oneshot" role="tab" aria-selected="false" hidden>一把梭</button>
+          <button type="button" class="leaderboard-kind-tab lb-kind-tab-survival" data-kind="survival" role="tab" aria-selected="false" hidden>活过三十日</button>
         </div>
         <div class="leaderboard-metric-tabs" role="tablist" aria-label="榜单类型">
           <button type="button" class="leaderboard-metric-tab active" data-metric="best" role="tab" aria-selected="true">最佳单局</button>
@@ -274,13 +360,20 @@ export async function showLeaderboard(preferredFillMode) {
     const res = await fetch("/api/v1/config", { credentials: "same-origin", headers: { Accept: "application/json" } });
     const json = await res.json().catch(() => ({}));
     gameRewindEnabled = !!(json?.data?.features?.gameRewind);
+    oneshotModeEnabled = !!(json?.data?.features?.oneshotMode);
+    survivalModeEnabled = !!(json?.data?.features?.survivalMode);
   } catch {
     gameRewindEnabled = false;
+    oneshotModeEnabled = false;
+    survivalModeEnabled = false;
   }
-  const assistTabs = screen.querySelector("#leaderboardAssistTabs");
-  if (assistTabs) assistTabs.hidden = !gameRewindEnabled;
+  if (preferredGameKind === "oneshot" || preferredGameKind === "survival" || preferredGameKind === "classic") {
+    activeGameKind = preferredGameKind;
+  }
+  syncKindTabsVisibility(screen);
   if (!gameRewindEnabled) activeAssist = null;
   else if (!activeAssist) activeAssist = "clean";
+  syncAssistTabsVisibility(screen);
   screen.querySelectorAll(".leaderboard-assist-tab").forEach((b) => {
     const on = b.dataset.assist === (activeAssist || "clean");
     b.classList.toggle("active", on);

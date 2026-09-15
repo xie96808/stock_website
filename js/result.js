@@ -167,10 +167,13 @@ export function endGame() {
         clearPuzzleResultDebrief();
         const lbBtn = document.getElementById('resultLeaderboardBtn');
         if (lbBtn) {
-            // Oneshot: no public board yet. Daily: open day-board modal (same as L3「查看日榜」).
-            if (view.gameKind === 'oneshot' || view.gameKind === 'survival') {
-                lbBtn.hidden = true;
-                lbBtn.textContent = '查看排行榜';
+            // Oneshot / survival: open kind-specific practice board tabs. Daily: day-board modal.
+            if (view.gameKind === 'oneshot') {
+                lbBtn.hidden = false;
+                lbBtn.textContent = '查看一把梭榜';
+            } else if (view.gameKind === 'survival') {
+                lbBtn.hidden = false;
+                lbBtn.textContent = '查看生存榜';
             } else if (view.gameKind === 'daily') {
                 lbBtn.hidden = false;
                 lbBtn.textContent = '查看日榜';

@@ -17,6 +17,7 @@ router.get("/leaderboard", (req, res) => {
       ruleVersion: req.query.ruleVersion,
       datasetVersion: req.query.datasetVersion,
       assistClass: req.query.assistClass,
+      gameKind: req.query.gameKind,
     },
     req.user || null
   );

@@ -1,11 +1,24 @@
 import { openDb } from "../db/connection.js";
 import { ensureDatasetLoaded } from "./dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
-import { ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
+import {
+  ASSIST_QUERY_SET,
+  ASSIST_CLEAN,
+  ASSIST_ALL,
+  GAME_KIND_CLASSIC,
+  GAME_KIND_ONESHOT,
+  GAME_KIND_SURVIVAL,
+} from "../../../shared/protocol.js";
 import { config } from "./config.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const METRIC_SET = new Set(["best", "average"]);
+/** Practice boards only — daily/puzzle stay on their own endpoints. */
+const LEADERBOARD_KIND_SET = new Set([
+  GAME_KIND_CLASSIC,
+  GAME_KIND_ONESHOT,
+  GAME_KIND_SURVIVAL,
+]);
 const TOP_N = 10;
 
 /** Short in-memory TTL for shared board (topN + total). Viewer fields stay request-scoped. */
@@ -52,10 +65,27 @@ export function resolveBoardKey(query = {}) {
       ? query.datasetVersion.trim()
       : meta.version;
 
-  // F03: assist boards only when GAME_REWIND_ENABLED. Flag off → null (unfiltered aggregate).
+  // gameKind: classic (default) | oneshot | survival. Old clients omit → classic.
+  let gameKind = GAME_KIND_CLASSIC;
+  if (query.gameKind != null && query.gameKind !== "") {
+    const rawKind = String(query.gameKind);
+    if (!LEADERBOARD_KIND_SET.has(rawKind)) {
+      return {
+        error: {
+          status: 400,
+          code: "INVALID_GAME_KIND",
+          message: "gameKind 必须为 classic、oneshot 或 survival",
+        },
+      };
+    }
+    gameKind = rawKind;
+  }
+
+  // F03: assist boards only for classic when GAME_REWIND_ENABLED.
+  // oneshot/survival ignore assistClass (no rewind assist boards).
   // assistClass=all → 总榜 = classic clean ∪ undo (after legacy→clean migration).
   let assistClass = null;
-  if (config.gameRewindEnabled) {
+  if (gameKind === GAME_KIND_CLASSIC && config.gameRewindEnabled) {
     const raw = query.assistClass;
     if (raw == null || raw === "") {
       assistClass = ASSIST_CLEAN;
@@ -72,12 +102,13 @@ export function resolveBoardKey(query = {}) {
     }
   }
 
-  return { fillMode, metric, ruleVersion, datasetVersion, assistClass };
+  return { fillMode, metric, ruleVersion, datasetVersion, assistClass, gameKind };
 }
 
 function boardCacheKey(board) {
   const assist = board.assistClass || "_all";
-  return `${board.fillMode}\0${board.metric}\0${board.ruleVersion}\0${board.datasetVersion}\0${assist}`;
+  const kind = board.gameKind || GAME_KIND_CLASSIC;
+  return `${board.fillMode}\0${board.metric}\0${board.ruleVersion}\0${board.datasetVersion}\0${assist}\0${kind}`;
 }
 
 /**
@@ -103,9 +134,9 @@ function ppmToPct(ppm) {
   return (ppm / 10000).toFixed(2);
 }
 
-function publicEntry(row) {
+function publicEntry(row, { includeBusted = false } = {}) {
   const custom = row.avatar_custom_path || null;
-  return {
+  const entry = {
     rank: row.rank,
     nickname: row.nickname,
     avatarId: row.avatar_id,
@@ -116,6 +147,10 @@ function publicEntry(row) {
     gameCount: row.game_count != null ? Number(row.game_count) : 0,
     winRate: row.win_rate != null ? Number(row.win_rate) : null,
   };
+  if (includeBusted) {
+    entry.busted = Number(row.is_busted || 0) === 1;
+  }
+  return entry;
 }
 
 /**
@@ -129,12 +164,13 @@ const BEST_SEATS_CTE = `
       s.id AS game_id,
       s.finished_at AS finished_at,
       r.return_ppm AS return_ppm,
+      __BUST_EXPR__ AS is_busted,
       u.nickname AS nickname,
       u.avatar_id AS avatar_id,
       u.avatar_custom_path AS avatar_custom_path,
       ROW_NUMBER() OVER (
         PARTITION BY s.user_id
-        ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
+        ORDER BY __SEAT_ORDER__
       ) AS seat_rn
     FROM game_sessions s
     JOIN game_results r ON r.game_id = s.id
@@ -151,7 +187,7 @@ const BEST_SEATS_CTE = `
       AND u.leaderboard_opt_in = 1
   ),
   seats AS (
-    SELECT user_id, game_id, finished_at, return_ppm, nickname, avatar_id, avatar_custom_path
+    SELECT user_id, game_id, finished_at, return_ppm, is_busted, nickname, avatar_id, avatar_custom_path
     FROM eligible
     WHERE seat_rn = 1
   )
@@ -188,6 +224,7 @@ const AVG_SEATS_CTE = `
       AVG(e.return_ppm * 1.0) AS return_avg,
       CAST(ROUND(AVG(e.return_ppm * 1.0)) AS INTEGER) AS return_ppm,
       MIN(e.finished_at) AS finished_at,
+      0 AS is_busted,
       u.nickname AS nickname,
       u.avatar_id AS avatar_id,
       u.avatar_custom_path AS avatar_custom_path
@@ -197,15 +234,52 @@ const AVG_SEATS_CTE = `
   )
 `;
 
-function seatsCte(metric, board) {
-  const base = metric === "average" ? AVG_SEATS_CTE : BEST_SEATS_CTE;
-  return base.replaceAll("__ASSIST__", assistSql(board));
+/** Survival: busted from valuation_json (kind=bust or busted=true). Else 0. */
+function bustExprSql(board) {
+  if (board.gameKind === GAME_KIND_SURVIVAL) {
+    return `CASE
+      WHEN json_extract(r.valuation_json, '$.kind') = 'bust' THEN 1
+      WHEN json_extract(r.valuation_json, '$.busted') = 1 THEN 1
+      ELSE 0
+    END`;
+  }
+  return "0";
 }
 
-function assistSql(board) {
-  // Default practice board is classic-only (oneshot/daily/puzzle never mix in).
+function seatOrderSql(board) {
+  // Survival best: 活穿 (not busted) first, then return — same tie-break as classic.
+  // Use bustExprSql (not alias) — SQLite window ORDER BY cannot see SELECT aliases.
+  if (board.gameKind === GAME_KIND_SURVIVAL) {
+    return `(${bustExprSql(board)}) ASC, r.return_ppm DESC, s.finished_at ASC, s.id ASC`;
+  }
+  return "r.return_ppm DESC, s.finished_at ASC, s.id ASC";
+}
+
+function boardOrderSql(board) {
+  if (board.metric === "average") {
+    return "return_avg DESC, finished_at ASC, user_id ASC";
+  }
+  if (board.gameKind === GAME_KIND_SURVIVAL) {
+    return "is_busted ASC, return_ppm DESC, finished_at ASC, user_id ASC";
+  }
+  return "return_ppm DESC, finished_at ASC, user_id ASC";
+}
+
+function seatsCte(metric, board) {
+  const base = metric === "average" ? AVG_SEATS_CTE : BEST_SEATS_CTE;
+  return base
+    .replaceAll("__ASSIST__", kindAssistSql(board))
+    .replaceAll("__BUST_EXPR__", bustExprSql(board))
+    .replaceAll("__SEAT_ORDER__", seatOrderSql(board));
+}
+
+function kindAssistSql(board) {
+  const kind = board.gameKind || GAME_KIND_CLASSIC;
+  if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL) {
+    return " AND s.game_kind = ?";
+  }
+  // Classic practice board — oneshot/survival/daily/puzzle never mix in.
   if (!board.assistClass) return " AND s.game_kind = 'classic'";
-  // Per-game assist classification; classic only on assist boards.
   if (board.assistClass === ASSIST_ALL) {
     // 总榜: clean ∪ undo (post-migration; no legacy population advertised).
     return " AND s.game_kind = 'classic' AND s.assist_class IN ('clean', 'undo')";
@@ -215,7 +289,12 @@ function assistSql(board) {
 
 function boardBinds(board) {
   const binds = [board.ruleVersion, board.datasetVersion, board.fillMode];
-  if (board.assistClass && board.assistClass !== ASSIST_ALL) binds.push(board.assistClass);
+  const kind = board.gameKind || GAME_KIND_CLASSIC;
+  if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL) {
+    binds.push(kind);
+  } else if (board.assistClass && board.assistClass !== ASSIST_ALL) {
+    binds.push(board.assistClass);
+  }
   return binds;
 }
 
@@ -235,7 +314,7 @@ function loadUserStatsMap(db, userIds, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?${assistSql(board)}
+         AND s.fill_mode = ?${kindAssistSql(board)}
          AND r.validity = 'valid'
        GROUP BY s.user_id`
     )
@@ -260,10 +339,8 @@ function loadUserStatsMap(db, userIds, board) {
 function computeSharedBoard(db, board) {
   const binds = boardBinds(board);
   const cte = seatsCte(board.metric, board);
-  const orderExpr =
-    board.metric === "average"
-      ? "return_avg DESC, finished_at ASC, user_id ASC"
-      : "return_ppm DESC, finished_at ASC, user_id ASC";
+  const orderExpr = boardOrderSql(board);
+  const includeBusted = board.gameKind === GAME_KIND_SURVIVAL;
 
   const topRows = db
     .prepare(
@@ -272,6 +349,7 @@ function computeSharedBoard(db, board) {
          user_id,
          finished_at,
          return_ppm,
+         is_busted,
          nickname,
          avatar_id,
          avatar_custom_path,
@@ -306,8 +384,9 @@ function computeSharedBoard(db, board) {
     ruleVersion: board.ruleVersion,
     datasetVersion: board.datasetVersion,
     assistClass: board.assistClass,
+    gameKind: board.gameKind || GAME_KIND_CLASSIC,
     asOf: new Date().toISOString(),
-    top10: topRows.map(publicEntry),
+    top10: topRows.map((r) => publicEntry(r, { includeBusted })),
     total,
     /** Compact seats for myRank when viewer is inside Top N (avoid extra query). */
     _topUserIds: topRows.map((r) => ({ userId: r.user_id, rank: r.rank })),
@@ -354,7 +433,7 @@ function userIneligibility(db, user, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?${assistSql(board)}
+         AND s.fill_mode = ?${kindAssistSql(board)}
          AND r.validity = 'valid'
          AND r.leaderboard_hidden = 0
          AND r.trade_count >= 1
@@ -379,7 +458,7 @@ function loadUserBoardStats(db, userId, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?${assistSql(board)}
+         AND s.fill_mode = ?${kindAssistSql(board)}
          AND r.validity = 'valid'`
     )
     .get(userId, ...boardBinds(board));
@@ -396,24 +475,35 @@ function loadUserBoardStats(db, userId, board) {
  * Viewer's best eligible seat on this board (for rank lookup outside Top N).
  */
 function loadViewerBestSeat(db, userId, board) {
+  const bust = bustExprSql(board);
+  const orderBy =
+    board.gameKind === GAME_KIND_SURVIVAL
+      ? "is_busted ASC, return_ppm DESC, finished_at ASC, game_id ASC"
+      : "return_ppm DESC, finished_at ASC, game_id ASC";
   return db
     .prepare(
-      `SELECT s.user_id AS user_id, s.id AS game_id, s.finished_at AS finished_at, r.return_ppm AS return_ppm
-       FROM game_sessions s
-       JOIN game_results r ON r.game_id = s.id
-       JOIN users u ON u.id = s.user_id
-       WHERE s.user_id = ?
-         AND s.status = 'settled'
-         AND s.rule_version = ?
-         AND s.dataset_version = ?
-         AND s.fill_mode = ?${assistSql(board)}
-         AND r.validity = 'valid'
-         AND r.leaderboard_hidden = 0
-         AND r.trade_count >= 1
-         AND u.status = 'active'
-         AND u.role = 'user'
-         AND u.leaderboard_opt_in = 1
-       ORDER BY r.return_ppm DESC, s.finished_at ASC, s.id ASC
+      `SELECT user_id, game_id, finished_at, return_ppm, is_busted FROM (
+         SELECT s.user_id AS user_id,
+                s.id AS game_id,
+                s.finished_at AS finished_at,
+                r.return_ppm AS return_ppm,
+                ${bust} AS is_busted
+         FROM game_sessions s
+         JOIN game_results r ON r.game_id = s.id
+         JOIN users u ON u.id = s.user_id
+         WHERE s.user_id = ?
+           AND s.status = 'settled'
+           AND s.rule_version = ?
+           AND s.dataset_version = ?
+           AND s.fill_mode = ?${kindAssistSql(board)}
+           AND r.validity = 'valid'
+           AND r.leaderboard_hidden = 0
+           AND r.trade_count >= 1
+           AND u.status = 'active'
+           AND u.role = 'user'
+           AND u.leaderboard_opt_in = 1
+       )
+       ORDER BY ${orderBy}
        LIMIT 1`
     )
     .get(userId, ...boardBinds(board));
@@ -429,7 +519,8 @@ function loadViewerAverageSeat(db, userId, board) {
          s.user_id AS user_id,
          AVG(r.return_ppm * 1.0) AS return_avg,
          CAST(ROUND(AVG(r.return_ppm * 1.0)) AS INTEGER) AS return_ppm,
-         MIN(s.finished_at) AS finished_at
+         MIN(s.finished_at) AS finished_at,
+         0 AS is_busted
        FROM game_sessions s
        JOIN game_results r ON r.game_id = s.id
        JOIN users u ON u.id = s.user_id
@@ -437,7 +528,7 @@ function loadViewerAverageSeat(db, userId, board) {
          AND s.status = 'settled'
          AND s.rule_version = ?
          AND s.dataset_version = ?
-         AND s.fill_mode = ?${assistSql(board)}
+         AND s.fill_mode = ?${kindAssistSql(board)}
          AND r.validity = 'valid'
          AND r.leaderboard_hidden = 0
          AND r.trade_count >= 1
@@ -479,6 +570,33 @@ function rankForSeat(db, board, seat) {
         seat.return_avg,
         seat.finished_at,
         seat.return_avg,
+        seat.finished_at,
+        seat.user_id
+      );
+    return Number(row?.better || 0) + 1;
+  }
+  if (board.gameKind === GAME_KIND_SURVIVAL) {
+    const busted = Number(seat.is_busted || 0);
+    const row = db
+      .prepare(
+        `${cte}
+         SELECT COUNT(*) AS better
+         FROM seats
+         WHERE is_busted < ?
+            OR (is_busted = ? AND return_ppm > ?)
+            OR (is_busted = ? AND return_ppm = ? AND finished_at < ?)
+            OR (is_busted = ? AND return_ppm = ? AND finished_at = ? AND user_id < ?)`
+      )
+      .get(
+        ...binds,
+        busted,
+        busted,
+        seat.return_ppm,
+        busted,
+        seat.return_ppm,
+        seat.finished_at,
+        busted,
+        seat.return_ppm,
         seat.finished_at,
         seat.user_id
       );
@@ -556,6 +674,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       ruleVersion: shared.ruleVersion,
       datasetVersion: shared.datasetVersion,
       assistClass: shared.assistClass,
+      gameKind: shared.gameKind || board.gameKind || GAME_KIND_CLASSIC,
       asOf: shared.asOf,
       top10: shared.top10,
       total: shared.total,
