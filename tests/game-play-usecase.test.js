@@ -451,10 +451,32 @@ test('applyServerDecisionState applies mid-game actions + revision', () => {
   assert.equal(gameState.tradeHistory.length, 2);
 });
 
-test('isRevisionConflictError detects API conflict', () => {
+test('isRevisionConflictError detects API conflict variants', () => {
   assert.equal(isRevisionConflictError({ code: 'REVISION_CONFLICT', status: 409 }), true);
+  assert.equal(isRevisionConflictError({ code: 'REVISION_CONFLICT' }), true);
+  assert.equal(
+    isRevisionConflictError({ code: 'FOO_REVISION_BAR', status: 409 }),
+    true,
+    '409 + code containing REVISION'
+  );
+  assert.equal(
+    isRevisionConflictError({ code: 'REVISION_STALE', status: 409 }),
+    true
+  );
+  assert.equal(
+    isRevisionConflictError({ code: 'OTHER', status: 409 }),
+    false,
+    '409 alone without REVISION in code is not a conflict'
+  );
+  assert.equal(
+    isRevisionConflictError({ code: 'REVISION_CONFLICT', status: 400 }),
+    true,
+    'exact REVISION_CONFLICT code wins even if status is not 409'
+  );
   assert.equal(isRevisionConflictError({ code: 'OTHER', status: 400 }), false);
+  assert.equal(isRevisionConflictError({ status: 500, code: 'SERVER' }), false);
   assert.equal(isRevisionConflictError(null), false);
+  assert.equal(isRevisionConflictError(undefined), false);
 });
 
 test('syncEventV1Decision recovers once on REVISION_CONFLICT', async () => {
@@ -575,4 +597,154 @@ test('syncEventV1Decision recovers when append ok but local apply fails', async 
   assert.equal(fetchCalls, 1);
   assert.equal(gameState.revision, 1);
   assert.deepEqual(gameState.actions, ['buy']);
+});
+
+test('validatePlayAction returns 忙碌中 when decisionBusy or rewindBusy', () => {
+  seedClassicWindow();
+  patchSession({ decisionBusy: true, rewindBusy: false, position: 'empty' });
+  const busyDecision = validatePlayAction(getSession(), 'hold');
+  assert.equal(busyDecision.ok, false);
+  assert.equal(busyDecision.errorZh, '忙碌中');
+
+  patchSession({ decisionBusy: false, rewindBusy: true });
+  const busyRewind = validatePlayAction(getSession(), 'buy');
+  assert.equal(busyRewind.ok, false);
+  assert.equal(busyRewind.errorZh, '忙碌中');
+
+  patchSession({ decisionBusy: true, rewindBusy: true });
+  assert.equal(validatePlayAction(getSession(), 'sell').errorZh, '忙碌中');
+
+  patchSession({ decisionBusy: false, rewindBusy: false });
+  assert.equal(validatePlayAction(getSession(), 'hold').ok, true);
+});
+
+test('syncEventV1Decision conflict + fetchState fails leaves revision stale', async () => {
+  const bars = seedClassicWindow({ actions: ['hold'] });
+  patchSession({
+    cloudMode: true,
+    cloudGameId: 'g-fetch-fail',
+    protocolVersion: 'event-v1',
+    revision: 2,
+    fillMode: 'next_open',
+    actions: ['hold'],
+    currentDay: 2,
+  });
+
+  const conflict = new Error('revision 不匹配，请重新拉取状态');
+  conflict.code = 'REVISION_CONFLICT';
+  conflict.status = 409;
+
+  const result = await syncEventV1Decision('hold', {
+    expectedRevision: 2,
+    bars,
+    appendDecision: async () => {
+      throw conflict;
+    },
+    fetchState: async () => {
+      throw new Error('network down');
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.recovered, false);
+  assert.equal(result.error, conflict);
+  assert.ok(result.fetchError);
+  assert.match(String(result.fetchError.message), /network down/);
+  assert.equal(gameState.revision, 2, 'stale revision must remain unchanged');
+  assert.deepEqual(gameState.actions, ['hold']);
+});
+
+test('syncEventV1Decision after recover next sync uses updated revision', async () => {
+  const bars = seedClassicWindow({ actions: ['hold'] });
+  patchSession({
+    cloudMode: true,
+    cloudGameId: 'g-anti-spam',
+    protocolVersion: 'event-v1',
+    revision: 1,
+    fillMode: 'next_open',
+    actions: ['hold'],
+    currentDay: 2,
+  });
+
+  const conflict = new Error('revision 不匹配，请重新拉取状态');
+  conflict.code = 'REVISION_CONFLICT';
+  conflict.status = 409;
+
+  const seenRevisions = [];
+  let phase = 'conflict';
+
+  const appendDecision = async (action, rev) => {
+    seenRevisions.push(rev);
+    if (phase === 'conflict') {
+      throw conflict;
+    }
+    assert.equal(rev, getSession().revision, 'anti-spam: expectedRevision === session.revision');
+    return {
+      actions: ['hold', 'hold', 'buy', 'hold'],
+      revision: rev + 1,
+      protocolVersion: 'event-v1',
+      undoCount: 0,
+      assistClass: 'clean',
+    };
+  };
+
+  const recover = await syncEventV1Decision('buy', {
+    expectedRevision: getSession().revision,
+    bars,
+    appendDecision,
+    fetchState: async () => ({
+      actions: ['hold', 'hold', 'buy'],
+      revision: 3,
+      protocolVersion: 'event-v1',
+      undoCount: 0,
+      assistClass: 'clean',
+    }),
+  });
+  assert.equal(recover.recovered, true);
+  assert.equal(gameState.revision, 3);
+  assert.deepEqual(seenRevisions, [1]);
+
+  phase = 'ok';
+  const next = await syncEventV1Decision('hold', {
+    expectedRevision: getSession().revision,
+    bars,
+    appendDecision,
+    fetchState: async () => {
+      throw new Error('should not fetch on success');
+    },
+  });
+  assert.equal(next.ok, true);
+  assert.deepEqual(seenRevisions, [1, 3], 'second sync must send recovered revision 3');
+  assert.equal(gameState.revision, 4);
+  assert.deepEqual(gameState.actions, ['hold', 'hold', 'buy', 'hold']);
+});
+
+test('applyRewindServerResult accepts empty actions and bumps revision', () => {
+  const bars = seedClassicWindow({ actions: ['buy', 'hold'] });
+  patchSession({
+    protocolVersion: 'event-v1',
+    revision: 2,
+    undoCount: 0,
+    assistClass: 'clean',
+    fillMode: 'next_open',
+  });
+  const r = applyRewindServerResult(
+    {
+      actions: [],
+      revision: 4,
+      undoCount: 1,
+      assistClass: 'undo',
+      balanceAfter: 450,
+      protocolVersion: 'event-v1',
+    },
+    { bars }
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.balanceAfter, 450);
+  assert.deepEqual(gameState.actions, []);
+  assert.equal(gameState.currentDay, 1);
+  assert.equal(gameState.revision, 4);
+  assert.equal(gameState.undoCount, 1);
+  assert.equal(gameState.assistClass, 'undo');
+  assert.equal(gameState.position, 'empty');
 });
