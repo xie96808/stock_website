@@ -8,9 +8,11 @@ import {
   describeOpenSituation,
   describeTradePath,
   formatSituationNarrative,
+  formatTeachingTip,
   formatPuzzleDebrief,
   PUZZLE_BS_NOTE,
 } from '../js/puzzle-debrief-copy.js';
+import { renderPuzzleDebriefHtml } from '../js/puzzle-settle-modal.js';
 
 const BANNED = [
   '记住：',
@@ -243,6 +245,7 @@ test('formatPuzzleDebrief pending / fail / ok', () => {
   assert.equal(pending.status, 'pending');
   assert.equal(pending.sectionTitle, '复盘');
   assert.equal(pending.buyHoldCompare, null);
+  assert.equal(pending.teachingTip, null);
   assert.equal(pending.bsNote, PUZZLE_BS_NOTE);
   assert.match(pending.situationParagraphs[0], /结算保存完成/);
 
@@ -280,13 +283,19 @@ test('formatPuzzleDebrief pending / fail / ok', () => {
   assert.equal(ok.buyHoldCompare.edgePp, '+4.00');
   assert.ok(ok.starBreakdown);
   assert.equal(ok.starBreakdown.starN, 2);
+  assert.ok(ok.teachingTip);
+  assert.equal(ok.teachingTip.title, '本关提示');
+  assert.match(ok.teachingTip.paragraph, /开局已浮亏/);
   assert.ok(ok.situationParagraphs.length >= 1);
+  // Tip is first-class — situation must not re-paste the same brief.
+  assert.ok(!ok.situationParagraphs.some((p) => p.includes('开局已浮亏。')));
   assert.equal(ok.bsNote, PUZZLE_BS_NOTE);
   assert.match(ok.bsNote, /不套用经典 BS/);
   const blob = [
     ok.buyHoldCompare.paragraph,
     ...ok.starBreakdown.lines,
     ok.starBreakdown.paragraph,
+    ok.teachingTip.paragraph,
     ...ok.situationParagraphs,
     ok.bsNote,
   ].join('\n');
@@ -297,4 +306,106 @@ test('PUZZLE_BS_NOTE is short and non-slogan', () => {
   assert.match(PUZZLE_BS_NOTE, /短窗残局/);
   assert.match(PUZZLE_BS_NOTE, /BS/);
   assertNoBannedTone(PUZZLE_BS_NOTE);
+});
+
+test('formatTeachingTip present / absent / sanitized / banned', () => {
+  assert.equal(formatTeachingTip(null), null);
+  assert.equal(formatTeachingTip(''), null);
+  assert.equal(formatTeachingTip('   '), null);
+
+  const tip = formatTeachingTip(
+    '开局已浮亏。继续死扛还是止损离场，比的是相对买入持有少亏多少。'
+  );
+  assert.ok(tip);
+  assert.equal(tip.title, '本关提示');
+  assert.match(tip.paragraph, /开局已浮亏/);
+  assert.match(tip.paragraph, /相对买入持有/);
+  assertNoBannedTone(tip.paragraph);
+
+  const sanitized = formatTeachingTip('记住：关键在于先卖出。值得注意的是窗口很短。');
+  assert.ok(sanitized);
+  assert.match(sanitized.paragraph, /重点在/);
+  assert.ok(!sanitized.paragraph.includes('记住'));
+  assert.ok(!sanitized.paragraph.includes('关键在于'));
+  assert.ok(!sanitized.paragraph.includes('值得注意的是'));
+  assertNoBannedTone(sanitized.paragraph);
+
+  assert.equal(formatTeachingTip('应止损离场才是完美操作，加油！'), null);
+  assert.equal(formatTeachingTip('你真棒，继续努力'), null);
+});
+
+test('formatPuzzleDebrief teachingTip absent when brief missing', () => {
+  const ok = formatPuzzleDebrief({
+    status: 'ok',
+    puzzleResult: {
+      stars: 1,
+      returnPpm: 0,
+      benchmarkReturnPpm: 0,
+      edgePpm: 0,
+    },
+  });
+  assert.equal(ok.teachingTip, null);
+});
+
+test('formatSituationNarrative does not embed teachingBrief', () => {
+  const paras = formatSituationNarrative({
+    theme: '窄幅震荡',
+    teachingBrief: '少动为上——控制次数。',
+    initialState: { cash: 100000, qty: 0, firstSellableDay: 1 },
+    maxOrders: 1,
+    gameDays: 6,
+    tradeHistory: [],
+    // no puzzleResult → previously soft-embedded teachingBrief into p2
+  });
+  const blob = paras.join('\n');
+  assert.ok(!blob.includes('少动为上'));
+  assert.ok(!blob.includes('控制次数'));
+});
+
+test('renderPuzzleDebriefHtml shows 本关提示 block when tip set', () => {
+  const debrief = formatPuzzleDebrief({
+    status: 'ok',
+    teachingBrief: '开局仓位受 T+1 锁定：首日不能卖，等到可卖日再决定持或走。',
+    theme: '刚买入的锁定持仓',
+    initialState: { cash: 0, qty: 100, cost: 10, firstSellableDay: 2 },
+    maxOrders: 1,
+    gameDays: 6,
+    tradeHistory: [],
+    puzzleResult: {
+      stars: 2,
+      twoStarMet: true,
+      threeStarMet: false,
+      returnPpm: 40000,
+      benchmarkReturnPpm: 0,
+      edgePpm: 40000,
+      mddPpm: 50000,
+      tradeCount: 0,
+      goals: {
+        twoStar: { beatBuyHoldPp: 3 },
+        threeStar: { maxMddPct: 30, maxOrders: 1 },
+      },
+    },
+  });
+  const html = renderPuzzleDebriefHtml(debrief);
+  assert.match(html, /puzzle-debrief-tip/);
+  assert.match(html, /本关提示/);
+  assert.match(html, /T\+1/);
+  assert.match(html, /对照买持/);
+  assert.match(html, /本关情境/);
+  // one tip paragraph, not duplicated into situation as raw brief alone
+  assert.equal((html.match(/puzzle-debrief-tip/g) || []).length, 1);
+
+  const noTip = renderPuzzleDebriefHtml(
+    formatPuzzleDebrief({
+      status: 'ok',
+      puzzleResult: {
+        stars: 1,
+        returnPpm: 0,
+        benchmarkReturnPpm: 0,
+        edgePpm: 0,
+      },
+    })
+  );
+  assert.ok(!noTip.includes('puzzle-debrief-tip'));
+  assert.ok(!noTip.includes('本关提示'));
 });
