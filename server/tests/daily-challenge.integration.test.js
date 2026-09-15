@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { prepareTestEnv, startTestServer, holds, actionsObj } from "./helpers.js";
+import {
+  assertGameWindowDtoShape,
+  assertGameWindowDtoMatch,
+} from "./assert-game-window-dto.js";
 
 prepareTestEnv();
 process.env.DAILY_CHALLENGE_ENABLED = "1";
@@ -196,6 +200,28 @@ test("settle before cutoff enters board; late settle excluded; idempotent retry"
 
   // restore clock for remaining tests
   process.env.STOCKGAME_NOW_MS = String(Date.parse("2026-09-11T04:00:00.000Z"));
+});
+
+test("R5 daily create/activeGame expose GameWindowDTO (classic shape)", async () => {
+  const auth = await register(`dcwin${Date.now().toString(36)}`);
+  const started = await startDaily(auth, `win-${auth.user.id}`);
+  assert.equal(started.status, 201, JSON.stringify(started.json));
+  const game = started.json.data.game;
+  assert.equal(game.gameKind, "daily");
+  const win = game.window;
+  assertGameWindowDtoShape(win, {
+    historyLength: game.historyLength,
+    gameDays: game.gameDays,
+    label: "daily create.window",
+  });
+
+  const st = await api("/api/v1/daily-challenge");
+  assert.equal(st.status, 200);
+  assertGameWindowDtoMatch(st.json.data.activeGame?.window, win, "daily status.activeGame.window");
+
+  const state = await api(`/api/v1/games/${game.gameId}/state`, { csrf: auth.csrfToken });
+  assert.equal(state.status, 200);
+  assertGameWindowDtoMatch(state.json.data.window, win, "daily state.window");
 });
 
 test("flag off returns 404", async () => {
