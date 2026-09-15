@@ -154,6 +154,7 @@ export function gamesConfigPayload() {
       dailyChallenge: !!config.dailyChallengeEnabled,
       gameRewind: !!config.gameRewindEnabled,
       puzzleChapter: !!config.puzzleChapterEnabled,
+      puzzleWeekly: !!config.puzzleWeeklyEnabled,
       oneshotMode: !!config.oneshotModeEnabled,
       survivalMode: !!config.survivalModeEnabled,
       ghostDuel: !!config.ghostDuelEnabled,

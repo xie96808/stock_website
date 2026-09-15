@@ -95,6 +95,13 @@ export const config = {
   puzzleChapterEnabled:
     process.env.PUZZLE_CHAPTER_ENABLED === "1" || process.env.PUZZLE_CHAPTER_ENABLED === "true",
   /**
+   * Puzzle same-level weekly board (同题周榜). Default OFF.
+   * When false, /puzzles/weekly* returns 404. Enable with PUZZLE_WEEKLY_ENABLED=1
+   * after puzzle chapter is live (safe deploy: leave off until day-29 cutover).
+   */
+  puzzleWeeklyEnabled:
+    process.env.PUZZLE_WEEKLY_ENABLED === "1" || process.env.PUZZLE_WEEKLY_ENABLED === "true",
+  /**
    * Phase A 一把梭. Default OFF.
    * When false, POST /games with gameKind=oneshot returns FEATURE_DISABLED
    * and the L3 card stays hidden.

@@ -208,7 +208,9 @@ export function showPuzzleSettleModal(state) {
     if (copy.rewardGranted && copy.rewardAmount != null) {
       rewardEl.hidden = false;
       rewardEl.innerHTML =
-        '首通奖励 +' + amountWithCoinHtml(copy.rewardAmount, { size: 16 });
+        (copy.rewardLine ? escapeHtml(copy.rewardLine) + ' · ' : '') +
+        '合计 +' +
+        amountWithCoinHtml(copy.rewardAmount, { size: 16 });
     } else if (copy.rewardLine) {
       rewardEl.hidden = false;
       rewardEl.textContent = copy.rewardLine;
@@ -286,6 +288,10 @@ export function showPuzzleSettleModal(state) {
     body.dataset.status = copy.status;
   }
 
+  const weeklyBtn = document.getElementById('puzzleSettleWeeklyBtn');
+  if (weeklyBtn) {
+    weeklyBtn.hidden = !(typeof window.isPuzzleWeeklyEnabled === 'function' && window.isPuzzleWeeklyEnabled());
+  }
   modal.hidden = false;
   modal.setAttribute('aria-hidden', 'false');
 }

@@ -15,7 +15,10 @@ const {
   finishPuzzleGame,
   insertLevelVersionBump,
   firstClearRewardKey,
+  threeStarRewardKey,
   PUZZLE_FIRST_CLEAR_REWARD,
+  PUZZLE_RETRY_FEE,
+  PUZZLE_THREE_STAR_REWARD,
   chapterTitle,
 } = await import("../src/lib/puzzleChapter.js");
 const { CHAPTER1_LEVEL_DEFS, CHAPTER2_LEVEL_DEFS } = await import("../src/lib/puzzleLevels.js");
@@ -105,7 +108,7 @@ test("free create does not deduct jiu coin; resume idempotent", async () => {
   assert.equal(getJiuCoinBalance(auth.user.id), bal0);
 });
 
-test("3★ settle grants +20 once; repeat and version bump no double pay; 1★ no grant", async () => {
+test("3★ settle grants +20 and +15 once; retry fee; version bump no double pay; 1★ no grant", async () => {
   const auth = await register(`pzstar${Date.now().toString(36)}`);
   const def = CHAPTER1_LEVEL_DEFS[1];
   const bal0 = getJiuCoinBalance(auth.user.id);
@@ -124,22 +127,40 @@ test("3★ settle grants +20 once; repeat and version bump no double pay; 1★ n
   assert.equal(s2.status, 201, JSON.stringify(s2.json));
   const f2 = await finishLevel(auth, s2.json.data.game.gameId, def.validatedThreeStarActions);
   assert.equal(f2.status, 201, JSON.stringify(f2.json));
+  assert.equal(s2.json.data.createFee, PUZZLE_RETRY_FEE);
+  assert.equal(s2.json.data.charged, true);
   assert.equal(f2.json.data.stars, 3);
   assert.equal(f2.json.data.reward.grantedThisTime, true);
   assert.equal(f2.json.data.reward.amount, PUZZLE_FIRST_CLEAR_REWARD);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD);
+  assert.equal(f2.json.data.threeStarReward.grantedThisTime, true);
+  assert.equal(f2.json.data.threeStarReward.amount, PUZZLE_THREE_STAR_REWARD);
+  // -10 retry +20 first-clear +15 three-star
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 - PUZZLE_RETRY_FEE + PUZZLE_FIRST_CLEAR_REWARD + PUZZLE_THREE_STAR_REWARD
+  );
+  assert.equal(hasRewardClaim(auth.user.id, threeStarRewardKey(def.rewardFamilyId)), true);
 
   const f2b = await finishLevel(auth, s2.json.data.game.gameId, def.validatedThreeStarActions);
   assert.equal(f2b.status, 200);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 - PUZZLE_RETRY_FEE + PUZZLE_FIRST_CLEAR_REWARD + PUZZLE_THREE_STAR_REWARD
+  );
 
   const s3 = await startLevel(auth, def.levelKey, `star-s3-${auth.user.id}`);
   assert.equal(s3.status, 201);
+  assert.equal(s3.json.data.charged, true);
   const f3 = await finishLevel(auth, s3.json.data.game.gameId, def.validatedThreeStarActions);
   assert.equal(f3.status, 201, JSON.stringify(f3.json));
   assert.equal(f3.json.data.reward.grantedThisTime, false);
   assert.equal(f3.json.data.reward.alreadyClaimed, true);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD);
+  assert.equal(f3.json.data.threeStarReward.grantedThisTime, false);
+  assert.equal(f3.json.data.threeStarReward.alreadyClaimed, true);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 - 2 * PUZZLE_RETRY_FEE + PUZZLE_FIRST_CLEAR_REWARD + PUZZLE_THREE_STAR_REWARD
+  );
 
   insertLevelVersionBump(def.levelKey);
   const s4 = await startLevel(auth, def.levelKey, `star-s4-${auth.user.id}`);
@@ -148,7 +169,11 @@ test("3★ settle grants +20 once; repeat and version bump no double pay; 1★ n
   const f4 = await finishLevel(auth, s4.json.data.game.gameId, def.validatedThreeStarActions);
   assert.equal(f4.status, 201, JSON.stringify(f4.json));
   assert.equal(f4.json.data.reward.grantedThisTime, false);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD);
+  assert.equal(f4.json.data.threeStarReward.grantedThisTime, false);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 - 3 * PUZZLE_RETRY_FEE + PUZZLE_FIRST_CLEAR_REWARD + PUZZLE_THREE_STAR_REWARD
+  );
 });
 
 test("concurrent first-clear settle pays once", async () => {
@@ -162,11 +187,18 @@ test("concurrent first-clear settle pays once", async () => {
   const r2 = finishPuzzleGame(auth.user.id, gameId, body);
   assert.equal(r1.status, 201);
   assert.equal(r2.status, 200);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 + PUZZLE_FIRST_CLEAR_REWARD + PUZZLE_THREE_STAR_REWARD
+  );
   const claims = openDb()
     .prepare(`SELECT COUNT(*) AS c FROM reward_claims WHERE user_id=? AND reward_key=?`)
     .get(auth.user.id, firstClearRewardKey(def.rewardFamilyId)).c;
   assert.equal(claims, 1);
+  const threeClaims = openDb()
+    .prepare(`SELECT COUNT(*) AS c FROM reward_claims WHERE user_id=? AND reward_key=?`)
+    .get(auth.user.id, threeStarRewardKey(def.rewardFamilyId)).c;
+  assert.equal(threeClaims, 1);
 });
 
 test("order budget rejection does not settle", async () => {
@@ -306,7 +338,10 @@ test("ch2 first-clear cap is separate from ch1 families", async () => {
   assert.equal(f2.status, 201, JSON.stringify(f2.json));
   assert.equal(f2.json.data.stars, 3);
   assert.equal(f2.json.data.reward.grantedThisTime, true);
-  assert.equal(getJiuCoinBalance(auth.user.id), bal0 + PUZZLE_FIRST_CLEAR_REWARD * 2);
+  assert.equal(
+    getJiuCoinBalance(auth.user.id),
+    bal0 + PUZZLE_FIRST_CLEAR_REWARD * 2 + PUZZLE_THREE_STAR_REWARD * 2
+  );
 
   const list2 = await api("/api/v1/puzzles?chapter=ch2");
   assert.equal(list2.status, 200);

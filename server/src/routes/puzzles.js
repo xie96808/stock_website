@@ -8,12 +8,17 @@ import {
   finishPuzzleGame,
   PUZZLE_CHAPTER_ID,
 } from "../lib/puzzleChapter.js";
+import { getPuzzleWeekly, getPuzzleWeeklyBoard } from "../lib/puzzleWeekly.js";
 import { checkCreateGameLimits, rateLimitFail } from "../lib/rateLimit.js";
 
 const router = Router();
 
 function mapPuzzleError(res, e) {
-  const status = e.status || (e.code === "PUZZLE_CHAPTER_DISABLED" ? 404 : 500);
+  const status =
+    e.status ||
+    (e.code === "PUZZLE_CHAPTER_DISABLED" || e.code === "PUZZLE_WEEKLY_DISABLED"
+      ? 404
+      : 500);
   return fail(res, status, e.code || "INTERNAL", e.message || "服务器错误");
 }
 
@@ -24,6 +29,50 @@ function guardFlag(res) {
   }
   return true;
 }
+
+function guardWeekly(res) {
+  if (!config.puzzleWeeklyEnabled) {
+    fail(res, 404, "PUZZLE_WEEKLY_DISABLED", "残局同题周榜暂未开放");
+    return false;
+  }
+  return true;
+}
+
+/** GET /puzzles/weekly — featured level + my best (+ board preview). */
+router.get("/puzzles/weekly", (req, res) => {
+  if (!guardWeekly(res)) return;
+  try {
+    const weekId =
+      typeof req.query.week === "string" && req.query.week ? req.query.week : null;
+    const data = getPuzzleWeekly({
+      weekId,
+      userId: req.user?.id || null,
+      includeBoard: true,
+      limit: 20,
+    });
+    return ok(res, data);
+  } catch (e) {
+    return mapPuzzleError(res, e);
+  }
+});
+
+/** GET /puzzles/weekly/board — full same-level weekly board. */
+router.get("/puzzles/weekly/board", (req, res) => {
+  if (!guardWeekly(res)) return;
+  try {
+    const weekId =
+      typeof req.query.week === "string" && req.query.week ? req.query.week : null;
+    const limit = req.query.limit != null ? Number(req.query.limit) : 50;
+    const data = getPuzzleWeeklyBoard({
+      weekId,
+      userId: req.user?.id || null,
+      limit,
+    });
+    return ok(res, data);
+  } catch (e) {
+    return mapPuzzleError(res, e);
+  }
+});
 
 /** GET /puzzles — chapter level list (+ progress when authed). */
 router.get("/puzzles", (req, res) => {
@@ -40,7 +89,7 @@ router.get("/puzzles", (req, res) => {
   }
 });
 
-/** POST /puzzles/:levelKey/entries — start or resume (free). */
+/** POST /puzzles/:levelKey/entries — start or resume (first free; retry after settle costs). */
 router.post("/puzzles/:levelKey/entries", requireUser, (req, res) => {
   if (!guardFlag(res)) return;
   const gameLimit = checkCreateGameLimits(req.user.id);
@@ -65,7 +114,7 @@ router.post("/puzzles/:levelKey/entries", requireUser, (req, res) => {
   }
 });
 
-/** POST /puzzles/games/:gameId/finish — settle short window + stars / first-clear. */
+/** POST /puzzles/games/:gameId/finish — settle short window + stars / first-clear / 3★. */
 router.post("/puzzles/games/:gameId/finish", requireUser, (req, res) => {
   if (!guardFlag(res)) return;
   try {

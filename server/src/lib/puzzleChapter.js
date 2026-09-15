@@ -29,14 +29,18 @@ import {
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
+  PUZZLE_RETRY_FEE,
+  PUZZLE_THREE_STAR_REWARD,
   PUZZLE_PUBLIC_STOCK_CODE,
   buildLevelSnapshot,
   puzzleVersionId,
   firstClearRewardKey,
+  threeStarRewardKey,
   levelDefByKey,
   levelDefsForChapter,
   chapterTitle,
 } from "./puzzleLevels.js";
+import { deductGameCreateCost, getJiuCoinBalance } from "./jiuCoin.js";
 
 const ACTION_SET = new Set(PUZZLE_ACTIONS);
 
@@ -46,7 +50,10 @@ export {
   PUZZLE_FIRST_CLEAR_REWARD,
   PUZZLE_CHAPTER_MAX_REWARD,
   PUZZLE_CREATE_FEE,
+  PUZZLE_RETRY_FEE,
+  PUZZLE_THREE_STAR_REWARD,
   firstClearRewardKey,
+  threeStarRewardKey,
   chapterTitle,
 };
 
@@ -260,6 +267,29 @@ function chapterRewardGrantedCount(userId, chapterId, db) {
   return rows.filter((r) => String(r.reward_key).startsWith(prefix)).length;
 }
 
+
+function hasSettledForFamily(userId, rewardFamilyId, db) {
+  if (!userId || !rewardFamilyId) return false;
+  const row = db
+    .prepare(
+      `SELECT 1 AS ok
+       FROM game_sessions gs
+       JOIN puzzle_versions pv ON pv.id = gs.puzzle_version_id
+       WHERE gs.user_id = ?
+         AND gs.game_kind = ?
+         AND gs.status = 'settled'
+         AND pv.reward_family_id = ?
+       LIMIT 1`
+    )
+    .get(userId, GAME_KIND_PUZZLE, rewardFamilyId);
+  return !!row;
+}
+
+/** Fee for a *new* entry: free until first settled run on family; then retry fee. */
+export function puzzleEntryFeeForFamily(userId, rewardFamilyId, db = openDb()) {
+  return hasSettledForFamily(userId, rewardFamilyId, db) ? PUZZLE_RETRY_FEE : PUZZLE_CREATE_FEE;
+}
+
 export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID } = {}) {
   requirePuzzleChapterEnabled();
   seedAllPuzzleChapters();
@@ -273,9 +303,12 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
       levels: [],
       reward: {
         firstClearAmount: PUZZLE_FIRST_CLEAR_REWARD,
+        threeStarAmount: PUZZLE_THREE_STAR_REWARD,
         chapterMax: PUZZLE_CHAPTER_MAX_REWARD,
         grantedCount: 0,
+        retryFee: PUZZLE_RETRY_FEE,
       },
+      retryFee: PUZZLE_RETRY_FEE,
     };
   }
   const prog = progressForUser(userId, chapterId, db);
@@ -285,6 +318,8 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
     status: "ready",
     title: chapterTitle(chapterId),
     createFee: PUZZLE_CREATE_FEE,
+    retryFee: PUZZLE_RETRY_FEE,
+    threeStarReward: PUZZLE_THREE_STAR_REWARD,
     rewindEnabled: false,
     levels: levels.map((row) => {
       const p = prog.get(row.level_key);
@@ -333,12 +368,24 @@ export function listPuzzleChapter(userId = null, { chapterId = PUZZLE_CHAPTER_ID
               )
               .get(userId, firstClearRewardKey(row.reward_family_id))
           : false,
+        threeStarGranted: userId
+          ? !!db
+              .prepare(
+                `SELECT 1 AS ok FROM reward_claims WHERE user_id = ? AND reward_key = ?`
+              )
+              .get(userId, threeStarRewardKey(row.reward_family_id))
+          : false,
+        entryFee: userId
+          ? puzzleEntryFeeForFamily(userId, row.reward_family_id, db)
+          : PUZZLE_CREATE_FEE,
       };
     }),
     reward: {
       firstClearAmount: PUZZLE_FIRST_CLEAR_REWARD,
+      threeStarAmount: PUZZLE_THREE_STAR_REWARD,
       chapterMax: PUZZLE_CHAPTER_MAX_REWARD,
       grantedCount,
+      retryFee: PUZZLE_RETRY_FEE,
     },
   };
 }
@@ -449,6 +496,10 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
     })
   );
 
+  const entryFee = puzzleEntryFeeForFamily(userId, level.reward_family_id, db);
+  let charged = false;
+  let balanceAfter = null;
+
   try {
     const tx = db.transaction(() => {
       expireStaleActive(db, userId, now);
@@ -462,7 +513,13 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
         err.activeGame = sessionPublicFromRow(again);
         throw err;
       }
-      // Free create — play-mode fee is 0 (do NOT call deductGameCreate).
+      // First attempt (no prior settled run on family): free.
+      // Retry after settled: deduct PUZZLE_RETRY_FEE via game_create ledger (idempotent per game id).
+      if (entryFee > 0) {
+        const debit = deductGameCreateCost(userId, id, db, entryFee);
+        charged = !debit.unchanged;
+        balanceAfter = debit.balance;
+      }
       db.prepare(
         `INSERT INTO game_sessions (
           id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
@@ -509,6 +566,20 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
         },
       };
     }
+    if (e.code === "INSUFFICIENT_FUNDS") {
+      return {
+        error: {
+          status: 402,
+          code: "INSUFFICIENT_FUNDS",
+          message: "韭币不足，无法重开残局",
+          details: {
+            balance: e.balance ?? getJiuCoinBalance(userId, db),
+            required: e.required ?? entryFee,
+            entryFee,
+          },
+        },
+      };
+    }
     if (String(e.message || "").includes("UNIQUE")) {
       const again = db
         .prepare(`SELECT * FROM game_sessions WHERE user_id = ? AND create_key = ?`)
@@ -524,9 +595,17 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
   }
 
   const row = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(id);
+  const game = sessionPublicFromRow(row);
+  if (game) game.createFee = entryFee;
   return {
     status: 201,
-    data: { game: sessionPublicFromRow(row), resumed: false, charged: false, createFee: 0 },
+    data: {
+      game,
+      resumed: false,
+      charged,
+      createFee: entryFee,
+      balance: balanceAfter ?? getJiuCoinBalance(userId, db),
+    },
   };
 }
 
@@ -699,6 +778,8 @@ export function finishPuzzleGame(userId, gameId, body) {
 
   let grantResult = null;
   let grantedThisTime = false;
+  let threeStarGrantResult = null;
+  let threeStarGrantedThisTime = false;
 
   try {
     const tx = db.transaction(() => {
@@ -838,6 +919,34 @@ export function finishPuzzleGame(userId, gameId, body) {
           }
         }
       }
+
+      // First 3★ bonus — once per family; independent of 2★ first-clear / chapter cap.
+      if (starInfo.stars >= 3 && rewardFamilyId) {
+        const threeKey = threeStarRewardKey(rewardFamilyId);
+        const alreadyThree = db
+          .prepare(
+            `SELECT 1 AS ok FROM reward_claims WHERE user_id = ? AND reward_key = ?`
+          )
+          .get(userId, threeKey);
+        if (!alreadyThree) {
+          threeStarGrantResult = grantRewardClaim(db, {
+            userId,
+            rewardKey: threeKey,
+            amount: PUZZLE_THREE_STAR_REWARD,
+            reason: "puzzle_three_star",
+            ruleVersion: PUZZLE_RULE_VERSION,
+            refType: "puzzle_version",
+            refId: row.puzzle_version_id,
+            meta: {
+              levelKey,
+              rewardFamilyId,
+              stars: starInfo.stars,
+              chapterId,
+            },
+          });
+          threeStarGrantedThisTime = !threeStarGrantResult.unchanged;
+        }
+      }
     });
     tx();
   } catch (e) {
@@ -880,6 +989,9 @@ export function finishPuzzleGame(userId, gameId, body) {
     rewardAmount: grantedThisTime ? PUZZLE_FIRST_CLEAR_REWARD : 0,
     rewardKey,
     grantUnchanged: grantResult?.unchanged ?? null,
+    threeStarRewardGranted: threeStarGrantedThisTime,
+    threeStarRewardAmount: threeStarGrantedThisTime ? PUZZLE_THREE_STAR_REWARD : 0,
+    threeStarRewardKey: rewardFamilyId ? threeStarRewardKey(rewardFamilyId) : null,
   });
   return { status: 201, data: dto };
 }
@@ -894,12 +1006,20 @@ function buildPuzzleResultDto(db, resultRow, sessionRow, extra = null) {
         .get(sessionRow.user_id, level.level_key)
     : null;
   const rewardKey = level ? firstClearRewardKey(level.reward_family_id) : null;
+  const threeKey = level ? threeStarRewardKey(level.reward_family_id) : null;
   const claim = rewardKey
     ? db
         .prepare(
           `SELECT amount, created_at FROM reward_claims WHERE user_id = ? AND reward_key = ?`
         )
         .get(sessionRow.user_id, rewardKey)
+    : null;
+  const threeClaim = threeKey
+    ? db
+        .prepare(
+          `SELECT amount, created_at FROM reward_claims WHERE user_id = ? AND reward_key = ?`
+        )
+        .get(sessionRow.user_id, threeKey)
     : null;
 
   let stars = extra?.stars;
@@ -970,6 +1090,18 @@ function buildPuzzleResultDto(db, resultRow, sessionRow, extra = null) {
       alreadyClaimed: !!claim,
       claimAmount: claim?.amount ?? null,
     },
+    threeStarReward: {
+      key: threeKey,
+      grantedThisTime: !!extra?.threeStarRewardGranted,
+      amount: extra?.threeStarRewardAmount || 0,
+      alreadyClaimed: !!threeClaim,
+      claimAmount: threeClaim?.amount ?? null,
+    },
+    entryFee: puzzleEntryFeeForFamily(
+      sessionRow.user_id,
+      level?.reward_family_id,
+      db
+    ),
     createFee: 0,
   };
 }
