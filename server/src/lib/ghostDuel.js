@@ -1,5 +1,6 @@
 /**
- * Phase C 幽灵对局 — yesterday's daily #1 trajectory as solo ghost opponent.
+ * Phase C 幽灵对局 — yesterday's daily challenge trajectories as solo ghost opponents.
+ * Pool: all replayable settled runs on yesterday's challenge (prefer board_eligible).
  * Flag default OFF (GHOST_DUEL_ENABLED). No rooms / WS / daily-chance consumption.
  */
 import crypto from "node:crypto";
@@ -14,9 +15,7 @@ import {
 } from "./jiuCoin.js";
 import {
   challengeNow,
-  shanghaiYmdAt,
   seedNearDailyChallenges,
-  getChallengeByDate,
   DAILY_FILL_MODE,
 } from "./dailyChallenge.js";
 import {
@@ -25,12 +24,28 @@ import {
   ASSIST_LEGACY,
 } from "../../../shared/protocol.js";
 import { ghostModifiersJson, GHOST_LABEL } from "../../../shared/ghost.js";
-import { DECISION_DAYS } from "../../../shared/engine.js";
+import {
+  resolveYesterdayGhostPool,
+  resolveYesterdayGhost,
+  pickGhostFromPool,
+  publicGhostIdentity,
+  yesterdayShanghaiYmd,
+  GHOST_POOL_LIMIT,
+  GHOST_POOL_MIN_PREFERRED,
+} from "./ghostDuelPool.js";
+
+export {
+  resolveYesterdayGhostPool,
+  resolveYesterdayGhost,
+  pickGhostFromPool,
+  publicGhostIdentity,
+  yesterdayShanghaiYmd,
+  GHOST_POOL_LIMIT,
+  GHOST_POOL_MIN_PREFERRED,
+};
 
 /** Same as classic practice create cost; does not consume daily chance. */
 export const GHOST_DUEL_COST = JIU_COIN_GAME_CREATE_COST;
-
-const ACTION_SET = new Set(["buy", "sell", "hold"]);
 
 export function requireGhostDuelEnabled() {
   if (!config.ghostDuelEnabled) {
@@ -39,15 +54,6 @@ export function requireGhostDuelEnabled() {
     err.status = 403;
     throw err;
   }
-}
-
-function ymdPlusOffset(baseYmd, offsetDays) {
-  const ms = Date.parse(`${baseYmd}T12:00:00+08:00`) + offsetDays * 24 * 60 * 60 * 1000;
-  return shanghaiYmdAt(new Date(ms));
-}
-
-export function yesterdayShanghaiYmd(now = challengeNow()) {
-  return ymdPlusOffset(shanghaiYmdAt(now), -1);
 }
 
 function sessionPublicFromRow(row) {
@@ -88,139 +94,15 @@ function sessionPublicFromRow(row) {
   return base;
 }
 
-function avatarUrlFromRow(row) {
-  const custom = row.avatar_custom_path || null;
-  return custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null;
-}
-
-function parseStoredActions(raw) {
-  let arr;
-  try {
-    arr = typeof raw === "string" ? JSON.parse(raw) : raw;
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(arr) || arr.length < 1) return null;
-  const out = [];
-  for (const item of arr) {
-    if (typeof item === "string" && ACTION_SET.has(item)) {
-      out.push(item);
-    } else if (item && typeof item === "object" && typeof item.action === "string" && ACTION_SET.has(item.action)) {
-      out.push(item.action);
-    } else {
-      return null;
-    }
-  }
-  return out;
-}
-
-function parseEquityCurve(raw) {
-  if (raw == null || raw === "") return null;
-  try {
-    const arr = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return Array.isArray(arr) ? arr : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Resolve yesterday's #1 board-eligible settled attempt + replay payload.
- * @returns {{ ok: true, challenge, ghost } | { ok: false, code, date, challengeId? }}
- */
-export function resolveYesterdayGhost(db = openDb(), now = challengeNow()) {
-  const ymd = yesterdayShanghaiYmd(now);
-  const challenge = getChallengeByDate(ymd, db);
-  if (!challenge) {
-    return { ok: false, code: "CHALLENGE_MISSING", date: ymd, message: "昨日挑战题目不存在" };
-  }
-
-  const top = db
-    .prepare(
-      `SELECT
-         a.user_id AS user_id,
-         a.game_id AS game_id,
-         a.return_ppm AS return_ppm,
-         a.mdd_ppm AS mdd_ppm,
-         a.settled_at AS settled_at,
-         u.nickname AS nickname,
-         u.avatar_id AS avatar_id,
-         u.avatar_custom_path AS avatar_custom_path,
-         r.actions_json AS actions_json,
-         r.equity_curve_json AS equity_curve_json
-       FROM daily_challenge_attempts a
-       JOIN users u ON u.id = a.user_id
-       JOIN game_results r ON r.game_id = a.game_id
-       WHERE a.challenge_id = ?
-         AND a.board_eligible = 1
-         AND a.status = 'settled'
-         AND u.status = 'active'
-       ORDER BY a.return_ppm DESC, a.mdd_ppm ASC, a.settled_at ASC, a.user_id ASC
-       LIMIT 1`
-    )
-    .get(challenge.id);
-
-  if (!top) {
-    return {
-      ok: false,
-      code: "NO_GHOST",
-      date: ymd,
-      challengeId: challenge.id,
-      message: "昨日日榜暂无第一名可挑战",
-    };
-  }
-
-  const actions = parseStoredActions(top.actions_json);
-  if (!actions || actions.length !== DECISION_DAYS) {
-    return {
-      ok: false,
-      code: "NO_REPLAY",
-      date: ymd,
-      challengeId: challenge.id,
-      message: "幽灵回放数据缺失，暂无法开局",
-    };
-  }
-
-  const ghost = {
-    userId: top.user_id,
-    gameId: top.game_id,
-    nickname: top.nickname || "幽灵选手",
-    avatarId: top.avatar_id,
-    avatarUrl: avatarUrlFromRow(top),
-    returnPpm: top.return_ppm,
-    mddPpm: top.mdd_ppm,
-    actions,
-    equityCurve: parseEquityCurve(top.equity_curve_json),
-    label: GHOST_LABEL,
-    sourceDate: ymd,
-  };
-
-  return { ok: true, challenge, ghost, date: ymd };
-}
-
-function publicGhostIdentity(ghost) {
-  if (!ghost) return null;
-  return {
-    nickname: ghost.nickname,
-    avatarId: ghost.avatarId,
-    avatarUrl: ghost.avatarUrl,
-    label: ghost.label || GHOST_LABEL,
-    returnPpm: ghost.returnPpm,
-    returnPct:
-      ghost.returnPpm == null ? null : (Number(ghost.returnPpm) / 10000).toFixed(2),
-    userId: ghost.userId,
-    sourceDate: ghost.sourceDate,
-  };
-}
-
 /**
  * Preview for day-board entry (no actions leak).
+ * `ghost` = featured #1 for compat; `ghosts` = full picker list.
  */
 export function getGhostDuelPreview(userId = null) {
   requireGhostDuelEnabled();
   seedNearDailyChallenges();
   const db = openDb();
-  const resolved = resolveYesterdayGhost(db);
+  const resolved = resolveYesterdayGhostPool(db);
   const base = {
     featureEnabled: true,
     cost: GHOST_DUEL_COST,
@@ -235,8 +117,11 @@ export function getGhostDuelPreview(userId = null) {
       sourceDate: resolved.date,
       challengeId: resolved.challengeId || null,
       ghost: null,
+      ghosts: [],
+      poolSource: null,
     };
   }
+  const ghostsPublic = resolved.ghosts.map(publicGhostIdentity);
   const out = {
     ...base,
     available: true,
@@ -244,7 +129,9 @@ export function getGhostDuelPreview(userId = null) {
     message: null,
     sourceDate: resolved.date,
     challengeId: resolved.challenge.id,
-    ghost: publicGhostIdentity(resolved.ghost),
+    ghost: ghostsPublic[0],
+    ghosts: ghostsPublic,
+    poolSource: resolved.poolSource,
   };
   if (userId) {
     out.balance = getJiuCoinBalance(userId, db);
@@ -266,8 +153,10 @@ function expireStaleActive(db, userId, nowIso) {
 /**
  * Start or resume a ghost duel on yesterday's challenge window.
  * Does NOT touch daily_challenge_attempts / today's chance.
+ * @param {number} userId
+ * @param {{ createKey?: string, ghostGameId?: string|null }} [opts]
  */
-export function startGhostDuel(userId, { createKey: clientKey } = {}) {
+export function startGhostDuel(userId, { createKey: clientKey, ghostGameId } = {}) {
   requireGhostDuelEnabled();
   if (!config.cloudGamesEnabled) {
     return {
@@ -282,7 +171,7 @@ export function startGhostDuel(userId, { createKey: clientKey } = {}) {
   const now = challengeNow();
   const nowIso = now.toISOString();
   const db = openDb();
-  const resolved = resolveYesterdayGhost(db, now);
+  const resolved = resolveYesterdayGhostPool(db, now);
   if (!resolved.ok) {
     return {
       error: {
@@ -293,12 +182,29 @@ export function startGhostDuel(userId, { createKey: clientKey } = {}) {
       },
     };
   }
-  const { challenge, ghost } = resolved;
+
+  const picked = pickGhostFromPool(resolved, ghostGameId);
+  if (!picked.ok) {
+    return {
+      error: {
+        status: 404,
+        code: picked.code,
+        message: picked.message,
+        details: {
+          sourceDate: resolved.date,
+          challengeId: resolved.challenge.id,
+          ghostGameId: ghostGameId != null ? String(ghostGameId) : null,
+        },
+      },
+    };
+  }
+  const { challenge } = resolved;
+  const ghost = picked.ghost;
 
   const createKey =
     clientKey && typeof clientKey === "string" && clientKey.length >= 8 && clientKey.length <= 128
       ? clientKey
-      : `ghost-duel:${challenge.id}:${userId}:${crypto.randomUUID()}`;
+      : `ghost-duel:${challenge.id}:${ghost.gameId}:${userId}:${crypto.randomUUID()}`;
 
   const byKey = db
     .prepare(`SELECT * FROM game_sessions WHERE user_id = ? AND create_key = ?`)
@@ -457,6 +363,7 @@ function ghostPayloadIdentity(row) {
     const g = m?.ghost;
     if (!g) return null;
     return {
+      gameId: g.gameId,
       nickname: g.nickname,
       avatarId: g.avatarId,
       avatarUrl: g.avatarUrl,
