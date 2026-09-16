@@ -141,10 +141,15 @@ test('ghost-duel entry supports multi picker + random CTA', () => {
   assert.match(client, /ghostGameId/);
   assert.match(client, /随机挑战/);
   assert.match(client, /挑战所选/);
-  const css = fs.readFileSync(
-    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'css', 'start.css'),
+  const cssPick = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'css', 'ghost-duel-pick.css'),
     'utf8'
   );
-  assert.match(css, /\.ghost-duel-pick-list/);
-  assert.match(css, /\.ghost-duel-pick\.is-selected/);
+  assert.match(cssPick, /\.ghost-duel-pick-list/);
+  assert.match(cssPick, /\.ghost-duel-pick\.is-selected/);
+  const styleCss = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'css', 'style.css'),
+    'utf8'
+  );
+  assert.match(styleCss, /ghost-duel-pick\.css/);
 });
