@@ -1,0 +1,85 @@
+/* Ghost duel multi-ghost picker (paper aesthetic) */
+.ghost-duel-entry--multi {
+    flex-direction: column;
+    align-items: stretch;
+}
+.ghost-duel-entry__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.65rem;
+}
+.ghost-duel-entry__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+.ghost-duel-entry__cta--secondary {
+    background: color-mix(in srgb, var(--mode-ghost) 8%, var(--card));
+    font-weight: 600;
+}
+.ghost-duel-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 11.5rem;
+    overflow-y: auto;
+    padding: 0.15rem;
+    border-radius: 8px;
+    border: 1px dashed color-mix(in srgb, var(--mode-ghost) 35%, var(--line));
+    background: color-mix(in srgb, var(--mode-ghost) 5%, var(--card));
+}
+.ghost-duel-pick {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--card) 92%, #fff);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: 1px 1px 0 color-mix(in srgb, var(--mode-ghost) 18%, transparent);
+}
+.ghost-duel-pick:hover {
+    border-color: color-mix(in srgb, var(--mode-ghost) 40%, var(--line));
+}
+.ghost-duel-pick.is-selected {
+    border-color: color-mix(in srgb, var(--mode-ghost) 65%, var(--line));
+    background: color-mix(in srgb, var(--mode-ghost) 14%, var(--card));
+    box-shadow: 2px 2px 0 color-mix(in srgb, var(--mode-ghost) 32%, var(--line));
+}
+.ghost-duel-pick__rank {
+    flex: 0 0 auto;
+    min-width: 1.6rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--ink-soft);
+}
+.ghost-duel-pick__avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid color-mix(in srgb, var(--mode-ghost) 50%, var(--line));
+    flex: 0 0 auto;
+}
+.ghost-duel-pick__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    min-width: 0;
+}
+.ghost-duel-pick__name {
+    font-size: 0.88rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ghost-duel-pick__ret {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+}
