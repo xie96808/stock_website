@@ -43,12 +43,12 @@ async function finishHold(auth, gameId) {
   });
 }
 
-async function startGhost(auth, key) {
+async function startGhost(auth, key, body = {}) {
   return api("/api/v1/daily-challenge/ghost/games", {
     method: "POST",
     csrf: auth.csrfToken,
     headers: { "Idempotency-Key": key },
-    body: {},
+    body,
   });
 }
 
@@ -67,6 +67,7 @@ test("empty ghost day: NO_GHOST preview; POST fails clearly", async () => {
   assert.equal(preview.json.data.available, false);
   assert.ok(["NO_GHOST", "CHALLENGE_MISSING", "NO_REPLAY"].includes(preview.json.data.reason));
   assert.equal(preview.json.data.ghost, null);
+  assert.deepEqual(preview.json.data.ghosts, []);
 
   const auth = await register(`ghemp${Date.now().toString(36)}`);
   const create = await startGhost(auth, `ghemp-${Date.now()}`);
@@ -105,7 +106,11 @@ test("yesterday #1 becomes ghost with name+avatar; lockstep window; no daily att
   assert.equal(preview.json.data.ghost.nickname, top.nickname);
   assert.equal(preview.json.data.ghost.avatarId, top.avatarId);
   assert.equal(preview.json.data.ghost.label, "幽灵");
+  assert.ok(preview.json.data.ghost.gameId);
   assert.ok(!("actions" in preview.json.data.ghost));
+  assert.ok(Array.isArray(preview.json.data.ghosts));
+  assert.equal(preview.json.data.ghosts.length, 1);
+  assert.equal(preview.json.data.ghosts[0].gameId, preview.json.data.ghost.gameId);
 
   const challenger = await register(`ghchal${Date.now().toString(36)}`);
   const bal0 = getJiuCoinBalance(challenger.user.id);
@@ -175,4 +180,78 @@ test("yesterday #1 becomes ghost with name+avatar; lockstep window; no daily att
   });
   assert.equal(classic2.status, 201, JSON.stringify(classic2.json));
   assert.equal(classic2.json.data.gameKind, "classic");
+});
+
+test("multi-ghost pool: preview lists all; start by ghostGameId; invalid id rejected", async () => {
+  // Clock is already Sep 11 from prior test; seed a fresh "today" then settle two players
+  // on that day, then advance again so both become yesterday ghosts.
+  process.env.STOCKGAME_NOW_MS = String(Date.parse("2026-09-12T04:00:00.000Z"));
+  seedNearDailyChallenges(challengeNow());
+  const ymd = shanghaiYmdAt(challengeNow());
+
+  // Settle one user at a time — shared cookie jar is last-login only.
+  const a = await register(`ghma${Date.now().toString(36)}`);
+  const startA = await startDaily(a, `gh-ma-d-${a.user.id}`);
+  assert.equal(startA.status, 201, JSON.stringify(startA.json));
+  const finA = await finishHold(a, startA.json.data.game.gameId);
+  assert.ok(finA.status === 201 || finA.status === 200, JSON.stringify(finA.json));
+
+  const b = await register(`ghmb${Date.now().toString(36)}`);
+  const startB = await startDaily(b, `gh-mb-d-${b.user.id}`);
+  assert.equal(startB.status, 201, JSON.stringify(startB.json));
+  const finB = await finishHold(b, startB.json.data.game.gameId);
+  assert.ok(finB.status === 201 || finB.status === 200, JSON.stringify(finB.json));
+
+  const gameIdA = startA.json.data.game.gameId;
+  const gameIdB = startB.json.data.game.gameId;
+  assert.notEqual(gameIdA, gameIdB);
+
+  process.env.STOCKGAME_NOW_MS = String(Date.parse("2026-09-13T04:00:00.000Z"));
+  seedNearDailyChallenges(challengeNow());
+
+  const preview = await api("/api/v1/daily-challenge/ghost");
+  assert.equal(preview.status, 200, JSON.stringify(preview.json));
+  assert.equal(preview.json.data.available, true);
+  assert.equal(preview.json.data.sourceDate, ymd);
+  assert.ok(Array.isArray(preview.json.data.ghosts));
+  assert.ok(preview.json.data.ghosts.length >= 2, JSON.stringify(preview.json.data.ghosts));
+  const ids = new Set(preview.json.data.ghosts.map((g) => g.gameId));
+  assert.ok(ids.has(gameIdA));
+  assert.ok(ids.has(gameIdB));
+  assert.equal(preview.json.data.ghost.gameId, preview.json.data.ghosts[0].gameId);
+  for (const g of preview.json.data.ghosts) {
+    assert.ok(g.nickname);
+    assert.ok(g.gameId);
+    assert.ok(!("actions" in g));
+  }
+
+  const challenger = await register(`ghmpick${Date.now().toString(36)}`);
+  // Pick non-featured ghost when possible
+  const featuredId = preview.json.data.ghost.gameId;
+  const chosen =
+    preview.json.data.ghosts.find((g) => g.gameId !== featuredId) || preview.json.data.ghosts[0];
+
+  const create = await startGhost(challenger, `gh-pick-${challenger.user.id}`, {
+    ghostGameId: chosen.gameId,
+  });
+  assert.equal(create.status, 201, JSON.stringify(create.json));
+  assert.equal(create.json.data.game.gameKind, "ghost");
+  assert.equal(create.json.data.game.modifiers.ghost.gameId, chosen.gameId);
+  assert.equal(create.json.data.ghost.nickname, chosen.nickname);
+  assert.equal(create.json.data.ghost.gameId, chosen.gameId);
+
+  // Finish so we can start another with invalid id
+  const gFin = await finishHold(challenger, create.json.data.game.gameId);
+  assert.ok(gFin.status === 201 || gFin.status === 200, JSON.stringify(gFin.json));
+
+  const bad = await startGhost(challenger, `gh-bad-${challenger.user.id}`, {
+    ghostGameId: "not-a-real-ghost-game-id",
+  });
+  assert.equal(bad.status, 404, JSON.stringify(bad.json));
+  assert.equal(bad.json.error.code, "GHOST_NOT_IN_POOL");
+
+  // Omit ghostGameId → still defaults to featured #1
+  const def = await startGhost(challenger, `gh-def-${challenger.user.id}`, {});
+  assert.equal(def.status, 201, JSON.stringify(def.json));
+  assert.equal(def.json.data.game.modifiers.ghost.gameId, featuredId);
 });
