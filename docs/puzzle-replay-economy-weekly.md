@@ -15,7 +15,7 @@
 ### B) 同题周榜
 
 - **周界**：Asia/Shanghai 本地日历日 → **ISO week**（周一至周日），week id `YYYY-Www`。
-- **选题**：`sha256("puzzle-weekly:" + weekId)` 前 8 hex → int → `%` published ch1+ch2 `levelKey`（按 key 升序）。全服同一关。
+- **选题**：`sha256("puzzle-weekly:" + weekId)` 前 8 hex → int → `%` published ch1+ch2+ch3+ch4 `levelKey`（按 key 升序）。全服同一关。
 - **排名**：该周（`finished_at` ∈ [周一 00:00+08, 下周一)）在该 `levelKey` 上 settled 的最佳 **returnPpm**（并列再比 MDD↑、时间）；每用户一行。
 - **隔离**：不进经典练习榜 / 日挑战榜。
 - **Flag**：`PUZZLE_WEEKLY_ENABLED`（`features.puzzleWeekly`），**默认 OFF**。上线后在 29 日再开。

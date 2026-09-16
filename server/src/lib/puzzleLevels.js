@@ -1,5 +1,5 @@
 /**
- * F02 authored puzzle level catalogs — ch1 (v4) + re-exports ch2 (v1).
+ * F02 authored puzzle level catalogs — ch1 (v4) + ch2/ch3/ch4 (v1).
  * Each level pins stockIndex + windowStartIndex; bars/history embedded for
  * offline tests / mini fixtures. buildLevelSnapshot prefers live pack slice
  * when the dataset can resolve the pin.
@@ -11,6 +11,14 @@ import {
   CHAPTER2_LEVEL_DEFS,
   PUZZLE_CHAPTER2_ID,
 } from "./puzzleLevelsCh2.js";
+import {
+  CHAPTER3_LEVEL_DEFS,
+  PUZZLE_CHAPTER3_ID,
+} from "./puzzleLevelsCh3.js";
+import {
+  CHAPTER4_LEVEL_DEFS,
+  PUZZLE_CHAPTER4_ID,
+} from "./puzzleLevelsCh4.js";
 
 export const PUZZLE_CHAPTER_ID = "ch1";
 export const PUZZLE_FIRST_CLEAR_REWARD = 20;
@@ -657,25 +665,47 @@ export function threeStarRewardKey(rewardFamilyId) {
   return `puzzle:three-star:${rewardFamilyId}`;
 }
 
-export { CHAPTER2_LEVEL_DEFS, PUZZLE_CHAPTER2_ID };
+export {
+  CHAPTER2_LEVEL_DEFS,
+  PUZZLE_CHAPTER2_ID,
+  CHAPTER3_LEVEL_DEFS,
+  PUZZLE_CHAPTER3_ID,
+  CHAPTER4_LEVEL_DEFS,
+  PUZZLE_CHAPTER4_ID,
+};
 
-export const ALL_PUZZLE_LEVEL_DEFS = [...CHAPTER1_LEVEL_DEFS, ...CHAPTER2_LEVEL_DEFS];
+export const ALL_PUZZLE_LEVEL_DEFS = [
+  ...CHAPTER1_LEVEL_DEFS,
+  ...CHAPTER2_LEVEL_DEFS,
+  ...CHAPTER3_LEVEL_DEFS,
+  ...CHAPTER4_LEVEL_DEFS,
+];
 
 export const PUZZLE_CHAPTER_TITLES = {
   ch1: "残局挑战 · 第一章",
   ch2: "残局挑战 · 第二章",
+  ch3: "残局挑战 · 第三章",
+  ch4: "残局挑战 · 第四章",
 };
 
 export function chapterTitle(chapterId) {
   return PUZZLE_CHAPTER_TITLES[chapterId] || "残局挑战";
 }
 
-/** Levels for a chapter id (`ch1` / `ch2`). */
+/** Levels for a chapter id (`ch1`…`ch4`). */
 export function levelDefsForChapter(chapterId) {
+  if (chapterId === PUZZLE_CHAPTER4_ID || chapterId === "ch4") return CHAPTER4_LEVEL_DEFS;
+  if (chapterId === PUZZLE_CHAPTER3_ID || chapterId === "ch3") return CHAPTER3_LEVEL_DEFS;
   if (chapterId === PUZZLE_CHAPTER2_ID || chapterId === "ch2") return CHAPTER2_LEVEL_DEFS;
   return CHAPTER1_LEVEL_DEFS;
 }
 
 export function levelDefByKey(levelKey) {
   return ALL_PUZZLE_LEVEL_DEFS.find((d) => d.levelKey === levelKey) || null;
+}
+
+/** Infer chapter id from levelKey like `ch3-01`. */
+export function chapterIdFromLevelKey(levelKey) {
+  const m = String(levelKey || "").match(/^(ch[1-4])-/);
+  return m ? m[1] : null;
 }

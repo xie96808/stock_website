@@ -7,7 +7,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { shanghaiYmd } from "./jiuCoin.js";
 import { seedAllPuzzleChapters } from "./puzzleChapter.js";
-import { levelDefByKey } from "./puzzleLevels.js";
+import { levelDefByKey, chapterIdFromLevelKey } from "./puzzleLevels.js";
 import { GAME_KIND_PUZZLE } from "../../../shared/protocol.js";
 import { formatReturnPct } from "../../../shared/puzzleEngine.js";
 
@@ -71,13 +71,13 @@ export function shanghaiIsoWeekBounds(weekId) {
   };
 }
 
-function publishedCh1Ch2LevelKeys(db) {
+function publishedPuzzleLevelKeys(db) {
   const rows = db
     .prepare(
       `SELECT level_key FROM (
          SELECT level_key, MAX(version) AS max_version
          FROM puzzle_versions
-         WHERE status = 'published' AND chapter_id IN ('ch1', 'ch2')
+         WHERE status = 'published' AND chapter_id IN ('ch1', 'ch2', 'ch3', 'ch4')
          GROUP BY level_key
        )
        ORDER BY level_key ASC`
@@ -88,7 +88,7 @@ function publishedCh1Ch2LevelKeys(db) {
 
 /** Deterministic featured levelKey for a week id (same for all players). */
 export function featuredLevelKeyForWeek(weekId, db = openDb()) {
-  const keys = publishedCh1Ch2LevelKeys(db);
+  const keys = publishedPuzzleLevelKeys(db);
   if (!keys.length) return null;
   const hash = crypto.createHash("sha256").update(`${WEEK_PREFIX}${weekId}`, "utf8").digest("hex");
   const idx = Number.parseInt(hash.slice(0, 8), 16) % keys.length;
@@ -104,7 +104,7 @@ function levelPublicMeta(levelKey) {
     levelKey: def.levelKey,
     title: def.title,
     theme: def.theme,
-    chapterId: def.levelKey.startsWith("ch2") ? "ch2" : "ch1",
+    chapterId: chapterIdFromLevelKey(def.levelKey) || "ch1",
     gameDays: def.gameDays,
     teachingBrief: def.teachingBrief || null,
   };
@@ -175,7 +175,7 @@ export function getPuzzleWeekly({
     startYmd: bounds.startYmd,
     startIso: bounds.startIso,
     endIso: bounds.endIso,
-    selectionRule: "sha256(puzzle-weekly:<weekId>)[0:8] % published(ch1+ch2) ordered by levelKey",
+    selectionRule: "sha256(puzzle-weekly:<weekId>)[0:8] % published(ch1+ch2+ch3+ch4) ordered by levelKey",
     level,
     total,
     entries,

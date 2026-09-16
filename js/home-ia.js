@@ -136,7 +136,7 @@ export function showPlayModes() {
   refreshSurvivalModeCard().catch(() => {});
 }
 
-/** 三级残局章节选择：第一、二章已开放 / 第三章即将推出（hash 仍为 sim） */
+/** 三级残局章节选择：第一～四章已开放（hash 仍为 sim） */
 export function showPuzzleChapters() {
   prepareScreen(Route.SIM);
   const home = document.getElementById("homeLanes");

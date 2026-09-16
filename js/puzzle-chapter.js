@@ -1,4 +1,4 @@
-/** F02 残局挑战 (ch1/ch2) — hub entry card + dedicated #puzzleScreen */
+/** F02 残局挑战 (ch1…ch4) — hub entry card + dedicated #puzzleScreen */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
 import { loadCloudGameDraft, clearCloudGameDraft } from './cloud-draft.js';
 import { abandonCloudGame } from './game-sync.js';
@@ -126,10 +126,11 @@ export function onPuzzleChapterCardClick() {
   showPuzzleScreen();
 }
 
-/** L3 chapter card → open chapter levels (ch1/ch2; ch3 soon). */
+/** L3 chapter card → open chapter levels (ch1…ch4). */
 export function onPuzzleChapterSelect(chapterIndex) {
   const idx = Number(chapterIndex) || 0;
-  if (idx !== 1 && idx !== 2) {
+  const chapterMap = { 1: 'ch1', 2: 'ch2', 3: 'ch3', 4: 'ch4' };
+  if (!chapterMap[idx]) {
     showToast('该章节即将推出', 'error');
     return;
   }
@@ -140,7 +141,7 @@ export function onPuzzleChapterSelect(chapterIndex) {
     openAuthModal?.();
     return;
   }
-  activeChapterId = idx === 2 ? 'ch2' : 'ch1';
+  activeChapterId = chapterMap[idx];
   showPuzzleScreen();
 }
 
@@ -152,8 +153,13 @@ export async function showPuzzleScreen() {
   if (backBtn) backBtn.textContent = '← 返回章节';
   const titleEl = screen?.querySelector?.('.puzzle-panel-title');
   if (titleEl) {
-    titleEl.textContent =
-      activeChapterId === 'ch2' ? '残局挑战 · 第二章' : '残局挑战 · 第一章';
+    const titles = {
+      ch1: '残局挑战 · 第一章',
+      ch2: '残局挑战 · 第二章',
+      ch3: '残局挑战 · 第三章',
+      ch4: '残局挑战 · 第四章',
+    };
+    titleEl.textContent = titles[activeChapterId] || '残局挑战';
   }
   const body = bodyEl();
   if (body) body.innerHTML = '<p class="puzzle-muted">加载关卡…</p>';
