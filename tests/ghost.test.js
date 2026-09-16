@@ -130,3 +130,30 @@ test('ghost action-index reveal only after player decision (incl. hold→观望)
     labelZh: '观望',
   });
 });
+
+test('ghost-duel entry supports multi picker + random CTA', () => {
+  const client = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js', 'ghost-duel-entry.js'),
+    'utf8'
+  );
+  const start = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'js', 'ghost-duel.js'),
+    'utf8'
+  );
+  assert.match(client, /ghost-duel-pick-list/);
+  assert.match(client, /ghostDuelRandomBtn/);
+  assert.match(client, /随机挑战/);
+  assert.match(client, /挑战所选/);
+  assert.match(start, /ghostGameId/);
+  const cssPick = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'css', 'ghost-duel-pick.css'),
+    'utf8'
+  );
+  assert.match(cssPick, /\.ghost-duel-pick-list/);
+  assert.match(cssPick, /\.ghost-duel-pick\.is-selected/);
+  const styleCss = fs.readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'css', 'style.css'),
+    'utf8'
+  );
+  assert.match(styleCss, /ghost-duel-pick\.css/);
+});

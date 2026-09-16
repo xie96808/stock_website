@@ -1,9 +1,8 @@
 /**
- * Phase C 幽灵对局 — entry from day-board + helpers for HUD identity.
+ * Phase C 幽灵对局 — start flow + HUD identity sync.
  * Flag: features.ghostDuel (GHOST_DUEL_ENABLED). Default off → entry hidden.
  */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
-import { amountWithCoinHtml } from './jiu-coin.js';
 import { abandonActiveCloudGame, loadCloudGameDraft } from './game-sync.js';
 import { mustAwaitPackBeforeEnter } from './game-window-seed.js';
 import {
@@ -16,6 +15,19 @@ import {
   ghostActionLabelZh,
   GHOST_LABEL,
 } from '../shared/ghost.js';
+import {
+  isGhostDuelEnabled,
+  refreshGhostDuelFlag,
+  fetchGhostPreview,
+  renderGhostDuelEntryHtml,
+  wireGhostDuelEntry,
+  ghostApi,
+  getGhostPreviewCache,
+  isGhostStartLocked,
+  setGhostStartLocked,
+  registerGhostStartHandler,
+  previewGhostList,
+} from './ghost-duel-entry.js';
 
 export {
   ghostIdentityFromModifiers,
@@ -26,133 +38,16 @@ export {
   ghostRevealedActions,
   ghostActionLabelZh,
   GHOST_LABEL,
+  isGhostDuelEnabled,
+  refreshGhostDuelFlag,
+  fetchGhostPreview,
+  renderGhostDuelEntryHtml,
+  wireGhostDuelEntry,
 };
-
-let ghostDuelEnabled = false;
-let previewCache = null;
-let startLocked = false;
-
-export function isGhostDuelEnabled() {
-  return ghostDuelEnabled;
-}
-
-export async function refreshGhostDuelFlag() {
-  try {
-    const res = await fetch('/api/v1/config', {
-      credentials: 'same-origin',
-      headers: { Accept: 'application/json' },
-    });
-    const json = await res.json().catch(() => ({}));
-    ghostDuelEnabled = !!(json?.data?.features?.ghostDuel);
-  } catch {
-    ghostDuelEnabled = false;
-  }
-  return ghostDuelEnabled;
-}
 
 function newIdempotencyKey() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `ghost-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-async function ghostApi(path, { method = 'GET', body, headers = {} } = {}) {
-  const auth = getAuthState();
-  const h = { Accept: 'application/json', ...headers };
-  if (body !== undefined) h['Content-Type'] = 'application/json';
-  if (auth.csrfToken) h['X-CSRF-Token'] = auth.csrfToken;
-  const res = await fetch(`/api/v1${path}`, {
-    method,
-    credentials: 'same-origin',
-    headers: h,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(json?.error?.message || `HTTP ${res.status}`);
-    err.code = json?.error?.code;
-    err.status = res.status;
-    err.payload = json;
-    err.details = json?.error?.details;
-    throw err;
-  }
-  return { ok: true, status: res.status, data: json.data };
-}
-
-export async function fetchGhostPreview() {
-  if (!ghostDuelEnabled) {
-    previewCache = null;
-    return null;
-  }
-  try {
-    const { data } = await ghostApi('/daily-challenge/ghost');
-    previewCache = data;
-    return data;
-  } catch (e) {
-    if (e.code === 'FEATURE_DISABLED' || e.status === 403) {
-      ghostDuelEnabled = false;
-    }
-    previewCache = null;
-    return null;
-  }
-}
-
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function escapeAttr(s) {
-  return escapeHtml(s).replace(/'/g, '&#39;');
-}
-
-/**
- * Render entry strip into daily board modal body (call after board table HTML).
- * Persistent CTA when ghost available; clear empty state when not.
- */
-export function renderGhostDuelEntryHtml(preview) {
-  if (!ghostDuelEnabled) return '';
-  if (!preview || !preview.available || !preview.ghost) {
-    const msg = preview?.message || '昨日暂无幽灵可挑战';
-    return `<div class="ghost-duel-entry ghost-duel-entry--empty" id="ghostDuelEntry">
-      <span class="ghost-duel-entry__label">${escapeHtml(GHOST_LABEL)}</span>
-      <p class="ghost-duel-entry__empty">${escapeHtml(msg)}</p>
-    </div>`;
-  }
-  const g = preview.ghost;
-  const src = ghostAvatarSrc(g);
-  const preset = `images/avatars/${String(g.avatarId || 1).padStart(2, '0')}.png`;
-  const ret =
-    g.returnPct != null ? `${Number(g.returnPct) >= 0 ? '+' : ''}${g.returnPct}%` : '—';
-  const cost = Number(preview.cost) || 20;
-  return `<div class="ghost-duel-entry" id="ghostDuelEntry">
-    <div class="ghost-duel-entry__who">
-      <img class="ghost-duel-entry__avatar" src="${escapeAttr(src)}" alt="" width="36" height="36"
-        loading="lazy" decoding="async"
-        onerror="this.onerror=null;this.src='${escapeAttr(preset)}'">
-      <div class="ghost-duel-entry__meta">
-        <span class="ghost-duel-entry__ribbon">${escapeHtml(GHOST_LABEL)}</span>
-        <strong class="ghost-duel-entry__name">${escapeHtml(g.nickname || '幽灵选手')}</strong>
-        <span class="ghost-duel-entry__sub">昨日日榜 #1 · 收益 ${escapeHtml(ret)} · ${escapeHtml(preview.sourceDate || '')}</span>
-      </div>
-    </div>
-    <button type="button" class="ghost-duel-entry__cta" id="ghostDuelStartBtn">
-      挑战幽灵<span class="jiu-price-badge jiu-price-paid" data-jiu-price="${cost}">${amountWithCoinHtml(cost, { size: 12 })}</span>
-    </button>
-  </div>`;
-}
-
-export function wireGhostDuelEntry(root = document) {
-  const btn = root.querySelector?.('#ghostDuelStartBtn') || document.getElementById('ghostDuelStartBtn');
-  if (!btn || btn.dataset.wired === '1') return;
-  btn.dataset.wired = '1';
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    void onGhostDuelStartClick();
-  });
 }
 
 function fillModalEl() {
@@ -239,28 +134,36 @@ async function startCloudFromMeta(cloud) {
   }
 }
 
-async function createOrResumeGhost() {
+async function createOrResumeGhost(ghostGameId) {
   const key = newIdempotencyKey();
+  const body = {};
+  if (ghostGameId) body.ghostGameId = ghostGameId;
   const data = (
     await ghostApi('/daily-challenge/ghost/games', {
       method: 'POST',
-      body: {},
+      body,
       headers: { 'Idempotency-Key': key },
     })
   ).data;
   return data.game;
 }
 
-async function runFreshGhostStart() {
-  const preview = previewCache || (await fetchGhostPreview());
+async function runFreshGhostStart({ ghostGameId, random = false } = {}) {
+  const preview = getGhostPreviewCache() || (await fetchGhostPreview());
   if (!preview?.available) {
     showToast(preview?.message || '暂无幽灵可挑战', 'error');
     return;
   }
-  const g = preview.ghost;
+  const list = previewGhostList(preview);
+  let chosen = null;
+  if (ghostGameId) {
+    chosen = list.find((g) => g.gameId === ghostGameId) || null;
+  }
+  if (!chosen) chosen = list[0] || preview.ghost;
   const cost = Number(preview.cost) || 20;
+  const verb = random ? '随机挑战' : '挑战';
   const ok = window.confirm(
-    `挑战幽灵「${g?.nickname || '昨日第一'}」\n` +
+    `${verb}幽灵「${chosen?.nickname || '昨日选手'}」\n` +
       `将重玩昨日（${preview.sourceDate || '昨日'}）同题，幽灵操作按日回放。\n` +
       `消耗 ${cost} 韭币（不占用今日挑战机会）。\n\n确定开始？`
   );
@@ -274,7 +177,7 @@ async function runFreshGhostStart() {
     const packPromise = ensureStocksLoaded(gameState, (ratio) => {
       setFillProgress(18 + Math.max(0, Math.min(1, ratio)) * 50, '股票资源加载中…');
     });
-    const game = await createOrResumeGhost();
+    const game = await createOrResumeGhost(chosen?.gameId || ghostGameId || null);
     if (mustAwaitPackBeforeEnter(game)) {
       await packPromise;
       setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
@@ -298,7 +201,7 @@ async function runFreshGhostStart() {
   }
 }
 
-async function handleActiveConflict(activeGame) {
+async function handleActiveConflict(activeGame, startOpts) {
   const kindMap = {
     daily: '今日挑战',
     oneshot: '一把梭',
@@ -318,18 +221,18 @@ async function handleActiveConflict(activeGame) {
   );
   if (!okAbandon) return;
   await abandonActiveCloudGame();
-  await runFreshGhostStart();
+  await runFreshGhostStart(startOpts);
 }
 
-export async function onGhostDuelStartClick() {
-  if (!ghostDuelEnabled || startLocked) return;
+export async function onGhostDuelStartClick(opts = {}) {
+  if (!isGhostDuelEnabled() || isGhostStartLocked()) return;
   const auth = getAuthState();
   if (!auth?.user) {
     showToast('登录后才能挑战幽灵', 'error');
     openAuthModal('login');
     return;
   }
-  startLocked = true;
+  setGhostStartLocked(true);
   try {
     const preview = await fetchGhostPreview();
     if (!preview?.available) {
@@ -337,20 +240,22 @@ export async function onGhostDuelStartClick() {
       return;
     }
     if (preview.cloudActiveGame) {
-      await handleActiveConflict(preview.cloudActiveGame);
+      await handleActiveConflict(preview.cloudActiveGame, opts);
       return;
     }
-    await runFreshGhostStart();
+    await runFreshGhostStart(opts);
   } catch (e) {
     if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.game) {
-      await handleActiveConflict(e.details.game);
+      await handleActiveConflict(e.details.game, opts);
       return;
     }
     showToast(e.message || '开局失败', 'error');
   } finally {
-    startLocked = false;
+    setGhostStartLocked(false);
   }
 }
+
+registerGhostStartHandler(onGhostDuelStartClick);
 
 /**
  * Sync persistent HUD chip from session modifiers (name + avatar always visible).

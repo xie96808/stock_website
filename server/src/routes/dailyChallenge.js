@@ -78,7 +78,7 @@ function guardGhostFlag(res) {
   return true;
 }
 
-/** GET /daily-challenge/ghost — yesterday #1 preview (auth optional). */
+/** GET /daily-challenge/ghost — yesterday ghost pool preview (auth optional). */
 router.get("/daily-challenge/ghost", (req, res) => {
   if (!guardGhostFlag(res)) return;
   try {
@@ -90,7 +90,7 @@ router.get("/daily-challenge/ghost", (req, res) => {
   }
 });
 
-/** POST /daily-challenge/ghost/games — start/resume ghost duel. */
+/** POST /daily-challenge/ghost/games — start/resume ghost duel (optional ghostGameId). */
 router.post("/daily-challenge/ghost/games", requireUser, (req, res) => {
   if (!guardGhostFlag(res)) return;
   const gameLimit = checkCreateGameLimits(req.user.id);
@@ -98,8 +98,18 @@ router.post("/daily-challenge/ghost/games", requireUser, (req, res) => {
     return rateLimitFail(res, gameLimit.retryAfterSec, gameLimit.message);
   }
   const createKey = req.get("idempotency-key") || req.get("Idempotency-Key");
+  const rawId = req.body?.ghostGameId ?? req.body?.ghost_game_id ?? null;
+  const ghostGameId =
+    rawId == null || rawId === ""
+      ? null
+      : typeof rawId === "string" || typeof rawId === "number"
+        ? String(rawId)
+        : null;
+  if (rawId != null && rawId !== "" && ghostGameId == null) {
+    return fail(res, 400, "INVALID_GHOST_GAME_ID", "ghostGameId 无效");
+  }
   try {
-    const result = startGhostDuel(req.user.id, { createKey });
+    const result = startGhostDuel(req.user.id, { createKey, ghostGameId });
     if (result.error) {
       return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
     }
