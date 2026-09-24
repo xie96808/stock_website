@@ -428,6 +428,34 @@
 }
 .action-btn.hold:hover:not(:disabled) { background: var(--chip-bg); }
 
+#holdBtn,
+#fastForwardBtn {
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.action-btn.ff {
+    color: var(--ink);
+    background: var(--chip-bg);
+    border-radius: 16px 22px 18px 24px;
+    letter-spacing: 0.18em;
+}
+
+#holdBtn.is-fast-forwarding,
+#fastForwardBtn.is-fast-forwarding {
+    background: var(--chip-bg);
+    box-shadow: inset 0 0 0 2px var(--terra);
+}
+
+.ff-hint {
+    font-size: 0.72rem;
+    color: var(--mute);
+    line-height: 1.45;
+    padding: 0 2px;
+}
+
 .action-hint {
     font-size: 0.76rem;
     color: var(--ink-soft);
@@ -672,6 +700,10 @@
         padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px));
     }
 
+    .game-screen.active.game-screen--ff-tap {
+        padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+    }
+
     .action-zone {
         position: fixed;
         left: 0;
@@ -696,11 +728,20 @@
         font-size: 0.95rem;
     }
 
-    .action-zone .action-hint {
+    .action-zone .action-hint,
+    .action-zone .ff-hint,
+    .action-zone #fastForwardBtn {
         grid-column: 1 / -1;
         text-align: center;
+    }
+
+    .action-zone .action-hint {
         padding: 0 4px 2px;
         font-size: 0.72rem;
+    }
+
+    .action-zone .ff-hint {
+        padding: 0 4px 2px;
     }
 
     .action-zone #finishBtn {
@@ -721,6 +762,10 @@
     .board-meta-grid { grid-template-columns: 1fr 1fr; }
     .game-screen.active {
         padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .game-screen.active.game-screen--ff-tap {
+        padding-bottom: calc(162px + env(safe-area-inset-bottom, 0px));
     }
 }
 

@@ -360,6 +360,175 @@ function applyLocalAction(action) {
     return true;
 }
 
+const FF_ARM_MS = 380;
+const FF_STEP_MS = 200;
+let ffActive = false;
+let ffLoopRunning = false;
+let ffPointerId = null;
+let ffArmTimer = null;
+let ffSuppressClick = false;
+
+function prefersTapFastForward() {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const narrow = window.matchMedia('(max-width: 900px)').matches;
+    return coarse || narrow;
+}
+
+function fastForwardHintText(tap, active) {
+    if (active) {
+        return tap ? '快进中 · 再点「快进」停下' : '快进中 · 松开「观望」即停';
+    }
+    if (tap) {
+        return '长按「观望」可快进。手机点「快进」，再点一次停下';
+    }
+    return '长按「观望」连续快进，松开即停';
+}
+
+function syncFastForwardChrome() {
+    const session = getSession();
+    const settle = session.currentDay >= sessionGameDays(session);
+    const tap = prefersTapFastForward();
+    const hint = document.getElementById('fastForwardHint');
+    const btn = document.getElementById('fastForwardBtn');
+    const holdBtn = document.getElementById('holdBtn');
+    const screen = document.getElementById('gameScreen');
+    if (screen) screen.classList.toggle('game-screen--ff-tap', tap && !settle);
+    if (btn) {
+        btn.hidden = !tap || settle;
+        btn.disabled = settle || (!ffActive && !!(session.rewindBusy || session.decisionBusy));
+        btn.classList.toggle('is-fast-forwarding', ffActive);
+        btn.setAttribute('aria-pressed', ffActive ? 'true' : 'false');
+        btn.textContent = ffActive ? '停止' : '快进';
+    }
+    if (holdBtn) holdBtn.classList.toggle('is-fast-forwarding', ffActive && !holdBtn.hidden);
+    if (hint) {
+        hint.hidden = settle;
+        hint.textContent = fastForwardHintText(tap, ffActive);
+    }
+    if (ffActive && holdBtn) holdBtn.disabled = false;
+}
+
+function stopFastForward() {
+    ffActive = false;
+    syncFastForwardChrome();
+}
+
+function sleepMs(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runFastForwardLoop() {
+    if (ffLoopRunning) return;
+    ffLoopRunning = true;
+    try {
+        while (ffActive) {
+            const session = getSession();
+            const screen = document.getElementById('gameScreen');
+            if (!screen || !screen.classList.contains('active')) break;
+            if (session.currentDay >= sessionGameDays(session)) break;
+            if (session.rewindBusy) break;
+            if (session.decisionBusy) {
+                await sleepMs(40);
+                continue;
+            }
+            const holdBtn = document.getElementById('holdBtn');
+            if (!holdBtn || holdBtn.hidden) break;
+            const before = session.actions.length;
+            await handleAction('hold');
+            if (!ffActive) break;
+            if (getSession().actions.length <= before) {
+                ffActive = false;
+                break;
+            }
+            await sleepMs(FF_STEP_MS);
+        }
+    } finally {
+        ffLoopRunning = false;
+        const session = getSession();
+        const screen = document.getElementById('gameScreen');
+        if (session.currentDay >= sessionGameDays(session) || !screen || !screen.classList.contains('active')) {
+            ffActive = false;
+        }
+        syncFastForwardChrome();
+    }
+}
+
+function startFastForward(fromHoldPress) {
+    if (ffActive) return;
+    const session = getSession();
+    if (session.currentDay >= sessionGameDays(session)) return;
+    const holdBtn = document.getElementById('holdBtn');
+    if (!holdBtn || holdBtn.hidden || (holdBtn.disabled && !fromHoldPress)) return;
+    ffActive = true;
+    if (fromHoldPress) ffSuppressClick = true;
+    syncFastForwardChrome();
+    void runFastForwardLoop();
+}
+
+function clearFastForwardArm() {
+    if (ffArmTimer != null) {
+        clearTimeout(ffArmTimer);
+        ffArmTimer = null;
+    }
+}
+
+function bindFastForwardControls() {
+    const holdBtn = document.getElementById('holdBtn');
+    const ffBtn = document.getElementById('fastForwardBtn');
+    if (!holdBtn || holdBtn.dataset.ffBound === '1') return;
+    holdBtn.dataset.ffBound = '1';
+
+    holdBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+    holdBtn.addEventListener('pointerdown', (e) => {
+        if (e.button != null && e.button !== 0) return;
+        if (holdBtn.disabled || holdBtn.hidden || ffActive) return;
+        ffPointerId = e.pointerId;
+        try { holdBtn.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+        clearFastForwardArm();
+        ffArmTimer = setTimeout(() => startFastForward(true), FF_ARM_MS);
+    });
+    const endHoldPointer = (e, cancelled) => {
+        if (ffPointerId == null || e.pointerId !== ffPointerId) return;
+        if (cancelled && ffActive && getSession().decisionBusy) return;
+        clearFastForwardArm();
+        if (ffActive) stopFastForward();
+        ffPointerId = null;
+    };
+    holdBtn.addEventListener('pointerup', (e) => endHoldPointer(e, false));
+    holdBtn.addEventListener('pointercancel', (e) => endHoldPointer(e, true));
+    document.addEventListener('pointerup', (e) => endHoldPointer(e, false));
+    holdBtn.addEventListener('click', (e) => {
+        if (ffSuppressClick) {
+            ffSuppressClick = false;
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (ffActive) return;
+        void handleAction('hold');
+    });
+
+    if (ffBtn) {
+        ffBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        ffBtn.addEventListener('click', () => {
+            if (ffActive) stopFastForward();
+            else startFastForward();
+        });
+    }
+    ['buyBtn', 'sellBtn', 'finishBtn'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('pointerdown', () => {
+            if (ffActive) stopFastForward();
+        });
+    });
+
+    const refresh = () => syncFastForwardChrome();
+    window.matchMedia('(pointer: coarse)').addEventListener('change', refresh);
+    window.matchMedia('(max-width: 900px)').addEventListener('change', refresh);
+    syncFastForwardChrome();
+}
+
 export async function handleAction(action) {
     const session = getSession();
     const guard = validatePlayAction(session, action);
@@ -392,6 +561,7 @@ export async function handleAction(action) {
             });
             if (result.ok) {
                 if (result.survivalSettled || result.state?.busted || result.state?.status === 'settled') {
+                    stopFastForward();
                     clearCloudGameDraftSafe();
                     updateUI();
                     updateChart();
@@ -436,9 +606,14 @@ export async function handleAction(action) {
 }
 
 function setActionControlsLocked(locked) {
-    ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn'].forEach((id) => {
+    ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn', 'fastForwardBtn'].forEach((id) => {
         const el = document.getElementById(id);
-        if (el) el.disabled = !!locked || (id === 'rewindBtn' && !el.dataset.eligible);
+        if (!el) return;
+        if (ffActive && (id === 'holdBtn' || id === 'fastForwardBtn')) {
+            el.disabled = false;
+            return;
+        }
+        el.disabled = !!locked || (id === 'rewindBtn' && !el.dataset.eligible);
     });
 }
 
@@ -571,6 +746,7 @@ export async function confirmRewind() {
 
 /** Last day only: settle with valuation (not a fake sell). */
 export function finishSettle() {
+    stopFastForward();
     const bars = getGameBars();
     const result = settleLocalSession({ bars });
     if (!result.ok) {
@@ -866,7 +1042,7 @@ export function updateUI() {
         }
         if (holdBtn) {
             holdBtn.hidden = false;
-            holdBtn.disabled = busy;
+            holdBtn.disabled = busy && !ffActive;
         }
         if (finishBtn) {
             finishBtn.hidden = true;
@@ -936,6 +1112,7 @@ export function updateUI() {
         }
     }
 
+    syncFastForwardChrome();
     updateTradeLog();
 }
 
@@ -1081,3 +1258,5 @@ export function toggleIndicatorPanel() {
     const panel = document.getElementById('indicatorPanel');
     if (panel) panel.classList.toggle('open');
 }
+
+bindFastForwardControls();
