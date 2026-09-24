@@ -102,7 +102,15 @@ router.post("/auth/logout", (req, res) => {
   return ok(res, null, 204);
 });
 
-router.get("/me", requireUser, (req, res) => {
+// Anonymous bootstrap: 200 + null user (avoids Network-panel 401 noise for guests).
+// Authenticated shape unchanged. Disabled accounts still 403.
+router.get("/me", (req, res) => {
+  if (!req.user) {
+    return ok(res, { user: null, csrfToken: null });
+  }
+  if (req.user.status === "disabled") {
+    return fail(res, 403, "ACCOUNT_DISABLED", "账号已禁用");
+  }
   return ok(res, { user: req.user, csrfToken: req.csrfToken });
 });
 
