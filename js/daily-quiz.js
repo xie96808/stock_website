@@ -331,8 +331,23 @@ export async function showDailyQuizResults(attemptId, settledHint) {
 
   const firstCorrect = review?.firstCorrectCount ?? settledHint?.firstCorrectCount ?? 0;
   const rewardAmount = review?.rewardAmount ?? settledHint?.rewardAmount ?? 0;
-  const complete = 10;
-  const bonus = rewardAmount > complete ? rewardAmount - complete : 0;
+  const complete = Number(
+    review?.rewardComplete ??
+      settledHint?.completeReward ??
+      settledHint?.rewardComplete ??
+      dailyCache?.rewardComplete ??
+      10
+  );
+  const bonusConfigured = Number(
+    review?.rewardBonus ?? settledHint?.rewardBonus ?? dailyCache?.rewardBonus ?? 0
+  );
+  const bonus =
+    settledHint?.bonusReward != null
+      ? Number(settledHint.bonusReward)
+      : rewardAmount > complete
+        ? rewardAmount - complete
+        : 0;
+  const bonusLabel = bonusConfigured > 0 ? bonusConfigured : bonus;
 
   const card = document.getElementById('dailyQuizResultCard');
   if (card) {
@@ -342,7 +357,7 @@ export async function showDailyQuizResults(attemptId, settledHint) {
       firstCorrect + ' / 5 首次答对</div>' +
       '<div class="daily-quiz-reward-breakdown">' +
       '<div>完成 5 题　+' + amountWithCoinHtml(complete, { size: 14 }) + '</div>' +
-      '<div>首次正确 ≥4　+' + amountWithCoinHtml(bonus, { size: 14 }) + (bonus ? '' : '（未达成）') + '</div>' +
+      '<div>首次正确 ≥' + (review?.bonusMinCorrect ?? dailyCache?.bonusMinCorrect ?? 4) + '　+' + amountWithCoinHtml(bonus || bonusLabel, { size: 14 }) + (bonus ? '' : '（未达成）') + '</div>' +
       '<div class="daily-quiz-reward-total">合计　+' + amountWithCoinHtml(rewardAmount, { size: 16 }) + '</div>' +
       '<p class="daily-quiz-reward-note">与每日领取互不影响；重练不改分、不重发。</p>' +
       '</div>';
@@ -359,7 +374,7 @@ export async function showDailyQuizResults(attemptId, settledHint) {
     details +=
       '<div class="quiz-result-item ' + (ok ? 'correct-item' : 'wrong') + '">' +
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
-      '<span style="font-family:\'JetBrains Mono\';font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
+      '<span style="font-family:var(--mono),monospace;font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
       '<span style="font-size:0.82rem;color:var(--text-muted)">第 ' + (i + 1) + ' 题</span></div>' +
       '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + escapeHtml(q.stem) + '</div>' +
       '<div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:4px">' +

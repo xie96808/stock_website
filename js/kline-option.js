@@ -103,14 +103,14 @@ export function buildKlineOption(vm) {
 
     const xAxisBottomLabel = isResult
         ? {
-            color: axisLabelColor, fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
+            color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, rotate: 0,
             formatter: (v) => (v === startDayLabel ? '{start|' + v + '}' : v),
             rich: {
                 start: { color: '#f5c542', fontWeight: 'bold', fontSize: 11 }
             }
         }
         : {
-            color: axisLabelColor, fontFamily: 'JetBrains Mono', fontSize: 10, rotate: 0,
+            color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, rotate: 0,
             formatter: (v) => v
         };
 
@@ -143,7 +143,7 @@ export function buildKlineOption(vm) {
                     color: '#f5c542',
                     fontSize: 11,
                     fontWeight: 'bold',
-                    fontFamily: 'Noto Sans SC',
+                    fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
                     backgroundColor: 'rgba(22,22,29,0.88)',
                     padding: [3, 6],
                     borderRadius: 3
@@ -194,7 +194,7 @@ export function buildKlineOption(vm) {
             data: ['5日线', '10日线', '20日线', '30日线'],
             top: 0,
             left: 10,
-            textStyle: { color: '#6b6660', fontFamily: 'Noto Sans SC', fontSize: 11 },
+            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
@@ -210,7 +210,7 @@ export function buildKlineOption(vm) {
             selectedMode: false,
             top: 5,
             left: 10,
-            textStyle: { color: '#8b949e', fontFamily: 'Noto Sans SC', fontSize: 11 },
+            textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
@@ -225,8 +225,8 @@ export function buildKlineOption(vm) {
             backgroundColor: isResult ? 'rgba(22, 22, 29, 0.95)' : 'rgba(13,17,23,0.97)',
             borderColor: isResult ? 'rgba(200, 164, 78, 0.2)' : 'rgba(88,166,255,0.2)',
             textStyle: isResult
-                ? { color: '#e8e4dd', fontFamily: 'JetBrains Mono' }
-                : { color: '#e6edf3', fontFamily: 'JetBrains Mono', fontSize: 12 },
+                ? { color: '#e8e4dd', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }
+                : { color: '#e6edf3', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 12 },
             formatter: function(params) {
                 const cs = params.find(p => p.seriesName === 'K线');
                 if (!cs) return '';
@@ -316,7 +316,7 @@ export function buildKlineOption(vm) {
         yAxis: [
             {
                 type: 'value', scale: true, gridIndex: 0,
-                axisLabel: { color: axisLabelColor, fontFamily: 'JetBrains Mono', fontSize: 10 },
+                axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
                 splitLine: { lineStyle: { color: splitLineColor } }
             },

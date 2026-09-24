@@ -838,7 +838,7 @@
     justify-content: center;
     z-index: 2;
     pointer-events: none;
-    font-family: 'Noto Sans SC', system-ui, sans-serif;
+    font-family: var(--sans);
     font-size: 0.85rem;
     letter-spacing: 0.04em;
     color: var(--muted, #8a847a);
