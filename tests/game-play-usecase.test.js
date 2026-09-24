@@ -7,6 +7,8 @@ import {
   sessionGameDays,
   isPuzzleSession,
   validatePlayAction,
+  canSellOnCurrentDay,
+  sellFillDayForDecision,
   applyLocalDecision,
   settleLocalSession,
   resumeLocalActions,
@@ -72,10 +74,18 @@ test('validatePlayAction rejects illegal buy/sell and allows hold', () => {
   assert.equal(sell.ok, false);
   assert.match(sell.errorZh, /空仓/);
 
-  patchSession({ position: 'locked' });
+  // Same decision-day T+1: sell fill would not beat buy fill (next_open).
+  patchSession({
+    position: 'locked',
+    currentDay: 1,
+    lastBuyFillDay: 2,
+    fillMode: 'next_open',
+    actions: [],
+  });
   const locked = validatePlayAction(getSession(), 'sell');
   assert.equal(locked.ok, false);
   assert.match(locked.errorZh, /T\+1/);
+  assert.equal(canSellOnCurrentDay(getSession()), false);
 
   patchSession({ rewindBusy: true, position: 'empty' });
   assert.equal(validatePlayAction(getSession(), 'hold').ok, false);
@@ -98,6 +108,38 @@ test('puzzle T+1 sell guard before firstSellableDay', () => {
   const r = validatePlayAction(getSession(), 'sell');
   assert.equal(r.ok, false);
   assert.match(r.errorZh, /可卖日/);
+});
+
+test('classic buy→next-day sell allowed via validatePlayAction (both fill modes)', () => {
+  for (const fillMode of ['next_open', 'same_close']) {
+    const bars = seedClassicWindow({ fillMode });
+    assert.equal(applyLocalDecision('buy', { bars }).ok, true);
+    const session = getSession();
+    assert.equal(session.currentDay, 2);
+    assert.ok(session.lastBuyFillDay != null);
+    assert.equal(canSellOnCurrentDay(session), true, `canSell fillMode=${fillMode}`);
+    const v = validatePlayAction(session, 'sell');
+    assert.equal(v.ok, true, `validate sell fillMode=${fillMode}: ${v.errorZh}`);
+    // Engine fill-day math: next decision after buy is always legal for both modes.
+    const sellFill = sellFillDayForDecision(session.currentDay, fillMode);
+    assert.ok(sellFill > session.lastBuyFillDay);
+  }
+});
+
+test('puzzle locked position still rejects sell even after firstSellableDay check path', () => {
+  resetSession();
+  patchSession({
+    gameKind: 'puzzle',
+    gameDays: 8,
+    currentDay: 1,
+    position: 'locked',
+    firstSellableDay: 2,
+    actions: [],
+  });
+  assert.equal(canSellOnCurrentDay(getSession()), false);
+  const r = validatePlayAction(getSession(), 'sell');
+  assert.equal(r.ok, false);
+  assert.match(r.errorZh, /可卖日|T\+1/);
 });
 
 test('applyLocalDecision buy→sell advances day and MTM fields', () => {

@@ -30,6 +30,12 @@ function el(html) {
 function hydratePriceBadges() {
   document.querySelectorAll(".jiu-price-badge[data-jiu-price]").forEach((badge) => {
     const amount = badge.getAttribute("data-jiu-price");
+    // Free pills: show 免费 text (not "0"+coin, which can read like "0/0").
+    if (badge.classList.contains("jiu-price-free") || amount === "0") {
+      badge.textContent = "免费";
+      if (!badge.getAttribute("aria-label")) badge.setAttribute("aria-label", "免费");
+      return;
+    }
     badge.innerHTML = amountWithCoinHtml(amount, { size: 12 });
   });
 }

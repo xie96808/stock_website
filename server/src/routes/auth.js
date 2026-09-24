@@ -102,8 +102,15 @@ router.post("/auth/logout", (req, res) => {
   return ok(res, null, 204);
 });
 
-router.get("/me", requireUser, (req, res) => {
-  return ok(res, { user: req.user, csrfToken: req.csrfToken });
+// No cookie is a guest (200). A cookie that does not load a session stays 401.
+router.get("/me", (req, res) => {
+  if (req.user) {
+    return ok(res, { user: req.user, csrfToken: req.csrfToken });
+  }
+  if (req.cookies?.[config.cookieName]) {
+    return fail(res, 401, "UNAUTHORIZED", "未登录或会话已过期");
+  }
+  return ok(res, { user: null, csrfToken: null });
 });
 
 router.get("/me/jiu-coin", requireUser, (req, res) => {

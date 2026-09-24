@@ -92,7 +92,7 @@
         "cls": "up"
       },
       {
-        "text": "+3.7%",
+        "text": "区间涨跌（收盘） +3.7%",
         "cls": "up"
       }
     ],
@@ -100,7 +100,7 @@
     "volatility": "中等波动",
     "maAlignment": "多头排列",
     "periodReturn1": 3.7209,
-    "analysisHtmlHash": -1646875588
+    "analysisHtmlHash": -234217566
   },
   "grade": {
     "letter": "A",

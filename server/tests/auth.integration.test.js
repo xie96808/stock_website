@@ -27,7 +27,8 @@ test("Stage2 AUTH register+login+me+logout", async () => {
   assert.equal(logout.status, 204);
 
   const me2 = await api("/api/v1/me");
-  assert.equal(me2.status, 401);
+  assert.equal(me2.status, 200);
+  assert.equal(me2.json.data.user, null);
 });
 
 test("Stage2 AUTH username uniqueness case-insensitive", async () => {

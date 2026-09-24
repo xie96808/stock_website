@@ -92,10 +92,10 @@ async function main() {
     record("health", "meta", "health live", r.status === 200 && r.json?.data?.status === "live", `status=${r.status}`);
   }
 
-  // P0-2a: GET /me when not logged in -> 401
+  // P0-2a: GET /me when not logged in -> 200 + null user (guest bootstrap)
   {
     const r = await req("/api/v1/me");
-    record("P0-2b", "P0", "GET /me unauthenticated -> 401", r.status === 401, `status=${r.status} code=${r.json?.error?.code}`);
+    record("P0-2b", "P0", "GET /me unauthenticated -> 200 null user", r.status === 200 && r.json?.data?.user == null, `status=${r.status} user=${r.json?.data?.user}`);
   }
 
   // P1: short password rejected

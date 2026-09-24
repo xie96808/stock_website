@@ -36,9 +36,12 @@
 
 .announcements-dialog {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(480px, 100%);
-  max-height: 86vh;
-  overflow: auto;
+  /* CSS zoom (page-zoom.js) shrinks visual viewport; keep modal within it. */
+  max-height: min(86vh, 100dvh - 32px);
+  overflow: hidden;
   background: var(--paper, #f7f1e6);
   color: var(--ink, #222);
   border: 2px solid var(--line, #2a2a2a);
@@ -72,6 +75,10 @@
   flex-direction: column;
   gap: 12px;
   margin-bottom: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .announcements-item {
@@ -107,6 +114,9 @@
   text-align: center;
   padding: 18px 8px;
   margin: 0 0 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .announcements-actions {
@@ -114,6 +124,9 @@
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+  flex-shrink: 0;
+  padding-top: 4px;
+  background: var(--paper, #f7f1e6);
 }
 
 .announcements-primary,

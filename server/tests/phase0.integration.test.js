@@ -146,6 +146,7 @@ test("absolute session expiry: idle refresh cannot extend past created_at+absolu
 
   const me = await api("/api/v1/me");
   assert.equal(me.status, 401);
+  assert.equal(me.json?.error?.code, "UNAUTHORIZED");
 });
 
 test("tombstone written on self-delete; replay keeps deleted", async () => {

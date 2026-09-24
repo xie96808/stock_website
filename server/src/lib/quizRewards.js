@@ -448,6 +448,10 @@ export function getAttemptReview(userId, attemptId, db = openDb()) {
     firstCorrectCount: attempt.first_correct_count,
     rewardAmount: attempt.reward_amount,
     settledAt: attempt.settled_at,
+    // Split for settle UI (backward-compatible additive fields).
+    rewardComplete: set.rewardComplete,
+    rewardBonus: set.rewardBonus,
+    bonusMinCorrect: set.bonusMinCorrect,
     questions: qRows.map((row) => {
       const pub = publicQuestion(row, { includeAnswer: true });
       const ans = answeredMap.get(row.id);

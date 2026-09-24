@@ -80,6 +80,32 @@ function idbPut(record) {
   });
 }
 
+/** Best-effort GC: drop pack entries whose key is not the current sha/legacy key. */
+function idbDeleteKeysExcept(keepKey) {
+  return openDb().then(function (db) {
+    return new Promise(function (resolve, reject) {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.getAllKeys ? store.getAllKeys() : null;
+      if (!req) {
+        // Older browsers without getAllKeys — skip quietly.
+        resolve();
+        return;
+      }
+      req.onsuccess = function () {
+        const keys = req.result || [];
+        for (let i = 0; i < keys.length; i++) {
+          if (keys[i] !== keepKey) {
+            try { store.delete(keys[i]); } catch (_) {}
+          }
+        }
+      };
+      tx.oncomplete = function () { resolve(); };
+      tx.onerror = function () { reject(tx.error || new Error('idb gc failed')); };
+    });
+  });
+}
+
 let packPromise = null;
 
 export function packReady() {
@@ -315,6 +341,7 @@ function loadPack(onProgress) {
             if (typeof window !== 'undefined') window.STOCKS_DATASET_SHA = datasetSha;
             if (onProgress) onProgress(1);
             perfLog('pack.cache.hit', 0, { stocks: pack.length, key: cacheKey.slice(0, 12) });
+            idbDeleteKeysExcept(cacheKey).catch(function () {});
             return pack;
           }
           // Legacy unversioned: validate with HEAD etag / length.
@@ -352,6 +379,8 @@ function loadPack(onProgress) {
         meta: fetched.meta || {},
         savedAt: Date.now(),
         datasetSha: datasetSha || null,
+      }).then(function () {
+        return idbDeleteKeysExcept(cacheKey);
       }).catch(function () {});
       fetched.text = null;
       if (!Array.isArray(pack) || pack.length === 0) {

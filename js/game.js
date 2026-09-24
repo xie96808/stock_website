@@ -21,6 +21,7 @@ import {
 import {
     sessionGameDays,
     isPuzzleSession,
+    canSellOnCurrentDay,
     validatePlayAction,
     applyLocalDecision,
     applyServerDecisionState,
@@ -858,10 +859,8 @@ export function updateUI() {
         }
         if (sellBtn) {
             sellBtn.hidden = false;
-            // Classic next_open may queue sell while locked; puzzle forbids sell until firstSellableDay / T+1.
-            const sellBlocked = isPuzzleSession(session)
-                ? session.position === 'empty' || session.position === 'locked'
-                : session.position === 'empty';
+            // Mirror engine / puzzle T+1 via canSellOnCurrentDay (classic may show locked after buy).
+            const sellBlocked = !canSellOnCurrentDay(session);
             const oneshotSellBlocked = session.gameKind === 'oneshot' && oneshotAmmo && oneshotAmmo.sellsLeft <= 0;
             sellBtn.disabled = busy || sellBlocked || oneshotSellBlocked;
         }
@@ -908,11 +907,17 @@ export function updateUI() {
                 hintEl.className = 'action-hint warning';
             }
         } else if (session.position === 'locked') {
-            hintEl.textContent = sameClose
-                ? 'T+1 锁定中，今日可卖出（按今日收盘价成交）'
-                : (puzzle
-                    ? '残局 T+1 锁定 · 今日可挂卖单（次日开盘成交）'
-                    : 'T+1 锁定中，今日可挂卖单（按次日开盘成交）');
+            const sellOk = canSellOnCurrentDay(session);
+            if (puzzle || !sellOk) {
+                const n = session.firstSellableDay || 1;
+                hintEl.textContent = puzzle
+                    ? `T+1 锁定 · 今日不可卖，第 ${n} 天起可卖`
+                    : 'T+1 锁定中，今日不可卖出';
+            } else if (sameClose) {
+                hintEl.textContent = 'T+1 锁定中，今日可卖出（按今日收盘价成交）';
+            } else {
+                hintEl.textContent = 'T+1 锁定中，今日可挂卖单（按次日开盘成交）';
+            }
             hintEl.className = 'action-hint warning';
         } else if (session.position === 'empty') {
             hintEl.textContent = sameClose

@@ -5,6 +5,7 @@
 import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
+import { challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 import { sha256Text } from "./dataset.js";
 import { replayGame, settleGame, DECISION_DAYS, GAME_DAYS, roundHalfUp } from "../../../shared/engine.js";
@@ -149,7 +150,7 @@ function writeSurvivalBustSettle(db, {
 
 function expireIfNeeded(db, row) {
   if (!row || row.status !== "active") return row;
-  if (Date.parse(row.expires_at) > Date.now()) return row;
+  if (Date.parse(row.expires_at) > challengeNow().getTime()) return row;
   db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ? AND status = 'active'`).run(
     row.id
   );
@@ -756,7 +757,7 @@ export function finishEventV1(userId, gameId, body, commandKey) {
         err.actual = fresh.revision;
         throw err;
       }
-      if (Date.parse(fresh.expires_at) <= Date.now()) {
+      if (Date.parse(fresh.expires_at) <= challengeNow().getTime()) {
         db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ?`).run(gameId);
         const err = new Error("GAME_EXPIRED");
         err.code = "GAME_EXPIRED";

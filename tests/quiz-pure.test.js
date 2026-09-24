@@ -11,6 +11,9 @@ import {
   advanceQuizSession,
   buildQuizResultDetails,
   pickPracticalWindow,
+  maskPatternNamesInText,
+  safeDescSnippet,
+  directionSignalWrongChoices,
 } from '../js/quiz-pure.js';
 
 function bar(i, { o, h, l, c, v } = {}) {
@@ -130,4 +133,55 @@ test('pickPracticalWindow uses injected stocks + rng (no gameState)', () => {
   assert.ok(calls >= 1);
 
   assert.equal(pickPracticalWindow([], { rng }), null);
+});
+
+
+test('maskPatternNamesInText masks longest names first', () => {
+  const patterns = [{ name: '螺旋桨' }, { name: '缩量回调' }, { name: '十字星' }];
+  assert.equal(
+    maskPatternNamesInText('形似螺旋桨。单独出现', patterns),
+    '形似「该形态」。单独出现'
+  );
+  assert.equal(
+    maskPatternNamesInText('上升趋势中的缩量回调是健康的', patterns),
+    '上升趋势中的「该形态」是健康的'
+  );
+});
+
+test('safeDescSnippet rejects or masks name-leaking descriptions', () => {
+  const all = [
+    { name: '螺旋桨', desc: '实体较小而上下影线都很长的K线，形似螺旋桨。表示多空双方激烈交锋。' },
+    { name: '大阳线', desc: '实体长、上下影线短的阳线。表示多方力量强劲。' },
+  ];
+  const propeller = safeDescSnippet(all[0], all);
+  assert.ok(propeller);
+  assert.equal(propeller.includes('螺旋桨'), false);
+  assert.match(propeller, /该形态|实体较小/);
+
+  const yang = safeDescSnippet(all[1], all);
+  assert.ok(yang);
+  assert.equal(yang.includes('大阳线'), false);
+});
+
+test('safeDescSnippet skips alias leaks that are not the full pattern name', () => {
+  const samples = [
+    { name: 'W底', desc: '价格两次探底到相近价位后反弹，形成"W"形。当价格突破颈线时双底成立。' },
+    { name: 'M顶', desc: '价格两次冲高到相近价位后回落，形成"M"形。当价格跌破颈线时双顶成立。' },
+    { name: 'T字线', desc: '开盘价、收盘价与最高价相同，仅有下影线，形如"T"字。说明盘中下探后被收回。' },
+    { name: '倒T字线', desc: '开盘价、收盘价与最低价相同，仅有上影线，形如倒"T"字。说明冲高后被打回。' },
+    { name: '地量见底', desc: '"地量之后有地价"。成交量萎缩到极低水平，说明抛压已近枯竭。' },
+    { name: '天量见顶', desc: '"天量之后有天价"。成交量突然放出历史级巨量，往往是出货标志。' },
+  ];
+  for (const pattern of samples) {
+    assert.equal(safeDescSnippet(pattern, samples), null, pattern.name);
+  }
+});
+
+test('directionSignalWrongChoices stay inside 看涨/看跌/中性', () => {
+  const same = (actual, expected) => assert.deepEqual([...actual].sort(), [...expected].sort());
+  same(directionSignalWrongChoices('看涨'), ['看跌', '中性']);
+  same(directionSignalWrongChoices('看跌'), ['看涨', '中性']);
+  same(directionSignalWrongChoices('中性'), ['看涨', '看跌']);
+  const flat = directionSignalWrongChoices('看涨').join('');
+  assert.equal(/反转|突破|持续/.test(flat), false);
 });

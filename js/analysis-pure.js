@@ -368,8 +368,8 @@ export function computeBSReport({
     else if (userReturn < 0) score -= 2;
 
     const bestNote = bestProfit > 0.001
-        ? `可交易区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%；最优单次 ${(bestProfit * 100).toFixed(2)}%`
-        : `可交易区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（机会有限）`;
+        ? `可成交区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%；最优单次 ${(bestProfit * 100).toFixed(2)}%`
+        : `可成交区间涨跌 ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(2)}%（机会有限）`;
     details.push({
         label: '收益率表现',
         value: `${userReturn >= 0 ? '+' : ''}${userReturn.toFixed(2)}%`,
@@ -628,24 +628,24 @@ export function computeKlineAnalysisModel({ kline, historyLength, gameDays = 30 
         { text: trend, cls: trendCls },
         { text: volatility, cls: volCls },
         { text: maAlignment, cls: maCls },
-        { text: `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%`, cls: periodReturn > 0 ? 'up' : periodReturn < 0 ? 'down' : 'neutral' }
+        { text: `区间涨跌（收盘） ${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%`, cls: periodReturn > 0 ? 'up' : periodReturn < 0 ? 'down' : 'neutral' }
     ];
 
     let analysis = '';
 
     // Trend paragraph
     if (trendCls === 'up') {
-        analysis += `<p>该波段整体呈<strong>上行趋势</strong>，区间涨幅 ${periodReturn.toFixed(2)}%。`;
+        analysis += `<p>该波段整体呈<strong>上行趋势</strong>，区间涨跌（收盘） ${periodReturn.toFixed(2)}%。`;
         if (maCls === 'up') analysis += `均线呈多头排列（MA5 > MA10 > MA20），趋势信号明确，适合顺势持股。`;
         else analysis += `但均线${maAlignment}，上行动力存在分歧，追高需谨慎。`;
         analysis += `</p>`;
     } else if (trendCls === 'down') {
-        analysis += `<p>该波段整体呈<strong>下行趋势</strong>，区间跌幅 ${periodReturn.toFixed(2)}%。`;
+        analysis += `<p>该波段整体呈<strong>下行趋势</strong>，区间涨跌（收盘） ${periodReturn.toFixed(2)}%。`;
         if (maCls === 'down') analysis += `均线呈空头排列（MA5 < MA10 < MA20），下行压力较大，宜观望或轻仓试探反弹。`;
         else analysis += `均线${maAlignment}，可能存在阶段性反弹机会，但需注意控制仓位。`;
         analysis += `</p>`;
     } else {
-        analysis += `<p>该波段呈<strong>横盘震荡</strong>格局，区间涨跌幅仅 ${periodReturn.toFixed(2)}%。`;
+        analysis += `<p>该波段呈<strong>横盘震荡</strong>格局，区间涨跌（收盘）仅 ${periodReturn.toFixed(2)}%。`;
         analysis += `价格在 ${minPrice.toFixed(2)} ~ ${maxPrice.toFixed(2)} 区间内波动，没有明确的趋势方向。`;
         analysis += `</p>`;
     }
