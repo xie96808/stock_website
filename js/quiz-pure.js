@@ -269,6 +269,29 @@ export function maskPatternNamesInText(text, patterns, placeholder = '「该形�
   return out;
 }
 
+const DIRECTION_SIGNALS = ['看涨', '看跌', '中性'];
+
+/** Wrong choices for a direction-signal item. Role labels (反转/突破/持续) are not exclusive. */
+export function directionSignalWrongChoices(correct) {
+  return DIRECTION_SIGNALS.filter((s) => s !== correct);
+}
+
+/** Aliases that still name the answer after the full pattern name is masked. */
+const DESC_ALIAS_LEAKS = {
+  'W底': ['"W"', '“W”', 'W形'],
+  'M顶': ['"M"', '“M”', 'M形'],
+  'T字线': ['"T"', '“T”', 'T字'],
+  '倒T字线': ['倒"T"', '倒“T”', '"T"', '“T”'],
+  '地量见底': ['地量'],
+  '天量见顶': ['天量'],
+};
+
+function descAliasLeaks(name, text) {
+  const tokens = DESC_ALIAS_LEAKS[name];
+  if (!tokens || !text) return false;
+  return tokens.some((token) => text.includes(token));
+}
+
 /**
  * First-sentence snippet for desc questions, or null if the answer would leak.
  * @returns {string|null}
@@ -279,6 +302,7 @@ export function safeDescSnippet(pattern, allPatterns, maxLen = 40) {
   if (!firstSentence || firstSentence.length < 8) return null;
   const masked = maskPatternNamesInText(firstSentence, allPatterns);
   if (masked.includes(pattern.name)) return null;
+  if (descAliasLeaks(pattern.name, masked)) return null;
   // Too little substance left after masking → unusable.
   const substance = masked.replace(/「该形态」/g, '').replace(/\s+/g, '');
   if (substance.length < 6) return null;

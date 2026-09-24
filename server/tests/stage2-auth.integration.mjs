@@ -270,7 +270,7 @@ async function main() {
     });
     // 204 expected
     const meAfter = await req("/api/v1/me", { cookie: sessionCookieHeader(sessionToken) });
-    record("P0-1-logout", "P0", "Logout invalidates session", (lo.status === 204 || lo.status === 200) && meAfter.status === 200 && meAfter.json?.data?.user == null, `logout=${lo.status} me=${meAfter.status}`);
+    record("P0-1-logout", "P0", "Logout invalidates session", (lo.status === 204 || lo.status === 200) && meAfter.status === 401, `logout=${lo.status} me=${meAfter.status}`);
 
     // login again
     const li = await req("/api/v1/auth/login", {
@@ -310,8 +310,8 @@ async function main() {
     sessionToken = extractCookie(liNew.setCookies, "stockgame_session");
     csrfToken = liNew.json?.data?.csrfToken;
     const passOk = (ch.status === 204 || ch.status === 200)
-      && meOld.status === 200 && meOld.json?.data?.user == null
-      && meNew.status === 200 && meNew.json?.data?.user == null
+      && meOld.status === 401
+      && meNew.status === 401
       && liNew.status === 200
       && !!sessionToken;
     record("P0-5", "P0", "Password change invalidates old sessions", passOk, `ch=${ch.status} oldMe=${meOld.status} curMe=${meNew.status} relogin=${liNew.status}`);
@@ -355,7 +355,7 @@ async function main() {
       method: "POST",
       body: { username: uniq, password: "BetterPass9" },
     });
-    record("P1-delete", "P1", "DELETE account soft-deletes + revokes", (del.status === 204 || del.status === 200) && me.status === 200 && me.json?.data?.user == null && loginGone.status === 401, `del=${del.status} me=${me.status} login=${loginGone.status}`);
+    record("P1-delete", "P1", "DELETE account soft-deletes + revokes", (del.status === 204 || del.status === 200) && me.status === 401 && loginGone.status === 401, `del=${del.status} me=${me.status} login=${loginGone.status}`);
   }
 
   // Client dice path code presence (static check via fetch of js/auth.js)

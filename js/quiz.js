@@ -14,6 +14,7 @@ import {
     buildQuizResultDetails,
     pickPracticalWindow,
     safeDescSnippet,
+    directionSignalWrongChoices,
 } from './quiz-pure.js';
 import {
     ensureEcharts,
@@ -33,14 +34,11 @@ export function disposeQuizCharts() {
 }
 
 // Theory question generators
-function genSignalQuestion(pattern, allPatterns) {
-    const q = '"' + pattern.name + '" 是什么信号？';
+function genSignalQuestion(pattern) {
+    const q = '"' + pattern.name + '" 的方向信号是？（看涨 / 看跌 / 中性）';
     const correct = pattern.signal;
-    const allSignals = ['看涨', '看跌', '中性'];
-    const wrong = allSignals.filter(s => s !== correct);
-    const extras = ['反转信号', '突破信号', '持续信号'];
-    wrong.push(extras[Math.floor(Math.random() * extras.length)]);
-    return { type: 'theory_text', question: q, correct, wrongChoices: shuffleArray(wrong).slice(0, 3), explanation: '"' + pattern.name + '"是' + pattern.signal + '信号。' + pattern.desc };
+    const wrong = directionSignalWrongChoices(correct);
+    return { type: 'theory_text', question: q, correct, wrongChoices: shuffleArray(wrong), explanation: '"' + pattern.name + '"是' + pattern.signal + '信号。' + pattern.desc };
 }
 
 function genWhichPatternQuestion(pattern, allPatterns) {
@@ -135,7 +133,7 @@ export function startQuiz() {
         } else if (roll < 0.7) {
             q = genWhichPatternQuestion(p, allP) || genVisualQuestion(p, allP);
         } else if (roll < 0.85) {
-            q = genSignalQuestion(p, allP) || genVisualQuestion(p, allP);
+            q = genSignalQuestion(p) || genVisualQuestion(p, allP);
         } else {
             q = genDescQuestion(p, allP) || genVisualQuestion(p, allP);
         }
