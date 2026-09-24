@@ -247,3 +247,40 @@ export function pickPracticalWindow(stocks, {
     }
     return null;
 }
+
+
+/**
+ * Replace any known pattern name in `text` with a placeholder (longest names first).
+ * Used so description-based quiz questions do not leak the answer.
+ * @param {string} text
+ * @param {{ name: string }[]} patterns
+ * @param {string} [placeholder]
+ */
+export function maskPatternNamesInText(text, patterns, placeholder = '「该形态」') {
+  if (!text) return text;
+  let out = String(text);
+  const names = (patterns || [])
+    .map((p) => p && p.name)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  for (const name of names) {
+    if (out.includes(name)) out = out.split(name).join(placeholder);
+  }
+  return out;
+}
+
+/**
+ * First-sentence snippet for desc questions, or null if the answer would leak.
+ * @returns {string|null}
+ */
+export function safeDescSnippet(pattern, allPatterns, maxLen = 40) {
+  if (!pattern?.desc) return null;
+  const firstSentence = String(pattern.desc).split('。')[0];
+  if (!firstSentence || firstSentence.length < 8) return null;
+  const masked = maskPatternNamesInText(firstSentence, allPatterns);
+  if (masked.includes(pattern.name)) return null;
+  // Too little substance left after masking → unusable.
+  const substance = masked.replace(/「该形态」/g, '').replace(/\s+/g, '');
+  if (substance.length < 6) return null;
+  return masked.length > maxLen ? masked.substring(0, maxLen) + '...' : masked;
+}

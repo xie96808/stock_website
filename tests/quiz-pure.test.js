@@ -11,6 +11,8 @@ import {
   advanceQuizSession,
   buildQuizResultDetails,
   pickPracticalWindow,
+  maskPatternNamesInText,
+  safeDescSnippet,
 } from '../js/quiz-pure.js';
 
 function bar(i, { o, h, l, c, v } = {}) {
@@ -130,4 +132,32 @@ test('pickPracticalWindow uses injected stocks + rng (no gameState)', () => {
   assert.ok(calls >= 1);
 
   assert.equal(pickPracticalWindow([], { rng }), null);
+});
+
+
+test('maskPatternNamesInText masks longest names first', () => {
+  const patterns = [{ name: '螺旋桨' }, { name: '缩量回调' }, { name: '十字星' }];
+  assert.equal(
+    maskPatternNamesInText('形似螺旋桨。单独出现', patterns),
+    '形似「该形态」。单独出现'
+  );
+  assert.equal(
+    maskPatternNamesInText('上升趋势中的缩量回调是健康的', patterns),
+    '上升趋势中的「该形态」是健康的'
+  );
+});
+
+test('safeDescSnippet rejects or masks name-leaking descriptions', () => {
+  const all = [
+    { name: '螺旋桨', desc: '实体较小而上下影线都很长的K线，形似螺旋桨。表示多空双方激烈交锋。' },
+    { name: '大阳线', desc: '实体长、上下影线短的阳线。表示多方力量强劲。' },
+  ];
+  const propeller = safeDescSnippet(all[0], all);
+  assert.ok(propeller);
+  assert.equal(propeller.includes('螺旋桨'), false);
+  assert.match(propeller, /该形态|实体较小/);
+
+  const yang = safeDescSnippet(all[1], all);
+  assert.ok(yang);
+  assert.equal(yang.includes('大阳线'), false);
 });
