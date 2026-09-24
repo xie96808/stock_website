@@ -103,6 +103,37 @@ export function applyPuzzleEngineResult(r, { finished = false, bars = null, sess
  * Client-side illegal-action guards (puzzle often starts long).
  * @returns {{ ok: true } | { ok: false, errorZh: string }}
  */
+/**
+ * Sell fill calendar day for a decision submitted on `decisionDay` (mirrors shared/engine.js).
+ * @param {number} decisionDay
+ * @param {string} [fillMode]
+ */
+export function sellFillDayForDecision(decisionDay, fillMode = 'next_open') {
+  return fillMode === 'same_close' ? decisionDay : decisionDay + 1;
+}
+
+/**
+ * Whether selling on session.currentDay is legal under engine / puzzle T+1 rules.
+ * Classic modes may still show position==='locked' after a buy until the next
+ * action is applied; that display lock must not block a sell whose fill day
+ * is strictly after the buy fill day (engine unlocks locked→holding at the
+ * start of each new decision).
+ */
+export function canSellOnCurrentDay(session) {
+  if (!session || session.position === 'empty') return false;
+  if (isPuzzleSession(session)) {
+    if (session.currentDay < (session.firstSellableDay || 1)) return false;
+    // Puzzle HUD encodes pre-firstSellable / same-lot lock as position==='locked'.
+    if (session.position === 'locked') return false;
+    return true;
+  }
+  const fillMode = session.fillMode === 'same_close' ? 'same_close' : 'next_open';
+  const sellFillDay = sellFillDayForDecision(session.currentDay, fillMode);
+  const buyFillDay = session.lastBuyFillDay;
+  if (buyFillDay != null && sellFillDay <= buyFillDay) return false;
+  return true;
+}
+
 export function validatePlayAction(session, action) {
   if (!session) return { ok: false, errorZh: '无对局' };
   if (session.rewindBusy || session.decisionBusy) return { ok: false, errorZh: '忙碌中' };
@@ -130,7 +161,7 @@ export function validatePlayAction(session, action) {
     if (isPuzzleSession(session) && session.currentDay < (session.firstSellableDay || 1)) {
       return { ok: false, errorZh: '尚未到可卖日（T+1）' };
     }
-    if (session.position === 'locked') {
+    if (!canSellOnCurrentDay(session)) {
       return { ok: false, errorZh: '受 T+1 限制，今日不可卖出' };
     }
   }
