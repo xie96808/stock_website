@@ -33,7 +33,7 @@ export function formatThreeStarGoalLine(goals) {
     parts.push(`收益≥${label}%`);
   }
   if (!parts.length) return null;
-  return `三星：${parts.join(' 且')}`;
+  return `三星：${parts.join(' 且 ')}`;
 }
 
 /**

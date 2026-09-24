@@ -41,7 +41,7 @@ test('renderStarIcons: CSS icon row with aria-label', () => {
 test('stripStarPrefix removes text star prefixes', () => {
   assert.equal(stripStarPrefix('1★ 合法完成'), '合法完成');
   assert.equal(stripStarPrefix('二星：收益比买持好 ≥3 个百分点'), '收益比买持好 ≥3 个百分点');
-  assert.equal(stripStarPrefix('三星：回撤≤30% 且成交≤1笔'), '回撤≤30% 且成交≤1笔');
+  assert.equal(stripStarPrefix('三星：回撤≤30% 且 成交≤1笔'), '回撤≤30% 且 成交≤1笔');
 });
 
 test('formatEdgeVsBuyHold', () => {
@@ -57,7 +57,7 @@ test('goal summaries from goals DTO', () => {
     threeStar: { maxMddPct: 30, maxOrders: 1 },
   };
   assert.equal(formatTwoStarSummary(goals), '二星：收益比买持好 ≥3 个百分点');
-  assert.equal(formatThreeStarSummary(goals), '三星：回撤≤30% 且成交≤1笔');
+  assert.equal(formatThreeStarSummary(goals), '三星：回撤≤30% 且 成交≤1笔');
   assert.equal(formatThreeStarSummary(null), null);
 });
 

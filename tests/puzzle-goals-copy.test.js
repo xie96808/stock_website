@@ -26,7 +26,7 @@ test('formatTwoStarGoalLine human-readable', () => {
 test('formatThreeStarGoalLine human-readable', () => {
   assert.equal(
     formatThreeStarGoalLine(sampleGoals),
-    '三星：回撤≤30% 且成交≤1笔'
+    '三星：回撤≤30% 且 成交≤1笔'
   );
   assert.equal(
     formatThreeStarGoalLine({ threeStar: { maxMddPct: 12 } }),
@@ -34,7 +34,7 @@ test('formatThreeStarGoalLine human-readable', () => {
   );
   assert.equal(
     formatThreeStarGoalLine({ threeStar: { maxMddPct: 8, maxOrders: 1, minReturnPpm: 327000 } }),
-    '三星：回撤≤8% 且成交≤1笔 且收益≥32.7%'
+    '三星：回撤≤8% 且 成交≤1笔 且 收益≥32.7%'
   );
   assert.equal(
     formatThreeStarGoalLine({ threeStar: { minReturnPpm: 0 } }),
@@ -46,7 +46,7 @@ test('formatThreeStarGoalLine human-readable', () => {
 test('formatLevelGoalLines both', () => {
   assert.deepEqual(formatLevelGoalLines(sampleGoals), [
     '二星：收益比买持好 ≥3 个百分点',
-    '三星：回撤≤30% 且成交≤1笔',
+    '三星：回撤≤30% 且 成交≤1笔',
   ]);
 });
 
