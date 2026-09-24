@@ -13,6 +13,7 @@ import {
     advanceQuizSession,
     buildQuizResultDetails,
     pickPracticalWindow,
+    safeDescSnippet,
 } from './quiz-pure.js';
 import {
     ensureEcharts,
@@ -52,10 +53,11 @@ function genWhichPatternQuestion(pattern, allPatterns) {
 }
 
 function genDescQuestion(pattern, allPatterns) {
-    const firstSentence = pattern.desc.split('。')[0];
-    const snippet = firstSentence.length > 40 ? firstSentence.substring(0, 40) + '...' : firstSentence;
+    const snippet = safeDescSnippet(pattern, allPatterns);
+    if (!snippet) return null;
     const q = '以下描述对应什么形态？"' + snippet + '"';
     const wrongPatterns = allPatterns.filter(p => p.name !== pattern.name);
+    if (wrongPatterns.length < 3) return null;
     return { type: 'theory_text', question: q, correct: pattern.name, wrongChoices: shuffleArray(wrongPatterns).slice(0, 3).map(p => p.name), explanation: '这描述的是"' + pattern.name + '"。' + pattern.desc };
 }
 
@@ -125,12 +127,19 @@ export function startQuiz() {
 
     for (let i = 0; i < theoryCount && i < shuffledP.length; i++) {
         const p = shuffledP[i];
-        if (Math.random() < 0.8) {
-            quizState.questions.push(genVisualQuestion(p, allP));
+        const roll = Math.random();
+        let q = null;
+        // Weight: visual ~45%, which-pattern ~25%, signal ~15%, desc ~15% (with fallbacks).
+        if (roll < 0.45) {
+            q = genVisualQuestion(p, allP);
+        } else if (roll < 0.7) {
+            q = genWhichPatternQuestion(p, allP) || genVisualQuestion(p, allP);
+        } else if (roll < 0.85) {
+            q = genSignalQuestion(p, allP) || genVisualQuestion(p, allP);
         } else {
-            const q = genWhichPatternQuestion(p, allP);
-            quizState.questions.push(q || genVisualQuestion(p, allP));
+            q = genDescQuestion(p, allP) || genVisualQuestion(p, allP);
         }
+        quizState.questions.push(q);
     }
 
     for (let i = 0; i < practicalCount; i++) {
@@ -317,10 +326,11 @@ export function selectAnswer(optionIndex) {
         }
     });
 
-    if (!isCorrect) {
-        document.getElementById('quizQuestionContainer').insertAdjacentHTML('beforeend',
-            '<div class="quiz-explanation"><strong>回答错误。</strong><br>' + q.explanation + '</div>');
-    }
+    const explainLead = isCorrect
+        ? '<strong>答对了。</strong><br>'
+        : '<strong>回答错误。</strong><br>';
+    document.getElementById('quizQuestionContainer').insertAdjacentHTML('beforeend',
+        '<div class="quiz-explanation">' + explainLead + q.explanation + '</div>');
 
     document.getElementById('quizNextBtn').disabled = false;
 }
@@ -342,7 +352,7 @@ export function showQuizResults() {
     const { scoreCls, comment } = gradeQuizScore(score, 10);
 
     document.getElementById('quizResultCard').innerHTML =
-        '<h2 style="font-family:\'Bodoni Moda\',serif;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
+        '<h2 style="font-family:var(--kaiti),serif;font-size:1.2rem;color:var(--accent-cyan);letter-spacing:0.1em;margin:0 0 8px">训练结果</h2>' +
         '<div class="quiz-score ' + scoreCls + '">' + score + ' / 10</div>' +
         '<p style="color:var(--text-secondary);font-size:0.92rem;margin:12px 0 0">' + comment + '</p>';
 
@@ -354,7 +364,7 @@ export function showQuizResults() {
 
         detailsHtml += '<div class="quiz-result-item ' + (row.isCorrect ? 'correct-item' : 'wrong') + '">' +
             '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
-            '<span style="font-family:\'JetBrains Mono\';font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
+            '<span style="font-family:var(--mono),monospace;font-weight:700;color:' + color + ';font-size:1.1rem">' + icon + '</span>' +
             '<span style="font-size:0.82rem;color:var(--text-muted)">' + row.typeName + ' · 第 ' + (row.index + 1) + ' 题</span></div>' +
             '<div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:8px">' + row.question + '</div>';
         if (!row.isCorrect) {
