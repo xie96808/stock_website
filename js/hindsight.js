@@ -15,6 +15,7 @@ import {
     markChartFailed,
 } from './echarts-loader.js';
 import { getTheme, onThemeChange, THEME_DARK } from './theme.js';
+import { showToast } from './auth.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
@@ -413,7 +414,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
                 show: true, formatter: `买入\n¥${kline[buyIdx].close.toFixed(2)}`,
                 position: 'insideBottom',
                 distance: 16,
-                fontFamily: 'Noto Sans SC', fontSize: 10, fontWeight: 600,
+                fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 10, fontWeight: 600,
                 color: '#C43030',
                 backgroundColor: labelBg,
                 borderColor: '#C43030', borderWidth: 0.5, borderRadius: 2,
@@ -431,7 +432,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
                 show: true, formatter: `卖出\n¥${kline[sellIdx].high.toFixed(2)}`,
                 position: peakIdx === sellIdx ? 'insideBottom' : 'insideTop',
                 distance: peakIdx === sellIdx ? 18 : 16,
-                fontFamily: 'Noto Sans SC', fontSize: 10, fontWeight: 600,
+                fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 10, fontWeight: 600,
                 color: '#3A5F80',
                 backgroundColor: labelBg,
                 borderColor: '#5A7FA0', borderWidth: 0.5, borderRadius: 2,
@@ -449,7 +450,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
             backgroundColor: ttBg,
             borderColor: ttBorder,
             borderWidth: 0.5,
-            textStyle: { color: ttTxt, fontFamily: 'JetBrains Mono', fontSize: 11 },
+            textStyle: { color: ttTxt, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 11 },
             formatter: params => {
                 const p = params.find(x => x.seriesIndex === 0) || params[0];
                 if (!p) return '';
@@ -464,7 +465,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
             axisTick:  { show: false },
             splitLine: { show: false },
             axisLabel: {
-                color: lblClr, fontFamily: 'JetBrains Mono', fontSize: 9, rotate: 30,
+                color: lblClr, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 9, rotate: 30,
                 interval: Math.max(0, Math.floor(kline.length / 4) - 1)
             }
         },
@@ -473,7 +474,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
             axisLine:  { show: false },
             axisTick:  { show: false },
             splitLine: { lineStyle: { color: axisClr, type: 'dashed' } },
-            axisLabel: { color: lblClr, fontFamily: 'JetBrains Mono', fontSize: 9 }
+            axisLabel: { color: lblClr, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 9 }
         },
         series: [
             {
@@ -499,7 +500,7 @@ async function _drawChart(kline, buyIdx, sellIdx, peakIdx) {
                     formatter: `巅峰\n¥${peakHigh.toFixed(2)}`,
                     position: 'top',
                     distance: 6,
-                    fontFamily: 'Noto Sans SC', fontSize: 10, fontWeight: 700,
+                    fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 10, fontWeight: 700,
                     color: '#A07010',
                     backgroundColor: labelBg,
                     borderColor: '#D4A017', borderWidth: 0.8, borderRadius: 2,
@@ -656,7 +657,7 @@ export function hindsightCopy() {
 }
 
 function _copyText(text, btnId) {
-    navigator.clipboard.writeText(text).then(() => {
+    const markCopied = () => {
         if (!btnId) return;
         const btn = document.getElementById(btnId);
         if (!btn) return;
@@ -664,11 +665,39 @@ function _copyText(text, btnId) {
         btn.textContent = '✓ 已复制';
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
-    }).catch(() => {
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-    });
+    };
+    const fallbackCopy = () => {
+        try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return !!ok;
+        } catch (_) {
+            return false;
+        }
+    };
+    const onSuccess = () => {
+        markCopied();
+        try { showToast('已复制文案', 'success'); } catch (_) {}
+    };
+    const onFail = () => {
+        try { showToast('复制失败，请手动长按选择文案', 'error'); } catch (_) {}
+    };
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+            if (fallbackCopy()) onSuccess();
+            else onFail();
+        });
+        return;
+    }
+    if (fallbackCopy()) onSuccess();
+    else onFail();
 }
