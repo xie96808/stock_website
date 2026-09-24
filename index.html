@@ -16,7 +16,8 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
     <!-- R6: ECharts loaded async via js/echarts-loader.js (idle prefetch + ensure on chart screens). -->
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" as="script" crossorigin>
+    <!-- Preload matches echarts-loader inject (no crossorigin; classic script). -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js" as="script">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/jiu-coin.css">
