@@ -19,6 +19,13 @@ import {
     fetchServerConfigFeatures,
 } from './game-sync.js';
 import {
+    FAST_FORWARD_ACTION,
+    createFastForwardController,
+    fastForwardChrome,
+    prefersTapFastForward,
+    shouldUnlockControlDuringFastForward,
+} from './fast-forward.js';
+import {
     sessionGameDays,
     isPuzzleSession,
     canSellOnCurrentDay,
@@ -360,6 +367,117 @@ function applyLocalAction(action) {
     return true;
 }
 
+let fastForward = null;
+
+function readFastForwardSnapshot() {
+    const session = getSession();
+    const holdBtn = document.getElementById('holdBtn');
+    const screen = document.getElementById('gameScreen');
+    return {
+        currentDay: session.currentDay,
+        gameDays: sessionGameDays(session),
+        screenActive: !!screen && screen.classList.contains('active'),
+        rewindBusy: !!session.rewindBusy,
+        decisionBusy: !!session.decisionBusy,
+        holdHidden: !holdBtn || !!holdBtn.hidden,
+        holdDisabled: !holdBtn || !!holdBtn.disabled,
+    };
+}
+
+function syncFastForwardChrome() {
+    const active = !!fastForward && fastForward.isActive();
+    const session = getSession();
+    const settle = session.currentDay >= sessionGameDays(session);
+    const tap = prefersTapFastForward({
+        coarse: window.matchMedia('(pointer: coarse)').matches,
+        narrow: window.matchMedia('(max-width: 900px)').matches,
+    });
+    const view = fastForwardChrome({
+        tap,
+        active,
+        settle,
+        rewindBusy: session.rewindBusy,
+        decisionBusy: session.decisionBusy,
+    });
+    const hint = document.getElementById('fastForwardHint');
+    const btn = document.getElementById('fastForwardBtn');
+    const holdBtn = document.getElementById('holdBtn');
+    const screen = document.getElementById('gameScreen');
+    if (screen) screen.classList.toggle('game-screen--ff-tap', view.tapLayout);
+    if (btn) {
+        btn.hidden = view.buttonHidden;
+        btn.disabled = view.buttonDisabled;
+        btn.classList.toggle('is-fast-forwarding', view.buttonPressed);
+        btn.setAttribute('aria-pressed', view.buttonPressed ? 'true' : 'false');
+        btn.textContent = view.buttonLabel;
+    }
+    if (holdBtn) {
+        holdBtn.classList.toggle('is-fast-forwarding', view.holdForwarding && !holdBtn.hidden);
+        if (view.holdForwarding) holdBtn.disabled = false;
+    }
+    if (hint) {
+        hint.hidden = view.hintHidden;
+        hint.textContent = view.hint;
+    }
+}
+
+function stopFastForward() {
+    if (fastForward) fastForward.stop();
+}
+
+function bindFastForwardControls() {
+    const holdBtn = document.getElementById('holdBtn');
+    const ffBtn = document.getElementById('fastForwardBtn');
+    if (!holdBtn || holdBtn.dataset.ffBound === '1') return;
+    holdBtn.dataset.ffBound = '1';
+
+    holdBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+    holdBtn.addEventListener('pointerdown', (e) => {
+        const armed = fastForward.pointerDown({
+            pointerId: e.pointerId,
+            button: e.button,
+            holdDisabled: holdBtn.disabled,
+            holdHidden: holdBtn.hidden,
+        });
+        if (!armed) return;
+        try { holdBtn.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    });
+    const endHoldPointer = (e, cancelled) => {
+        fastForward.pointerEnd({ pointerId: e.pointerId, cancelled });
+    };
+    holdBtn.addEventListener('pointerup', (e) => endHoldPointer(e, false));
+    holdBtn.addEventListener('pointercancel', (e) => endHoldPointer(e, true));
+    document.addEventListener('pointerup', (e) => endHoldPointer(e, false));
+    holdBtn.addEventListener('click', (e) => {
+        const verdict = fastForward.holdClick();
+        if (verdict !== 'step') {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        void handleAction(FAST_FORWARD_ACTION);
+    });
+
+    if (ffBtn) {
+        ffBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+        ffBtn.addEventListener('click', () => {
+            fastForward.toggle();
+        });
+    }
+    ['buyBtn', 'sellBtn', 'finishBtn'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('pointerdown', () => {
+            fastForward.interrupt();
+        });
+    });
+
+    const refresh = () => syncFastForwardChrome();
+    window.matchMedia('(pointer: coarse)').addEventListener('change', refresh);
+    window.matchMedia('(max-width: 900px)').addEventListener('change', refresh);
+    syncFastForwardChrome();
+}
+
 export async function handleAction(action) {
     const session = getSession();
     const guard = validatePlayAction(session, action);
@@ -392,6 +510,7 @@ export async function handleAction(action) {
             });
             if (result.ok) {
                 if (result.survivalSettled || result.state?.busted || result.state?.status === 'settled') {
+                    stopFastForward();
                     clearCloudGameDraftSafe();
                     updateUI();
                     updateChart();
@@ -436,9 +555,14 @@ export async function handleAction(action) {
 }
 
 function setActionControlsLocked(locked) {
-    ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn'].forEach((id) => {
+    ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn', 'fastForwardBtn'].forEach((id) => {
         const el = document.getElementById(id);
-        if (el) el.disabled = !!locked || (id === 'rewindBtn' && !el.dataset.eligible);
+        if (!el) return;
+        if (shouldUnlockControlDuringFastForward(id, fastForward && fastForward.isActive())) {
+            el.disabled = false;
+            return;
+        }
+        el.disabled = !!locked || (id === 'rewindBtn' && !el.dataset.eligible);
     });
 }
 
@@ -571,6 +695,7 @@ export async function confirmRewind() {
 
 /** Last day only: settle with valuation (not a fake sell). */
 export function finishSettle() {
+    stopFastForward();
     const bars = getGameBars();
     const result = settleLocalSession({ bars });
     if (!result.ok) {
@@ -866,7 +991,7 @@ export function updateUI() {
         }
         if (holdBtn) {
             holdBtn.hidden = false;
-            holdBtn.disabled = busy;
+            holdBtn.disabled = busy && !(fastForward && fastForward.isActive());
         }
         if (finishBtn) {
             finishBtn.hidden = true;
@@ -936,6 +1061,7 @@ export function updateUI() {
         }
     }
 
+    syncFastForwardChrome();
     updateTradeLog();
 }
 
@@ -1081,3 +1207,14 @@ export function toggleIndicatorPanel() {
     const panel = document.getElementById('indicatorPanel');
     if (panel) panel.classList.toggle('open');
 }
+
+fastForward = createFastForwardController({
+    step: async () => {
+        const before = getSession().actions.length;
+        await handleAction(FAST_FORWARD_ACTION);
+        return getSession().actions.length > before;
+    },
+    read: readFastForwardSnapshot,
+    onChange: () => syncFastForwardChrome(),
+});
+bindFastForwardControls();
