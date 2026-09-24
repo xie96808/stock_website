@@ -10,18 +10,23 @@ import { resultDto } from "./gameResultDto.js";
 import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_SURVIVAL, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "../../../shared/oneshot.js";
 import { survivalModifiersJson } from "../../../shared/survival.js";
-import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics } from "./dailyChallenge.js";
+import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics, challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ACTION_SET = new Set(["buy", "sell", "hold"]);
 
-function nowIso() {
-  return new Date().toISOString();
+/** Wall clock injectable via STOCKGAME_NOW_MS (same helper as dailyChallenge). */
+function nowMs() {
+  return challengeNow().getTime();
 }
 
-function expiresIso(from = Date.now()) {
+function nowIso() {
+  return challengeNow().toISOString();
+}
+
+function expiresIso(from = nowMs()) {
   return new Date(from + GAME_TTL_MS).toISOString();
 }
 
@@ -519,7 +524,7 @@ export function finishGame(userId, gameId, body, commandKey) {
   }
 
   // Expire check for unsettled
-  if (Date.parse(row.expires_at) <= Date.now()) {
+  if (Date.parse(row.expires_at) <= nowMs()) {
     db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ? AND status = 'active'`).run(
       gameId
     );
@@ -598,7 +603,7 @@ export function finishGame(userId, gameId, body, commandKey) {
         err.code = "GAME_NOT_ACTIVE";
         throw err;
       }
-      if (Date.parse(fresh.expires_at) <= Date.now()) {
+      if (Date.parse(fresh.expires_at) <= nowMs()) {
         db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ?`).run(gameId);
         onDailyGameClosed(db, fresh, "expired");
         const err = new Error("GAME_EXPIRED");
