@@ -1,7 +1,8 @@
 /**
- * Practice playback for one flat-open intraday tape.
+ * Flat-open intraday playback (practice, or the 21:00 ranked phase).
  * Loaded only by dynamic import. The rAF clock follows server time once;
  * it does not wait on HTTP and does not stretch the 100ms bar.
+ * Ranked play uses the public phase only — never a private origin.
  */
 import { getAuthState, openAuthModal, refreshMe, showToast } from './auth.js';
 import { ensureEcharts, markChartFailed, clearChartLoading } from './echarts-loader.js';
@@ -233,6 +234,38 @@ export function classifyFinishFailure(err) {
   return 'retry';
 }
 
+export const RANKED_FLAT_JOIN_LEAD_MS = 60_000;
+export const RANKED_FLAT_TAPE_MS = 241 * 100;
+
+/** Shown before a flat ranked session is created. No rank-coin payout. */
+export const RANKED_FLAT_CONFIRM_TEXT =
+  '消耗 30 韭币，开盘空仓正式局每天一次。模拟 T+0 · 当日可回转 · 不是券商规则。'
+  + '每天 21:00（Asia/Shanghai）一段公共相位，画面 24.1 秒。'
+  + '可提前 60 秒入场并预加载空图表。迟到未交付的分钟不能补。'
+  + '24.1 秒画面结束后，今天不能再开空仓正式局。没有名次奖励。';
+
+/**
+ * Flat ranked entry window is [phaseStartsAt - 60s, phaseStartsAt + 24.1s).
+ * A miss does not become a private clock. `long` is not a choice here.
+ */
+export function rankedFlatGate(status, nowMs) {
+  if (!status || status.ready !== true || !status.phaseStartsAt || !status.phaseStartsAt.flat) {
+    return { ok: false, message: (status && status.message) || '分时题库准备中' };
+  }
+  const phaseMs = Date.parse(status.phaseStartsAt.flat);
+  if (!Number.isFinite(phaseMs)) return { ok: false, message: '分时题库准备中' };
+  const now = Number.isFinite(nowMs) ? nowMs : status.serverNowMs;
+  if (!Number.isFinite(now)) return { ok: false, message: '无法对齐公共相位' };
+  if (status.remainingChance && status.remainingChance.flat === 0) {
+    return { ok: false, message: '今日空仓机会已用完' };
+  }
+  const openMs = phaseMs - RANKED_FLAT_JOIN_LEAD_MS;
+  const closedMs = phaseMs + RANKED_FLAT_TAPE_MS;
+  if (now < openMs) return { ok: false, message: '空仓相位尚未开放' };
+  if (now >= closedMs) return { ok: false, message: '今日空仓正式局已结束' };
+  return { ok: true, phaseMs, openMs, closedMs };
+}
+
 function newKey() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return `k-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -454,7 +487,12 @@ function loadClock(sessionId) {
 function adoptCreate(data) {
   applyProgress(data);
   sampleClockOnce(data.serverNowMs);
-  if (!data.phaseStartsAt && Number.isFinite(data.serverNowMs)) {
+  if (state.mode === 'ranked') {
+    // Public phase only. Missing phaseStartsAt must not become a private origin.
+    state.pausedAtMs = null;
+    state.pauseKnown = true;
+    if (!data.phaseStartsAt) state.originKnown = false;
+  } else if (!data.phaseStartsAt && Number.isFinite(data.serverNowMs)) {
     state.originMs = data.serverNowMs;
     state.originKnown = true;
     state.pausedAtMs = null;
@@ -508,6 +546,8 @@ async function prefetchOnce() {
 }
 
 async function catchUpPrefetch() {
+  // Ranked without a public phase must not anchor a private origin.
+  if (state.mode === 'ranked' && !state.originKnown) return;
   // Unknown pause: do not poll a session that might be frozen.
   if (!state.pauseKnown) return;
   if (!state.originKnown) {
@@ -899,7 +939,81 @@ async function bootChart() {
   startRaf();
 }
 
-export async function startIntradayPractice() {
+let rankedConfirmResolver = null;
+
+function ensureRankedConfirmModal() {
+  if (typeof document === 'undefined') return null;
+  const existing = document.getElementById('intradayRankedConfirmModal');
+  if (existing) return existing;
+  const wrap = document.createElement('div');
+  wrap.id = 'intradayRankedConfirmModal';
+  wrap.className = 'jiu-coin-modal';
+  wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayRankedConfirmTitle">
+      <button type="button" class="jiu-coin-close-x" id="intradayRankedConfirmCloseX" aria-label="关闭">×</button>
+      <h2 id="intradayRankedConfirmTitle">开始空仓正式局</h2>
+      <p class="jiu-coin-modal-body" id="intradayRankedConfirmBody"></p>
+      <div class="jiu-coin-modal-actions">
+        <button type="button" class="jiu-coin-secondary" id="intradayRankedConfirmCancel">取消</button>
+        <button type="button" class="jiu-coin-primary" id="intradayRankedConfirmOk">消耗 30 韭币开始</button>
+      </div>
+    </div>`;
+  document.body.appendChild(wrap);
+  const close = () => resolveRankedConfirm(false);
+  document.getElementById('intradayRankedConfirmCancel')?.addEventListener('click', close);
+  document.getElementById('intradayRankedConfirmCloseX')?.addEventListener('click', close);
+  document.getElementById('intradayRankedConfirmOk')?.addEventListener('click', () => resolveRankedConfirm(true));
+  wrap.addEventListener('click', (e) => {
+    if (e.target === wrap) close();
+  });
+  return wrap;
+}
+
+function resolveRankedConfirm(ok) {
+  const modal = typeof document !== 'undefined'
+    ? document.getElementById('intradayRankedConfirmModal')
+    : null;
+  if (modal) modal.hidden = true;
+  if (!rankedConfirmResolver) return;
+  const resolve = rankedConfirmResolver;
+  rankedConfirmResolver = null;
+  resolve(ok);
+}
+
+function askRankedFlatConfirm() {
+  const modal = ensureRankedConfirmModal();
+  const body = typeof document !== 'undefined'
+    ? document.getElementById('intradayRankedConfirmBody')
+    : null;
+  if (body) body.textContent = RANKED_FLAT_CONFIRM_TEXT;
+  return new Promise((resolve) => {
+    rankedConfirmResolver = resolve;
+    if (!modal) {
+      resolve(false);
+      return;
+    }
+    modal.hidden = false;
+    document.getElementById('intradayRankedConfirmOk')?.focus();
+  });
+}
+
+async function backToPlayModes() {
+  stopPlayback();
+  state = freshState();
+  createKey = null;
+  const screen = document.getElementById('intradayScreen');
+  if (screen) {
+    screen.classList.remove('active');
+    screen.hidden = true;
+    screen.setAttribute('aria-hidden', 'true');
+  }
+  const { showPlayModes } = await import('./home-ia.js');
+  showPlayModes();
+}
+
+async function openFlatSession(mode) {
+  if (mode !== 'practice' && mode !== 'ranked') return;
   if (state.starting) return;
   if (state.live && !state.settled) return;
   state.starting = true;
@@ -922,7 +1036,7 @@ export async function startIntradayPractice() {
     try {
       data = await apiSend('/intraday/sessions', {
         method: 'POST',
-        body: { mode: 'practice', startMode: 'flat' },
+        body: { mode, startMode: 'flat' },
         key: createKey,
       });
     } catch (err) {
@@ -934,10 +1048,21 @@ export async function startIntradayPractice() {
         await resumeIntradaySession(err.details.sessionId);
         return;
       }
+      if (err.code === 'PHASE_NOT_OPEN' || err.code === 'PHASE_CLOSED' || err.code === 'INTRADAY_CHANCE_USED') {
+        showToast(err.message || '现在不能开空仓正式局', 'error');
+        await backToPlayModes();
+        return;
+      }
       showToast(err.message || '开局失败', 'error');
+      if (mode === 'ranked') await backToPlayModes();
       return;
     }
     adoptCreate(data);
+    if (mode === 'ranked' && !state.originKnown) {
+      showToast('正式局没有公共相位，未开始', 'error');
+      await backToPlayModes();
+      return;
+    }
     refreshMe().catch(() => {});
     try {
       await bootChart();
@@ -950,6 +1075,39 @@ export async function startIntradayPractice() {
   } finally {
     state.starting = false;
   }
+}
+
+export async function startIntradayPractice() {
+  return openFlatSession('practice');
+}
+
+/** Flat ranked only. Confirms the public 21:00 phase, then preloads an empty chart inside the join window. */
+export async function startIntradayRankedFlat() {
+  if (state.starting || (state.live && !state.settled)) return;
+  if (!(await ensureLoggedIn())) return;
+  let status;
+  try {
+    status = await apiSend('/intraday');
+  } catch (err) {
+    if (isLoginFailure(err)) {
+      openAuthModal('login');
+      return;
+    }
+    showToast(err.message || '无法读取分时相位', 'error');
+    return;
+  }
+  if (status?.activeSession?.sessionId) {
+    await resumeIntradaySession(status.activeSession.sessionId);
+    return;
+  }
+  const gate = rankedFlatGate(status, status.serverNowMs);
+  if (!gate.ok) {
+    showToast(gate.message, 'error');
+    return;
+  }
+  const accepted = await askRankedFlatConfirm();
+  if (!accepted) return;
+  await openFlatSession('ranked');
 }
 
 export async function resumeIntradaySession(sessionId) {
@@ -992,6 +1150,11 @@ export async function resumeIntradaySession(sessionId) {
     if (session.phaseStartsAt) {
       state.originMs = Date.parse(session.phaseStartsAt);
       state.originKnown = Number.isFinite(state.originMs);
+    }
+    if (session.mode === 'ranked') {
+      state.pausedAtMs = null;
+      state.pauseKnown = true;
+      if (!session.phaseStartsAt) state.originKnown = false;
     }
     try {
       await bootChart();

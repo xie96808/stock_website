@@ -47,7 +47,8 @@ test('boot stages and chart box reserve 320px without booting ECharts', () => {
   assert.equal(section.includes('观望'), false);
   assert.equal(section.includes('2x'), false);
   assert.equal(section.includes('4x'), false);
-  assert.equal(html.includes('intraday-mode-lane'), false);
+  assert.equal(section.includes('intraday-mode-lane'), false);
+  assert.match(html, /class="lane intraday-mode-lane"/);
   assert.equal(html.includes('intraday.js'), false);
 
   const player = read('js/intraday.js');
@@ -55,7 +56,9 @@ test('boot stages and chart box reserve 320px without booting ECharts', () => {
   assert.equal(chart.includes('echarts'), false);
   assert.match(player, /ensureEcharts\(/);
   assert.equal(player.includes('resultScreen'), false);
-  assert.equal(read('js/home-ia.js').includes('intraday.js'), false);
+  const home = read('js/home-ia.js');
+  assert.equal(/from\s+['"]\.\/intraday\.js['"]/.test(home), false);
+  assert.match(home, /import\(\s*['"]\.\/intraday\.js['"]\s*\)/);
   assert.equal(read('js/game.js').includes('intraday.js'), false);
   assert.equal(Route.INTRADAY, 'intraday');
   assert.equal(resolveHashRoute('intraday'), null);

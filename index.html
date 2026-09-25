@@ -218,6 +218,17 @@
                             </span>
                             <span class="cta cta-fill survival-mode-cta">开始生存模式</span>
                         </button>
+                        <button type="button" class="hub-board-link" id="intradayBoardBtn" hidden onclick="onIntradayBoardClick(event)">查看空仓榜</button>
+                        <button type="button" class="lane intraday-mode-lane" id="intradayModeCard" hidden onclick="onIntradayModeCardClick()">
+                            <span class="mark">分</span>
+                            <span class="copy">
+                                <small>正式 · 开盘空仓</small>
+                                <strong>分时操作<span class="jiu-price-badge jiu-price-paid" data-jiu-price="30" aria-label="消耗 30 韭币"></span></strong>
+                                <p id="intradayModeCardMeta">模拟 T+0 · 上海时间 21:00 同题 · 24.1 秒 · 没有名次奖励</p>
+                                <p id="intradayModeCardState">加载中…</p>
+                            </span>
+                            <span class="cta cta-fill" id="intradayModeCardCta">进入正式局</span>
+                        </button>
                     </div>
 
                     <!-- L3 残局章节选择（与玩法三级同构） -->
@@ -283,6 +294,19 @@
                         <strong id="dailyChallengeBoardTitle">今日挑战榜</strong>
                     </div>
                     <div id="dailyChallengeBoardBody"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分时空仓榜（仅 flat；已持有榜不在本入口） -->
+        <div class="jiu-coin-modal daily-challenge-board-modal" id="intradayBoardModal" hidden>
+            <div class="jiu-coin-dialog daily-challenge-board-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayBoardTitle">
+                <button type="button" class="jiu-coin-close-x" onclick="hideIntradayBoard()" aria-label="关闭">×</button>
+                <div class="daily-challenge-board" id="intradayBoard">
+                    <div class="daily-challenge-board-head">
+                        <strong id="intradayBoardTitle">分时空仓榜</strong>
+                    </div>
+                    <div id="intradayBoardBody"></div>
                 </div>
             </div>
         </div>
@@ -1061,7 +1085,7 @@
         import { initFeedback } from './js/feedback.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
-        import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
+        import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell, onIntradayModeCardClick, onIntradayBoardClick, hideIntradayBoard } from './js/home-ia.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
@@ -1143,6 +1167,9 @@
         window.showDailyChallengeBoard = showDailyChallengeBoard;
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
         window.onGhostDuelStartClick = onGhostDuelStartClick;
+        window.onIntradayModeCardClick = onIntradayModeCardClick;
+        window.onIntradayBoardClick = onIntradayBoardClick;
+        window.hideIntradayBoard = hideIntradayBoard;
         window.startIntradayPractice = enterIntradayPractice;
         window.startClassicPractice = function () {
           if (typeof window.startGame === 'function') window.startGame();

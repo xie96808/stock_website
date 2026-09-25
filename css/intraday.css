@@ -1,4 +1,4 @@
-/* 分时练习屏。选择器都挂在 #intradayScreen 下。 */
+/* 分时练习屏挂在 #intradayScreen 下。Hub 卡片只追加下面这一条 lane。 */
 
 #intradayScreen.intraday-screen {
   display: none;
@@ -183,4 +183,23 @@
   #intradayScreen .intraday-pause {
     grid-column: 1 / -1;
   }
+}
+
+/* Author display:grid on the shared card class beats the UA hidden rule, so a flagged-off card would still take a row. */
+.start-screen .intraday-mode-lane {
+  position: relative;
+  overflow: hidden;
+  border-width: 2.5px;
+  border-color: color-mix(in srgb, var(--terra) 72%, var(--line));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--terra) 12%, var(--card)) 0%,
+      color-mix(in srgb, var(--terra) 4%, var(--card)) 55%,
+      var(--card) 100%
+    );
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--terra) 42%, var(--line));
+}
+.start-screen .intraday-mode-lane[hidden] {
+  display: none !important;
 }
