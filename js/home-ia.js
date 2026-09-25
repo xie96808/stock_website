@@ -197,17 +197,15 @@ export function describeLongRankedCard(status, nowMs) {
  * A cached phase stays closed until the next day's join lead.
  * Repainting that snapshot would leave the card disabled through the new 60s window.
  */
-export function shouldRefetchFlatRankedStatus(status, nowMs) {
-  const phaseMs = Date.parse(status?.phaseStartsAt?.flat || "");
+export function shouldRefetchFlatRankedStatus(status, nowMs, startMode = "flat") {
+  const key = startMode === "long" ? "long" : "flat";
+  const phaseMs = Date.parse(status?.phaseStartsAt?.[key] || "");
   if (!Number.isFinite(phaseMs) || !Number.isFinite(nowMs)) return false;
   return nowMs >= phaseMs + FLAT_PHASE_PERIOD_MS - FLAT_JOIN_LEAD_MS;
 }
 
-/** Same join lead, measured from phaseStartsAt.long so a stale long phase does not stay closed. */
 export function shouldRefetchLongRankedStatus(status, nowMs) {
-  const phaseMs = Date.parse(status?.phaseStartsAt?.long || "");
-  if (!Number.isFinite(phaseMs) || !Number.isFinite(nowMs)) return false;
-  return nowMs >= phaseMs + FLAT_PHASE_PERIOD_MS - FLAT_JOIN_LEAD_MS;
+  return shouldRefetchFlatRankedStatus(status, nowMs, "long");
 }
 
 function paintRankedLane(card, model) {
