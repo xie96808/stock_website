@@ -141,10 +141,13 @@ export function formatReturnPpm(ppm) {
   return `${sign}${pct.toFixed(2)}%`;
 }
 
+/** Server hands at most this many new bars per prefetch. A short page has caught `released`. */
+export const INTRADAY_PREFETCH_PAGE = 20;
+
 /**
- * The clickable bar is the latest delivered index, until that bar's own deadline
- * (reveal + 100ms + 400ms). The clock index moving on does not close it.
- * A bar past `cursor` is undelivered and stays non-clickable; prefetch continues.
+ * The button targets the bar on screen (min of cursor and the clock), not a
+ * prefetched index that is not drawn yet. It stays open until that bar's own
+ * deadline. `prefetchOnly` is informational and must not veto the click.
  * Limit bands are the session DTO's fen, not a client-side board rule.
  */
 export function tradeControls({
@@ -162,19 +165,27 @@ export function tradeControls({
   const prefetchOnly = Number.isInteger(cursor) && Number.isInteger(released) && cursor < released;
   const off = { buyEnabled: false, sellEnabled: false, prefetchOnly, barIndex: null };
   if (settled) return { ...off, prefetchOnly: false };
-  if (!Number.isInteger(cursor) || cursor < 0 || !Number.isFinite(originMs) || !Number.isFinite(nowMs)) {
+  const drawn = drawnThroughIndex(cursor, released);
+  if (drawn < 0 || drawn > cursor || !Number.isFinite(originMs) || !Number.isFinite(nowMs)) {
     return off;
   }
-  const openAt = originMs + cursor * INTRADAY_CLIENT_BAR_MS;
-  const open = nowMs >= openAt && nowMs < actDeadlineMs(originMs, cursor) && actedBar !== cursor;
+  const openAt = originMs + drawn * INTRADAY_CLIENT_BAR_MS;
+  const open = nowMs >= openAt && nowMs < actDeadlineMs(originMs, drawn) && actedBar !== drawn;
   const blockedUp = closeFen != null && limitUpFen != null && closeFen >= limitUpFen;
   const blockedDown = closeFen != null && limitDownFen != null && closeFen <= limitDownFen;
   return {
     buyEnabled: open && position === 'empty' && !blockedUp,
     sellEnabled: open && position === 'long' && !blockedDown,
     prefetchOnly,
-    barIndex: open ? cursor : null,
+    barIndex: open ? drawn : null,
   };
+}
+
+/** Send when the drawn bar is enabled. `prefetchOnly` is not a veto. */
+export function clickShouldSend(controls, side) {
+  if (!controls || !Number.isInteger(controls.barIndex)) return false;
+  if (side === 'sell') return controls.sellEnabled === true;
+  return controls.buyEnabled === true;
 }
 
 /** A queued click stays valid until its own deadline, even if the clock index moved. */
@@ -196,6 +207,23 @@ export function playbackGate({ pauseKnown, pausedAtMs }) {
     advanceClock: playing,
     prefetchLoop: playing,
     finish: playing,
+  };
+}
+
+/**
+ * Unknown origin must prefetch until a short page, then anchor.
+ * Anchoring the stale cursor first makes `released === cursor` and `shouldPrefetch` false.
+ * A known pause anchors on `pausedAtMs` and does not use the wall clock.
+ */
+export function resumeCatchUpAction({ originKnown, pauseKnown, pausedAtMs, gained }) {
+  if (!pauseKnown || originKnown) return { prefetch: false, anchor: false, basis: null };
+  if (gained == null || gained >= INTRADAY_PREFETCH_PAGE) {
+    return { prefetch: true, anchor: false, basis: null };
+  }
+  return {
+    prefetch: false,
+    anchor: true,
+    basis: pausedAtMs != null ? 'pausedAtMs' : 'wall',
   };
 }
 
@@ -338,14 +366,15 @@ function controlsFor(clock) {
       barIndex: null,
     };
   }
-  const bar = state.bars.get(state.cursor);
+  const drawn = drawnThroughIndex(state.cursor, clock.released);
+  const bar = drawn >= 0 ? state.bars.get(drawn) : null;
   return tradeControls({
     cursor: state.cursor,
     released: clock.released,
     originMs: state.originMs,
     nowMs: alignedNow(),
     position: state.position,
-    actedBar: state.acted.has(state.cursor) ? state.cursor : null,
+    actedBar: drawn >= 0 && state.acted.has(drawn) ? drawn : null,
     limitUpFen: state.limitUpFen,
     limitDownFen: state.limitDownFen,
     closeFen: bar ? bar.closeFen : null,
@@ -465,20 +494,57 @@ async function sendAdvance(body, { pauseIntent = null } = {}) {
   return data;
 }
 
+async function prefetchOnce() {
+  try {
+    await sendAdvance({ expectedRevision: state.revision, op: 'prefetch' });
+    return false;
+  } catch (err) {
+    if (err.code === 'REVISION_CONFLICT' && Number.isInteger(err.details?.actual)) {
+      state.revision = err.details.actual;
+      return true;
+    }
+    throw err;
+  }
+}
+
 async function catchUpPrefetch() {
-  const gate = playbackGate({ pauseKnown: state.pauseKnown, pausedAtMs: state.pausedAtMs });
   // Unknown pause: do not poll a session that might be frozen.
   if (!state.pauseKnown) return;
   if (!state.originKnown) {
-    const basis = state.pausedAtMs != null ? state.pausedAtMs : Date.now() + state.clockOffsetMs;
-    const anchored = anchorOriginMs({ nowMs: basis, cursor: state.cursor });
-    if (anchored != null) {
-      state.originMs = anchored;
-      state.originKnown = true;
-      saveClock();
+    // Reach the server's released index before anchoring. Anchoring the stale
+    // cursor first makes shouldPrefetch false and the gap is never filled.
+    let gained = null;
+    for (let n = 0; n < 16; n += 1) {
+      const step = resumeCatchUpAction({
+        originKnown: state.originKnown,
+        pauseKnown: state.pauseKnown,
+        pausedAtMs: state.pausedAtMs,
+        gained,
+      });
+      if (step.prefetch) {
+        const before = state.cursor;
+        const retry = await prefetchOnce();
+        if (retry) continue;
+        gained = state.cursor - before;
+        continue;
+      }
+      if (step.anchor) {
+        const basis = step.basis === 'pausedAtMs'
+          ? state.pausedAtMs
+          : Date.now() + state.clockOffsetMs;
+        const anchored = anchorOriginMs({ nowMs: basis, cursor: state.cursor });
+        if (anchored != null) {
+          state.originMs = anchored;
+          state.originKnown = true;
+          saveClock();
+        }
+      }
+      break;
     }
+    return;
   }
-  // Playing prefetches ahead of the clock. A pause only fills the frozen gap, then stops.
+  const gate = playbackGate({ pauseKnown: state.pauseKnown, pausedAtMs: state.pausedAtMs });
+  // A known origin can fill a frozen gap. A running clock prefetches as it falls behind.
   if (!gate.prefetchLoop && state.pausedAtMs == null) return;
   for (let n = 0; n < 16; n += 1) {
     const clock = readClock();
@@ -488,15 +554,8 @@ async function catchUpPrefetch() {
       inFlight: false,
       originKnown: state.originKnown,
     })) break;
-    try {
-      await sendAdvance({ expectedRevision: state.revision, op: 'prefetch' });
-    } catch (err) {
-      if (err.code === 'REVISION_CONFLICT' && Number.isInteger(err.details?.actual)) {
-        state.revision = err.details.actual;
-        continue;
-      }
-      throw err;
-    }
+    const retry = await prefetchOnce();
+    if (retry) continue;
   }
 }
 
@@ -767,8 +826,7 @@ function onAct(side) {
   if (state.settled) return;
   const clock = readClock();
   const controls = controlsFor(clock);
-  const enabled = side === 'buy' ? controls.buyEnabled : controls.sellEnabled;
-  if (!enabled || controls.barIndex == null || controls.prefetchOnly) return;
+  if (!clickShouldSend(controls, side)) return;
   const barIndex = controls.barIndex;
   enqueue(async () => {
     if (!queuedActAllowed({

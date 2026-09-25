@@ -13,8 +13,10 @@ import {
   commitPause,
   settlementView,
   tradeControls,
+  clickShouldSend,
   queuedActAllowed,
   playbackGate,
+  resumeCatchUpAction,
   classifyFinishFailure,
   formatReturnPpm,
 } from '../js/intraday.js';
@@ -85,6 +87,17 @@ test('playback stays on a 100ms clock when the buffer is behind', () => {
   assert.equal(behind.buyEnabled, true);
   assert.equal(behind.barIndex, 19);
   assert.equal(behind.prefetchOnly, true);
+  assert.equal(clickShouldSend(behind, 'buy'), true);
+  assert.equal(clickShouldSend.toString().includes('prefetchOnly'), false);
+  const ahead = tradeControls({
+    ...behindInput,
+    cursor: 12,
+    released: 3,
+    nowMs: 1_000 + 3 * 100 + 50,
+  });
+  assert.equal(ahead.buyEnabled, true);
+  assert.equal(ahead.barIndex, 3);
+  assert.equal(ahead.prefetchOnly, false);
   const slackOver = tradeControls({ ...behindInput, nowMs: 1_000 + 20 * 100 + 400 });
   assert.equal(slackOver.buyEnabled, false);
   assert.equal(slackOver.barIndex, null);
@@ -128,6 +141,42 @@ test('playback stays on a 100ms clock when the buffer is behind', () => {
   assert.equal(open.barIndex, 0);
   const closed = tradeControls({ ...delivered, nowMs: 1_500 });
   assert.equal(closed.buyEnabled, false);
+
+  const player = read('js/intraday.js');
+  const onActSrc = player.slice(player.indexOf('function onAct'), player.indexOf('function onPause'));
+  assert.equal(onActSrc.includes('prefetchOnly'), false);
+  assert.match(onActSrc, /clickShouldSend/);
+
+  const catchUp = player.slice(player.indexOf('async function catchUpPrefetch'), player.indexOf('function enqueuePrefetch'));
+  const prefetchAt = catchUp.indexOf('prefetchOnce');
+  const anchorAt = catchUp.indexOf('anchorOriginMs');
+  assert.ok(prefetchAt >= 0 && anchorAt > prefetchAt);
+
+  assert.deepEqual(
+    resumeCatchUpAction({ originKnown: false, pauseKnown: true, pausedAtMs: null, gained: null }),
+    { prefetch: true, anchor: false, basis: null },
+  );
+  assert.equal(
+    resumeCatchUpAction({ originKnown: false, pauseKnown: true, pausedAtMs: null, gained: 20 }).anchor,
+    false,
+  );
+  assert.equal(
+    resumeCatchUpAction({ originKnown: false, pauseKnown: true, pausedAtMs: 5_000, gained: 4 }).basis,
+    'pausedAtMs',
+  );
+  assert.equal(
+    resumeCatchUpAction({ originKnown: false, pauseKnown: true, pausedAtMs: null, gained: 4 }).basis,
+    'wall',
+  );
+  const staleOrigin = anchorOriginMs({ nowMs: 50_000, cursor: 5 });
+  const staleReleased = Math.floor((50_000 - staleOrigin) / 100);
+  assert.equal(staleReleased, 5);
+  assert.equal(shouldPrefetch({
+    cursor: 5,
+    released: staleReleased,
+    inFlight: false,
+    originKnown: true,
+  }), false);
 });
 
 test('pause and score stay uncommitted when the server rejects them', () => {
