@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
  * Import the intraday JSONL tail (or the whole file with --full).
- * Not on the request path. Startup uses importIntradayTail() without --full.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";

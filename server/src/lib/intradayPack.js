@@ -10,26 +10,10 @@ export const DEFAULT_INTRADAY_PATH = "/var/lib/stockgame/intraday.jsonl";
 export const INTRADAY_READY_MIN_TAPES = 20;
 export const INTRADAY_READY_MIN_DATES = 7;
 
-let eligibleIds = [];
-
 export function intradayJsonlPath() {
   const raw = process.env.STOCKGAME_INTRADAY_PATH;
   if (raw && String(raw).trim()) return String(raw).trim();
   return DEFAULT_INTRADAY_PATH;
-}
-
-export function eligibleTapeIds() {
-  return eligibleIds.slice();
-}
-
-export function reloadEligibleTapeIds(db = openDb()) {
-  eligibleIds = db
-    .prepare(
-      `SELECT id FROM intraday_tapes WHERE eligible = 1 ORDER BY session_date, symbol, id`
-    )
-    .all()
-    .map((row) => row.id);
-  return eligibleIds.slice();
 }
 
 export function intradayLibraryStatus(db = openDb()) {
@@ -70,7 +54,6 @@ export function insertValidatedTape(db, input) {
     validated.canonicalJson,
     sha
   );
-  if (info.changes === 1) eligibleIds.push(validated.sha256);
   return { ok: true, id: validated.sha256, inserted: info.changes === 1, validated };
 }
 
@@ -114,11 +97,6 @@ function consumeLines(buf) {
 export function importIntradayTail(db = openDb(), { full = false } = {}) {
   const filePath = intradayJsonlPath();
   if (!fs.existsSync(filePath)) {
-    try {
-      reloadEligibleTapeIds(db);
-    } catch {
-      eligibleIds = [];
-    }
     return { imported: 0, skipped: 0, missing: true };
   }
   const run = db.transaction(() => {
@@ -164,7 +142,5 @@ export function importIntradayTail(db = openDb(), { full = false } = {}) {
     ).run(filePath, byteOffset, new Date().toISOString());
     return { imported, skipped, byteOffset };
   });
-  const result = run.immediate();
-  reloadEligibleTapeIds(db);
-  return result;
+  return run.immediate();
 }

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { requireUser } from "../middleware/request.js";
 import { ok, fail } from "../lib/http.js";
 import { config } from "../lib/config.js";
-import { checkIntradayCreateLimits, rateLimitFail } from "../lib/rateLimit.js";
+import { checkCreateGameLimits, rateLimitFail } from "../lib/rateLimit.js";
 import {
   getIntradayStatus,
   createIntradaySession,
@@ -51,7 +51,7 @@ router.get("/intraday", (req, res) => {
 
 router.post("/intraday/sessions", requireUser, (req, res) => {
   if (!config.intradayModeEnabled) return disabled(res);
-  const limited = checkIntradayCreateLimits(req.user.id);
+  const limited = checkCreateGameLimits(req.user.id, "intraday");
   if (limited.limited) return rateLimitFail(res, limited.retryAfterSec, limited.message);
   const createKey = req.get("idempotency-key") || req.get("Idempotency-Key");
   try {

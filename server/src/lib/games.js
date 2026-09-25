@@ -142,15 +142,6 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
 
 export { resultDto };
 
-function gameConflictDetails(gameId, game) {
-  const details = { gameId, game: game || null };
-  if (config.intradayModeEnabled) {
-    details.kind = game?.gameKind || "classic";
-    details.sessionId = gameId;
-  }
-  return details;
-}
-
 function expireStaleActive(db, userId, now = nowIso()) {
   const stale = db
     .prepare(
@@ -275,7 +266,6 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
         err.activeGame = sessionPublic(active);
         throw err;
       }
-      // Flag off must not prepare this statement. Flag on is one extra read, still deferred.
       if (config.intradayModeEnabled) {
         const intra = findActiveEngagement(db, userId, now);
         if (intra) {
@@ -419,12 +409,17 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
       };
     }
     if (e.code === "ACTIVE_GAME_EXISTS") {
+      const details = { gameId: e.activeId, game: e.activeGame || null };
+      if (config.intradayModeEnabled) {
+        details.kind = e.activeGame?.gameKind || "classic";
+        details.sessionId = e.activeId;
+      }
       return {
         error: {
           status: 409,
           code: "ACTIVE_GAME_EXISTS",
           message: "已有进行中的云端对局，请继续对局或重新开始",
-          details: gameConflictDetails(e.activeId, e.activeGame),
+          details,
         },
       };
     }

@@ -174,63 +174,33 @@ export function checkRegisterLimits(ip) {
   return { limited: false };
 }
 
-/** Create-game: per user minute + day. */
-export function checkCreateGameLimits(userId) {
+/** Minute + day buckets. `intraday` does not consume the classic `game:` quota. */
+export function checkCreateGameLimits(userId, bucket = "game") {
   const cfg = config.rateLimit;
   const uid = String(userId);
+  const intraday = bucket === "intraday";
   const minute = consumeRateLimit(
-    `game:m:${uid}`,
-    cfg.createGamePerUserMinute,
+    intraday ? `intraday:m:${uid}` : `game:m:${uid}`,
+    intraday ? cfg.intradayPerUserMinute : cfg.createGamePerUserMinute,
     cfg.createGameMinuteMs
   );
   if (!minute.ok) {
     return {
       limited: true,
       retryAfterSec: minute.retryAfterSec,
-      message: "开局过于频繁，请稍后再试",
+      message: intraday ? "分时开局过于频繁，请稍后再试" : "开局过于频繁，请稍后再试",
     };
   }
   const day = consumeRateLimit(
-    `game:d:${uid}`,
-    cfg.createGamePerUserDay,
+    intraday ? `intraday:d:${uid}` : `game:d:${uid}`,
+    intraday ? cfg.intradayPerUserDay : cfg.createGamePerUserDay,
     cfg.createGameDayMs
   );
   if (!day.ok) {
     return {
       limited: true,
       retryAfterSec: day.retryAfterSec,
-      message: "今日开局次数已达上限，请明天再试",
-    };
-  }
-  return { limited: false };
-}
-
-/** Intraday create: own buckets, not game:m / game:d. */
-export function checkIntradayCreateLimits(userId) {
-  const cfg = config.rateLimit;
-  const uid = String(userId);
-  const minute = consumeRateLimit(
-    `intraday:m:${uid}`,
-    cfg.intradayPerUserMinute,
-    cfg.createGameMinuteMs
-  );
-  if (!minute.ok) {
-    return {
-      limited: true,
-      retryAfterSec: minute.retryAfterSec,
-      message: "分时开局过于频繁，请稍后再试",
-    };
-  }
-  const day = consumeRateLimit(
-    `intraday:d:${uid}`,
-    cfg.intradayPerUserDay,
-    cfg.createGameDayMs
-  );
-  if (!day.ok) {
-    return {
-      limited: true,
-      retryAfterSec: day.retryAfterSec,
-      message: "今日分时开局次数已达上限，请明天再试",
+      message: intraday ? "今日分时开局次数已达上限，请明天再试" : "今日开局次数已达上限，请明天再试",
     };
   }
   return { limited: false };

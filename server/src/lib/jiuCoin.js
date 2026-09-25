@@ -8,9 +8,7 @@ export const JIU_COIN_GAME_CREATE_COST = 20;
 export const JIU_COIN_ONESHOT_CREATE_COST = 30;
 /** Survival (活过三十日) create cost — same as classic. */
 export const JIU_COIN_SURVIVAL_CREATE_COST = 20;
-/** Ranked intraday (分时正式局). One charge per startMode per day. */
 export const JIU_COIN_INTRADAY_RANKED_COST = 30;
-/** Practice intraday. User kept the recommended 10. */
 export const JIU_COIN_INTRADAY_PRACTICE_COST = 10;
 export const JIU_COIN_GAME_REWIND_COST = 50;
 export const JIU_COIN_DAILY_MIN = 50;

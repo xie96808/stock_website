@@ -366,6 +366,69 @@ test("intraday flag on", async (t) => {
     assert.equal(openDb().prepare(`SELECT status FROM intraday_sessions WHERE id = ?`).get(sessionId).status, "abandoned");
   });
 
+  await t.test("abandon after settleReady stays abandoned with no result row", async () => {
+    const auth = await register(`abready${Date.now().toString(36)}`);
+    const origin = Date.parse("2026-09-25T11:00:00.000Z");
+    setNow(origin);
+    const created = await postSession(auth, { mode: "practice", startMode: "flat" }, `abready-${auth.user.id}`);
+    assert.equal(created.status, 201, JSON.stringify(created.json));
+    const sessionId = created.json.data.sessionId;
+    setNow(origin + 24500);
+    const left = await abandon(auth, sessionId);
+    assert.equal(left.status, 200, JSON.stringify(left.json));
+    assert.equal(left.json.data.status, "abandoned");
+    assert.equal(resultCount(sessionId), 0);
+    assert.equal(openDb().prepare(`SELECT status FROM intraday_sessions WHERE id = ?`).get(sessionId).status, "abandoned");
+  });
+
+  await t.test("rejected act does not commit pause or resume", async () => {
+    const auth = await register(`nopause${Date.now().toString(36)}`);
+    const origin = Date.parse("2026-09-25T05:00:00.000Z");
+    setNow(origin);
+    const created = await postSession(auth, { mode: "practice", startMode: "flat" }, `nopause-${auth.user.id}`);
+    assert.equal(created.status, 201, JSON.stringify(created.json));
+    const sessionId = created.json.data.sessionId;
+    setNow(origin + 500);
+    const rejected = await advance(auth, sessionId, {
+      expectedRevision: 0,
+      op: "act",
+      pause: true,
+      actions: [{ barIndex: 0, side: "buy" }],
+    }, `nopause-act-${auth.user.id}`);
+    assert.equal(rejected.status, 422, JSON.stringify(rejected.json));
+    assert.equal(rejected.json.error.code, "BAR_CLOSED");
+    const frozen = openDb().prepare(
+      `SELECT clock_origin_ms, paused_at_ms FROM intraday_sessions WHERE id = ?`
+    ).get(sessionId);
+    assert.equal(frozen.paused_at_ms, null);
+    assert.equal(frozen.clock_origin_ms, origin);
+
+    const paused = await advance(auth, sessionId, {
+      expectedRevision: 0,
+      op: "prefetch",
+      pause: true,
+    }, `nopause-pf-${auth.user.id}`);
+    assert.equal(paused.status, 200, JSON.stringify(paused.json));
+    const held = openDb().prepare(
+      `SELECT revision, clock_origin_ms, paused_at_ms FROM intraday_sessions WHERE id = ?`
+    ).get(sessionId);
+    assert.equal(held.paused_at_ms, origin + 500);
+    setNow(origin + 500 + 10_000);
+    const resume = await advance(auth, sessionId, {
+      expectedRevision: held.revision,
+      op: "act",
+      pause: false,
+      actions: [{ barIndex: 0, side: "buy" }],
+    }, `nopause-resume-${auth.user.id}`);
+    assert.equal(resume.status, 422, JSON.stringify(resume.json));
+    const still = openDb().prepare(
+      `SELECT clock_origin_ms, paused_at_ms FROM intraday_sessions WHERE id = ?`
+    ).get(sessionId);
+    assert.equal(still.paused_at_ms, held.paused_at_ms);
+    assert.equal(still.clock_origin_ms, held.clock_origin_ms);
+    await abandon(auth, sessionId);
+  });
+
   await t.test("finish actions must match the server log; omitted actions settle", async () => {
     const auth = await register(`actlog${Date.now().toString(36)}`);
     const origin = Date.parse("2026-09-25T07:00:00.000Z");
@@ -387,6 +450,11 @@ test("intraday flag on", async (t) => {
     }, `act-bad-${auth.user.id}`);
     assert.equal(bad.status, 409, JSON.stringify(bad.json));
     assert.equal(bad.json.error.code, "SUBMISSION_CONFLICT");
+    assert.equal(resultCount(sessionId), 0);
+    assert.equal(
+      openDb().prepare(`SELECT status FROM intraday_sessions WHERE id = ?`).get(sessionId).status,
+      "active"
+    );
 
     const plain = await register(`omit${Date.now().toString(36)}`);
     const origin2 = origin + 60_000;
@@ -412,6 +480,8 @@ test("intraday flag on", async (t) => {
     const second = await postSession(auth, { mode: "practice", startMode: "flat" }, key);
     assert.equal(second.status, 200, JSON.stringify(second.json));
     assert.equal(second.json.data.sessionId, first.json.data.sessionId);
+    assert.ok(first.json.data.bars.length >= 1);
+    assert.deepEqual(second.json.data.bars, first.json.data.bars);
     assert.equal(getJiuCoinBalance(auth.user.id), before - JIU_COIN_INTRADAY_PRACTICE_COST);
     const charges = openDb().prepare(
       `SELECT COUNT(*) AS c FROM jiu_coin_ledger WHERE reason = 'game_create' AND ref_id = ?`

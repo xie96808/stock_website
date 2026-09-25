@@ -1,7 +1,5 @@
 /**
- * Intraday sessions, public phases, and daily boards.
- * settleIntradaySession is the only writer of intraday_results.
- * It returns errors instead of throwing so an expired UPDATE in the same
+ * Returns errors instead of throwing so an expired UPDATE in the same
  * transaction is not rolled back by better-sqlite3.
  */
 import crypto from "node:crypto";
@@ -572,7 +570,7 @@ export function createIntradaySession(userId, { mode, startMode, createKey } = {
     if (existing.create_payload_hash !== payloadHash) {
       return fail(409, "IDEMPOTENCY_CONFLICT", "同一幂等键不能用于不同开局参数");
     }
-    const data = dtoFromSession(db, existing, nowMs, { bars: [] });
+    const data = dtoFromSession(db, existing, nowMs);
     return { status: 200, data: data || { sessionId: existing.id, revision: existing.revision } };
   }
 
@@ -813,7 +811,7 @@ export function createIntradaySession(userId, { mode, startMode, createKey } = {
       if (e.row.create_payload_hash !== payloadHash) {
         return fail(409, "IDEMPOTENCY_CONFLICT", "同一幂等键不能用于不同开局参数");
       }
-      const data = dtoFromSession(db, e.row, nowMs, { bars: [] });
+      const data = dtoFromSession(db, e.row, nowMs);
       return { status: 200, data };
     }
     if (e.code === "INSUFFICIENT_FUNDS") {
@@ -848,7 +846,7 @@ export function createIntradaySession(userId, { mode, startMode, createKey } = {
         .prepare(`SELECT * FROM intraday_sessions WHERE user_id = ? AND create_key = ?`)
         .get(userId, createKey);
       if (again && again.create_payload_hash === payloadHash) {
-        return { status: 200, data: dtoFromSession(db, again, nowMs, { bars: [] }) };
+        return { status: 200, data: dtoFromSession(db, again, nowMs) };
       }
       const activeIntra = db
         .prepare(`SELECT id FROM intraday_sessions WHERE user_id = ? AND status = 'active'`)
@@ -952,17 +950,26 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
           actual: fresh.revision,
         });
       }
+      // Proposed clock only. A rejected act must not commit pause or resume.
+      let pendingOrigin = fresh.clock_origin_ms;
+      let pendingPaused = fresh.paused_at_ms;
       if (fresh.mode === "practice" && body?.pause === true && fresh.paused_at_ms == null) {
-        db.prepare(`UPDATE intraday_sessions SET paused_at_ms = ? WHERE id = ?`).run(nowMs, fresh.id);
-        fresh.paused_at_ms = nowMs;
+        pendingPaused = nowMs;
       } else if (fresh.mode === "practice" && body?.pause === false && fresh.paused_at_ms != null) {
-        const shifted = fresh.clock_origin_ms + (nowMs - fresh.paused_at_ms);
-        db.prepare(
-          `UPDATE intraday_sessions SET clock_origin_ms = ?, paused_at_ms = NULL WHERE id = ?`
-        ).run(shifted, fresh.id);
-        fresh.clock_origin_ms = shifted;
-        fresh.paused_at_ms = null;
+        pendingOrigin = fresh.clock_origin_ms + (nowMs - fresh.paused_at_ms);
+        pendingPaused = null;
       }
+      const clockRow = {
+        ...fresh,
+        clock_origin_ms: pendingOrigin,
+        paused_at_ms: pendingPaused,
+      };
+      const writePause = () => {
+        if (pendingOrigin === fresh.clock_origin_ms && pendingPaused === fresh.paused_at_ms) return;
+        db.prepare(
+          `UPDATE intraday_sessions SET clock_origin_ms = ?, paused_at_ms = ? WHERE id = ?`
+        ).run(pendingOrigin, pendingPaused, fresh.id);
+      };
 
       const challenge = loadChallenge(db, fresh);
       const loaded = readTape(db, fresh.tape_id);
@@ -970,7 +977,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
         return fail(503, "INTRADAY_NOT_READY", "分时带子不可用");
       }
       const view = tapeView(loaded);
-      const clock = clockFor(fresh, challenge, nowMs);
+      const clock = clockFor(clockRow, challenge, nowMs);
       const actions = readActions(fresh);
       const phaseStartsAt = phaseStartsAtOf(fresh, challenge);
 
@@ -985,6 +992,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
             view.limitPct
           );
           if (mark.error) return fail(422, mark.error.code, mark.error.message || "盯市失败");
+          writePause();
           return {
             status: 200,
             data: progressDto({
@@ -1045,6 +1053,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
           )
           .run(newCursor, revisionAfter, fresh.id, fresh.revision);
         if (info.changes !== 1) return fail(409, "REVISION_CONFLICT", "revision 不匹配");
+        writePause();
         insertCommand(db, {
           sessionId: fresh.id,
           commandKey,
@@ -1059,8 +1068,10 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
       }
 
       const action = { barIndex: body.actions[0].barIndex, side: body.actions[0].side };
-      const actNow = fresh.mode === "practice" && fresh.paused_at_ms != null ? fresh.paused_at_ms : nowMs;
-      const originMs = originOf(fresh, challenge);
+      const actNow = clockRow.mode === "practice" && clockRow.paused_at_ms != null
+        ? clockRow.paused_at_ms
+        : nowMs;
+      const originMs = originOf(clockRow, challenge);
       if (
         action.barIndex > clock.released
         || actNow < originMs + action.barIndex * INTRADAY_RANKED_BAR_MS
@@ -1147,6 +1158,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
         )
         .run(newCursor, revisionAfter, JSON.stringify(nextActions), fresh.id, fresh.revision);
       if (info.changes !== 1) return fail(409, "REVISION_CONFLICT", "revision 不匹配");
+      writePause();
       insertCommand(db, {
         sessionId: fresh.id,
         commandKey,
@@ -1201,15 +1213,17 @@ export function finishIntradaySession(userId, sessionId, body, commandKey) {
 
   try {
     const tx = db.transaction(() => {
-      sweepIntradayForUser(db, userId, nowMs);
       const replayed = replayCommand(db, sessionId, commandKey, payloadHash);
       if (replayed) return replayed;
       const fresh = db.prepare(`SELECT * FROM intraday_sessions WHERE id = ?`).get(sessionId);
       if (!fresh || fresh.user_id !== userId) return fail(404, "NOT_FOUND", "对局不存在");
-      const serverActions = readActions(fresh);
-      if (clientActions && !sameActions(clientActions, serverActions)) {
+      const existing = db
+        .prepare(`SELECT 1 AS ok FROM intraday_results WHERE session_id = ?`)
+        .get(sessionId);
+      if (!existing && clientActions && !sameActions(clientActions, readActions(fresh))) {
         return fail(409, "SUBMISSION_CONFLICT", "动作与服务端记录不一致");
       }
+      sweepIntradayForUser(db, userId, nowMs);
       const settled = settleIntradaySession(db, sessionId, nowMs);
       if (!settled.ok) {
         return fail(settled.httpStatus, settled.code, settled.message, { sessionId }, {
@@ -1300,18 +1314,16 @@ export function abandonIntradaySession(userId, sessionId) {
   const tx = db.transaction(() => {
     const row = db.prepare(`SELECT * FROM intraday_sessions WHERE id = ?`).get(sessionId);
     if (!row || row.user_id !== userId) return fail(404, "NOT_FOUND", "对局不存在");
-    sweepIntradayForUser(db, userId, nowMs);
-    const fresh = db.prepare(`SELECT * FROM intraday_sessions WHERE id = ?`).get(sessionId);
-    if (fresh.status === "abandoned") {
+    if (row.status === "abandoned") {
       return { status: 200, data: { sessionId, status: "abandoned" } };
     }
-    if (fresh.status !== "active") {
+    if (row.status !== "active") {
       return fail(409, "GAME_NOT_ACTIVE", "对局不在进行中", { sessionId });
     }
     db.prepare(
       `UPDATE intraday_sessions SET status = 'abandoned', finished_at = ? WHERE id = ? AND status = 'active'`
     ).run(nowIso, sessionId);
-    if (fresh.mode === "ranked") {
+    if (row.mode === "ranked") {
       db.prepare(
         `UPDATE intraday_attempts SET status = 'abandoned', board_eligible = 0
          WHERE session_id = ? AND status = 'active'`
