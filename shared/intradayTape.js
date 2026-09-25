@@ -70,15 +70,10 @@ export function isExcludedName(name) {
   return text.startsWith('S*ST') || text.startsWith('*ST') || text.startsWith('ST') || text.includes('退');
 }
 
-/** 688/689 and 300/301 are 20%; other Shanghai/Shenzhen names are 10%. */
+/** STAR 688/689 and the whole ChiNext 30xxxx range are 20%; other names are 10%. */
 export function limitPctForSymbol(symbol) {
   const code = normalizeSymbol(symbol);
-  if (
-    code.startsWith('688')
-    || code.startsWith('689')
-    || code.startsWith('300')
-    || code.startsWith('301')
-  ) {
+  if (code.startsWith('688') || code.startsWith('689') || code.startsWith('30')) {
     return 20;
   }
   return 10;
@@ -223,25 +218,8 @@ export function checkCumulativeAverage(bars) {
   return { ok: true, reason: null, zeroCount };
 }
 
-export function canonicalTapeJson(tape) {
-  const decoded = decodeTapeBars(tape.bars);
-  const bars = decoded.map((bar) => [bar.closeFen, bar.volumeLot, bar.amountFen, bar.avgFen]);
-  return JSON.stringify({
-    v: TAPE_VERSION,
-    symbol: normalizeSymbol(tape.symbol),
-    name: tape.name,
-    sessionDate: tape.sessionDate,
-    prevCloseFen: tape.prevCloseFen,
-    limitPct: tape.limitPct,
-    barCount: INTRADAY_BAR_COUNT,
-    clock: INTRADAY_CLOCK,
-    bars,
-  });
-}
-
-export function tapeSha256(tapeOrJson) {
-  const json = typeof tapeOrJson === 'string' ? tapeOrJson : canonicalTapeJson(tapeOrJson);
-  return createHash('sha256').update(json, 'utf8').digest('hex');
+export function tapeSha256(canonicalJson) {
+  return createHash('sha256').update(canonicalJson, 'utf8').digest('hex');
 }
 
 /**

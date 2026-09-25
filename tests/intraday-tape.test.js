@@ -134,7 +134,29 @@ describe('eligibility filters', () => {
     assert.equal(limitPctForSymbol('689009'), 20);
     assert.equal(limitPctForSymbol('300750'), 20);
     assert.equal(limitPctForSymbol('301001'), 20);
+    assert.equal(limitPctForSymbol('302132'), 20);
     assert.equal(limitPctForSymbol('600036'), 10);
+  });
+
+  it('keeps a ChiNext 302 open that sits between the 10% and 20% bands', () => {
+    const prevCloseFen = 10000;
+    const openFen = 11200;
+    const tape = legalTape({
+      symbol: '302132',
+      name: '中航成飞',
+      prevCloseFen,
+      closeFen: prevCloseFen,
+    });
+    tape.bars[0][0] = openFen;
+    const result = validateTape(tape);
+    assert.equal(result.ok, true, result.reason);
+    assert.equal(result.canonical.limitPct, 20);
+    assert.equal(result.closes[0].closeFen, openFen);
+    const ten = limitBandFen(prevCloseFen, 10);
+    const twenty = limitBandFen(prevCloseFen, 20);
+    assert.ok(openFen > ten.limitUpFen && openFen < twenty.limitUpFen);
+    assert.equal(isLimitLockedOpen(prevCloseFen, 10, openFen), true);
+    assert.equal(isLimitLockedOpen(prevCloseFen, 20, openFen), false);
   });
 
   it('takes the first 200 names with kline and does not backfill filters', () => {

@@ -87,7 +87,7 @@ def is_excluded_name(name):
 
 def limit_pct_for_symbol(symbol):
     code = normalize_symbol(symbol)
-    if code.startswith(("688", "689", "300", "301")):
+    if code.startswith(("688", "689", "30")):
         return 20
     return 10
 
@@ -414,6 +414,14 @@ def self_test_rules():
     assert len(EM241_TIMES) == 241
     assert EM241_TIMES[0] == "09:30" and EM241_TIMES[-1] == "15:00"
     assert "09:15" not in EM241_SET and "13:00" not in EM241_SET
+    if limit_pct_for_symbol("302132") != 20:
+        raise SystemExit("ChiNext 302 must be a 20% band")
+    # 112.00 on a 100.00 prev close is +12%: outside 10%, inside 20%.
+    chinext = normalize_session("302132", "中航成飞", "2026-09-24", 100.00, synthetic_minutes(112.00))
+    if not chinext["ok"] or chinext["canonical"]["limitPct"] != 20 or chinext["bars"][0]["closeFen"] != 11200:
+        raise SystemExit(f"302132 open between 10% and 20% must validate: {chinext.get('reason')}")
+    if not is_limit_locked_open(10000, 10, 11200):
+        raise SystemExit("12% open should be locked on a 10% band")
 
     base = normalize_session("600036", "招商银行", "2026-09-24", 38.50, synthetic_minutes())
     if not base["ok"]:
