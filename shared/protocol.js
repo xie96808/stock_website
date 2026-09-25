@@ -15,6 +15,8 @@ export const GAME_KIND_PUZZLE = 'puzzle';
 export const GAME_KIND_ONESHOT = 'oneshot';
 export const GAME_KIND_SURVIVAL = 'survival';
 export const GAME_KIND_GHOST = 'ghost';
+/** Minute tape. Not a GAME_KINDS member — those stay on the 30-day create path. */
+export const GAME_KIND_INTRADAY = 'intraday';
 export const GAME_KINDS = Object.freeze([
   GAME_KIND_CLASSIC,
   GAME_KIND_DAILY,
@@ -49,3 +51,5 @@ export const DECISION_ACTION_SET = new Set(DECISION_ACTIONS);
 
 /** Settle metrics schema version written on event-v1 results (B0-PR2). */
 export const SCORE_VERSION_CURVE_V1 = 'sim30-mtm-curve-v1';
+/** Intraday T+0 mark-to-market. Not written on game_results. */
+export const SCORE_VERSION_INTRADAY_V1 = 'intraday-t0-mtm-v1';
