@@ -56,6 +56,7 @@ function freshState() {
     originKnown: false,
     clockOffsetMs: 0,
     clockSampled: false,
+    pauseKnown: false,
     pausedAtMs: null,
     chart: null,
     raf: 0,
@@ -141,8 +142,9 @@ export function formatReturnPpm(ppm) {
 }
 
 /**
- * Buy stays disabled while the cursor is behind the released bar.
- * A delivered bar is clickable only inside the server slack.
+ * The clickable bar is the latest delivered index, until that bar's own deadline
+ * (reveal + 100ms + 400ms). The clock index moving on does not close it.
+ * A bar past `cursor` is undelivered and stays non-clickable; prefetch continues.
  * Limit bands are the session DTO's fen, not a client-side board rule.
  */
 export function tradeControls({
@@ -157,22 +159,50 @@ export function tradeControls({
   closeFen,
   settled,
 }) {
-  const off = { buyEnabled: false, sellEnabled: false, prefetchOnly: false, barIndex: null };
-  if (settled) return { ...off };
-  if (!Number.isInteger(cursor) || !Number.isInteger(released) || cursor < released || released < 0) {
-    return { ...off, prefetchOnly: cursor < released };
+  const prefetchOnly = Number.isInteger(cursor) && Number.isInteger(released) && cursor < released;
+  const off = { buyEnabled: false, sellEnabled: false, prefetchOnly, barIndex: null };
+  if (settled) return { ...off, prefetchOnly: false };
+  if (!Number.isInteger(cursor) || cursor < 0 || !Number.isFinite(originMs) || !Number.isFinite(nowMs)) {
+    return off;
   }
-  const deadline = actDeadlineMs(originMs, released);
-  const openAt = originMs + released * INTRADAY_CLIENT_BAR_MS;
-  const open = nowMs >= openAt && nowMs < deadline && actedBar !== released;
+  const openAt = originMs + cursor * INTRADAY_CLIENT_BAR_MS;
+  const open = nowMs >= openAt && nowMs < actDeadlineMs(originMs, cursor) && actedBar !== cursor;
   const blockedUp = closeFen != null && limitUpFen != null && closeFen >= limitUpFen;
   const blockedDown = closeFen != null && limitDownFen != null && closeFen <= limitDownFen;
   return {
     buyEnabled: open && position === 'empty' && !blockedUp,
     sellEnabled: open && position === 'long' && !blockedDown,
-    prefetchOnly: false,
-    barIndex: open ? released : null,
+    prefetchOnly,
+    barIndex: open ? cursor : null,
   };
+}
+
+/** A queued click stays valid until its own deadline, even if the clock index moved. */
+export function queuedActAllowed({ originMs, nowMs, cursor, barIndex, acted }) {
+  if (acted) return false;
+  if (!Number.isInteger(barIndex) || !Number.isInteger(cursor) || barIndex > cursor || barIndex < 0) return false;
+  if (!Number.isFinite(originMs) || !Number.isFinite(nowMs)) return false;
+  if (nowMs < originMs + barIndex * INTRADAY_CLIENT_BAR_MS) return false;
+  return nowMs < actDeadlineMs(originMs, barIndex);
+}
+
+/**
+ * A missing pause field is not "playing". A known pause does not run the clock,
+ * and must not prefetch or finish in a loop. Playing is the only path that does both.
+ */
+export function playbackGate({ pauseKnown, pausedAtMs }) {
+  const playing = pauseKnown === true && pausedAtMs == null;
+  return {
+    advanceClock: playing,
+    prefetchLoop: playing,
+    finish: playing,
+  };
+}
+
+/** Latch only a rejected action log or a terminal inactive session. Transport and 5xx retry. */
+export function classifyFinishFailure(err) {
+  if (err && (err.code === 'SUBMISSION_CONFLICT' || err.code === 'GAME_NOT_ACTIVE')) return 'latch';
+  return 'retry';
 }
 
 function newKey() {
@@ -277,12 +307,20 @@ function tone(ppm) {
 }
 
 function readClock() {
-  const nowMs = Date.now() + state.clockOffsetMs;
+  const wall = Date.now() + state.clockOffsetMs;
+  const gate = playbackGate({ pauseKnown: state.pauseKnown, pausedAtMs: state.pausedAtMs });
+  let pausedAtMs = state.pausedAtMs;
+  let nowMs = wall;
+  // Pause unknown: hold the delivered bar. Do not let wall time walk the index.
+  if (!gate.advanceClock && pausedAtMs == null && state.originKnown && state.cursor >= 0) {
+    pausedAtMs = state.originMs + state.cursor * INTRADAY_CLIENT_BAR_MS;
+    nowMs = pausedAtMs;
+  }
   return playbackClock(playbackArgs({
     originMs: state.originKnown ? state.originMs : nowMs,
     nowMs,
     barCount: state.barCount,
-    pausedAtMs: state.pausedAtMs,
+    pausedAtMs,
   }));
 }
 
@@ -292,17 +330,22 @@ function alignedNow() {
 }
 
 function controlsFor(clock) {
-  if (!state.originKnown) {
-    return { buyEnabled: false, sellEnabled: false, prefetchOnly: true, barIndex: null };
+  if (!state.originKnown || !state.pauseKnown) {
+    return {
+      buyEnabled: false,
+      sellEnabled: false,
+      prefetchOnly: !state.pauseKnown || state.cursor < clock.released,
+      barIndex: null,
+    };
   }
-  const bar = state.bars.get(clock.released);
+  const bar = state.bars.get(state.cursor);
   return tradeControls({
     cursor: state.cursor,
     released: clock.released,
     originMs: state.originMs,
     nowMs: alignedNow(),
     position: state.position,
-    actedBar: state.acted.has(clock.released) ? clock.released : null,
+    actedBar: state.acted.has(state.cursor) ? state.cursor : null,
     limitUpFen: state.limitUpFen,
     limitDownFen: state.limitDownFen,
     closeFen: bar ? bar.closeFen : null,
@@ -337,6 +380,10 @@ function applyProgress(data) {
   if (data.fillBar && Number.isInteger(data.fillBar.i)) state.bars.set(data.fillBar.i, data.fillBar);
   if (typeof data.tapeClosed === 'boolean') state.tapeClosed = data.tapeClosed;
   if (typeof data.settleReady === 'boolean') state.settleReady = data.settleReady;
+  if (data && Object.prototype.hasOwnProperty.call(data, 'pausedAtMs')) {
+    state.pauseKnown = true;
+    state.pausedAtMs = Number.isFinite(data.pausedAtMs) ? data.pausedAtMs : null;
+  }
   if (data.phaseStartsAt) {
     const origin = Date.parse(data.phaseStartsAt);
     if (Number.isFinite(origin)) {
@@ -382,6 +429,7 @@ function adoptCreate(data) {
     state.originMs = data.serverNowMs;
     state.originKnown = true;
     state.pausedAtMs = null;
+    state.pauseKnown = true;
   }
   saveClock();
 }
@@ -391,7 +439,10 @@ function restoreStoredClock(sessionId) {
   if (!saved) return;
   state.originMs = saved.originMs;
   state.originKnown = true;
-  state.pausedAtMs = saved.pausedAtMs == null ? null : saved.pausedAtMs;
+  if (Object.prototype.hasOwnProperty.call(saved, 'pausedAtMs')) {
+    state.pausedAtMs = saved.pausedAtMs == null ? null : saved.pausedAtMs;
+    state.pauseKnown = true;
+  }
   if (Number.isFinite(saved.clockOffsetMs)) {
     state.clockOffsetMs = saved.clockOffsetMs;
     state.clockSampled = true;
@@ -399,32 +450,44 @@ function restoreStoredClock(sessionId) {
 }
 
 async function sendAdvance(body, { pauseIntent = null } = {}) {
+  const before = { originMs: state.originMs, pausedAtMs: state.pausedAtMs };
   const data = await apiSend(`/intraday/sessions/${encodeURIComponent(state.sessionId)}/advance`, {
     method: 'POST',
     body,
     key: newKey(),
   });
+  // Shift the origin from the pre-response pause. The DTO's pausedAtMs then wins.
+  const next = commitPause(before, { ok: true, pause: pauseIntent, serverNowMs: data.serverNowMs });
   applyProgress(data);
-  const next = commitPause(
-    { originMs: state.originMs, pausedAtMs: state.pausedAtMs },
-    { ok: true, pause: pauseIntent, serverNowMs: data.serverNowMs },
-  );
-  state.originMs = next.originMs;
-  state.pausedAtMs = next.pausedAtMs;
+  if (!data.phaseStartsAt) state.originMs = next.originMs;
+  if (!Object.prototype.hasOwnProperty.call(data, 'pausedAtMs')) state.pausedAtMs = next.pausedAtMs;
   if (pauseIntent != null) saveClock();
   return data;
 }
 
 async function catchUpPrefetch() {
+  const gate = playbackGate({ pauseKnown: state.pauseKnown, pausedAtMs: state.pausedAtMs });
+  // Unknown pause: do not poll a session that might be frozen.
+  if (!state.pauseKnown) return;
+  if (!state.originKnown) {
+    const basis = state.pausedAtMs != null ? state.pausedAtMs : Date.now() + state.clockOffsetMs;
+    const anchored = anchorOriginMs({ nowMs: basis, cursor: state.cursor });
+    if (anchored != null) {
+      state.originMs = anchored;
+      state.originKnown = true;
+      saveClock();
+    }
+  }
+  // Playing prefetches ahead of the clock. A pause only fills the frozen gap, then stops.
+  if (!gate.prefetchLoop && state.pausedAtMs == null) return;
   for (let n = 0; n < 16; n += 1) {
     const clock = readClock();
-    if (state.originKnown && !shouldPrefetch({
+    if (!shouldPrefetch({
       cursor: state.cursor,
       released: clock.released,
       inFlight: false,
-      originKnown: true,
+      originKnown: state.originKnown,
     })) break;
-    const before = state.cursor;
     try {
       await sendAdvance({ expectedRevision: state.revision, op: 'prefetch' });
     } catch (err) {
@@ -433,15 +496,6 @@ async function catchUpPrefetch() {
         continue;
       }
       throw err;
-    }
-    if (!state.originKnown && state.cursor - before < 20) {
-      const anchored = anchorOriginMs({ nowMs: Date.now() + state.clockOffsetMs, cursor: state.cursor });
-      if (anchored != null) {
-        state.originMs = anchored;
-        state.originKnown = true;
-        saveClock();
-      }
-      break;
     }
   }
 }
@@ -615,7 +669,7 @@ function enqueueFinish() {
       const view = settlementView(data);
       if (!view) {
         state.finishing = false;
-        state.settleBlocked = true;
+        finishNotBefore = Date.now() + 200;
         return;
       }
       if (Number.isInteger(data.revision)) state.revision = data.revision;
@@ -625,22 +679,13 @@ function enqueueFinish() {
       stopRaf();
     } catch (err) {
       state.finishing = false;
-      if (err.code === 'SUBMISSION_CONFLICT') {
+      if (classifyFinishFailure(err) === 'latch') {
         state.settleBlocked = true;
-        showToast('动作与服务端记录不一致，未公布成绩', 'error');
-        return;
-      }
-      if (err.code === 'TAPE_NOT_FINISHED') {
-        finishNotBefore = Date.now() + 200;
-        return;
-      }
-      if (isLoginFailure(err)) {
-        finishNotBefore = Date.now() + 1000;
         handleBackgroundError(err);
         return;
       }
-      state.settleBlocked = true;
-      handleBackgroundError(err);
+      finishNotBefore = Date.now() + (isLoginFailure(err) ? 1000 : 200);
+      if (isLoginFailure(err)) handleBackgroundError(err);
     }
   });
 }
@@ -653,16 +698,18 @@ function stopRaf() {
 function tick() {
   state.raf = requestAnimationFrame(tick);
   if (!state.live || state.settled) return;
+  const gate = playbackGate({ pauseKnown: state.pauseKnown, pausedAtMs: state.pausedAtMs });
   const clock = readClock();
   syncHud(clock);
   if (state.chart) paintChart(clock);
+  if (!gate.prefetchLoop && state.pausedAtMs == null) return;
   if (shouldPrefetch({
     cursor: state.cursor,
     released: clock.released,
     inFlight: state.prefetching,
     originKnown: state.originKnown,
   })) enqueuePrefetch();
-  if (clock.settleReady) enqueueFinish();
+  if (gate.finish && clock.settleReady) enqueueFinish();
 }
 
 function startRaf() {
@@ -724,9 +771,13 @@ function onAct(side) {
   if (!enabled || controls.barIndex == null || controls.prefetchOnly) return;
   const barIndex = controls.barIndex;
   enqueue(async () => {
-    const again = controlsFor(readClock());
-    const still = side === 'buy' ? again.buyEnabled : again.sellEnabled;
-    if (!still || again.barIndex !== barIndex) return;
+    if (!queuedActAllowed({
+      originMs: state.originMs,
+      nowMs: alignedNow(),
+      cursor: state.cursor,
+      barIndex,
+      acted: state.acted.has(barIndex),
+    })) return;
     try {
       await sendAdvance({
         expectedRevision: state.revision,

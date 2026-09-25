@@ -409,6 +409,9 @@ test("intraday flag on", async (t) => {
       pause: true,
     }, `nopause-pf-${auth.user.id}`);
     assert.equal(paused.status, 200, JSON.stringify(paused.json));
+    assert.equal(paused.json.data.pausedAtMs, origin + 500);
+    assert.equal(created.json.data.pausedAtMs, null);
+    assert.equal("symbol" in paused.json.data, false);
     const held = openDb().prepare(
       `SELECT revision, clock_origin_ms, paused_at_ms FROM intraday_sessions WHERE id = ?`
     ).get(sessionId);

@@ -243,6 +243,8 @@ function progressDto(fields) {
     phaseStartsAt: fields.phaseStartsAt,
     tapeClosed: fields.tapeClosed,
     settleReady: fields.settleReady,
+    // Practice freeze instant. Null means the clock is running. Not a future bar.
+    pausedAtMs: Number.isFinite(fields.pausedAtMs) ? fields.pausedAtMs : null,
   };
   if (fields.fillBar) dto.fillBar = fields.fillBar;
   return dto;
@@ -296,6 +298,7 @@ function dtoFromSession(db, session, nowMs, { bars, fillBar, cursor, revision, p
     phaseStartsAt: phaseStartsAtOf(session, challenge),
     tapeClosed: clock.tapeClosed,
     settleReady: clock.settleReady,
+    pausedAtMs: session.mode === "practice" ? session.paused_at_ms : null,
     fillBar,
   });
 }
@@ -802,6 +805,7 @@ export function createIntradaySession(userId, { mode, startMode, createKey } = {
           phaseStartsAt: phaseStartsAtOf(session, challengeRow),
           tapeClosed: clock.tapeClosed,
           settleReady: clock.settleReady,
+          pausedAtMs: null,
         }),
       };
     });
@@ -1012,6 +1016,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
               phaseStartsAt,
               tapeClosed: clock.tapeClosed,
               settleReady: clock.settleReady,
+              pausedAtMs: fresh.mode === "practice" ? pendingPaused : null,
             }),
           };
         }
@@ -1045,6 +1050,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
           phaseStartsAt,
           tapeClosed: clock.tapeClosed,
           settleReady: clock.settleReady,
+          pausedAtMs: fresh.mode === "practice" ? pendingPaused : null,
         });
         const info = db
           .prepare(
@@ -1148,6 +1154,7 @@ export function advanceIntradaySession(userId, sessionId, body, commandKey) {
         phaseStartsAt,
         tapeClosed: clock.tapeClosed,
         settleReady: clock.settleReady,
+        pausedAtMs: fresh.mode === "practice" ? pendingPaused : null,
         fillBar,
       });
       const info = db

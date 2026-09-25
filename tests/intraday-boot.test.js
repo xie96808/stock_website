@@ -13,6 +13,9 @@ import {
   commitPause,
   settlementView,
   tradeControls,
+  queuedActAllowed,
+  playbackGate,
+  classifyFinishFailure,
   formatReturnPpm,
 } from '../js/intraday.js';
 
@@ -65,7 +68,7 @@ test('playback stays on a 100ms clock when the buffer is behind', () => {
   assert.equal(shouldPrefetch({ cursor: 19, released: 40, inFlight: false, originKnown: true }), true);
   assert.equal(shouldPrefetch({ cursor: 40, released: 40, inFlight: false, originKnown: true }), false);
   assert.equal(shouldPrefetch({ cursor: 19, released: 40, inFlight: true, originKnown: true }), false);
-  const behind = tradeControls({
+  const behindInput = {
     cursor: 19,
     released: 40,
     originMs: 1_000,
@@ -76,10 +79,37 @@ test('playback stays on a 100ms clock when the buffer is behind', () => {
     limitDownFen: 1,
     closeFen: 100,
     settled: false,
-  });
-  assert.equal(behind.buyEnabled, false);
-  assert.equal(behind.sellEnabled, false);
+  };
+  // Bar 19's deadline is origin + 20*100 + 400. The clock has moved; the delivered bar stays open.
+  const behind = tradeControls(behindInput);
+  assert.equal(behind.buyEnabled, true);
+  assert.equal(behind.barIndex, 19);
   assert.equal(behind.prefetchOnly, true);
+  const slackOver = tradeControls({ ...behindInput, nowMs: 1_000 + 20 * 100 + 400 });
+  assert.equal(slackOver.buyEnabled, false);
+  assert.equal(slackOver.barIndex, null);
+  assert.equal(slackOver.prefetchOnly, true);
+  assert.equal(queuedActAllowed({
+    originMs: 1_000,
+    nowMs: 1_499,
+    cursor: 4,
+    barIndex: 0,
+    acted: false,
+  }), true);
+  assert.equal(queuedActAllowed({
+    originMs: 1_000,
+    nowMs: 1_499,
+    cursor: 0,
+    barIndex: 3,
+    acted: false,
+  }), false);
+  assert.equal(queuedActAllowed({
+    originMs: 1_000,
+    nowMs: 1_500,
+    cursor: 4,
+    barIndex: 0,
+    acted: false,
+  }), false);
 
   const delivered = {
     cursor: 0,
@@ -117,4 +147,31 @@ test('pause and score stay uncommitted when the server rejects them', () => {
   assert.equal(formatReturnPpm(12345), '+1.23%');
   const anchored = anchorOriginMs({ nowMs: 10_000, cursor: 0 });
   assert.equal(anchored, 10_000 - 99);
+
+  assert.deepEqual(playbackGate({ pauseKnown: false, pausedAtMs: null }), {
+    advanceClock: false,
+    prefetchLoop: false,
+    finish: false,
+  });
+  assert.deepEqual(playbackGate({ pauseKnown: true, pausedAtMs: 5_000 }), {
+    advanceClock: false,
+    prefetchLoop: false,
+    finish: false,
+  });
+  assert.deepEqual(playbackGate({ pauseKnown: true, pausedAtMs: null }), {
+    advanceClock: true,
+    prefetchLoop: true,
+    finish: true,
+  });
+  const frozenAnchor = anchorOriginMs({ nowMs: 5_000, cursor: 4 });
+  assert.equal(frozenAnchor, 5_000 - (4 * 100 + 99));
+
+  assert.equal(classifyFinishFailure({ code: 'SUBMISSION_CONFLICT', status: 409 }), 'latch');
+  assert.equal(classifyFinishFailure({ code: 'GAME_NOT_ACTIVE', status: 409 }), 'latch');
+  assert.equal(classifyFinishFailure({ code: 'INTERNAL', status: 500 }), 'retry');
+  assert.equal(classifyFinishFailure({ status: 503 }), 'retry');
+  assert.equal(classifyFinishFailure({ code: 'TAPE_NOT_FINISHED', status: 409 }), 'retry');
+  assert.equal(classifyFinishFailure(new TypeError('fetch failed')), 'retry');
+  assert.equal(settlementView({ code: 'SUBMISSION_CONFLICT', returnPpm: 10 }), null);
+  assert.equal(settlementView({ returnPpm: 10 }).returnPpm, 10);
 });
