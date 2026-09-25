@@ -218,7 +218,7 @@
                             </span>
                             <span class="cta cta-fill survival-mode-cta">开始生存模式</span>
                         </button>
-                        <button type="button" class="hub-board-link" id="intradayBoardBtn" hidden onclick="onIntradayBoardClick(event)">查看空仓榜</button>
+                        <button type="button" class="hub-board-link" id="intradayBoardBtn" hidden onclick="onIntradayBoardClick(event)">查看分时榜</button>
                         <button type="button" class="lane intraday-mode-lane" id="intradayModeCard" hidden onclick="onIntradayModeCardClick()">
                             <span class="mark">分</span>
                             <span class="copy">
@@ -228,6 +228,16 @@
                                 <p id="intradayModeCardState">加载中…</p>
                             </span>
                             <span class="cta cta-fill" id="intradayModeCardCta">进入正式局</span>
+                        </button>
+                        <button type="button" class="lane intraday-mode-lane" id="intradayLongModeCard" hidden onclick="onIntradayLongModeCardClick()">
+                            <span class="mark">持</span>
+                            <span class="copy">
+                                <small>正式 · 开盘已持有</small>
+                                <strong>分时操作<span class="jiu-price-badge jiu-price-paid" data-jiu-price="30" aria-label="消耗 30 韭币"></span></strong>
+                                <p id="intradayLongModeCardMeta">模拟 T+0 · 上海时间 21:05 同题 · 24.1 秒 · 每根 100ms · 没有名次奖励</p>
+                                <p id="intradayLongModeCardState">加载中…</p>
+                            </span>
+                            <span class="cta cta-fill" id="intradayLongModeCardCta">进入正式局</span>
                         </button>
                     </div>
 
@@ -298,7 +308,7 @@
             </div>
         </div>
 
-        <!-- 分时空仓榜（仅 flat；已持有榜不在本入口） -->
+        <!-- 分时双榜：空仓与已持有各一张表，不混排 -->
         <div class="jiu-coin-modal daily-challenge-board-modal" id="intradayBoardModal" hidden>
             <div class="jiu-coin-dialog daily-challenge-board-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayBoardTitle">
                 <button type="button" class="jiu-coin-close-x" onclick="hideIntradayBoard()" aria-label="关闭">×</button>
@@ -306,7 +316,40 @@
                     <div class="daily-challenge-board-head">
                         <strong id="intradayBoardTitle">分时空仓榜</strong>
                     </div>
-                    <div id="intradayBoardBody"></div>
+                    <div class="intraday-board-switch" role="tablist">
+                        <button type="button" id="intradayBoardFlatTab" role="tab" aria-selected="true">空仓榜</button>
+                        <button type="button" id="intradayBoardLongTab" role="tab" aria-selected="false">已持有榜</button>
+                    </div>
+                    <div class="intraday-board-pane" id="intradayBoardFlatPane"></div>
+                    <div class="intraday-board-pane" id="intradayBoardLongPane" hidden></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 正式局确认。正文默认是已持有档；空仓档由脚本换成 21:00 文案。 -->
+        <div class="jiu-coin-modal" id="intradayRankedConfirmModal" hidden>
+            <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayRankedConfirmTitle">
+                <button type="button" class="jiu-coin-close-x" id="intradayRankedConfirmCloseX" aria-label="关闭">×</button>
+                <h2 id="intradayRankedConfirmTitle">开始已持有正式局</h2>
+                <p class="jiu-coin-modal-body" id="intradayRankedConfirmBody">消耗 30 韭币，开盘已持有正式局每天一次。模拟 T+0 · 当日可回转 · 不是券商规则。开盘已持有：起点按开盘价记 0，收盘仍持仓按收盘价乘卖出费率结算，不是开盘到收盘再减一个固定 bps。每天 21:05（Asia/Shanghai）一段公共相位，画面 24.1 秒，每根 100ms。可提前 60 秒入场并预加载空图表。迟到未交付的分钟不能补。24.1 秒画面结束后，今天不能再开已持有正式局。没有名次奖励。</p>
+                <div class="jiu-coin-modal-actions">
+                    <button type="button" class="jiu-coin-secondary" id="intradayRankedConfirmCancel">取消</button>
+                    <button type="button" class="jiu-coin-primary" id="intradayRankedConfirmOk">消耗 30 韭币开始</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 练习开局：空仓或已持有。私人时钟，不进榜。 -->
+        <div class="jiu-coin-modal" id="intradayPracticeChoiceModal" hidden>
+            <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayPracticeChoiceTitle">
+                <button type="button" class="jiu-coin-close-x" id="intradayPracticeChoiceCloseX" aria-label="关闭">×</button>
+                <h2 id="intradayPracticeChoiceTitle">选择练习开局</h2>
+                <p class="jiu-coin-modal-body" id="intradayPracticeFlatCopy">消耗 10 韭币。起点是现金，不交易则结算为 0。练习使用私人时钟，可以暂停，不进榜。</p>
+                <p class="jiu-coin-modal-body" id="intradayPracticeLongCopy">消耗 10 韭币。开盘已持有：起点按开盘价记 0，收盘仍持仓按收盘价乘卖出费率结算，不是开盘到收盘再减一个固定 bps。练习使用私人时钟，可以暂停，不进榜。</p>
+                <div class="jiu-coin-modal-actions">
+                    <button type="button" class="jiu-coin-secondary" id="intradayPracticeChoiceCancel">取消</button>
+                    <button type="button" class="jiu-coin-secondary" id="intradayPracticeFlatBtn">开盘空仓</button>
+                    <button type="button" class="jiu-coin-primary" id="intradayPracticeLongBtn">开盘已持有</button>
                 </div>
             </div>
         </div>
@@ -1085,7 +1128,7 @@
         import { initFeedback } from './js/feedback.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
-        import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell, onIntradayModeCardClick, onIntradayBoardClick, hideIntradayBoard } from './js/home-ia.js';
+        import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell, onIntradayModeCardClick, onIntradayLongModeCardClick, onIntradayBoardClick, hideIntradayBoard } from './js/home-ia.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
@@ -1168,6 +1211,7 @@
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
         window.onGhostDuelStartClick = onGhostDuelStartClick;
         window.onIntradayModeCardClick = onIntradayModeCardClick;
+        window.onIntradayLongModeCardClick = onIntradayLongModeCardClick;
         window.onIntradayBoardClick = onIntradayBoardClick;
         window.hideIntradayBoard = hideIntradayBoard;
         window.startIntradayPractice = enterIntradayPractice;

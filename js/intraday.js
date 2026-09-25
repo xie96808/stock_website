@@ -1,5 +1,7 @@
 /**
- * Flat-open intraday playback (practice, or the 21:00 ranked phase).
+ * Intraday playback for flat or opening-long.
+ * Practice asks which start to use and keeps the private clock.
+ * Ranked flat follows the 21:00 phase; ranked long follows phaseStartsAt.long (21:05).
  * Loaded only by dynamic import. The rAF clock follows server time once;
  * it does not wait on HTTP and does not stretch the 100ms bar.
  * Ranked play uses the public phase only — never a private origin.
@@ -236,6 +238,11 @@ export function classifyFinishFailure(err) {
 
 export const RANKED_FLAT_JOIN_LEAD_MS = 60_000;
 export const RANKED_FLAT_TAPE_MS = 241 * 100;
+export const RANKED_LONG_TAPE_MS = RANKED_FLAT_TAPE_MS;
+
+/** Not "open-to-close minus a fixed number of bps". The close sell multiplies. */
+export const OPENING_LONG_MARK_COPY =
+  '开盘已持有：起点按开盘价记 0，收盘仍持仓按收盘价乘卖出费率结算，不是开盘到收盘再减一个固定 bps。';
 
 /** Shown before a flat ranked session is created. No rank-coin payout. */
 export const RANKED_FLAT_CONFIRM_TEXT =
@@ -244,26 +251,90 @@ export const RANKED_FLAT_CONFIRM_TEXT =
   + '可提前 60 秒入场并预加载空图表。迟到未交付的分钟不能补。'
   + '24.1 秒画面结束后，今天不能再开空仓正式局。没有名次奖励。';
 
+/** Public 21:05 phase. Same 24.1s tape. Late minutes stay closed. */
+export const RANKED_LONG_CONFIRM_TEXT =
+  '消耗 30 韭币，开盘已持有正式局每天一次。模拟 T+0 · 当日可回转 · 不是券商规则。'
+  + OPENING_LONG_MARK_COPY
+  + '每天 21:05（Asia/Shanghai）一段公共相位，画面 24.1 秒，每根 100ms。'
+  + '可提前 60 秒入场并预加载空图表。迟到未交付的分钟不能补。'
+  + '24.1 秒画面结束后，今天不能再开已持有正式局。没有名次奖励。';
+
+export function openingConfirmText(startMode) {
+  return startMode === 'long' ? RANKED_LONG_CONFIRM_TEXT : RANKED_FLAT_CONFIRM_TEXT;
+}
+
+/** Practice only. Ranked long is the 21:05 phase, not this chooser. */
+export function practiceOpeningChoice(startMode) {
+  if (startMode === 'long') {
+    return {
+      startMode: 'long',
+      label: '开盘已持有',
+      detail: `消耗 10 韭币。${OPENING_LONG_MARK_COPY}练习使用私人时钟，可以暂停，不进榜。`,
+    };
+  }
+  return {
+    startMode: 'flat',
+    label: '开盘空仓',
+    detail: '消耗 10 韭币。起点是现金，不交易则结算为 0。练习使用私人时钟，可以暂停，不进榜。',
+  };
+}
+
+/** 盯市 while the tape is open. 结算 after finish, including a close sell fee when still long. */
+export function hudReturnLabel({ settled, markReturnPpm, returnPpm } = {}) {
+  if (settled === true) return `结算（含收盘卖出费用） ${formatReturnPpm(returnPpm)}`;
+  return `盯市 ${formatReturnPpm(markReturnPpm)}`;
+}
+
 /**
- * Flat ranked entry window is [phaseStartsAt - 60s, phaseStartsAt + 24.1s).
- * A miss does not become a private clock. `long` is not a choice here.
+ * Ranked origin is the server phase for that startMode (flat or long).
+ * Practice with no phase uses the same private serverNowMs clock as flat practice.
+ * A ranked session never falls back to that private clock.
  */
-export function rankedFlatGate(status, nowMs) {
-  if (!status || status.ready !== true || !status.phaseStartsAt || !status.phaseStartsAt.flat) {
+export function sessionOriginPlan({ mode, phaseStartsAt, serverNowMs } = {}) {
+  const phaseMs = typeof phaseStartsAt === 'string' ? Date.parse(phaseStartsAt) : NaN;
+  if (mode === 'ranked') {
+    const known = Number.isFinite(phaseMs);
+    return { originMs: known ? phaseMs : null, originKnown: known, privateClock: false };
+  }
+  if (Number.isFinite(phaseMs)) {
+    return { originMs: phaseMs, originKnown: true, privateClock: false };
+  }
+  const known = Number.isFinite(serverNowMs);
+  return { originMs: known ? serverNowMs : null, originKnown: known, privateClock: true };
+}
+
+/**
+ * Entry window is [phaseStartsAt - 60s, phaseStartsAt + 24.1s) for that startMode.
+ * Flat reads phaseStartsAt.flat. Long reads phaseStartsAt.long. Neither invents a clock.
+ */
+function rankedPhaseGate(status, nowMs, startMode) {
+  const mode = startMode === 'long' ? 'long' : 'flat';
+  const label = mode === 'long' ? '已持有' : '空仓';
+  if (!status || status.ready !== true || !status.phaseStartsAt || !status.phaseStartsAt[mode]) {
     return { ok: false, message: (status && status.message) || '分时题库准备中' };
   }
-  const phaseMs = Date.parse(status.phaseStartsAt.flat);
+  const phaseMs = Date.parse(status.phaseStartsAt[mode]);
   if (!Number.isFinite(phaseMs)) return { ok: false, message: '分时题库准备中' };
   const now = Number.isFinite(nowMs) ? nowMs : status.serverNowMs;
   if (!Number.isFinite(now)) return { ok: false, message: '无法对齐公共相位' };
-  if (status.remainingChance && status.remainingChance.flat === 0) {
-    return { ok: false, message: '今日空仓机会已用完' };
+  if (status.remainingChance && status.remainingChance[mode] === 0) {
+    return { ok: false, message: mode === 'long' ? '今日已持有机会已用完' : '今日空仓机会已用完' };
   }
   const openMs = phaseMs - RANKED_FLAT_JOIN_LEAD_MS;
   const closedMs = phaseMs + RANKED_FLAT_TAPE_MS;
-  if (now < openMs) return { ok: false, message: '空仓相位尚未开放' };
-  if (now >= closedMs) return { ok: false, message: '今日空仓正式局已结束' };
-  return { ok: true, phaseMs, openMs, closedMs };
+  if (now < openMs) return { ok: false, message: `${label}相位尚未开放` };
+  if (now >= closedMs) {
+    return { ok: false, message: mode === 'long' ? '今日已持有正式局已结束' : '今日空仓正式局已结束' };
+  }
+  return { ok: true, phaseMs, openMs, closedMs, startMode: mode };
+}
+
+export function rankedFlatGate(status, nowMs) {
+  return rankedPhaseGate(status, nowMs, 'flat');
+}
+
+export function rankedLongGate(status, nowMs) {
+  return rankedPhaseGate(status, nowMs, 'long');
 }
 
 function newKey() {
@@ -487,13 +558,20 @@ function loadClock(sessionId) {
 function adoptCreate(data) {
   applyProgress(data);
   sampleClockOnce(data.serverNowMs);
+  const plan = sessionOriginPlan({
+    mode: state.mode,
+    phaseStartsAt: data ? data.phaseStartsAt : null,
+    serverNowMs: data ? data.serverNowMs : null,
+  });
+  // Ranked (flat or long) always takes the public phase. Practice takes the
+  // private server clock only when that plan says so — same path for both starts.
   if (state.mode === 'ranked') {
-    // Public phase only. Missing phaseStartsAt must not become a private origin.
+    state.originMs = plan.originMs;
+    state.originKnown = plan.originKnown;
     state.pausedAtMs = null;
     state.pauseKnown = true;
-    if (!data.phaseStartsAt) state.originKnown = false;
-  } else if (!data.phaseStartsAt && Number.isFinite(data.serverNowMs)) {
-    state.originMs = data.serverNowMs;
+  } else if (plan.privateClock && plan.originKnown) {
+    state.originMs = plan.originMs;
     state.originKnown = true;
     state.pausedAtMs = null;
     state.pauseKnown = true;
@@ -685,7 +763,7 @@ function syncHud(clock) {
   if (posEl) posEl.textContent = state.position === 'long' ? '持仓' : '空仓';
   const markEl = document.getElementById('intradayMark');
   if (markEl) {
-    markEl.textContent = `盯市 ${formatReturnPpm(state.markReturnPpm)}`;
+    markEl.textContent = hudReturnLabel({ settled: false, markReturnPpm: state.markReturnPpm });
     markEl.classList.remove('is-up', 'is-down', 'is-flat');
     markEl.classList.add(tone(state.markReturnPpm));
   }
@@ -716,12 +794,12 @@ function paintSettlement(view) {
   if (panel) panel.hidden = false;
   const ret = document.getElementById('intradaySettleReturn');
   if (ret) {
-    ret.textContent = `结算（含收盘卖出费用） ${formatReturnPpm(view.returnPpm)}`;
+    ret.textContent = hudReturnLabel({ settled: true, returnPpm: view.returnPpm });
     ret.classList.remove('is-up', 'is-down', 'is-flat');
     ret.classList.add(tone(view.returnPpm));
   }
   const mark = document.getElementById('intradaySettleMark');
-  if (mark) mark.textContent = `盯市 ${formatReturnPpm(state.markReturnPpm)}`;
+  if (mark) mark.textContent = hudReturnLabel({ settled: false, markReturnPpm: state.markReturnPpm });
   const meta = document.getElementById('intradaySettleMeta');
   if (meta) {
     const trades = Number.isInteger(view.tradeCount) ? view.tradeCount : 0;
@@ -940,16 +1018,20 @@ async function bootChart() {
 }
 
 let rankedConfirmResolver = null;
+let rankedConfirmBound = false;
+let practiceChoiceResolver = null;
+let practiceChoiceBound = false;
+let practiceChoosing = false;
 
 function ensureRankedConfirmModal() {
   if (typeof document === 'undefined') return null;
-  const existing = document.getElementById('intradayRankedConfirmModal');
-  if (existing) return existing;
-  const wrap = document.createElement('div');
-  wrap.id = 'intradayRankedConfirmModal';
-  wrap.className = 'jiu-coin-modal';
-  wrap.hidden = true;
-  wrap.innerHTML = `
+  let wrap = document.getElementById('intradayRankedConfirmModal');
+  if (!wrap) {
+    wrap = document.createElement('div');
+    wrap.id = 'intradayRankedConfirmModal';
+    wrap.className = 'jiu-coin-modal';
+    wrap.hidden = true;
+    wrap.innerHTML = `
     <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayRankedConfirmTitle">
       <button type="button" class="jiu-coin-close-x" id="intradayRankedConfirmCloseX" aria-label="关闭">×</button>
       <h2 id="intradayRankedConfirmTitle">开始空仓正式局</h2>
@@ -959,14 +1041,18 @@ function ensureRankedConfirmModal() {
         <button type="button" class="jiu-coin-primary" id="intradayRankedConfirmOk">消耗 30 韭币开始</button>
       </div>
     </div>`;
-  document.body.appendChild(wrap);
-  const close = () => resolveRankedConfirm(false);
-  document.getElementById('intradayRankedConfirmCancel')?.addEventListener('click', close);
-  document.getElementById('intradayRankedConfirmCloseX')?.addEventListener('click', close);
-  document.getElementById('intradayRankedConfirmOk')?.addEventListener('click', () => resolveRankedConfirm(true));
-  wrap.addEventListener('click', (e) => {
-    if (e.target === wrap) close();
-  });
+    document.body.appendChild(wrap);
+  }
+  if (!rankedConfirmBound) {
+    rankedConfirmBound = true;
+    const close = () => resolveRankedConfirm(false);
+    document.getElementById('intradayRankedConfirmCancel')?.addEventListener('click', close);
+    document.getElementById('intradayRankedConfirmCloseX')?.addEventListener('click', close);
+    document.getElementById('intradayRankedConfirmOk')?.addEventListener('click', () => resolveRankedConfirm(true));
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap) close();
+    });
+  }
   return wrap;
 }
 
@@ -981,12 +1067,17 @@ function resolveRankedConfirm(ok) {
   resolve(ok);
 }
 
-function askRankedFlatConfirm() {
+function askRankedConfirm(startMode) {
+  const long = startMode === 'long';
   const modal = ensureRankedConfirmModal();
   const body = typeof document !== 'undefined'
     ? document.getElementById('intradayRankedConfirmBody')
     : null;
-  if (body) body.textContent = RANKED_FLAT_CONFIRM_TEXT;
+  const title = typeof document !== 'undefined'
+    ? document.getElementById('intradayRankedConfirmTitle')
+    : null;
+  if (title) title.textContent = long ? '开始已持有正式局' : '开始空仓正式局';
+  if (body) body.textContent = openingConfirmText(long ? 'long' : 'flat');
   return new Promise((resolve) => {
     rankedConfirmResolver = resolve;
     if (!modal) {
@@ -995,6 +1086,75 @@ function askRankedFlatConfirm() {
     }
     modal.hidden = false;
     document.getElementById('intradayRankedConfirmOk')?.focus();
+  });
+}
+
+function resolvePracticeChoice(startMode) {
+  const modal = typeof document !== 'undefined'
+    ? document.getElementById('intradayPracticeChoiceModal')
+    : null;
+  if (modal) modal.hidden = true;
+  if (!practiceChoiceResolver) return;
+  const resolve = practiceChoiceResolver;
+  practiceChoiceResolver = null;
+  resolve(startMode === 'long' || startMode === 'flat' ? startMode : null);
+}
+
+function ensurePracticeChoiceModal() {
+  if (typeof document === 'undefined') return null;
+  let wrap = document.getElementById('intradayPracticeChoiceModal');
+  if (!wrap) {
+    const longCopy = practiceOpeningChoice('long').detail;
+    const flatCopy = practiceOpeningChoice('flat').detail;
+    wrap = document.createElement('div');
+    wrap.id = 'intradayPracticeChoiceModal';
+    wrap.className = 'jiu-coin-modal';
+    wrap.hidden = true;
+    wrap.innerHTML = `
+    <div class="jiu-coin-dialog" role="dialog" aria-modal="true" aria-labelledby="intradayPracticeChoiceTitle">
+      <button type="button" class="jiu-coin-close-x" id="intradayPracticeChoiceCloseX" aria-label="关闭">×</button>
+      <h2 id="intradayPracticeChoiceTitle">选择练习开局</h2>
+      <p class="jiu-coin-modal-body" id="intradayPracticeFlatCopy"></p>
+      <p class="jiu-coin-modal-body" id="intradayPracticeLongCopy"></p>
+      <div class="jiu-coin-modal-actions">
+        <button type="button" class="jiu-coin-secondary" id="intradayPracticeChoiceCancel">取消</button>
+        <button type="button" class="jiu-coin-secondary" id="intradayPracticeFlatBtn">开盘空仓</button>
+        <button type="button" class="jiu-coin-primary" id="intradayPracticeLongBtn">开盘已持有</button>
+      </div>
+    </div>`;
+    document.body.appendChild(wrap);
+    const flatEl = document.getElementById('intradayPracticeFlatCopy');
+    const longEl = document.getElementById('intradayPracticeLongCopy');
+    if (flatEl) flatEl.textContent = flatCopy;
+    if (longEl) longEl.textContent = longCopy;
+  }
+  if (!practiceChoiceBound) {
+    practiceChoiceBound = true;
+    document.getElementById('intradayPracticeChoiceCancel')?.addEventListener('click', () => resolvePracticeChoice(null));
+    document.getElementById('intradayPracticeChoiceCloseX')?.addEventListener('click', () => resolvePracticeChoice(null));
+    document.getElementById('intradayPracticeFlatBtn')?.addEventListener('click', () => resolvePracticeChoice('flat'));
+    document.getElementById('intradayPracticeLongBtn')?.addEventListener('click', () => resolvePracticeChoice('long'));
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap) resolvePracticeChoice(null);
+    });
+  }
+  const longEl = document.getElementById('intradayPracticeLongCopy');
+  if (longEl && !longEl.textContent) longEl.textContent = practiceOpeningChoice('long').detail;
+  const flatEl = document.getElementById('intradayPracticeFlatCopy');
+  if (flatEl && !flatEl.textContent) flatEl.textContent = practiceOpeningChoice('flat').detail;
+  return wrap;
+}
+
+function askPracticeStartMode() {
+  const modal = ensurePracticeChoiceModal();
+  return new Promise((resolve) => {
+    practiceChoiceResolver = resolve;
+    if (!modal) {
+      resolve(null);
+      return;
+    }
+    modal.hidden = false;
+    document.getElementById('intradayPracticeFlatBtn')?.focus();
   });
 }
 
@@ -1012,8 +1172,9 @@ async function backToPlayModes() {
   showPlayModes();
 }
 
-async function openFlatSession(mode) {
+async function openSession(mode, startMode) {
   if (mode !== 'practice' && mode !== 'ranked') return;
+  if (startMode !== 'flat' && startMode !== 'long') return;
   if (state.starting) return;
   if (state.live && !state.settled) return;
   state.starting = true;
@@ -1036,7 +1197,7 @@ async function openFlatSession(mode) {
     try {
       data = await apiSend('/intraday/sessions', {
         method: 'POST',
-        body: { mode, startMode: 'flat' },
+        body: { mode, startMode },
         key: createKey,
       });
     } catch (err) {
@@ -1049,7 +1210,8 @@ async function openFlatSession(mode) {
         return;
       }
       if (err.code === 'PHASE_NOT_OPEN' || err.code === 'PHASE_CLOSED' || err.code === 'INTRADAY_CHANCE_USED') {
-        showToast(err.message || '现在不能开空仓正式局', 'error');
+        const which = startMode === 'long' ? '已持有' : '空仓';
+        showToast(err.message || `现在不能开${which}正式局`, 'error');
         await backToPlayModes();
         return;
       }
@@ -1077,12 +1239,29 @@ async function openFlatSession(mode) {
   }
 }
 
-export async function startIntradayPractice() {
-  return openFlatSession('practice');
+/** No startMode: ask flat or long. An explicit mode skips the chooser. */
+export async function startIntradayPractice(startMode) {
+  if (state.starting || practiceChoosing || (state.live && !state.settled)) return;
+  const chosen = startMode === 'flat' || startMode === 'long'
+    ? startMode
+    : await (async () => {
+      practiceChoosing = true;
+      try {
+        return await askPracticeStartMode();
+      } finally {
+        practiceChoosing = false;
+      }
+    })();
+  if (chosen !== 'flat' && chosen !== 'long') {
+    const screen = typeof document !== 'undefined' ? document.getElementById('intradayScreen') : null;
+    if (screen && !screen.hidden) await leaveScreen();
+    return;
+  }
+  await openSession('practice', chosen);
 }
 
-/** Flat ranked only. Confirms the public 21:00 phase, then preloads an empty chart inside the join window. */
-export async function startIntradayRankedFlat() {
+async function startRanked(startMode) {
+  if (startMode !== 'flat' && startMode !== 'long') return;
   if (state.starting || (state.live && !state.settled)) return;
   if (!(await ensureLoggedIn())) return;
   let status;
@@ -1100,14 +1279,26 @@ export async function startIntradayRankedFlat() {
     await resumeIntradaySession(status.activeSession.sessionId);
     return;
   }
-  const gate = rankedFlatGate(status, status.serverNowMs);
+  const gate = startMode === 'long'
+    ? rankedLongGate(status, status.serverNowMs)
+    : rankedFlatGate(status, status.serverNowMs);
   if (!gate.ok) {
     showToast(gate.message, 'error');
     return;
   }
-  const accepted = await askRankedFlatConfirm();
+  const accepted = await askRankedConfirm(startMode);
   if (!accepted) return;
-  await openFlatSession('ranked');
+  await openSession('ranked', startMode);
+}
+
+/** Confirms the public 21:00 phase, then preloads an empty chart inside the join window. */
+export async function startIntradayRankedFlat() {
+  await startRanked('flat');
+}
+
+/** Confirms the public 21:05 phase. Does not start a private clock. */
+export async function startIntradayRankedLong() {
+  await startRanked('long');
 }
 
 export async function resumeIntradaySession(sessionId) {
@@ -1152,9 +1343,15 @@ export async function resumeIntradaySession(sessionId) {
       state.originKnown = Number.isFinite(state.originMs);
     }
     if (session.mode === 'ranked') {
+      const plan = sessionOriginPlan({
+        mode: 'ranked',
+        phaseStartsAt: session.phaseStartsAt,
+        serverNowMs: session.serverNowMs,
+      });
+      state.originMs = plan.originMs;
+      state.originKnown = plan.originKnown;
       state.pausedAtMs = null;
       state.pauseKnown = true;
-      if (!session.phaseStartsAt) state.originKnown = false;
     }
     try {
       await bootChart();

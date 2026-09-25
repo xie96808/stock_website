@@ -84,11 +84,12 @@ async function refreshSurvivalModeCard() {
   card.hidden = !on;
 }
 
-/** Public flat phase. Not a private replay clock. */
+/** Public phases. Not a private replay clock. Long is 21:05, flat stays 21:00. */
 const FLAT_JOIN_LEAD_MS = 60_000;
 const FLAT_TAPE_MS = 241 * 100;
 const FLAT_PHASE_PERIOD_MS = 24 * 60 * 60 * 1000;
 const FLAT_CARD_META = "模拟 T+0 · 上海时间 21:00 同题 · 24.1 秒 · 没有名次奖励";
+const LONG_CARD_META = "模拟 T+0 · 上海时间 21:05 同题 · 24.1 秒 · 每根 100ms · 没有名次奖励";
 
 let intradayHubStatus = null;
 let intradayHubOffsetMs = 0;
@@ -100,6 +101,10 @@ function intradayCardEl() {
   return document.getElementById("intradayModeCard");
 }
 
+function intradayLongCardEl() {
+  return document.getElementById("intradayLongModeCard");
+}
+
 function intradayBoardBtnEl() {
   return document.getElementById("intradayBoardBtn");
 }
@@ -107,6 +112,8 @@ function intradayBoardBtnEl() {
 function hideIntradayHub() {
   const card = intradayCardEl();
   if (card) card.hidden = true;
+  const longCard = intradayLongCardEl();
+  if (longCard) longCard.hidden = true;
   const btn = intradayBoardBtnEl();
   if (btn) btn.hidden = true;
   stopIntradayCardTimer();
@@ -129,33 +136,33 @@ function formatCountdown(ms) {
   return `${pad(m)}:${pad(sec)}`;
 }
 
-/**
- * Card copy from GET /api/v1/intraday `ready` and flat `phaseStartsAt`.
- * Outside the 21:00 phase the state line is a countdown. `long` is not offered.
- */
-export function describeFlatRankedCard(status, nowMs) {
-  const base = { meta: FLAT_CARD_META, disabled: true, cta: "稍后再来", state: "分时题库准备中" };
+function describeRankedPhaseCard(status, nowMs, startMode) {
+  const long = startMode === "long";
+  const meta = long ? LONG_CARD_META : FLAT_CARD_META;
+  const clock = long ? "21:05" : "21:00";
+  const chanceLabel = long ? "已持有" : "空仓";
+  const base = { meta, disabled: true, cta: "稍后再来", state: "分时题库准备中" };
   if (!status || status.ready !== true) {
     return { ...base, state: status?.message || "分时题库准备中" };
   }
-  const phaseMs = Date.parse(status.phaseStartsAt?.flat || "");
+  const phaseMs = Date.parse(status.phaseStartsAt?.[startMode] || "");
   if (!Number.isFinite(phaseMs)) return base;
   if (status.activeSession?.sessionId) {
     return { ...base, disabled: false, cta: "继续分时", state: "进行中 · 可继续（不扣币）" };
   }
   const openMs = phaseMs - FLAT_JOIN_LEAD_MS;
   const closedMs = phaseMs + FLAT_TAPE_MS;
-  const chanceUsed = status.remainingChance?.flat === 0;
+  const chanceUsed = status.remainingChance?.[startMode] === 0;
   if (chanceUsed) {
-    return { ...base, cta: "今日已用", state: "今日空仓机会已用完" };
+    return { ...base, cta: "今日已用", state: `今日${chanceLabel}机会已用完` };
   }
   if (!Number.isFinite(nowMs) || nowMs < openMs) {
     const left = Number.isFinite(nowMs) ? formatCountdown(phaseMs - nowMs) : "—";
-    return { ...base, cta: "未到相位", state: `距离 21:00 还有 ${left}` };
+    return { ...base, cta: "未到相位", state: `距离 ${clock} 还有 ${left}` };
   }
   if (nowMs >= closedMs) {
     const left = formatCountdown(phaseMs + FLAT_PHASE_PERIOD_MS - nowMs);
-    return { ...base, cta: "明日再来", state: `今日空仓正式局已结束 · 距离下一场 21:00 还有 ${left}` };
+    return { ...base, cta: "明日再来", state: `今日${chanceLabel}正式局已结束 · 距离下一场 ${clock} 还有 ${left}` };
   }
   if (nowMs < phaseMs) {
     return {
@@ -174,6 +181,19 @@ export function describeFlatRankedCard(status, nowMs) {
 }
 
 /**
+ * Card copy from GET /api/v1/intraday `ready` and flat `phaseStartsAt`.
+ * Outside the 21:00 phase the state line is a countdown.
+ */
+export function describeFlatRankedCard(status, nowMs) {
+  return describeRankedPhaseCard(status, nowMs, "flat");
+}
+
+/** Opening-long card. Uses phaseStartsAt.long (21:05), not the flat phase. */
+export function describeLongRankedCard(status, nowMs) {
+  return describeRankedPhaseCard(status, nowMs, "long");
+}
+
+/**
  * A cached phase stays closed until the next day's join lead.
  * Repainting that snapshot would leave the card disabled through the new 60s window.
  */
@@ -183,14 +203,18 @@ export function shouldRefetchFlatRankedStatus(status, nowMs) {
   return nowMs >= phaseMs + FLAT_PHASE_PERIOD_MS - FLAT_JOIN_LEAD_MS;
 }
 
-function paintIntradayHubCard() {
-  const card = intradayCardEl();
+/** Same join lead, measured from phaseStartsAt.long so a stale long phase does not stay closed. */
+export function shouldRefetchLongRankedStatus(status, nowMs) {
+  const phaseMs = Date.parse(status?.phaseStartsAt?.long || "");
+  if (!Number.isFinite(phaseMs) || !Number.isFinite(nowMs)) return false;
+  return nowMs >= phaseMs + FLAT_PHASE_PERIOD_MS - FLAT_JOIN_LEAD_MS;
+}
+
+function paintRankedLane(card, model) {
   if (!card || card.hidden) return;
-  const nowMs = Date.now() + intradayHubOffsetMs;
-  const model = describeFlatRankedCard(intradayHubStatus, nowMs);
-  const meta = document.getElementById("intradayModeCardMeta");
-  const stateEl = document.getElementById("intradayModeCardState");
-  const cta = document.getElementById("intradayModeCardCta");
+  const meta = card.querySelector("[id$='ModeCardMeta']");
+  const stateEl = card.querySelector("[id$='ModeCardState']");
+  const cta = card.querySelector("[id$='ModeCardCta']");
   if (meta) meta.textContent = model.meta;
   if (stateEl) stateEl.textContent = model.state;
   if (cta) cta.textContent = model.cta;
@@ -205,15 +229,22 @@ function paintIntradayHubCard() {
   }
 }
 
+function paintIntradayHubCard() {
+  const nowMs = Date.now() + intradayHubOffsetMs;
+  paintRankedLane(intradayCardEl(), describeFlatRankedCard(intradayHubStatus, nowMs));
+  paintRankedLane(intradayLongCardEl(), describeLongRankedCard(intradayHubStatus, nowMs));
+}
+
 function paintIntradayHubError() {
-  const card = intradayCardEl();
-  if (!card) return;
-  card.hidden = false;
-  card.classList.remove("is-disabled");
-  const stateEl = document.getElementById("intradayModeCardState");
-  const cta = document.getElementById("intradayModeCardCta");
-  if (stateEl) stateEl.textContent = "状态加载失败，点此重试";
-  if (cta) cta.textContent = "重试";
+  for (const card of [intradayCardEl(), intradayLongCardEl()]) {
+    if (!card) continue;
+    card.hidden = false;
+    card.classList.remove("is-disabled");
+    const stateEl = card.querySelector("[id$='ModeCardState']");
+    const cta = card.querySelector("[id$='ModeCardCta']");
+    if (stateEl) stateEl.textContent = "状态加载失败，点此重试";
+    if (cta) cta.textContent = "重试";
+  }
 }
 
 async function refetchIntradayHubStatus() {
@@ -246,7 +277,10 @@ function startIntradayCardTimer() {
       return;
     }
     const nowMs = Date.now() + intradayHubOffsetMs;
-    if (shouldRefetchFlatRankedStatus(intradayHubStatus, nowMs)) {
+    if (
+      shouldRefetchFlatRankedStatus(intradayHubStatus, nowMs)
+      || shouldRefetchLongRankedStatus(intradayHubStatus, nowMs)
+    ) {
       void refetchIntradayHubStatus();
       return;
     }
@@ -292,6 +326,8 @@ export async function refreshIntradayModeCard() {
   const modes = playModesEl();
   if (!modes || modes.hidden) return;
   card.hidden = false;
+  const longCard = intradayLongCardEl();
+  if (longCard) longCard.hidden = false;
   const boardBtn = intradayBoardBtnEl();
   if (boardBtn) boardBtn.hidden = false;
   try {
@@ -312,12 +348,19 @@ export async function refreshIntradayModeCard() {
   startIntradayCardTimer();
 }
 
-/** Player module stays off the home graph until the card is clicked. */
+/** Player module stays off the home graph until a card is clicked. */
 export async function onIntradayModeCardClick() {
   const card = intradayCardEl();
   if (!card || card.hidden || card.classList.contains("is-disabled")) return;
   const { startIntradayRankedFlat } = await import("./intraday.js");
   await startIntradayRankedFlat();
+}
+
+export async function onIntradayLongModeCardClick() {
+  const card = intradayLongCardEl();
+  if (!card || card.hidden || card.classList.contains("is-disabled")) return;
+  const { startIntradayRankedLong } = await import("./intraday.js");
+  await startIntradayRankedLong();
 }
 
 function intradayBoardModalEl() {
@@ -350,6 +393,86 @@ function ensureIntradayBoardDismiss() {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && modal && !modal.hidden) hideIntradayBoard();
   });
+  document.getElementById("intradayBoardFlatTab")?.addEventListener("click", () => {
+    showIntradayBoardPane("flat");
+  });
+  document.getElementById("intradayBoardLongTab")?.addEventListener("click", () => {
+    showIntradayBoardPane("long");
+  });
+}
+
+let intradayBoardShown = "flat";
+
+function intradayBoardPane(startMode) {
+  const id = startMode === "long" ? "intradayBoardLongPane" : "intradayBoardFlatPane";
+  return document.getElementById(id);
+}
+
+function showIntradayBoardPane(startMode) {
+  intradayBoardShown = startMode === "long" ? "long" : "flat";
+  const flat = intradayBoardPane("flat");
+  const long = intradayBoardPane("long");
+  if (flat) flat.hidden = intradayBoardShown !== "flat";
+  if (long) long.hidden = intradayBoardShown !== "long";
+  const flatTab = document.getElementById("intradayBoardFlatTab");
+  const longTab = document.getElementById("intradayBoardLongTab");
+  if (flatTab) flatTab.setAttribute("aria-selected", intradayBoardShown === "flat" ? "true" : "false");
+  if (longTab) longTab.setAttribute("aria-selected", intradayBoardShown === "long" ? "true" : "false");
+  const title = document.getElementById("intradayBoardTitle");
+  if (title) title.textContent = intradayBoardShown === "long" ? "分时已持有榜" : "分时空仓榜";
+}
+
+async function fetchIntradayBoard(startMode) {
+  const mode = startMode === "long" ? "long" : "flat";
+  try {
+    const res = await fetch(`/api/v1/intraday/leaderboard?startMode=${mode}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, message: json?.error?.message || "榜单加载失败" };
+    return { ok: true, data: json.data || {} };
+  } catch (err) {
+    return { ok: false, message: err.message || "榜单加载失败" };
+  }
+}
+
+/** One startMode, one table. Callers pass flat and long separately. */
+export function renderIntradayBoardPane(data, label) {
+  if (!data || data.ready !== true) {
+    return `<p>${escapeHtml((data && data.message) || "分时题库准备中")}</p>`;
+  }
+  const symbol = data.pastCutoff && data.entries?.[0]?.symbol
+    ? ` · ${escapeHtml(data.entries[0].symbol)}`
+    : "";
+  const heading = `${escapeHtml(label)}${data.date ? ` · ${escapeHtml(data.date)}` : ""}${symbol}`;
+  if (!data.entries?.length) {
+    return `<p class="intraday-board-heading">${heading}</p><p>暂无上榜成绩（参与 ${Number(data.total) || 0}）· 没有名次奖励</p>`;
+  }
+  const rows = data.entries.map((e) => `<tr>
+      <td>${escapeHtml(e.rank)}</td>
+      <td>${escapeHtml(e.nickname || "玩家")}</td>
+      <td>${escapeHtml(e.returnPct)}%</td>
+      <td>${escapeHtml(e.tradeCount)}</td>
+    </tr>`).join("");
+  return `
+    <p class="intraday-board-heading">${heading}</p>
+    <p class="daily-challenge-board-meta">上榜 ${Number(data.total) || 0} 人 · 收益率↓ · 成交笔数↑ · 没有名次奖励</p>
+    <table class="daily-challenge-table">
+      <thead><tr><th>名次</th><th>昵称</th><th>收益</th><th>成交</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function paintIntradayBoardResult(startMode, result) {
+  const pane = intradayBoardPane(startMode);
+  if (!pane) return;
+  const label = startMode === "long" ? "分时已持有榜" : "分时空仓榜";
+  if (!result || result.ok === false) {
+    pane.innerHTML = `<p>${escapeHtml((result && result.message) || "加载失败")}</p>`;
+    return;
+  }
+  pane.innerHTML = renderIntradayBoardPane(result.data, label);
 }
 
 export async function showIntradayBoard() {
@@ -358,49 +481,17 @@ export async function showIntradayBoard() {
   if (!modal) return;
   modal.hidden = false;
   modal.setAttribute("aria-hidden", "false");
-  const body = document.getElementById("intradayBoardBody");
-  const title = document.getElementById("intradayBoardTitle");
-  if (body) body.innerHTML = '<p class="daily-challenge-board-loading">加载中…</p>';
-  try {
-    const res = await fetch("/api/v1/intraday/leaderboard?startMode=flat", {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.error?.message || "榜单加载失败");
-    const data = json.data || {};
-    if (title) {
-      title.textContent = data.date ? `分时空仓榜 · ${data.date}` : "分时空仓榜";
-    }
-    if (!data.ready) {
-      if (body) body.innerHTML = `<p>${escapeHtml(data.message || "分时题库准备中")}</p>`;
-      return;
-    }
-    const symbol = data.pastCutoff && data.entries?.[0]?.symbol
-      ? ` · ${data.entries[0].symbol}`
-      : "";
-    if (title && data.date) title.textContent = `分时空仓榜 · ${data.date}${symbol}`;
-    if (!data.entries?.length) {
-      if (body) body.innerHTML = `<p>暂无上榜成绩（参与 ${Number(data.total) || 0}）· 没有名次奖励</p>`;
-      return;
-    }
-    const rows = data.entries.map((e) => `<tr>
-      <td>${escapeHtml(e.rank)}</td>
-      <td>${escapeHtml(e.nickname || "玩家")}</td>
-      <td>${escapeHtml(e.returnPct)}%</td>
-      <td>${escapeHtml(e.tradeCount)}</td>
-    </tr>`).join("");
-    if (body) {
-      body.innerHTML = `
-        <p class="daily-challenge-board-meta">上榜 ${Number(data.total) || 0} 人 · 收益率↓ · 成交笔数↑ · 没有名次奖励</p>
-        <table class="daily-challenge-table">
-          <thead><tr><th>名次</th><th>昵称</th><th>收益</th><th>成交</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>`;
-    }
-  } catch (err) {
-    if (body) body.innerHTML = `<p>${escapeHtml(err.message || "加载失败")}</p>`;
-  }
+  showIntradayBoardPane(intradayBoardShown || "flat");
+  const flatPane = intradayBoardPane("flat");
+  const longPane = intradayBoardPane("long");
+  if (flatPane) flatPane.innerHTML = '<p class="daily-challenge-board-loading">加载中…</p>';
+  if (longPane) longPane.innerHTML = '<p class="daily-challenge-board-loading">加载中…</p>';
+  const [flatResult, longResult] = await Promise.all([
+    fetchIntradayBoard("flat"),
+    fetchIntradayBoard("long"),
+  ]);
+  paintIntradayBoardResult("flat", flatResult);
+  paintIntradayBoardResult("long", longResult);
 }
 
 export function onIntradayBoardClick(ev) {
@@ -448,7 +539,7 @@ export function showSimHub(opts = {}) {
     .catch(() => {});
 }
 
-/** 三级玩法选择：今日挑战 / 经典 / 一把梭 / 生存 / 分时空仓（hash 仍为 sim） */
+/** 三级玩法选择：今日挑战 / 经典 / 一把梭 / 生存 / 分时空仓 / 分时已持有（hash 仍为 sim） */
 export function showPlayModes() {
   prepareScreen(Route.SIM);
   const home = document.getElementById("homeLanes");

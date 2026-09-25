@@ -199,7 +199,7 @@ export function revealIntradayScreen() {
   return el;
 }
 
-/** Practice flat open. Screen paints, then the player module loads. */
+/** Practice. Screen paints, then the player asks flat or opening-long. */
 export function enterIntradayPractice() {
   revealIntradayScreen();
   return import('./intraday.js').then((mod) => mod.startIntradayPractice());

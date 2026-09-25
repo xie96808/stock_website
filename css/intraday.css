@@ -203,3 +203,37 @@
 .start-screen .intraday-mode-lane[hidden] {
   display: none !important;
 }
+
+/* Second board lives in the modal, not in a lane. Hidden panes take no space. */
+#intradayBoardModal .intraday-board-switch {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+#intradayBoardModal .intraday-board-switch button {
+  font-family: var(--kaiti);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  padding: 6px 14px;
+  border: var(--border-ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+#intradayBoardModal .intraday-board-switch button[aria-selected="true"] {
+  background: var(--card);
+  box-shadow: var(--shadow-nudge);
+}
+
+#intradayBoardModal .intraday-board-pane[hidden] {
+  display: none !important;
+}
+
+#intradayBoardModal .intraday-board-heading {
+  margin: 0 0 8px;
+  font-family: var(--kaiti);
+  letter-spacing: 0.06em;
+}

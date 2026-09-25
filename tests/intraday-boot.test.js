@@ -19,6 +19,7 @@ import {
   resumeCatchUpAction,
   classifyFinishFailure,
   formatReturnPpm,
+  hudReturnLabel,
 } from '../js/intraday.js';
 
 const root = new URL('..', import.meta.url);
@@ -226,4 +227,15 @@ test('pause and score stay uncommitted when the server rejects them', () => {
   assert.equal(classifyFinishFailure(new TypeError('fetch failed')), 'retry');
   assert.equal(settlementView({ code: 'SUBMISSION_CONFLICT', returnPpm: 10 }), null);
   assert.equal(settlementView({ returnPpm: 10 }).returnPpm, 10);
+
+  assert.equal(hudReturnLabel({ settled: false, markReturnPpm: 0 }), '盯市 0.00%');
+  assert.equal(hudReturnLabel({ settled: true, returnPpm: -2500 }), '结算（含收盘卖出费用） -0.25%');
+  assert.equal(/^盯市 /.test(hudReturnLabel({ settled: false, markReturnPpm: 10 })), true);
+  assert.equal(/^结算（含收盘卖出费用） /.test(hudReturnLabel({ settled: true, returnPpm: 10 })), true);
+  const player = read('js/intraday.js');
+  const sync = player.slice(player.indexOf('function syncHud'), player.indexOf('function paintSettlement'));
+  const settle = player.slice(player.indexOf('function paintSettlement'), player.indexOf('function enqueueFinish'));
+  assert.match(sync, /hudReturnLabel\(\{ settled: false/);
+  assert.match(settle, /hudReturnLabel\(\{ settled: true/);
+  assert.match(settle, /hudReturnLabel\(\{ settled: false/);
 });
