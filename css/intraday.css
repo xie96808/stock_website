@@ -1,0 +1,186 @@
+/* 分时练习屏。选择器都挂在 #intradayScreen 下。 */
+
+#intradayScreen.intraday-screen {
+  display: none;
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+#intradayScreen.intraday-screen.active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px 32px;
+}
+
+#intradayScreen .intraday-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 16px;
+}
+
+#intradayScreen .intraday-back {
+  font-family: var(--kaiti);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: transparent;
+  border: var(--border-ink);
+  border-radius: 16px 20px 14px 18px;
+  padding: 6px 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-nudge);
+}
+
+#intradayScreen .intraday-title {
+  margin: 0;
+  font-family: var(--kaiti);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+#intradayScreen .intraday-rule {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+#intradayScreen .intraday-hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+  padding: 10px 12px;
+  background: var(--card);
+  border: var(--border-ink);
+  border-radius: 18px 24px 16px 22px;
+  box-shadow: var(--shadow-nudge);
+  font-variant-numeric: tabular-nums;
+}
+
+#intradayScreen .intraday-chip {
+  font-family: var(--kaiti);
+  letter-spacing: 0.06em;
+}
+
+#intradayScreen .intraday-mark,
+#intradayScreen .intraday-price,
+#intradayScreen .intraday-vs {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+}
+
+#intradayScreen .is-up { color: var(--gain-color); }
+#intradayScreen .is-down { color: var(--loss-color); }
+#intradayScreen .is-flat { color: var(--ink-soft); }
+
+#intradayScreen .intraday-boot {
+  padding: 8px 12px 10px;
+  background: var(--card);
+  border: var(--border-ink);
+  border-radius: 16px 22px 14px 18px;
+}
+
+#intradayScreen .intraday-boot-bar {
+  height: 8px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#intradayScreen .intraday-boot-bar > span {
+  display: block;
+  height: 100%;
+  width: 25%;
+  background: var(--terra);
+}
+
+#intradayScreen .intraday-boot-text {
+  margin: 6px 0 0;
+  font-family: var(--kaiti);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+/* Reserved before ECharts arrives so the first frame does not jump. */
+#intradayScreen #intradayChart {
+  min-height: 320px;
+  width: 100%;
+  background: var(--card);
+  border: var(--border-ink);
+  border-radius: 18px 24px 16px 22px;
+  box-shadow: var(--shadow-nudge);
+}
+
+#intradayScreen .intraday-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+}
+
+#intradayScreen .intraday-btn {
+  font-family: var(--kaiti);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  padding: 12px 16px;
+  border: var(--border-ink);
+  cursor: pointer;
+}
+
+#intradayScreen .intraday-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+#intradayScreen .intraday-buy {
+  color: #f3ead8;
+  background: var(--gain-color);
+  border-radius: 22px 16px 24px 18px;
+  box-shadow: var(--shadow-nudge);
+}
+
+#intradayScreen .intraday-sell {
+  color: #f3ead8;
+  background: var(--loss-color);
+  border-radius: 18px 24px 16px 22px;
+  box-shadow: 1px 1px 0 var(--line);
+}
+
+#intradayScreen .intraday-pause {
+  color: var(--ink);
+  background: transparent;
+  letter-spacing: 0.12em;
+  border-radius: 16px 22px 18px 24px;
+}
+
+#intradayScreen .intraday-settle {
+  padding: 14px 16px;
+  background: var(--card);
+  border: var(--border-ink);
+  border-radius: 18px 24px 16px 22px;
+  box-shadow: var(--shadow-nudge);
+}
+
+#intradayScreen .intraday-settle h3 {
+  margin: 0 0 8px;
+  font-family: var(--kaiti);
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+}
+
+#intradayScreen .intraday-settle p {
+  margin: 4px 0;
+  font-family: var(--mono);
+}
+
+@media (max-width: 720px) {
+  #intradayScreen .intraday-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  #intradayScreen .intraday-pause {
+    grid-column: 1 / -1;
+  }
+}

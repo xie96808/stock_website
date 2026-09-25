@@ -8,6 +8,7 @@ import {
   activateScreen,
   deactivateScreen,
   setHeaderChrome,
+  continueOrAbandonIntraday,
 } from './screen-router.js';
 import { formatLevelGoalLines } from './puzzle-goals-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
@@ -471,6 +472,11 @@ async function startPuzzleLevel(levelKey, { afterAbandon = false, entryFee = nul
     if (res.status === 409 && json?.error?.code === 'ACTIVE_GAME_EXISTS') {
       const active = json?.error?.details?.game;
       const activeId = json?.error?.details?.gameId || active?.gameId;
+      if (json?.error?.details?.kind === 'intraday' && json?.error?.details?.sessionId && !active) {
+        await continueOrAbandonIntraday(json.error.details.sessionId);
+        if (body) restoreLevelListUi(body);
+        return;
+      }
       if (afterAbandon) {
         showToast('放弃后仍有进行中的对局，请稍后重试', 'error');
         restoreLevelListUi(body);

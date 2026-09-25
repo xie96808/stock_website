@@ -3,6 +3,7 @@
  * Flag: features.ghostDuel (GHOST_DUEL_ENABLED). Default off → entry hidden.
  */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
+import { continueOrAbandonIntraday } from './screen-router.js';
 import { abandonActiveCloudGame, loadCloudGameDraft } from './game-sync.js';
 import { mustAwaitPackBeforeEnter } from './game-window-seed.js';
 import {
@@ -247,6 +248,10 @@ export async function onGhostDuelStartClick(opts = {}) {
   } catch (e) {
     if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.game) {
       await handleActiveConflict(e.details.game, opts);
+      return;
+    }
+    if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.kind === 'intraday' && e.details.sessionId && !e.details?.game) {
+      await continueOrAbandonIntraday(e.details.sessionId);
       return;
     }
     showToast(e.message || '开局失败', 'error');

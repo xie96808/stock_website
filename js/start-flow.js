@@ -22,6 +22,7 @@ import {
   scheduleDeferredPrefetch,
 } from './pack-store.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
+import { continueOrAbandonIntraday } from './screen-router.js';
 
 function perfEnabled() {
   try {
@@ -295,6 +296,12 @@ export function attachDeferredStart(startGame, gameState) {
           cloud = await cloudPromise;
         } catch (e) {
           if (e && e.code === 'ACTIVE_GAME_EXISTS') {
+            if (!(e.details && e.details.game) && e.details && e.details.kind === 'intraday' && e.details.sessionId) {
+              await continueOrAbandonIntraday(e.details.sessionId);
+              const handoff = new Error('已转分时对局');
+              handoff.code = 'INTRADAY_HANDOFF';
+              throw handoff;
+            }
             let active = e.details && e.details.game ? e.details.game : null;
             if (!active || !active.gameId) {
               active = await fetchActiveCloudGame();
@@ -395,6 +402,10 @@ export function attachDeferredStart(startGame, gameState) {
       .catch(function (err) {
         if (err && err.code === 'USER_CANCELLED') {
           showChooseView();
+          return;
+        }
+        if (err && err.code === 'INTRADAY_HANDOFF') {
+          closeModal();
           return;
         }
         console.error(err);

@@ -1,5 +1,6 @@
 /** F01 每日同题挑战 — hub card + confirm + start/resume/leaderboard */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
+import { continueOrAbandonIntraday } from './screen-router.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 import {
   abandonActiveCloudGame,
@@ -435,6 +436,10 @@ export async function onDailyChallengeCardClick() {
   } catch (e) {
     if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.game) {
       await handleActiveConflict(e.details.game);
+      return;
+    }
+    if (e.code === 'ACTIVE_GAME_EXISTS' && e.details?.kind === 'intraday' && e.details.sessionId && !e.details?.game) {
+      await continueOrAbandonIntraday(e.details.sessionId);
       return;
     }
     if (e.code === 'INSUFFICIENT_FUNDS') {

@@ -391,6 +391,41 @@
             </div>
         </section>
 
+        <!-- Intraday practice. Hidden until Route.INTRADAY; no #playModes card in this pass. -->
+        <section class="intraday-screen" id="intradayScreen" hidden aria-hidden="true">
+            <div class="intraday-head">
+                <button type="button" class="intraday-back" id="intradayBackBtn">← 返回</button>
+                <h2 class="intraday-title">分时操作</h2>
+                <p class="intraday-rule">模拟 T+0 · 当日可回转 · 不是券商规则</p>
+            </div>
+            <div class="intraday-hud">
+                <span class="intraday-chip" id="intradayModeChip">练习 · 开盘空仓</span>
+                <span class="intraday-chip" id="intradayPositionChip">空仓</span>
+                <span class="intraday-mark is-flat" id="intradayMark">盯市 0.00%</span>
+                <span class="intraday-price" id="intradayPrice">—</span>
+                <span class="intraday-vs is-flat" id="intradayVsPrev">相对昨收 —</span>
+            </div>
+            <div class="intraday-boot" id="intradayBoot">
+                <div class="intraday-boot-bar" id="intradayBootBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="25">
+                    <span id="intradayBootFill"></span>
+                </div>
+                <p class="intraday-boot-text" id="intradayBootText">加载模块</p>
+            </div>
+            <div id="intradayChart"></div>
+            <div class="intraday-actions">
+                <button type="button" class="intraday-btn intraday-buy" id="intradayBuyBtn" disabled>买入</button>
+                <button type="button" class="intraday-btn intraday-sell" id="intradaySellBtn" disabled>卖出</button>
+                <button type="button" class="intraday-btn intraday-pause" id="intradayPauseBtn">暂停</button>
+            </div>
+            <div class="intraday-settle" id="intradaySettle" hidden>
+                <h3>结算（含收盘卖出费用）</h3>
+                <p id="intradaySettleReturn"></p>
+                <p id="intradaySettleMark"></p>
+                <p id="intradaySettleMeta"></p>
+                <p id="intradaySettleIdentity" hidden></p>
+            </div>
+        </section>
+
         <!-- Game Screen -->
         <section class="game-screen" id="gameScreen">
 
@@ -1012,6 +1047,7 @@
             registerHashRoute,
             initAppHashRouting,
             parseRouteHash,
+            enterIntradayPractice,
         } from './js/screen-router.js';
         import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
         import { closePuzzleSettleModal, returnToPuzzleListFromSettleModal } from './js/puzzle-settle-modal.js';
@@ -1107,6 +1143,7 @@
         window.showDailyChallengeBoard = showDailyChallengeBoard;
         window.hideDailyChallengeBoard = hideDailyChallengeBoard;
         window.onGhostDuelStartClick = onGhostDuelStartClick;
+        window.startIntradayPractice = enterIntradayPractice;
         window.startClassicPractice = function () {
           if (typeof window.startGame === 'function') window.startGame();
         };

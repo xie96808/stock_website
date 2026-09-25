@@ -12,6 +12,7 @@ export const Route = {
   PUZZLE: "puzzle",
   GAME: "game",
   RESULT: "result",
+  INTRADAY: "intraday",
 };
 
 /** Hash fragment (no #/) → route. Unknown hashes are ignored. */
@@ -40,6 +41,7 @@ const ROUTE_TO_HASH = {
 const ACTIVE_SCREEN_IDS = {
   [Route.GAME]: "gameScreen",
   [Route.RESULT]: "resultScreen",
+  [Route.INTRADAY]: "intradayScreen",
   [Route.ACADEMY]: "academyScreen",
   [Route.HINDSIGHT]: "hindsightScreen",
   [Route.LEADERBOARD]: "leaderboardScreen",
@@ -150,6 +152,7 @@ export function prepareScreen(route) {
     case Route.PUZZLE:
     case Route.GAME:
     case Route.RESULT:
+    case Route.INTRADAY:
       hideTopLevelScreens(route);
       setHeaderChrome("compact");
       {
@@ -173,6 +176,56 @@ export function activateScreen(route) {
     el.style.display = "block";
   }
   return el;
+}
+
+/**
+ * First frame of 分时: visible shell, reserved chart, boot copy already in the DOM.
+ * Call this before import('./intraday.js') so the module download is not a blank wait.
+ */
+export function revealIntradayScreen() {
+  prepareScreen(Route.INTRADAY);
+  const el = activateScreen(Route.INTRADAY);
+  if (!el) return null;
+  el.hidden = false;
+  el.setAttribute('aria-hidden', 'false');
+  const boot = document.getElementById('intradayBoot');
+  if (boot) boot.hidden = false;
+  const text = document.getElementById('intradayBootText');
+  if (text) text.textContent = '加载模块';
+  const fill = document.getElementById('intradayBootFill');
+  if (fill) fill.style.width = '25%';
+  const bar = document.getElementById('intradayBootBar');
+  if (bar) bar.setAttribute('aria-valuenow', '25');
+  return el;
+}
+
+/** Practice flat open. Screen paints, then the player module loads. */
+export function enterIntradayPractice() {
+  revealIntradayScreen();
+  return import('./intraday.js').then((mod) => mod.startIntradayPractice());
+}
+
+/**
+ * Active intraday session blocks other starts. Continue opens this screen;
+ * abandon hits the intraday route, never GET /api/v1/games/:id.
+ * If details.game is present, callers keep the existing game path instead.
+ */
+export async function continueOrAbandonIntraday(sessionId) {
+  if (!sessionId) return 'cancel';
+  const cont = window.confirm(
+    '已有进行中的分时对局。\n\n确定：继续原局\n取消：可再选是否放弃'
+  );
+  if (cont) {
+    revealIntradayScreen();
+    const { resumeIntradaySession } = await import('./intraday.js');
+    await resumeIntradaySession(sessionId);
+    return 'continue';
+  }
+  const drop = window.confirm('要放弃当前分时对局吗？放弃不退韭币。');
+  if (!drop) return 'cancel';
+  const { abandonIntradaySession } = await import('./intraday.js');
+  await abandonIntradaySession(sessionId);
+  return 'abandon';
 }
 
 /** Deactivate one active-protocol screen without touching others. */
