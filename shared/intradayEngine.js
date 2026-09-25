@@ -43,10 +43,7 @@ function bookFrom(startMode, openFen) {
   return { cash: 0, sharesNum: NAV_SCALE, sharesDen: openFen, position: 'long' };
 }
 
-/**
- * Buy keeps commission only. Sell and close liquidation keep commission plus stamp.
- * `fees: false` zeros both so fee drag is the same walk with a switch, not a second engine.
- */
+/** Buy keeps commission only. Sell and close liquidation keep commission plus stamp. */
 function factors(fees) {
   const commission = fees ? COMMISSION_PPM : 0;
   const stamp = fees ? STAMP_PPM : 0;
@@ -88,22 +85,18 @@ function liquidate(book, fillFen, factor) {
   return 1;
 }
 
-/**
- * Ranked and practice share this clock. `intervalMs` is the caller's bar
- * length (production passes INTRADAY_RANKED_BAR_MS). Pause freezes `now`.
- */
+/** `pausedAtMs` replaces `nowMs`. `intervalMs` is the bar length. */
 export function playbackClock({ originMs, nowMs, intervalMs, barCount, pausedAtMs }) {
   const now = pausedAtMs != null ? pausedAtMs : nowMs;
   const elapsed = now - originMs;
   const raw = elapsed < 0 ? -1 : Math.floor(elapsed / intervalMs);
   const released = raw < 0 ? -1 : Math.min(barCount - 1, raw);
   const tapeClosed = raw >= barCount;
-  // Slack after the last reveal so a late fill is not settled away.
   const settleReady = elapsed >= barCount * intervalMs + INTRADAY_ACT_SLACK_MS;
   return { raw, released, tapeClosed, settleReady };
 }
 
-/** Fill on bar i must arrive strictly before this instant. Price is that bar's close. */
+/** Fill on bar i must arrive strictly before this instant. */
 export function actDeadlineMs(originMs, barIndex) {
   return originMs + (barIndex + 1) * INTRADAY_RANKED_BAR_MS + INTRADAY_ACT_SLACK_MS;
 }

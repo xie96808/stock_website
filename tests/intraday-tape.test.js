@@ -263,11 +263,12 @@ describe('canonical json and sha256', () => {
 describe('mini fixture', () => {
   it('accepts two handwritten sessions of 241 integer-fen bars', () => {
     const text = readFileSync(fixturePath, 'utf8');
-    const lines = text.split('\n').filter((line) => line.length > 0);
+    const lines = text.split(/\r?\n/).filter((line) => line.length > 0);
     assert.equal(lines.length, 2);
     const symbols = [];
     let sawHighClose = false;
-    for (const line of lines) {
+    for (const rawLine of lines) {
+      const line = rawLine.replace(/\r$/, '');
       const parsed = JSON.parse(line);
       const result = validateTape(parsed);
       assert.equal(result.ok, true, result.reason);
