@@ -125,6 +125,14 @@ export const config = {
   ghostDuelEnabled:
     process.env.GHOST_DUEL_ENABLED === "1" || process.env.GHOST_DUEL_ENABLED === "true",
   /**
+   * 分时操作. Default OFF.
+   * When false, /intraday create and board are 404. Existing sessions can still advance/finish.
+   * Classic / daily / ghost / puzzle creates do not read intraday_sessions.
+   * Set INTRADAY_MODE_ENABLED=1 only after the intraday client is deployed.
+   */
+  intradayModeEnabled:
+    process.env.INTRADAY_MODE_ENABLED === "1" || process.env.INTRADAY_MODE_ENABLED === "true",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {
@@ -137,6 +145,9 @@ export const config = {
     registerDayMs: envInt("RATE_REGISTER_DAY_MS", 24 * 60 * 60 * 1000),
     createGamePerUserMinute: envInt("RATE_CREATE_GAME_PER_USER_MINUTE", 10),
     createGamePerUserDay: envInt("RATE_CREATE_GAME_PER_USER_DAY", 100),
+    /** Separate from game:m / game:d so practice replays do not eat classic creates. */
+    intradayPerUserMinute: envInt("RATE_INTRADAY_PER_USER_MINUTE", 10),
+    intradayPerUserDay: envInt("RATE_INTRADAY_PER_USER_DAY", 40),
     createGameMinuteMs: envInt("RATE_CREATE_GAME_MINUTE_MS", 60 * 1000),
     createGameDayMs: envInt("RATE_CREATE_GAME_DAY_MS", 24 * 60 * 60 * 1000),
     /** User feedback: per user / IP per hour (support channel, default on). */

@@ -43,6 +43,8 @@ import {
   chapterTitle,
 } from "./puzzleLevels.js";
 import { deductGameCreateCost, getJiuCoinBalance } from "./jiuCoin.js";
+import { challengeNow } from "./dailyChallenge.js";
+import { findActiveEngagement } from "./activeEngagement.js";
 
 const ACTION_SET = new Set(PUZZLE_ACTIONS);
 
@@ -72,6 +74,15 @@ export function requirePuzzleChapterEnabled() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function gameConflictDetails(gameId, game) {
+  const details = { gameId, game: game || null };
+  if (config.intradayModeEnabled) {
+    details.kind = game?.gameKind || "puzzle";
+    details.sessionId = gameId;
+  }
+  return details;
 }
 
 function expireStaleActive(db, userId, now) {
@@ -495,7 +506,7 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
         status: 409,
         code: "ACTIVE_GAME_EXISTS",
         message: "已有进行中的云端对局，请先继续或明确放弃后再开残局",
-        details: { gameId: active.id, game: sessionPublicFromRow(active) },
+        details: gameConflictDetails(active.id, sessionPublicFromRow(active)),
       },
     };
   }
@@ -528,6 +539,15 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
         err.activeId = again.id;
         err.activeGame = sessionPublicFromRow(again);
         throw err;
+      }
+      if (config.intradayModeEnabled) {
+        const intra = findActiveEngagement(db, userId, challengeNow().toISOString());
+        if (intra) {
+          const err = new Error("ACTIVE_INTRADAY");
+          err.code = "ACTIVE_INTRADAY";
+          err.sessionId = intra.sessionId;
+          throw err;
+        }
       }
       // First attempt (no prior settled run on family): free.
       // Retry after settled: deduct PUZZLE_RETRY_FEE via game_create ledger (idempotent per game id).
@@ -572,13 +592,23 @@ export function startPuzzleEntry(userId, levelKey, { createKey: clientKey } = {}
     });
     tx();
   } catch (e) {
+    if (e.code === "ACTIVE_INTRADAY") {
+      return {
+        error: {
+          status: 409,
+          code: "ACTIVE_GAME_EXISTS",
+          message: "已有进行中的分时对局，请先完成或放弃",
+          details: { kind: "intraday", sessionId: e.sessionId },
+        },
+      };
+    }
     if (e.code === "ACTIVE_GAME_EXISTS") {
       return {
         error: {
           status: 409,
           code: "ACTIVE_GAME_EXISTS",
           message: "已有进行中的云端对局，请先继续或明确放弃后再开残局",
-          details: { gameId: e.activeId, game: e.activeGame || null },
+          details: gameConflictDetails(e.activeId, e.activeGame),
         },
       };
     }

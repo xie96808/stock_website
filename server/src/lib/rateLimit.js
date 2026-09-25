@@ -204,3 +204,34 @@ export function checkCreateGameLimits(userId) {
   }
   return { limited: false };
 }
+
+/** Intraday create: own buckets, not game:m / game:d. */
+export function checkIntradayCreateLimits(userId) {
+  const cfg = config.rateLimit;
+  const uid = String(userId);
+  const minute = consumeRateLimit(
+    `intraday:m:${uid}`,
+    cfg.intradayPerUserMinute,
+    cfg.createGameMinuteMs
+  );
+  if (!minute.ok) {
+    return {
+      limited: true,
+      retryAfterSec: minute.retryAfterSec,
+      message: "分时开局过于频繁，请稍后再试",
+    };
+  }
+  const day = consumeRateLimit(
+    `intraday:d:${uid}`,
+    cfg.intradayPerUserDay,
+    cfg.createGameDayMs
+  );
+  if (!day.ok) {
+    return {
+      limited: true,
+      retryAfterSec: day.retryAfterSec,
+      message: "今日分时开局次数已达上限，请明天再试",
+    };
+  }
+  return { limited: false };
+}

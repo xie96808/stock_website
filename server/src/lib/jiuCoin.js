@@ -8,6 +8,10 @@ export const JIU_COIN_GAME_CREATE_COST = 20;
 export const JIU_COIN_ONESHOT_CREATE_COST = 30;
 /** Survival (活过三十日) create cost — same as classic. */
 export const JIU_COIN_SURVIVAL_CREATE_COST = 20;
+/** Ranked intraday (分时正式局). One charge per startMode per day. */
+export const JIU_COIN_INTRADAY_RANKED_COST = 30;
+/** Practice intraday. User kept the recommended 10. */
+export const JIU_COIN_INTRADAY_PRACTICE_COST = 10;
 export const JIU_COIN_GAME_REWIND_COST = 50;
 export const JIU_COIN_DAILY_MIN = 50;
 export const JIU_COIN_DAILY_MAX = 200;
@@ -82,7 +86,7 @@ export function grantRegisterBonus(userId, db) {
  * Throws Error with .code = INSUFFICIENT_FUNDS when balance too low.
  * Idempotent per game id (unique partial index on game_create).
  */
-export function deductGameCreateCost(userId, gameId, db, cost) {
+export function deductGameCreateCost(userId, gameId, db, cost, meta = null) {
   const amount = Number(cost);
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("invalid game create cost");
@@ -113,6 +117,7 @@ export function deductGameCreateCost(userId, gameId, db, cost) {
     reason: "game_create",
     refType: "game",
     refId: String(gameId),
+    meta,
   });
   db.prepare(
     `UPDATE users SET jiu_coin_balance = ?, updated_at = datetime('now') WHERE id = ?`

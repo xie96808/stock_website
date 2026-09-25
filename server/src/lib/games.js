@@ -12,6 +12,7 @@ import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "..
 import { survivalModifiersJson } from "../../../shared/survival.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics, challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
+import { findActiveEngagement } from "./activeEngagement.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -141,6 +142,15 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
 
 export { resultDto };
 
+function gameConflictDetails(gameId, game) {
+  const details = { gameId, game: game || null };
+  if (config.intradayModeEnabled) {
+    details.kind = game?.gameKind || "classic";
+    details.sessionId = gameId;
+  }
+  return details;
+}
+
 function expireStaleActive(db, userId, now = nowIso()) {
   const stale = db
     .prepare(
@@ -265,6 +275,16 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
         err.activeGame = sessionPublic(active);
         throw err;
       }
+      // Flag off must not prepare this statement. Flag on is one extra read, still deferred.
+      if (config.intradayModeEnabled) {
+        const intra = findActiveEngagement(db, userId, now);
+        if (intra) {
+          const err = new Error("ACTIVE_INTRADAY");
+          err.code = "ACTIVE_INTRADAY";
+          err.sessionId = intra.sessionId;
+          throw err;
+        }
+      }
       const proto = config.protocolEventV1Enabled ? eventV1CreateColumns({ gameKind: kind }) : null;
       const modifiersJson =
         kind === GAME_KIND_ONESHOT
@@ -388,16 +408,23 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
         },
       };
     }
+    if (e.code === "ACTIVE_INTRADAY") {
+      return {
+        error: {
+          status: 409,
+          code: "ACTIVE_GAME_EXISTS",
+          message: "已有进行中的分时对局，请先完成或放弃",
+          details: { kind: "intraday", sessionId: e.sessionId },
+        },
+      };
+    }
     if (e.code === "ACTIVE_GAME_EXISTS") {
       return {
         error: {
           status: 409,
           code: "ACTIVE_GAME_EXISTS",
           message: "已有进行中的云端对局，请继续对局或重新开始",
-          details: {
-            gameId: e.activeId,
-            game: e.activeGame || null,
-          },
+          details: gameConflictDetails(e.activeId, e.activeGame),
         },
       };
     }

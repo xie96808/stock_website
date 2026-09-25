@@ -158,6 +158,7 @@ export function gamesConfigPayload() {
       oneshotMode: !!config.oneshotModeEnabled,
       survivalMode: !!config.survivalModeEnabled,
       ghostDuel: !!config.ghostDuelEnabled,
+      intradayMode: !!config.intradayModeEnabled,
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },

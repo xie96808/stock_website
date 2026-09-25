@@ -64,6 +64,8 @@ export async function startTestServer() {
   config.rateLimit.registerPerIpDay = 10_000;
   config.rateLimit.createGamePerUserMinute = 10_000;
   config.rateLimit.createGamePerUserDay = 10_000;
+  config.rateLimit.intradayPerUserMinute = 10_000;
+  config.rateLimit.intradayPerUserDay = 10_000;
   config.rateLimit.feedbackPerUserHour = 10_000;
   config.rateLimit.feedbackPerIpHour = 10_000;
   resetRateLimitBuckets();

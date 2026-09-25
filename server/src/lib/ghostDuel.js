@@ -24,6 +24,7 @@ import {
   ASSIST_LEGACY,
 } from "../../../shared/protocol.js";
 import { ghostModifiersJson, GHOST_LABEL } from "../../../shared/ghost.js";
+import { findActiveEngagement } from "./activeEngagement.js";
 import {
   resolveYesterdayGhostPool,
   resolveYesterdayGhost,
@@ -143,6 +144,17 @@ export function getGhostDuelPreview(userId = null) {
   return out;
 }
 
+function gameConflictDetails(gameId, game, { withGameId = true } = {}) {
+  const details = { game: game || null };
+  if (withGameId) details.gameId = gameId;
+  if (config.intradayModeEnabled) {
+    details.gameId = gameId || game?.gameId || null;
+    details.kind = game?.gameKind || "ghost";
+    details.sessionId = details.gameId;
+  }
+  return details;
+}
+
 function expireStaleActive(db, userId, nowIso) {
   db.prepare(
     `UPDATE game_sessions SET status = 'expired'
@@ -231,10 +243,7 @@ export function startGhostDuel(userId, { createKey: clientKey, ghostGameId } = {
         status: 409,
         code: "ACTIVE_GAME_EXISTS",
         message: "已有进行中的云端对局，请先继续或明确放弃后再挑战幽灵",
-        details: {
-          gameId: active.id,
-          game: sessionPublicFromRow(active),
-        },
+        details: gameConflictDetails(active.id, sessionPublicFromRow(active)),
       },
     };
   }
@@ -264,8 +273,18 @@ export function startGhostDuel(userId, { createKey: clientKey, ghostGameId } = {
       if (againActive) {
         const err = new Error("ACTIVE_GAME_EXISTS");
         err.code = "ACTIVE_GAME_EXISTS";
+        err.activeId = againActive.id;
         err.activeGame = sessionPublicFromRow(againActive);
         throw err;
+      }
+      if (config.intradayModeEnabled) {
+        const intra = findActiveEngagement(db, userId, nowIso);
+        if (intra) {
+          const err = new Error("ACTIVE_INTRADAY");
+          err.code = "ACTIVE_INTRADAY";
+          err.sessionId = intra.sessionId;
+          throw err;
+        }
       }
 
       db.prepare(
@@ -315,13 +334,23 @@ export function startGhostDuel(userId, { createKey: clientKey, ghostGameId } = {
         },
       };
     }
+    if (e.code === "ACTIVE_INTRADAY") {
+      return {
+        error: {
+          status: 409,
+          code: "ACTIVE_GAME_EXISTS",
+          message: "已有进行中的分时对局，请先完成或放弃",
+          details: { kind: "intraday", sessionId: e.sessionId },
+        },
+      };
+    }
     if (e.code === "ACTIVE_GAME_EXISTS") {
       return {
         error: {
           status: 409,
           code: "ACTIVE_GAME_EXISTS",
           message: "已有进行中的云端对局，请先继续或明确放弃后再挑战幽灵",
-          details: { game: e.activeGame || null },
+          details: gameConflictDetails(e.activeId, e.activeGame, { withGameId: false }),
         },
       };
     }
