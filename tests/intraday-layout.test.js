@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { describeFlatRankedCard } from '../js/home-ia.js';
+import { describeFlatRankedCard, shouldRefetchFlatRankedStatus } from '../js/home-ia.js';
 import {
   RANKED_FLAT_CONFIRM_TEXT,
   RANKED_FLAT_TAPE_MS,
@@ -120,4 +120,42 @@ test('hub card follows ready and the flat phase countdown', () => {
   assert.equal(rankedFlatGate({ ...status, remainingChance: { flat: 0, long: 1 } }, phase).ok, false);
   assert.match(describeFlatRankedCard(status, phase).meta, /没有名次奖励/);
   assert.match(describeFlatRankedCard(status, phase).meta, /模拟 T\+0/);
+});
+
+test('closed flat card refetches when the next join lead opens', () => {
+  const phase = Date.parse('2026-09-25T13:00:00.000Z');
+  const day = 24 * 60 * 60 * 1000;
+  const nextLead = phase + day - 60_000;
+  const status = {
+    ready: true,
+    phaseStartsAt: { flat: '2026-09-25T13:00:00.000Z', long: '2026-09-25T13:05:00.000Z' },
+    remainingChance: { flat: 0, long: 1 },
+    activeSession: null,
+  };
+  const closed = describeFlatRankedCard(status, phase + 24_100);
+  assert.equal(closed.disabled, true);
+  assert.equal(shouldRefetchFlatRankedStatus(status, phase + 24_100), false);
+  assert.equal(shouldRefetchFlatRankedStatus(status, nextLead - 1), false);
+  assert.equal(shouldRefetchFlatRankedStatus(status, nextLead), true);
+  assert.equal(shouldRefetchFlatRankedStatus({ ready: false, phaseStartsAt: null }, nextLead), false);
+
+  const nextPhase = phase + day;
+  const refreshed = {
+    ...status,
+    phaseStartsAt: {
+      flat: new Date(nextPhase).toISOString(),
+      long: new Date(nextPhase + 5 * 60 * 1000).toISOString(),
+    },
+    remainingChance: { flat: 1, long: 1 },
+  };
+  assert.equal(shouldRefetchFlatRankedStatus(refreshed, nextLead), false);
+  const open = describeFlatRankedCard(refreshed, nextLead);
+  assert.equal(open.disabled, false);
+  assert.equal(open.cta, '提前进入');
+
+  const home = read('js/home-ia.js');
+  const timer = home.slice(home.indexOf('function startIntradayCardTimer'), home.indexOf('async function fetchIntradayStatus'));
+  assert.match(timer, /shouldRefetchFlatRankedStatus/);
+  assert.match(timer, /refetchIntradayHubStatus/);
+  assert.match(home, /fetch\("\/api\/v1\/intraday"/);
 });

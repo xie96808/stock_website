@@ -87,11 +87,13 @@ async function refreshSurvivalModeCard() {
 /** Public flat phase. Not a private replay clock. */
 const FLAT_JOIN_LEAD_MS = 60_000;
 const FLAT_TAPE_MS = 241 * 100;
+const FLAT_PHASE_PERIOD_MS = 24 * 60 * 60 * 1000;
 const FLAT_CARD_META = "模拟 T+0 · 上海时间 21:00 同题 · 24.1 秒 · 没有名次奖励";
 
 let intradayHubStatus = null;
 let intradayHubOffsetMs = 0;
 let intradayCardTimer = 0;
+let intradayStatusRefresh = null;
 let intradayBoardWired = false;
 
 function intradayCardEl() {
@@ -152,7 +154,7 @@ export function describeFlatRankedCard(status, nowMs) {
     return { ...base, cta: "未到相位", state: `距离 21:00 还有 ${left}` };
   }
   if (nowMs >= closedMs) {
-    const left = formatCountdown(phaseMs + 24 * 60 * 60 * 1000 - nowMs);
+    const left = formatCountdown(phaseMs + FLAT_PHASE_PERIOD_MS - nowMs);
     return { ...base, cta: "明日再来", state: `今日空仓正式局已结束 · 距离下一场 21:00 还有 ${left}` };
   }
   if (nowMs < phaseMs) {
@@ -169,6 +171,16 @@ export function describeFlatRankedCard(status, nowMs) {
     cta: "进入正式局",
     state: "相位进行中 · 迟到的分钟不能补",
   };
+}
+
+/**
+ * A cached phase stays closed until the next day's join lead.
+ * Repainting that snapshot would leave the card disabled through the new 60s window.
+ */
+export function shouldRefetchFlatRankedStatus(status, nowMs) {
+  const phaseMs = Date.parse(status?.phaseStartsAt?.flat || "");
+  if (!Number.isFinite(phaseMs) || !Number.isFinite(nowMs)) return false;
+  return nowMs >= phaseMs + FLAT_PHASE_PERIOD_MS - FLAT_JOIN_LEAD_MS;
 }
 
 function paintIntradayHubCard() {
@@ -204,12 +216,38 @@ function paintIntradayHubError() {
   if (cta) cta.textContent = "重试";
 }
 
+async function refetchIntradayHubStatus() {
+  if (intradayStatusRefresh) return intradayStatusRefresh;
+  intradayStatusRefresh = (async () => {
+    try {
+      const status = await fetchIntradayStatus();
+      const modes = playModesEl();
+      if (!modes || modes.hidden) return;
+      intradayHubStatus = status;
+      if (Number.isFinite(status?.serverNowMs)) {
+        intradayHubOffsetMs = status.serverNowMs - Date.now();
+      }
+      paintIntradayHubCard();
+    } catch (err) {
+      if (err.status === 404 || err.code === "INTRADAY_DISABLED") hideIntradayHub();
+    } finally {
+      intradayStatusRefresh = null;
+    }
+  })();
+  return intradayStatusRefresh;
+}
+
 function startIntradayCardTimer() {
   stopIntradayCardTimer();
   intradayCardTimer = setInterval(() => {
     const modes = playModesEl();
     if (!modes || modes.hidden) {
       stopIntradayCardTimer();
+      return;
+    }
+    const nowMs = Date.now() + intradayHubOffsetMs;
+    if (shouldRefetchFlatRankedStatus(intradayHubStatus, nowMs)) {
+      void refetchIntradayHubStatus();
       return;
     }
     paintIntradayHubCard();
