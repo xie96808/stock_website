@@ -13,6 +13,10 @@ const DEFAULT_HISTORY = 30;
 let _pack = null;
 let _version = null;
 let _filePath = null;
+/** @type {string[]} */
+let _dateTable = [];
+/** @type {{ index: number, historyLength: number, minStart: number, maxStart: number }[] | null} */
+let _eligible = null;
 
 function resolveDatasetPath() {
   if (process.env.STOCKGAME_DATASET_PATH) {
@@ -23,12 +27,6 @@ function resolveDatasetPath() {
   throw new Error("stocks_data.json not found; set STOCKGAME_DATASET_PATH");
 }
 
-/** Content sha256 — same value as static `pack-meta.datasetSha` / versioned pack filename. */
-function sha256File(filePath) {
-  const buf = fs.readFileSync(filePath);
-  return crypto.createHash("sha256").update(buf).digest("hex");
-}
-
 function sha256Text(text) {
   return crypto.createHash("sha256").update(text, "utf8").digest("hex");
 }
@@ -36,6 +34,18 @@ function sha256Text(text) {
 function isValidBar(bar) {
   if (!bar || typeof bar !== "object") return false;
   const { open, high, low, close } = bar;
+  if (![open, high, low, close].every((v) => Number.isFinite(v) && v > 0)) return false;
+  if (high < Math.max(open, close) || low > Math.min(open, close)) return false;
+  if (high < low) return false;
+  return true;
+}
+
+/** Validate bar at index without allocating an object (same rules as isValidBar). */
+function isValidBarAt(stock, i) {
+  const open = stock.open[i];
+  const high = stock.high[i];
+  const low = stock.low[i];
+  const close = stock.close[i];
   if (![open, high, low, close].every((v) => Number.isFinite(v) && v > 0)) return false;
   if (high < Math.max(open, close) || low > Math.min(open, close)) return false;
   if (high < low) return false;
@@ -53,6 +63,134 @@ function normalizeBar(bar) {
   };
 }
 
+/**
+ * Plain OHLCV object at index — shape matches former `stock.kline[i]`.
+ * @param {{ n: number, dates: Int32Array, open: Float64Array, high: Float64Array, low: Float64Array, close: Float64Array, volume: Float64Array }} stock
+ * @param {number} i
+ */
+export function getBar(stock, i) {
+  // Property order matches stocks_data.json bars (open/close before high/low)
+  // so JSON.stringify of pack slices is byte-identical to the object-pack era.
+  return {
+    date: _dateTable[stock.dates[i]],
+    open: stock.open[i],
+    close: stock.close[i],
+    high: stock.high[i],
+    low: stock.low[i],
+    volume: stock.volume[i],
+  };
+}
+
+/** K-line length for a columnar stock. */
+export function getKlineLength(stock) {
+  return stock?.n ?? 0;
+}
+
+/**
+ * Slice [start, end) as array-of-objects (same shape as former `kline.slice`).
+ * @param {object} stock
+ * @param {number} start
+ * @param {number} end
+ */
+export function sliceBars(stock, start, end) {
+  const n = stock.n;
+  const s = Math.max(0, start | 0);
+  const e = Math.min(n, end | 0);
+  const out = [];
+  for (let i = s; i < e; i++) out.push(getBar(stock, i));
+  return out;
+}
+
+/**
+ * Convert parsed JSON pack (array of {code,name,py,jp,kline:[{date,open,...}]})
+ * into columnar stocks. Uses Float64 for all numerics so JSON serialization of
+ * emitted numbers stays bit/string-identical to the object-pack era.
+ * Dates are interned into a shared string table + Int32Array indices.
+ */
+function toColumnarPack(parsed) {
+  /** @type {Map<string, number>} */
+  const dateIndex = new Map();
+  /** @type {string[]} */
+  const dateTable = [];
+
+  function internDate(d) {
+    const key = String(d || "");
+    let idx = dateIndex.get(key);
+    if (idx !== undefined) return idx;
+    idx = dateTable.length;
+    dateTable.push(key);
+    dateIndex.set(key, idx);
+    return idx;
+  }
+
+  const pack = new Array(parsed.length);
+  for (let si = 0; si < parsed.length; si++) {
+    const s = parsed[si];
+    const kline = Array.isArray(s?.kline) ? s.kline : [];
+    const n = kline.length;
+    const dates = new Int32Array(n);
+    const open = new Float64Array(n);
+    const high = new Float64Array(n);
+    const low = new Float64Array(n);
+    const close = new Float64Array(n);
+    const volume = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const b = kline[i] || {};
+      dates[i] = internDate(b.date);
+      open[i] = Number(b.open);
+      high[i] = Number(b.high);
+      low[i] = Number(b.low);
+      close[i] = Number(b.close);
+      volume[i] = b.volume != null ? Number(b.volume) : 0;
+    }
+    pack[si] = {
+      code: s.code,
+      name: s.name,
+      py: s.py,
+      jp: s.jp,
+      n,
+      dates,
+      open,
+      high,
+      low,
+      close,
+      volume,
+    };
+    // Drop object kline ASAP so peak RSS does not hold both representations.
+    parsed[si] = null;
+  }
+  return { pack, dateTable };
+}
+
+function buildEligible(pack) {
+  const eligible = [];
+  for (let i = 0; i < pack.length; i++) {
+    const stock = pack[i];
+    const n = stock?.n ?? 0;
+    if (n < GAME_DAYS) continue;
+    const historyLength = Math.min(DEFAULT_HISTORY, n - GAME_DAYS);
+    const minStart = historyLength;
+    const maxStart = n - GAME_DAYS; // inclusive
+    if (maxStart < minStart) continue;
+    let ok = false;
+    for (let s = minStart; s <= maxStart; s++) {
+      let windowOk = true;
+      for (let d = 0; d < GAME_DAYS; d++) {
+        if (!isValidBarAt(stock, s + d)) {
+          windowOk = false;
+          break;
+        }
+      }
+      if (windowOk) {
+        ok = true;
+        break;
+      }
+    }
+    if (ok) eligible.push({ index: i, historyLength, minStart, maxStart });
+  }
+  return eligible;
+}
+
 export function getDatasetMeta() {
   ensureDatasetLoaded();
   return {
@@ -66,13 +204,21 @@ export function getDatasetMeta() {
 export function ensureDatasetLoaded() {
   if (_pack && _version) return { pack: _pack, version: _version, filePath: _filePath };
   const filePath = resolveDatasetPath();
-  const raw = fs.readFileSync(filePath, "utf8");
-  const version = sha256File(filePath);
-  const parsed = JSON.parse(raw);
+  // Single read: hash file bytes, then parse from the same buffer.
+  let buf = fs.readFileSync(filePath);
+  const version = crypto.createHash("sha256").update(buf).digest("hex");
+  const parsed = JSON.parse(buf.toString("utf8"));
+  buf = null; // drop file bytes before columnar conversion
   if (!Array.isArray(parsed) || parsed.length === 0) {
     throw new Error("dataset pack empty or invalid");
   }
-  _pack = parsed;
+  const { pack, dateTable } = toColumnarPack(parsed);
+  // Release object-graph refs as soon as columnar pack is ready (toColumnarPack
+  // already nulls per-stock kline; clear the array shell too).
+  parsed.length = 0;
+  _pack = pack;
+  _dateTable = dateTable;
+  _eligible = buildEligible(pack);
   _version = version;
   _filePath = filePath;
 
@@ -81,18 +227,17 @@ export function ensureDatasetLoaded() {
   if (!existing) {
     let dateMin = null;
     let dateMax = null;
-    for (const s of parsed) {
-      const k = s.kline;
-      if (!Array.isArray(k) || !k.length) continue;
-      const a = k[0]?.date;
-      const b = k[k.length - 1]?.date;
+    for (const s of pack) {
+      if (!s.n) continue;
+      const a = _dateTable[s.dates[0]];
+      const b = _dateTable[s.dates[s.n - 1]];
       if (a && (!dateMin || a < dateMin)) dateMin = a;
       if (b && (!dateMax || b > dateMax)) dateMax = b;
     }
     db.prepare(
       `INSERT OR IGNORE INTO datasets (version, file_path, sha256, stock_count, date_min, date_max, active)
        VALUES (?, ?, ?, ?, ?, ?, 1)`
-    ).run(version, filePath, version, parsed.length, dateMin, dateMax);
+    ).run(version, filePath, version, pack.length, dateMin, dateMax);
   }
   return { pack: _pack, version: _version, filePath: _filePath };
 }
@@ -102,6 +247,8 @@ export function resetDatasetCache() {
   _pack = null;
   _version = null;
   _filePath = null;
+  _dateTable = [];
+  _eligible = null;
 }
 
 /**
@@ -112,27 +259,8 @@ export function pickRandomWindow(opts = {}) {
   const { pack, version } = ensureDatasetLoaded();
   const rng = typeof opts.rng === "function" ? opts.rng : Math.random;
 
-  const eligible = [];
-  for (let i = 0; i < pack.length; i++) {
-    const stock = pack[i];
-    const kline = stock?.kline;
-    if (!Array.isArray(kline) || kline.length < GAME_DAYS) continue;
-    const historyLength = Math.min(DEFAULT_HISTORY, kline.length - GAME_DAYS);
-    const minStart = historyLength;
-    const maxStart = kline.length - GAME_DAYS; // inclusive
-    if (maxStart < minStart) continue;
-    // Validate at least one window's game bars
-    let ok = false;
-    for (let s = minStart; s <= maxStart; s++) {
-      const slice = kline.slice(s, s + GAME_DAYS);
-      if (slice.length === GAME_DAYS && slice.every(isValidBar)) {
-        ok = true;
-        break;
-      }
-    }
-    if (ok) eligible.push({ index: i, historyLength, minStart, maxStart });
-  }
-  if (!eligible.length) throw new Error("no eligible stocks in dataset");
+  const eligible = _eligible;
+  if (!eligible?.length) throw new Error("no eligible stocks in dataset");
 
   let chosen;
   if (Number.isInteger(opts.stockIndex)) {
@@ -156,10 +284,8 @@ export function pickRandomWindow(opts = {}) {
 
   const historyLength =
     Number.isInteger(opts.historyLength) ? opts.historyLength : chosen.historyLength;
-  const historyBars = stock.kline
-    .slice(windowStart - historyLength, windowStart)
-    .map(normalizeBar);
-  const gameBars = stock.kline.slice(windowStart, windowStart + GAME_DAYS).map(normalizeBar);
+  const historyBars = sliceBars(stock, windowStart - historyLength, windowStart).map(normalizeBar);
+  const gameBars = sliceBars(stock, windowStart, windowStart + GAME_DAYS).map(normalizeBar);
   if (gameBars.length !== GAME_DAYS || !gameBars.every(isValidBar)) {
     throw new Error("picked window has invalid OHLC");
   }
@@ -228,18 +354,18 @@ export function pickPuzzleWindow(opts = {}) {
   }
 
   const stock = pack[stockIndex];
-  const kline = stock?.kline;
-  if (!Array.isArray(kline)) throw new Error("pickPuzzleWindow: stock has no kline");
+  const n = stock?.n ?? 0;
+  if (!n) throw new Error("pickPuzzleWindow: stock has no kline");
 
   const minStart = historyLength;
-  const maxStart = kline.length - gameDays;
+  const maxStart = n - gameDays;
   if (maxStart < minStart) throw new Error("pickPuzzleWindow: series too short");
   if (windowStart < minStart || windowStart > maxStart) {
     throw new Error("pickPuzzleWindow: windowStartIndex out of range");
   }
 
-  const historyBars = kline.slice(windowStart - historyLength, windowStart).map(normalizeBar);
-  const gameBars = kline.slice(windowStart, windowStart + gameDays).map(normalizeBar);
+  const historyBars = sliceBars(stock, windowStart - historyLength, windowStart).map(normalizeBar);
+  const gameBars = sliceBars(stock, windowStart, windowStart + gameDays).map(normalizeBar);
   if (historyBars.length !== historyLength || gameBars.length !== gameDays) {
     throw new Error("pickPuzzleWindow: slice length mismatch");
   }

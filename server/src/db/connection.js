@@ -30,6 +30,8 @@ export function openDb() {
   db.pragma("foreign_keys = ON");
   db.pragma("busy_timeout = 5000");
   db.pragma("synchronous = NORMAL"); // WAL + NORMAL: avoid FULL fsync latency on auth writes
+  // Cap page cache (~4 MiB) to reduce RSS on small hosts; functional behavior unchanged.
+  db.pragma("cache_size = -4000");
   _db = db;
   return db;
 }
