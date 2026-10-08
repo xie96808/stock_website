@@ -5,7 +5,7 @@
  * SettlementSnapshot stays in snapshot_json; this module only builds the
  * API play payload (may enrich volume without mutating stored snapshot).
  */
-import { ensureDatasetLoaded } from "./dataset.js";
+import { ensureDatasetLoaded, sliceBars, getKlineLength } from "./dataset.js";
 
 export const GAME_WINDOW_DTO_V = 1;
 
@@ -37,10 +37,10 @@ function packSliceVolumes(snapshot) {
     const gameDays = snapshot.gameDays ?? (Array.isArray(snapshot.bars) ? snapshot.bars.length : 0);
     if (!Number.isInteger(idx) || idx < 0 || idx >= pack.length) return null;
     if (!Number.isInteger(start) || !Number.isInteger(histLen) || !Number.isInteger(gameDays)) return null;
-    const kline = pack[idx]?.kline;
-    if (!Array.isArray(kline)) return null;
-    const history = kline.slice(start - histLen, start);
-    const bars = kline.slice(start, start + gameDays);
+    const stock = pack[idx];
+    if (!stock || getKlineLength(stock) <= 0) return null;
+    const history = sliceBars(stock, start - histLen, start);
+    const bars = sliceBars(stock, start, start + gameDays);
     if (history.length !== histLen || bars.length !== gameDays) return null;
     return { history, bars };
   } catch {
