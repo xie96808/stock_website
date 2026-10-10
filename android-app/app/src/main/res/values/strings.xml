@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">早知道当初不炒了</string>
+    <string name="game_url">https://stockgame.xieyw.top</string>
+    <string name="offline_message">无法连接服务器，请检查网络后重试</string>
+    <string name="retry">重试</string>
+</resources>

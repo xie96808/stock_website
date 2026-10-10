@@ -3,3 +3,9 @@ server/data/
 *.sqlite
 *.sqlite-*
 .preview-shots/
+
+# Android signing (never commit)
+*.keystore
+*.jks
+android-signing/
+**/keystore.b64
