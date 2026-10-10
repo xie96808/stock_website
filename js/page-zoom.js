@@ -1,13 +1,25 @@
-/** Page zoom aid: optional CSS zoom with localStorage persistence (sketchbook control). */
+/** Page zoom aid: optional CSS zoom with localStorage persistence (sketchbook control).
+ * On narrow viewports (≤640px) zoom is forced to 1 — CSS zoom breaks fixed chrome / bottom bars.
+ * Desktop (≥641px) keeps the control and stored preference.
+ */
 const STORAGE_KEY = 'pageZoom';
 const PRESETS = [0.6, 0.75, 0.9, 1, 1.25, 1.5];
 const MIN = 0.6;
 const MAX = 1.5;
+const MOBILE_MQ = '(max-width: 640px)';
 
 function clampZoom(n) {
   const x = Number(n);
   if (!Number.isFinite(x)) return 1;
   return Math.min(MAX, Math.max(MIN, Math.round(x * 100) / 100));
+}
+
+function isNarrowViewport() {
+  try {
+    return window.matchMedia(MOBILE_MQ).matches;
+  } catch {
+    return false;
+  }
 }
 
 function readStoredZoom() {
@@ -25,15 +37,22 @@ function formatPct(z) {
 }
 
 /** Apply zoom via CSS zoom on <html> (WebKit/Blink/iOS Safari friendly). */
-export function applyPageZoom(level, { persist = true } = {}) {
-  const z = clampZoom(level);
+export function applyPageZoom(level, { persist = true, force = false } = {}) {
+  // Mobile: always 1 unless force (internal reset)
+  const z = !force && isNarrowViewport() ? 1 : clampZoom(level);
   const html = document.documentElement;
-  html.style.zoom = String(z);
-  html.style.setProperty('--page-zoom', String(z));
-  html.dataset.pageZoom = String(z);
-  if (persist) {
+  if (z === 1) {
+    html.style.zoom = '';
+    html.style.removeProperty('--page-zoom');
+    delete html.dataset.pageZoom;
+  } else {
+    html.style.zoom = String(z);
+    html.style.setProperty('--page-zoom', String(z));
+    html.dataset.pageZoom = String(z);
+  }
+  if (persist && !isNarrowViewport()) {
     try {
-      localStorage.setItem(STORAGE_KEY, String(z));
+      localStorage.setItem(STORAGE_KEY, String(clampZoom(level)));
     } catch {
       /* ignore quota / private mode */
     }
@@ -49,6 +68,7 @@ export function applyPageZoom(level, { persist = true } = {}) {
 }
 
 export function getPageZoom() {
+  if (isNarrowViewport()) return 1;
   const fromData = Number(document.documentElement.dataset.pageZoom);
   if (Number.isFinite(fromData) && fromData > 0) return clampZoom(fromData);
   return readStoredZoom();
@@ -83,16 +103,21 @@ function setMenuOpen(open) {
   toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 
+function effectiveInitialZoom() {
+  if (isNarrowViewport()) return 1;
+  return readStoredZoom();
+}
+
 export function initPageZoom() {
   const root = document.getElementById('pageZoom');
   if (!root || root.dataset.ready === '1') {
-    applyPageZoom(readStoredZoom(), { persist: false });
+    applyPageZoom(effectiveInitialZoom(), { persist: false, force: true });
     return;
   }
   root.dataset.ready = '1';
 
-  const z0 = readStoredZoom();
-  applyPageZoom(z0, { persist: false });
+  const z0 = effectiveInitialZoom();
+  applyPageZoom(z0, { persist: false, force: true });
 
   const toggle = document.getElementById('pageZoomToggle');
   const menu = document.getElementById('pageZoomMenu');
@@ -102,6 +127,7 @@ export function initPageZoom() {
   if (toggle && menu) {
     toggle.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isNarrowViewport()) return;
       setMenuOpen(menu.hidden);
     });
     menu.addEventListener('click', (e) => e.stopPropagation());
@@ -109,6 +135,7 @@ export function initPageZoom() {
 
   document.querySelectorAll('[data-zoom-preset]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (isNarrowViewport()) return;
       applyPageZoom(btn.getAttribute('data-zoom-preset'));
       setMenuOpen(false);
     });
@@ -117,12 +144,14 @@ export function initPageZoom() {
   if (minus) {
     minus.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isNarrowViewport()) return;
       applyPageZoom(closestPreset(getPageZoom(), -1));
     });
   }
   if (plus) {
     plus.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isNarrowViewport()) return;
       applyPageZoom(closestPreset(getPageZoom(), 1));
     });
   }
@@ -131,4 +160,21 @@ export function initPageZoom() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setMenuOpen(false);
   });
+
+  // Crossing the breakpoint: clamp to 1 on narrow; restore stored on desktop
+  try {
+    const mq = window.matchMedia(MOBILE_MQ);
+    const onChange = () => {
+      if (mq.matches) {
+        applyPageZoom(1, { persist: false, force: true });
+        setMenuOpen(false);
+      } else {
+        applyPageZoom(readStoredZoom(), { persist: false, force: true });
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onChange);
+    else if (mq.addListener) mq.addListener(onChange);
+  } catch {
+    /* ignore */
+  }
 }

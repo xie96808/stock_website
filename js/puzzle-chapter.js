@@ -708,10 +708,12 @@ export async function showPuzzleWeeklyBoard() {
       body.innerHTML = `
         ${mineBit}
         <p class="puzzle-weekly-board-meta">同题「${escapeHtml(lv?.title || '')}」· 上榜 ${data.total} 人 · 最佳收益率↓ · 上海时区 ISO 周</p>
+        <div class="puzzle-weekly-table-scroll">
         <table class="puzzle-weekly-table daily-challenge-table">
           <thead><tr><th>名次</th><th>昵称</th><th>收益</th><th>最大回撤</th></tr></thead>
           <tbody>${rows}</tbody>
-        </table>`;
+        </table>
+        </div>`;
     }
   } catch (e) {
     if (body) body.innerHTML = `<p class="puzzle-muted">${escapeHtml(e.message || '加载失败')}</p>`;

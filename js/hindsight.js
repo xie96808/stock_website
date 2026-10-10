@@ -166,7 +166,7 @@ function _fillSuggestions(raw) {
         item.innerHTML =
             `<span class="hindsight-suggestion-name">${s.name}</span>` +
             `<span class="hindsight-suggestion-code">${s.code}</span>`;
-        item.addEventListener('mousedown', ev => { ev.preventDefault(); _selectStock(s); });
+        item.addEventListener('pointerdown', ev => { ev.preventDefault(); _selectStock(s); });
         list.appendChild(item);
     });
     list.classList.add('open');

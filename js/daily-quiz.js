@@ -152,6 +152,7 @@ export async function enterDailyQuizZone() {
     const modal = resultModalEl();
     if (modal) modal.hidden = true;
     document.getElementById('dailyQuizZone').style.display = 'block';
+    document.getElementById('academyScreen')?.classList.add('academy-in-zone');
 
     if (daily.status === 'settled') {
       await showDailyQuizResults(flow.attemptId);

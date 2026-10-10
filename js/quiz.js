@@ -344,6 +344,7 @@ export function quizNext() {
 export function showQuizResults() {
     document.getElementById('trainingZone').style.display = 'none';
     document.getElementById('trainingResults').style.display = 'block';
+    document.getElementById('academyScreen')?.classList.add('academy-in-zone');
     disposeQuizCharts();
 
     const score = quizState.score;

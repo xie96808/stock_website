@@ -46,6 +46,11 @@ function renderKnowledgePatterns() {
     patternsRendered = true;
 }
 
+function setAcademyInZone(inZone) {
+    const screen = document.getElementById('academyScreen');
+    if (screen) screen.classList.toggle('academy-in-zone', !!inZone);
+}
+
 function hideAllAcademyZones() {
     document.getElementById('academyLanding').style.display = 'none';
     document.getElementById('knowledgeZone').style.display = 'none';
@@ -67,6 +72,7 @@ export function showAcademy(opts = {}) {
     // Always start at landing
     hideAllAcademyZones();
     document.getElementById('academyLanding').style.display = 'block';
+    setAcademyInZone(false);
     refreshQuizRewardsFlag().then(() => refreshDailyQuizCard()).catch(() => {});
 }
 
@@ -88,11 +94,13 @@ export function enterKnowledgeZone() {
     renderKnowledgePatterns();
     hideAllAcademyZones();
     document.getElementById('knowledgeZone').style.display = 'block';
+    setAcademyInZone(true);
 }
 
 export function enterTrainingZone() {
     hideAllAcademyZones();
     document.getElementById('trainingZone').style.display = 'block';
+    setAcademyInZone(true);
     ensureStocksLoaded(gameState)
         .then(function () { startQuiz(); })
         .catch(function (err) {
@@ -104,6 +112,7 @@ export function enterTrainingZone() {
 export function backToAcademyLanding() {
     hideAllAcademyZones();
     document.getElementById('academyLanding').style.display = 'block';
+    setAcademyInZone(false);
     disposeQuizCharts();
     refreshDailyQuizCard().catch(() => {});
 }

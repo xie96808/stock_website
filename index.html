@@ -2,8 +2,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f1e6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1814" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>早知道当初不炒了</title>
+    <link rel="manifest" href="/site.webmanifest">
     <link rel="shortcut icon" href="/favicon.ico?v=20260908">
     <link rel="icon" href="/favicon.ico?v=20260908" type="image/x-icon" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png?v=20260908">
@@ -25,7 +31,7 @@
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
-    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
     <div class="bg-grid"></div>
@@ -482,7 +488,7 @@
                     <div class="ohlc-card">
                         <div class="ohlc-head">
                             <span class="ohlc-title">OHLC</span>
-                            <span class="ohlc-label" id="hoverLabel">悬停K线查看详情</span>
+                            <span class="ohlc-label" id="hoverLabel">点选/悬停K线查看详情</span>
                         </div>
                         <div class="ohlc-date" id="hoverDate">--</div>
                         <div class="ohlc-grid">
@@ -1017,7 +1023,7 @@
         import { closePuzzleSettleModal, returnToPuzzleListFromSettleModal } from './js/puzzle-settle-modal.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext, closeDailyQuizResultModal, goSimFromDailyQuizResult } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
-        import { showKBPopup, hideKBPopup } from './js/patterns.js';
+        import { showKBPopup, hideKBPopup, hideKBPopupSoon, toggleKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
@@ -1088,6 +1094,8 @@
         window.quizNext = quizNext;
         window.showKBPopup = showKBPopup;
         window.hideKBPopup = hideKBPopup;
+        window.hideKBPopupSoon = hideKBPopupSoon;
+        window.toggleKBPopup = toggleKBPopup;
         window.hindsightShare = hindsightShare;
         window.hindsightCopy  = hindsightCopy;
         window.hindsightReset = hindsightReset;
@@ -1179,5 +1187,12 @@
         <div class="kb-popup-desc"></div>
     </div>
 
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
+      });
+    }
+    </script>
 </body>
 </html>
