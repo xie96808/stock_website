@@ -152,6 +152,11 @@
                             <p class="apk-download-tip" id="apkDownloadTip">首次安装需允许「安装未知来源应用」</p>
                             <p class="apk-ios-hint" id="apkIosHint" hidden>苹果用户：用 Safari 打开本站，点分享 → 添加到主屏幕</p>
                         </div>
+                        <!-- Android shell only (bridge exposes checkUpdate) -->
+                        <div class="app-update-entry" id="appUpdateEntry" hidden>
+                            <button type="button" class="app-update-btn" id="appUpdateBtn">检查更新</button>
+                            <small class="app-update-version" id="appUpdateVersion"></small>
+                        </div>
                     </div>
 
                     <!-- Scheme A: 模拟盘二级 hub — row1 玩法入口, row2 残局 -->
@@ -1050,7 +1055,7 @@
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
-        import { applyApkDownloadEntry } from './js/apk-download.js';
+        import { applyApkDownloadEntry, applyAppUpdateEntry } from './js/apk-download.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
@@ -1155,6 +1160,7 @@
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         initFeedback();
         applyApkDownloadEntry();
+        applyAppUpdateEntry();
         (function () {
           const start = document.getElementById('startScreen');
           if (!start) return;

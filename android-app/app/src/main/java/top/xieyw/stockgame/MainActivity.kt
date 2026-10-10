@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var offlinePanel: LinearLayout
     private lateinit var rootView: View
+    private lateinit var updater: AppUpdater
     private val gameOrigin = "https://stockgame.xieyw.top"
     private val gameUrl = "$gameOrigin/"
 
@@ -67,6 +68,7 @@ class MainActivity : AppCompatActivity() {
             webView.loadUrl(gameUrl)
         }
 
+        updater = AppUpdater(this)
         configureCookies()
         configureWebView()
 
@@ -86,6 +88,8 @@ class MainActivity : AppCompatActivity() {
         } else {
             webView.loadUrl(gameUrl)
         }
+
+        updater.checkOnLaunch()
     }
 
     private fun configureCookies() {
@@ -196,6 +200,15 @@ class MainActivity : AppCompatActivity() {
         fun setTheme(mode: String?) {
             runOnUiThread { applyBarTheme(dark = mode == "dark") }
         }
+
+        /** Forced (unthrottled) update check, triggered from the web UI. */
+        @JavascriptInterface
+        fun checkUpdate() {
+            runOnUiThread { if (!isFinishing) updater.checkManual() }
+        }
+
+        @JavascriptInterface
+        fun getVersion(): String = BuildConfig.VERSION_NAME
     }
 
     companion object {
@@ -228,10 +241,12 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
+        updater.onResume()
     }
 
     override fun onDestroy() {
         CookieManager.getInstance().flush()
+        updater.onDestroy()
         webView.destroy()
         super.onDestroy()
     }

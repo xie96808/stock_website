@@ -72,10 +72,15 @@ jobs:
             echo "WARNING: release signing secrets missing; building debug APK"
           fi
 
-      - name: Build release APK
+      - name: Unit tests (updater logic)
         working-directory: android-app
         run: |
           chmod +x gradlew
+          ./gradlew testReleaseUnitTest --no-daemon --stacktrace
+
+      - name: Build release APK
+        working-directory: android-app
+        run: |
           if [[ -n "${ANDROID_KEYSTORE_PATH:-}" ]]; then
             ./gradlew assembleRelease --no-daemon --stacktrace
           else
@@ -85,12 +90,14 @@ jobs:
       - name: Locate APK
         id: apk
         run: |
+          VER="$(sed -nE 's/^[[:space:]]*versionName = "([^"]+)".*/\1/p' android-app/app/build.gradle.kts | head -n1)"
+          test -n "$VER" || { echo "versionName not found" >&2; exit 1; }
           if [[ -f android-app/app/build/outputs/apk/release/app-release.apk ]]; then
             SRC=android-app/app/build/outputs/apk/release/app-release.apk
-            NAME=stockgame-1.0.0.apk
+            NAME="stockgame-$VER.apk"
           elif [[ -f android-app/app/build/outputs/apk/debug/app-debug.apk ]]; then
             SRC=android-app/app/build/outputs/apk/debug/app-debug.apk
-            NAME=stockgame-1.0.0-debug.apk
+            NAME="stockgame-$VER-debug.apk"
           else
             echo "No APK found" >&2
             find android-app/app/build/outputs -type f -name '*.apk' || true

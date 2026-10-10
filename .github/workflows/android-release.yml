@@ -1,0 +1,222 @@
+# Build, sign and publish the Android shell APK + /download/app-version.json.
+# Server side: deploy/publish-stockgame-apk.sh installed as
+# /usr/local/sbin/publish-stockgame-apk (see docs/android-apk.md).
+
+name: Android release
+
+on:
+  push:
+    tags:
+      - "android-v*"
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: "更新说明（显示在 App 更新弹窗里）"
+        required: false
+        default: ""
+      minSupportedVersionCode:
+        description: "最低支持 versionCode（低于它强制更新）"
+        required: false
+        default: "1"
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://stockgame.xieyw.top/download/app-version.json
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read and check version
+        id: ver
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          IN_NOTES: ${{ inputs.notes }}
+          IN_MIN: ${{ inputs.minSupportedVersionCode }}
+        run: |
+          GRADLE=android-app/app/build.gradle.kts
+          VER="$(sed -nE 's/^[[:space:]]*versionName = "([^"]+)".*/\1/p' "$GRADLE" | head -n1)"
+          CODE="$(sed -nE 's/^[[:space:]]*versionCode = ([0-9]+).*/\1/p' "$GRADLE" | head -n1)"
+          [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad versionName '$VER'" >&2; exit 1; }
+          [[ "$CODE" =~ ^[0-9]+$ ]] || { echo "bad versionCode '$CODE'" >&2; exit 1; }
+          TAG="android-v$VER"
+          NOTES="$IN_NOTES"
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            [[ "$REF_NAME" == "$TAG" ]] || { echo "tag $REF_NAME != gradle versionName ($TAG)" >&2; exit 1; }
+            if [[ -z "$NOTES" ]]; then
+              # Annotated tag message (if any) becomes the notes.
+              NOTES="$(git tag -l --format='%(contents)' "$REF_NAME" | sed '/-----BEGIN PGP/,$d')"
+            fi
+          fi
+          [[ -n "${NOTES//[[:space:]]/}" ]] || NOTES="修复问题并优化体验。"
+          MIN="${IN_MIN:-1}"
+          [[ "$MIN" =~ ^[0-9]+$ ]] || { echo "bad minSupportedVersionCode '$MIN'" >&2; exit 1; }
+          (( MIN <= CODE )) || { echo "minSupportedVersionCode $MIN > versionCode $CODE" >&2; exit 1; }
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "min=$MIN" >> "$GITHUB_OUTPUT"
+          printf '%s' "$NOTES" > "$RUNNER_TEMP/notes.txt"
+          echo "versionName=$VER versionCode=$CODE min=$MIN tag=$TAG"
+
+      - name: Require deploy vars
+        run: |
+          test -n "${{ vars.PROD_HOST }}" || { echo "Set Actions variable PROD_HOST" >&2; exit 1; }
+          test -n "${{ vars.PROD_USER }}" || { echo "Set Actions variable PROD_USER" >&2; exit 1; }
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set Android SDK env
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          test -d "$SDK_ROOT" || { echo "Android SDK not found at $SDK_ROOT" >&2; exit 1; }
+          mkdir -p "$SDK_ROOT/licenses"
+          printf '%s\n' \
+            "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            "d56f5187479451eabf01fb78af6dfcb131a6481e" \
+            "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > "$SDK_ROOT/licenses/android-sdk-license"
+          printf '%s\n' "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" \
+            > "$SDK_ROOT/licenses/android-sdk-preview-license"
+
+      - name: Decode release keystore (required)
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z "$ANDROID_KEYSTORE_BASE64" || -z "$ANDROID_KEYSTORE_PASSWORD" || -z "$ANDROID_KEY_ALIAS" || -z "$ANDROID_KEY_PASSWORD" ]]; then
+            echo "Release signing secrets missing; refusing to publish an unsigned/debug APK" >&2
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/stockgame-release.keystore"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/stockgame-release.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Test and build signed release APK
+        working-directory: android-app
+        run: |
+          chmod +x gradlew
+          ./gradlew testReleaseUnitTest assembleRelease --no-daemon --stacktrace
+
+      - name: Verify signature, compute sha256/size, write manifest
+        id: apk
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+          CODE: ${{ steps.ver.outputs.code }}
+          MIN: ${{ steps.ver.outputs.min }}
+        run: |
+          SRC=android-app/app/build/outputs/apk/release/app-release.apk
+          test -f "$SRC" || { echo "release APK missing" >&2; exit 1; }
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n1)"
+          "$APKSIGNER" verify --print-certs "$SRC"
+          mkdir -p dist
+          APK="dist/stockgame-$VER.apk"
+          JSON="dist/app-version-$VER.json"
+          cp "$SRC" "$APK"
+          SHA="$(sha256sum "$APK" | awk '{print $1}')"
+          SIZE="$(stat -c %s "$APK")"
+          python3 - "$JSON" "$CODE" "$VER" "$SHA" "$SIZE" "$MIN" "$RUNNER_TEMP/notes.txt" <<'PY'
+          import datetime, json, sys
+          out, code, ver, sha, size, mn, notes_path = sys.argv[1:]
+          doc = {
+              "versionCode": int(code),
+              "versionName": ver,
+              "apkUrl": f"https://stockgame.xieyw.top/download/stockgame-{ver}.apk",
+              "sha256": sha,
+              "size": int(size),
+              "minSupportedVersionCode": int(mn),
+              "notes": open(notes_path, encoding="utf-8").read().strip(),
+              "publishedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+          }
+          with open(out, "w", encoding="utf-8") as f:
+              json.dump(doc, f, ensure_ascii=False, indent=2)
+              f.write("\n")
+          PY
+          cat "$JSON"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "json=$JSON" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockgame-release-${{ steps.ver.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Configure deploy transport
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
+        run: |
+          test -n "$PROD_SSH_KEY" || { echo "Set Actions secret PROD_SSH_KEY" >&2; exit 1; }
+          test -n "$PROD_KNOWN_HOSTS" || { echo "Set Actions secret PROD_KNOWN_HOSTS" >&2; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$PROD_SSH_KEY" > ~/.ssh/stock_website_deploy
+          chmod 600 ~/.ssh/stock_website_deploy
+          printf '%s\n' "$PROD_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload and publish on server
+        env:
+          PROD_HOST: ${{ vars.PROD_HOST }}
+          PROD_USER: ${{ vars.PROD_USER }}
+          VER: ${{ steps.ver.outputs.version }}
+          APK: ${{ steps.apk.outputs.apk }}
+          JSON: ${{ steps.apk.outputs.json }}
+          SHA: ${{ steps.apk.outputs.sha }}
+        run: |
+          R_APK="/home/$PROD_USER/incoming/stockgame-$VER.apk"
+          R_JSON="/home/$PROD_USER/incoming/app-version-$VER.json"
+          scp -i ~/.ssh/stock_website_deploy -o BatchMode=yes "$APK" "$PROD_USER@$PROD_HOST:$R_APK"
+          scp -i ~/.ssh/stock_website_deploy -o BatchMode=yes "$JSON" "$PROD_USER@$PROD_HOST:$R_JSON"
+          OUT="$(ssh -i ~/.ssh/stock_website_deploy -o BatchMode=yes "$PROD_USER@$PROD_HOST" \
+            "sudo /usr/local/sbin/publish-stockgame-apk '$R_APK' '$VER' '$SHA' '$R_JSON'")"
+          printf '%s\n' "$OUT"
+          grep -q '^PUBLISH_OK' <<<"$OUT" || { echo "publish did not report PUBLISH_OK" >&2; exit 1; }
+
+      - name: Verify public manifest
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+          SHA: ${{ steps.apk.outputs.sha }}
+        run: |
+          curl -fsS --max-time 15 -H 'Cache-Control: no-cache' https://stockgame.xieyw.top/download/app-version.json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["versionName"]==sys.argv[1] and d["sha256"]==sys.argv[2], d; print("manifest OK")' "$VER" "$SHA"
+
+      - name: GitHub Release (backup download)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          VER: ${{ steps.ver.outputs.version }}
+          APK: ${{ steps.apk.outputs.apk }}
+          JSON: ${{ steps.apk.outputs.json }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" "$JSON" --clobber
+          else
+            gh release create "$TAG" "$APK" "$JSON" \
+              --title "Android $VER" --notes-file "$RUNNER_TEMP/notes.txt" --target "$GITHUB_SHA"
+          fi
