@@ -20,6 +20,8 @@ import {
  * @param {'game'|'result'} [vm.mode='game']
  * @param {Record<string, boolean>|null} [vm.maSelected] - game legend selected map
  * @param {(bar: object, idx: number) => void|null} [vm.syncHover] - game OHLC panel sync
+ * @param {boolean} [vm.resetDataZoom=false] - force dataZoom window back to full range
+ * @param {boolean} [vm.showDataZoomSlider] - desktop slider; default true for result, false for game
  */
 export function buildKlineOption(vm) {
     const {
@@ -31,6 +33,8 @@ export function buildKlineOption(vm) {
         mode = 'game',
         maSelected = null,
         syncHover = null,
+        resetDataZoom = false,
+        showDataZoomSlider,
     } = vm;
 
     const isResult = mode === 'result';
@@ -216,9 +220,43 @@ export function buildKlineOption(vm) {
             itemGap: 12
         };
 
+    const wantSlider = showDataZoomSlider != null ? !!showDataZoomSlider : isResult;
+    const dataZoomWindow = resetDataZoom ? { start: 0, end: 100 } : {};
+    // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
+    // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
+    const dataZoom = [
+        {
+            type: 'inside',
+            xAxisIndex: [0, 1],
+            filterMode: 'none',
+            zoomOnMouseWheel: true,
+            moveOnMouseMove: true,
+            moveOnMouseWheel: false,
+            preventDefaultMouseMove: true,
+            minSpan: 8,
+            ...dataZoomWindow,
+        },
+    ];
+    if (wantSlider) {
+        dataZoom.push({
+            type: 'slider',
+            xAxisIndex: [0, 1],
+            filterMode: 'none',
+            height: 18,
+            bottom: 2,
+            brushSelect: false,
+            showDetail: false,
+            handleSize: '80%',
+            borderColor: 'rgba(88,166,255,0.2)',
+            fillerColor: 'rgba(88,166,255,0.12)',
+            ...dataZoomWindow,
+        });
+    }
+
     const option = {
         backgroundColor: 'transparent',
         legend,
+        dataZoom,
         tooltip: {
             trigger: 'axis',
             axisPointer: { type: 'cross' },
@@ -293,8 +331,8 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isResult
             ? [
-                { left: '10%', right: '2%', top: '12%', bottom: '35%' },
-                { left: '10%', right: '2%', top: '72%', bottom: '8%' }
+                { left: '10%', right: '2%', top: '12%', bottom: wantSlider ? '38%' : '35%' },
+                { left: '10%', right: '2%', top: wantSlider ? '70%' : '72%', bottom: wantSlider ? '14%' : '8%' }
             ]
             : [
                 { left: '8%', right: '2%', top: '8%', bottom: '34%' },

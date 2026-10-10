@@ -206,6 +206,99 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* ===== Chrome overflow (⋯) — narrow left cluster ===== */
+.chrome-overflow-btn {
+    appearance: none;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: 0;
+    color: var(--ink);
+    background: var(--chip-bg);
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-pill);
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+.chrome-overflow-btn:hover,
+.chrome-overflow-btn:focus-visible {
+    background: rgba(196, 160, 122, 0.28);
+    outline: none;
+}
+.chrome-overflow-btn:focus-visible {
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--line);
+}
+.chrome-overflow-btn[hidden] {
+    display: none !important;
+}
+.top-left-chrome.is-chrome-collapsed .chrome-overflow-btn:not([hidden]) {
+    display: inline-flex;
+}
+.chrome-overflow-inline {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: inherit;
+    min-width: 0;
+}
+.top-left-chrome.is-chrome-collapsed .chrome-overflow-inline {
+    display: none;
+}
+.chrome-overflow-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 46;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    min-width: 148px;
+    max-width: min(240px, calc(100vw - 24px));
+    padding: 10px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1.6px solid var(--line);
+    border-radius: 14px 16px 12px 18px;
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.14);
+}
+.chrome-overflow-menu[hidden] {
+    display: none !important;
+}
+.chrome-overflow-menu .theme-toggle {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.chrome-overflow-menu .theme-toggle .pill,
+.chrome-overflow-menu .pill {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 14px;
+}
+.chrome-overflow-menu .page-zoom-bar {
+    width: 100%;
+    justify-content: space-between;
+}
+.chrome-overflow-menu .page-zoom-step,
+.chrome-overflow-menu .page-zoom-toggle {
+    min-height: 44px;
+    min-width: 44px;
+}
+.chrome-overflow-menu .page-zoom-menu {
+    position: static;
+    margin-top: 6px;
+    box-shadow: none;
+    border-style: dashed;
+}
+
 /* ===== Top-left chrome: 纸/墨 + page zoom ===== */
 .top-left-chrome {
     position: fixed;

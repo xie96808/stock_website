@@ -198,3 +198,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Chrome 「⋯」 overflow: keep primary auth/公告 reachable; menu below fixed bar */
+@media (max-width: 480px) {
+  .top-left-chrome {
+    max-width: none;
+  }
+  .top-left-chrome.is-chrome-collapsed {
+    max-width: calc(100vw - 8px);
+  }
+  .chrome-overflow-btn:not([hidden]) {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .chrome-overflow-menu .theme-toggle .pill {
+    flex: 1 1 auto;
+  }
+}
+
+/* K-line pinch: leave #kline-chart / #result-kline-chart touch-action at default.
+   ECharts ZRender manages gesture; #holdBtn/#fastForwardBtn keep touch-action:none in game.css. */
