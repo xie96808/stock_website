@@ -105,14 +105,22 @@ QUIZ_PATTERNS.forEach(p => { PATTERN_KB[p.name] = p; });
 
 export function kbTag(name) {
     if (!PATTERN_KB[name]) return name;
-    return '<span class="kb-link" data-pattern="' + name + '" onmouseenter="showKBPopup(this)" onmouseleave="hideKBPopup()">' + name + '</span>';
+    return '<span class="kb-link" data-pattern="' + name + '" role="button" tabindex="0" onclick="toggleKBPopup(event,this)" onmouseenter="showKBPopup(this)" onmouseleave="hideKBPopupSoon()">' + name + '</span>';
 }
 
+let _kbHideTimer = null;
+let _kbPinnedEl = null;
+
 export function showKBPopup(el) {
+    if (_kbHideTimer) {
+        clearTimeout(_kbHideTimer);
+        _kbHideTimer = null;
+    }
     const key = el.getAttribute('data-pattern');
     const p = PATTERN_KB[key];
     if (!p) return;
     const popup = document.getElementById('kbPopup');
+    if (!popup) return;
     popup.querySelector('.kb-popup-name').textContent = key;
     const sig = popup.querySelector('.kb-popup-signal');
     sig.textContent = p.signal;
@@ -127,11 +135,59 @@ export function showKBPopup(el) {
     if (left + 310 > window.innerWidth) left = window.innerWidth - 320;
     if (left < 8) left = 8;
     if (top + 250 > window.innerHeight) top = rect.top - 250;
+    if (top < 8) top = 8;
     popup.style.left = left + 'px';
     popup.style.top = top + 'px';
     popup.classList.add('visible');
+    _kbPinnedEl = el;
 }
 
 export function hideKBPopup() {
-    document.getElementById('kbPopup').classList.remove('visible');
+    if (_kbHideTimer) {
+        clearTimeout(_kbHideTimer);
+        _kbHideTimer = null;
+    }
+    const popup = document.getElementById('kbPopup');
+    if (popup) popup.classList.remove('visible');
+    _kbPinnedEl = null;
 }
+
+/** Delayed hide so mouse can move toward popup; also used after hover leave. */
+export function hideKBPopupSoon() {
+    if (_kbHideTimer) clearTimeout(_kbHideTimer);
+    _kbHideTimer = setTimeout(() => {
+        _kbHideTimer = null;
+        // Keep open if pinned via tap until outside click / toggle
+        if (_kbPinnedEl && window.matchMedia('(pointer: coarse)').matches) return;
+        hideKBPopup();
+    }, 180);
+}
+
+/** Click/tap toggle for touch; stop hover leave from immediately closing. */
+export function toggleKBPopup(ev, el) {
+    if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+    const popup = document.getElementById('kbPopup');
+    const open = popup && popup.classList.contains('visible');
+    const same = _kbPinnedEl === el;
+    if (open && same) {
+        hideKBPopup();
+        return;
+    }
+    showKBPopup(el);
+}
+
+function _bindKbOutsideClose() {
+    if (typeof document === 'undefined' || document.documentElement.dataset.kbOutside === '1') return;
+    document.documentElement.dataset.kbOutside = '1';
+    document.addEventListener('click', (e) => {
+        const popup = document.getElementById('kbPopup');
+        if (!popup || !popup.classList.contains('visible')) return;
+        if (popup.contains(e.target)) return;
+        if (e.target && e.target.closest && e.target.closest('.kb-link')) return;
+        hideKBPopup();
+    });
+}
+_bindKbOutsideClose();

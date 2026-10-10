@@ -12,9 +12,11 @@
 
 .hs-atmosphere {
     position: absolute;
-    top: -40px; left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
+    top: -40px; left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
     min-height: 100vh;
     pointer-events: none;
     z-index: 0;

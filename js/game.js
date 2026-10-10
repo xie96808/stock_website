@@ -236,24 +236,35 @@ export async function initChart() {
     }
     chartRefs.klineChart = echartsApi.init(chartDom);
 
-    // Sync crosshair to OHLC panel
-    chartRefs.klineChart.on('mousemove', function(params) {
-        if (params.dataIndex == null) return;
+    // Sync crosshair / tap to OHLC panel (desktop hover + touch click)
+    function applyOhlcFromIndex(dataIndex, label) {
+        if (dataIndex == null) return;
         const session = getSession();
-        const histLen = session.historyLength;
         const visibleData = selectVisibleKline(session);
-        const d = visibleData[params.dataIndex];
+        const d = visibleData[dataIndex];
         if (!d) return;
-        document.getElementById('hoverLabel').textContent = '悬停数据';
+        document.getElementById('hoverLabel').textContent = label;
         document.getElementById('hoverDate').textContent = d.date;
         document.getElementById('hoverOpen').textContent = d.open.toFixed(2);
         document.getElementById('hoverHigh').textContent = d.high.toFixed(2);
         document.getElementById('hoverLow').textContent = d.low.toFixed(2);
         document.getElementById('hoverClose').textContent = d.close.toFixed(2);
         document.getElementById('hoverVolume').textContent = (d.volume / 10000).toFixed(0) + ' 万手';
+    }
+
+    chartRefs.klineChart.on('mousemove', function(params) {
+        applyOhlcFromIndex(params.dataIndex, '悬停数据');
+    });
+
+    chartRefs.klineChart.on('click', function(params) {
+        // Touch / click: pin selected bar (mousemove still works on desktop)
+        if (params.dataIndex == null) return;
+        applyOhlcFromIndex(params.dataIndex, '点选数据');
     });
 
     chartRefs.klineChart.on('mouseout', function() {
+        // On coarse pointers, keep last tap until next tap / day advance
+        if (window.matchMedia('(pointer: coarse)').matches) return;
         resetOHLCToToday();
     });
 
@@ -316,7 +327,7 @@ export function updateChart() {
         mode: 'game',
         maSelected,
         syncHover: (kd) => {
-            document.getElementById('hoverLabel').textContent = '悬停数据';
+            document.getElementById('hoverLabel').textContent = '点选/悬停';
             document.getElementById('hoverDate').textContent = kd.date;
             document.getElementById('hoverOpen').textContent = kd.open.toFixed(2);
             document.getElementById('hoverHigh').textContent = kd.high.toFixed(2);

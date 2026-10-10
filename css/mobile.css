@@ -1,0 +1,200 @@
+/* ===== Mobile adaptation (≤640 / ≤420) — keep desktop ≥900 untouched ===== */
+
+/* --- Safe top offset under fixed 纸墨 / 缩放 / 公告 / 登录 --- */
+:root {
+  --mobile-chrome-top: 52px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --mobile-chrome-top: 56px;
+  }
+
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Compact site title clears fixed chrome */
+  .header.compact {
+    padding-top: calc(var(--mobile-chrome-top) + 4px);
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+  .header.compact .logo {
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    line-height: 1.35;
+  }
+
+  .academy-screen.active,
+  .hindsight-screen.active,
+  .leaderboard-screen.active,
+  .my-games-screen.active,
+  .puzzle-screen:not([hidden]) {
+    padding-top: var(--mobile-chrome-top);
+  }
+
+  .academy-header {
+    padding-top: 4px;
+  }
+
+  .hindsight-header {
+    padding-top: 4px;
+  }
+
+  .game-screen.active {
+    padding-top: 0; /* compact header already offset */
+  }
+
+  /* Hide page zoom on narrow viewports (html zoom breaks fixed layouts) */
+  .page-zoom {
+    display: none !important;
+  }
+
+  /* Tap targets ≥ ~44×44 */
+  .theme-toggle .pill,
+  .pill {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-close,
+  .announcements-close-x,
+  .jiu-coin-close-x,
+  .feedback-close-x {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    right: 4px;
+    top: 4px;
+    padding: 0;
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .start-screen .hub-back {
+    min-height: 44px;
+    padding: 10px 8px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .start-screen .hub-board-link {
+    min-height: 44px;
+    padding: 10px 12px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .auth-tab {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .academy-back,
+  .zone-back-btn,
+  .puzzle-screen-back,
+  .leaderboard-back,
+  .my-games-back,
+  .hindsight-back {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .academy-tab {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+
+  .leaderboard-tab {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .announcements-btn,
+  .auth-login-btn,
+  .auth-user-btn {
+    min-height: 44px;
+  }
+
+  /* Auth toast above fixed trade action bar */
+  body:has(.game-screen.active) .auth-toast-host {
+    bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+  body:has(.game-screen.active.game-screen--ff-tap) .auth-toast-host {
+    bottom: calc(172px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Academy: one back control when inside a zone */
+  .academy-screen.academy-in-zone .academy-back {
+    display: none;
+  }
+
+  /* Hindsight suggest rows */
+  .hindsight-suggestion-item {
+    min-height: 44px;
+    padding: 12px 14px;
+  }
+
+  /* Ghost duel pick rows */
+  .ghost-duel-pick {
+    min-height: 44px;
+  }
+
+  /* Indicator toggles */
+  .indicator-toggle {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --mobile-chrome-top: 52px;
+  }
+
+  .container {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 8px;
+  }
+
+  .header.compact .logo {
+    font-size: 0.92rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+/* Puzzle weekly table horizontal scroll */
+.puzzle-weekly-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  margin-top: 0.35rem;
+}
+.puzzle-weekly-table-scroll .puzzle-weekly-table {
+  min-width: 320px;
+}
+
+/* KB popup: allow tap interaction when open */
+.kb-popup.visible {
+  pointer-events: auto;
+}
+.kb-link {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Pattern grid safer minmax */
+@media (max-width: 768px) {
+  .pattern-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

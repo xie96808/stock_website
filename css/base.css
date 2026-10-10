@@ -211,7 +211,8 @@ body {
     position: fixed;
     top: 10px;
     left: 14px;
-    z-index: 100;
+    /* Below modals (auth/announcements/jiu/rewind ≥80) so overlays block chrome clicks */
+    z-index: 45;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -289,7 +290,7 @@ html:not([data-theme="dark"]) .pill[data-mode="light"] {
 /* ===== Page zoom control (sketchbook) ===== */
 .page-zoom {
     position: relative;
-    z-index: 101;
+    z-index: auto;
 }
 .page-zoom-bar {
     display: inline-flex;
