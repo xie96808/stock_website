@@ -31,11 +31,25 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses >/dev/null || true
+      - name: Set Android SDK env
+        run: |
+          # ubuntu-latest runners ship an Android SDK; avoid android-actions/setup-android
+          # (it still tries to install the removed legacy "tools" package).
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "SDK_ROOT=$SDK_ROOT"
+          test -d "$SDK_ROOT" || { echo "Android SDK not found at $SDK_ROOT" >&2; exit 1; }
+          # Accept licenses so AGP can download platforms/build-tools as needed.
+          mkdir -p "$SDK_ROOT/licenses"
+          printf '%s\n' \
+            "24333f8a63b6825ea9c5514f83c2829b004d1fee" \
+            "d56f5187479451eabf01fb78af6dfcb131a6481e" \
+            "84831b9409646a918e30573bab4c9c91346d8abd" \
+            > "$SDK_ROOT/licenses/android-sdk-license"
+          printf '%s\n' "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" \
+            > "$SDK_ROOT/licenses/android-sdk-preview-license"
+          ls "$SDK_ROOT" | head
 
       - name: Decode release keystore
         id: keystore
@@ -55,7 +69,7 @@ jobs:
             echo "Using release keystore signing"
           else
             echo "signing=debug" >> "$GITHUB_OUTPUT"
-            echo "WARNING: release signing secrets missing; building unsigned/debug-signed APK"
+            echo "WARNING: release signing secrets missing; building debug APK"
           fi
 
       - name: Build release APK
