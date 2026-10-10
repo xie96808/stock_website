@@ -260,6 +260,8 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
       htmlFiles.push(file);
       continue;
     }
+    // Service worker must keep a stable URL (/sw.js); never fingerprint it.
+    if (relative(rootResolved, file) === "sw.js") continue;
     if (ASSET_EXT_RE.test(ext)) {
       textAssets.set(file, readFileSync(file, "utf8"));
     } else if (fingerprintImages && IMAGE_EXT_RE.test(ext)) {
