@@ -1,0 +1,32 @@
+{
+  "name": "早知道当初不炒了",
+  "short_name": "炒股模拟",
+  "description": "用真实 A 股数据，重走每一次错过的行情",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f7f1e6",
+  "theme_color": "#f7f1e6",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/images/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
