@@ -140,6 +140,18 @@
                             </span>
                             <span class="cta cta-wash">立即回溯</span>
                         </button>
+                        <!-- Android APK download / iOS add-to-home hint (home hub only) -->
+                        <div class="apk-download-entry" id="apkDownloadEntry" hidden>
+                            <a class="apk-download-link" id="apkDownloadLink" href="/download/stockgame.apk" download>
+                                <span class="apk-download-icon" aria-hidden="true">📱</span>
+                                <span class="apk-download-copy">
+                                    <strong>下载安卓 App</strong>
+                                    <small>侧载安装，打开即进本站</small>
+                                </span>
+                            </a>
+                            <p class="apk-download-tip" id="apkDownloadTip">首次安装需允许「安装未知来源应用」</p>
+                            <p class="apk-ios-hint" id="apkIosHint" hidden>苹果用户：用 Safari 打开本站，点分享 → 添加到主屏幕</p>
+                        </div>
                     </div>
 
                     <!-- Scheme A: 模拟盘二级 hub — row1 玩法入口, row2 残局 -->
@@ -1038,6 +1050,7 @@
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
+        import { applyApkDownloadEntry } from './js/apk-download.js';
         import {
           refreshDailyChallengeFlag,
           refreshDailyChallengeCard,
@@ -1141,6 +1154,7 @@
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         initFeedback();
+        applyApkDownloadEntry();
         (function () {
           const start = document.getElementById('startScreen');
           if (!start) return;
