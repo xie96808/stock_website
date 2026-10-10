@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/offline_message"
-            android:textColor="#E8EEF7"
+            android:textColor="#2B2620"
             android:textSize="16sp"
             android:gravity="center" />
 

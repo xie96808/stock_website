@@ -7,7 +7,9 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.graphics.Color
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
@@ -17,7 +19,9 @@ import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 
 /**
@@ -34,14 +38,27 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var offlinePanel: LinearLayout
+    private lateinit var rootView: View
     private val gameOrigin = "https://stockgame.xieyw.top"
     private val gameUrl = "$gameOrigin/"
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        // targetSdk 35 forces edge-to-edge on Android 15+, so pad the root by the
+        // system bar / display-cutout insets ourselves; the page never sits
+        // under the status bar or gesture bar.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        rootView = findViewById(R.id.root)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+        applyBarTheme(dark = false)
 
         webView = findViewById(R.id.webview)
         offlinePanel = findViewById(R.id.offline_panel)
@@ -95,6 +112,7 @@ class MainActivity : AppCompatActivity() {
             // Offscreen prerender not needed.
         }
 
+        webView.addJavascriptInterface(ThemeBridge(), "StockGameApp")
         webView.webChromeClient = WebChromeClient()
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(
@@ -112,6 +130,11 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 offlinePanel.visibility = View.GONE
+            }
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                // Follow the site's 纸/墨 theme so the bar strips match the page.
+                view.evaluateJavascript(THEME_WATCH_JS, null)
             }
 
             override fun onReceivedError(
@@ -153,6 +176,42 @@ class MainActivity : AppCompatActivity() {
         } catch (_: ActivityNotFoundException) {
             true
         }
+    }
+
+    private fun applyBarTheme(dark: Boolean) {
+        val color = if (dark) PAPER_DARK else PAPER_LIGHT
+        rootView.setBackgroundColor(color)
+        @Suppress("DEPRECATION")
+        window.statusBarColor = color
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = color
+        WindowCompat.getInsetsController(window, rootView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+    }
+
+    private inner class ThemeBridge {
+        @JavascriptInterface
+        fun setTheme(mode: String?) {
+            runOnUiThread { applyBarTheme(dark = mode == "dark") }
+        }
+    }
+
+    companion object {
+        private val PAPER_LIGHT = Color.parseColor("#F3EAD8")
+        private val PAPER_DARK = Color.parseColor("#1C1A16")
+        private const val THEME_WATCH_JS = """
+            (function () {
+              if (!window.StockGameApp) return;
+              var el = document.documentElement;
+              var send = function () { StockGameApp.setTheme(el.getAttribute('data-theme') || 'light'); };
+              send();
+              if (window.__sgThemeObs) return;
+              window.__sgThemeObs = new MutationObserver(send);
+              window.__sgThemeObs.observe(el, { attributes: true, attributeFilter: ['data-theme'] });
+            })();
+        """
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
