@@ -9,6 +9,9 @@ import {
   isAppleTouchDevice,
   apkDownloadMode,
   applyApkDownloadEntry,
+  hasAppUpdateBridge,
+  readAppVersion,
+  applyAppUpdateEntry,
 } from '../js/apk-download.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -154,4 +157,60 @@ test('nginx conf has /download/ alias before version.json', () => {
   assert.ok(dl > 0, 'missing /download/ location');
   assert.ok(ver > dl, '/download/ must precede version.json');
   assert.match(conf, /alias \/srv\/stock-website\/downloads\/;/);
+});
+
+function fakeDoc() {
+  const nodes = {
+    appUpdateEntry: { hidden: true },
+    appUpdateVersion: { textContent: '' },
+    appUpdateBtn: {
+      dataset: {},
+      handlers: [],
+      addEventListener(type, fn) { this.handlers.push([type, fn]); },
+    },
+  };
+  return { nodes, getElementById: (id) => nodes[id] || null };
+}
+
+test('hasAppUpdateBridge requires checkUpdate on the bridge', () => {
+  assert.equal(hasAppUpdateBridge(undefined), false);
+  assert.equal(hasAppUpdateBridge({}), false);
+  assert.equal(hasAppUpdateBridge({ StockGameApp: { setTheme() {} } }), false); // 1.0.2 shell
+  assert.equal(hasAppUpdateBridge({ StockGameApp: { checkUpdate() {} } }), true);
+});
+
+test('readAppVersion is defensive', () => {
+  assert.equal(readAppVersion({}), '');
+  assert.equal(readAppVersion({ StockGameApp: { getVersion: () => '1.0.3' } }), '1.0.3');
+  assert.equal(readAppVersion({ StockGameApp: { getVersion: () => { throw new Error('x'); } } }), '');
+  assert.equal(readAppVersion({ StockGameApp: { getVersion: () => 42 } }), '');
+});
+
+test('applyAppUpdateEntry stays hidden on web / old shell', () => {
+  for (const win of [{}, { StockGameApp: { setTheme() {} } }]) {
+    const doc = fakeDoc();
+    assert.equal(applyAppUpdateEntry(doc, win), false);
+    assert.equal(doc.nodes.appUpdateEntry.hidden, true);
+    assert.equal(doc.nodes.appUpdateBtn.handlers.length, 0);
+  }
+  assert.equal(applyAppUpdateEntry(null, {}), false);
+});
+
+test('applyAppUpdateEntry shows version and forwards click to checkUpdate', () => {
+  let calls = 0;
+  const win = { StockGameApp: { checkUpdate() { calls += 1; }, getVersion: () => '1.0.3' } };
+  const doc = fakeDoc();
+  assert.equal(applyAppUpdateEntry(doc, win), true);
+  assert.equal(applyAppUpdateEntry(doc, win), true); // idempotent binding
+  assert.equal(doc.nodes.appUpdateEntry.hidden, false);
+  assert.equal(doc.nodes.appUpdateVersion.textContent, '当前版本 1.0.3');
+  assert.equal(doc.nodes.appUpdateBtn.handlers.length, 1);
+  doc.nodes.appUpdateBtn.handlers[0][1]();
+  assert.equal(calls, 1);
+});
+
+test('index.html has hidden app-update entry wired to applyAppUpdateEntry', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.match(html, /id="appUpdateEntry" hidden/);
+  assert.match(html, /applyAppUpdateEntry\(\);/);
 });

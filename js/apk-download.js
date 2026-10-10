@@ -87,3 +87,58 @@ export function applyApkDownloadEntry(doc = typeof document !== "undefined" ? do
   }
   return mode;
 }
+
+/**
+ * Android shell ≥ 1.0.3 exposes checkUpdate()/getVersion() on the bridge.
+ * Older shells (bridge without checkUpdate) and browsers → false.
+ */
+export function hasAppUpdateBridge(win = typeof window !== "undefined" ? window : undefined) {
+  const app = win && win.StockGameApp;
+  return !!app && typeof app.checkUpdate === "function";
+}
+
+/** Read the shell's versionName; "" when unavailable or the call throws. */
+export function readAppVersion(win = typeof window !== "undefined" ? window : undefined) {
+  try {
+    const app = win && win.StockGameApp;
+    if (!app || typeof app.getVersion !== "function") return "";
+    const v = app.getVersion();
+    return typeof v === "string" ? v.slice(0, 32) : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Show 「检查更新 / 当前版本 x.y.z」 only inside an updater-capable shell.
+ * No-op (entry stays hidden) on web / desktop.
+ * @returns {boolean} whether the entry is shown
+ */
+export function applyAppUpdateEntry(
+  doc = typeof document !== "undefined" ? document : null,
+  win = typeof window !== "undefined" ? window : undefined,
+) {
+  if (!doc) return false;
+  const root = doc.getElementById("appUpdateEntry");
+  if (!root) return false;
+  if (!hasAppUpdateBridge(win)) {
+    root.hidden = true;
+    return false;
+  }
+  const ver = readAppVersion(win);
+  const label = doc.getElementById("appUpdateVersion");
+  if (label) label.textContent = ver ? `当前版本 ${ver}` : "";
+  const btn = doc.getElementById("appUpdateBtn");
+  if (btn && !btn.dataset.bound) {
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      try {
+        win.StockGameApp.checkUpdate();
+      } catch {
+        /* bridge gone; ignore */
+      }
+    });
+  }
+  root.hidden = false;
+  return true;
+}

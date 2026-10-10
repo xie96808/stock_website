@@ -948,3 +948,35 @@
 [data-theme="dark"] .start-screen .apk-ios-hint {
     background: var(--card);
 }
+
+/* Android shell: 检查更新 / 当前版本 (hidden unless bridge has checkUpdate) */
+.start-screen .app-update-entry {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 4px;
+}
+
+.start-screen .app-update-entry[hidden] {
+    display: none;
+}
+
+.start-screen .app-update-btn {
+    min-height: 36px;
+    padding: 6px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 14px 18px 12px 16px;
+    background: var(--card);
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.start-screen .app-update-version {
+    font-size: 0.7rem;
+    color: var(--mute);
+    letter-spacing: 0.04em;
+}
