@@ -212,6 +212,9 @@ export async function resyncCloudGameFromServer() {
     }
 }
 
+/** Reset inside dataZoom when game day / visible window changes (keep zoom on MA-only redraws). */
+let lastChartZoomKey = '';
+
 export async function initChart() {
     const chartDom = document.getElementById('kline-chart');
     if (!chartDom) {
@@ -234,6 +237,7 @@ export async function initChart() {
     if (chartRefs.klineChart) {
         chartRefs.klineChart.dispose();
     }
+    lastChartZoomKey = '';
     chartRefs.klineChart = echartsApi.init(chartDom);
 
     // Sync crosshair / tap to OHLC panel (desktop hover + touch click)
@@ -320,12 +324,18 @@ export function updateChart() {
         '30日线': maChecked('indicatorMA30'),
     };
 
+    const zoomKey = `${visibleData.length}:${histLen}:${session.currentDay || 1}`;
+    const resetDataZoom = zoomKey !== lastChartZoomKey;
+    lastChartZoomKey = zoomKey;
+
     const option = buildKlineOption({
         bars: visibleData,
         historyLength: histLen,
         trades: session.tradeHistory,
         mode: 'game',
         maSelected,
+        resetDataZoom,
+        showDataZoomSlider: false,
         syncHover: (kd) => {
             document.getElementById('hoverLabel').textContent = '点选/悬停';
             document.getElementById('hoverDate').textContent = kd.date;

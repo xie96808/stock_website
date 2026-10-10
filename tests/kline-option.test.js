@@ -72,3 +72,48 @@ test('buildKlineOption result markPoint includes trades + best points + valuatio
   assert.ok(mp.some((p) => p.name === 'S1'));
   assert.ok(mp.some((p) => p.value === '估值'));
 });
+
+test('buildKlineOption includes inside dataZoom for touch pinch/slide', () => {
+  const kline = makeAnalysisKline();
+  const full = kline.slice(0, HIST_LEN + 30);
+  const optGame = buildKlineOption({
+    bars: full,
+    historyLength: HIST_LEN,
+    trades: SAMPLE_TRADES_SAME_CLOSE,
+    mode: 'game',
+    resetDataZoom: true,
+    showDataZoomSlider: false,
+  });
+  assert.ok(Array.isArray(optGame.dataZoom));
+  assert.equal(optGame.dataZoom.length, 1);
+  assert.equal(optGame.dataZoom[0].type, 'inside');
+  assert.deepEqual(optGame.dataZoom[0].xAxisIndex, [0, 1]);
+  assert.equal(optGame.dataZoom[0].filterMode, 'none');
+  assert.equal(optGame.dataZoom[0].start, 0);
+  assert.equal(optGame.dataZoom[0].end, 100);
+  assert.ok(optGame.dataZoom[0].minSpan >= 1);
+
+  const optResult = buildKlineOption({
+    bars: full,
+    historyLength: HIST_LEN,
+    trades: SAMPLE_TRADES_SAME_CLOSE,
+    mode: 'result',
+    resetDataZoom: true,
+  });
+  assert.ok(optResult.dataZoom.some((z) => z.type === 'inside'));
+  assert.ok(optResult.dataZoom.some((z) => z.type === 'slider'));
+});
+
+test('buildKlineOption omits dataZoom start/end when not resetting', () => {
+  const kline = makeAnalysisKline();
+  const full = kline.slice(0, HIST_LEN + 30);
+  const opt = buildKlineOption({
+    bars: full,
+    historyLength: HIST_LEN,
+    mode: 'game',
+    resetDataZoom: false,
+    showDataZoomSlider: false,
+  });
+  assert.equal(opt.dataZoom[0].start, undefined);
+  assert.equal(opt.dataZoom[0].end, undefined);
+});
