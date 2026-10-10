@@ -849,3 +849,102 @@
 .ghost-duel-entry__cta:hover {
     box-shadow: 3px 3px 0 color-mix(in srgb, var(--mode-ghost) 42%, var(--line));
 }
+
+/* ============================================================
+   Home hub — Android APK download / iOS add-to-home hint
+   ============================================================ */
+
+.start-screen .apk-download-entry {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.start-screen .apk-download-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: inherit;
+    border: 1.5px dashed var(--line);
+    background: var(--card);
+    border-radius: 16px 22px 14px 20px;
+    box-shadow: 1px 1px 0 var(--line);
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-sizing: border-box;
+}
+
+.start-screen .apk-download-link:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 var(--line);
+}
+
+.start-screen .apk-download-link:active {
+    transform: translate(1px, 1px);
+    box-shadow: 0 0 0 var(--line);
+}
+
+.start-screen .apk-download-icon {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.start-screen .apk-download-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.start-screen .apk-download-copy strong {
+    font-family: var(--kaiti);
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--ink);
+}
+
+.start-screen .apk-download-copy small {
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    line-height: 1.35;
+}
+
+.start-screen .apk-download-tip,
+.start-screen .apk-ios-hint {
+    margin: 0;
+    padding: 0 4px;
+    font-size: 0.7rem;
+    color: var(--mute);
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
+.start-screen .apk-ios-hint {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border: 1.5px dashed var(--line);
+    background: var(--card);
+    border-radius: 16px 22px 14px 20px;
+    box-sizing: border-box;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+}
+
+[data-theme="dark"] .start-screen .apk-download-link,
+[data-theme="dark"] .start-screen .apk-ios-hint {
+    background: var(--card);
+}
