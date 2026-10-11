@@ -1,0 +1,117 @@
+{
+  "scope": "Documentation review only; no implemented PvP tests or production writes",
+  "review_date": "2026-10-11 Asia/Shanghai",
+  "source_revision": "fb13936984ae9166d58fa2bdc72423aee445933e",
+  "workspace_head": "da83f941c675a10183d83b0a3fac517bfc08eca0",
+  "original_sha256": "370c1ec0ead01a0e8c52b0be915533d5fbc4e62c03729de5ebe90dca1f38c990",
+  "modified_sha256": "2a55d19543abff0d2e93721421005d660d7fe9213506663ab36628ac0a0dc2ad",
+  "patch_sha256": "3d416a057d70ee0838cf3bb31270e5a96020fb8021f58bb54a8a15d99fd56c7a",
+  "reviewed_document_path": "/Users/xiexuan/codes/github_projects/stock_website/docs/pvp-battle-design.md",
+  "runs": [
+    {
+      "name": "baseline_document_against_revised_acceptance",
+      "argv": [
+        "python3",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/verify.py",
+        "--document",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/original.md"
+      ],
+      "cwd": "/Users/xiexuan/codes/github_projects/stock_website",
+      "stdout": "FAIL versioned_baseline\nFAIL single_write_transport\nFAIL correct_live_equity\nFAIL persistent_player_lock\nFAIL unique_settlement\nFAIL rating_formula_fixed\nFAIL reward_cap_before_charge\nFAIL explicit_restart_policy\nFAIL drain_before_rollback\nFAIL resources_and_acceptance\nFAIL no_production_test_claim\nPASS balanced_fences\nFAIL json_examples_parse\nFAIL section_references_exist\nDOCUMENT_CHECKS 1/14\n",
+      "stderr": "",
+      "exit_status": 1,
+      "expected_exit_status": 1
+    },
+    {
+      "name": "modified_document_against_revised_acceptance",
+      "argv": [
+        "python3",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/verify.py",
+        "--document",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/pvp-battle-design.md"
+      ],
+      "cwd": "/Users/xiexuan/codes/github_projects/stock_website",
+      "stdout": "PASS versioned_baseline\nPASS single_write_transport\nPASS correct_live_equity\nPASS persistent_player_lock\nPASS unique_settlement\nPASS rating_formula_fixed\nPASS reward_cap_before_charge\nPASS explicit_restart_policy\nPASS drain_before_rollback\nPASS resources_and_acceptance\nPASS no_production_test_claim\nPASS balanced_fences\nPASS json_examples_parse\nPASS section_references_exist\nDOCUMENT_CHECKS 14/14\n",
+      "stderr": "",
+      "exit_status": 0,
+      "expected_exit_status": 0
+    },
+    {
+      "name": "baseline_engine_and_proposed_adapter",
+      "argv": [
+        "node",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/engine-probe.mjs"
+      ],
+      "cwd": "/Users/xiexuan/codes/github_projects/stock_website",
+      "stdout": "PASS MTM_ADAPTER baseline=-500000 proposed=100000\nPASS T_PLUS_ONE next_open buy(d1)->sell(d2) is legal\nPASS FINAL_CURVE_EQUALS_SETTLEMENT\nPASS RATING_BOUNDARY baseline_level=3 proposed_level=4 level_at_1132=5\nNOTE: proposed adapter/formula tested as isolated expressions, not implemented PvP.\n",
+      "stderr": "",
+      "exit_status": 0,
+      "expected_exit_status": 0
+    },
+    {
+      "name": "apply_patch_to_original_copy",
+      "argv": [
+        "patch",
+        "-p0",
+        "-i",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/changes.patch"
+      ],
+      "cwd": "/var/folders/37/w1780s5110xgjf0hj4zy4r940000gn/T/pvp-document-patch-ue4i76s7",
+      "stdout": "patching file 'docs/pvp-battle-design.md'\n",
+      "stderr": "",
+      "exit_status": 0,
+      "expected_exit_status": 0
+    },
+    {
+      "name": "rollback_patched_copy",
+      "argv": [
+        "python3",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/rollback.py",
+        "--target",
+        "/var/folders/37/w1780s5110xgjf0hj4zy4r940000gn/T/pvp-document-patch-ue4i76s7/docs/pvp-battle-design.md"
+      ],
+      "cwd": "/Users/xiexuan/codes/github_projects/stock_website",
+      "stdout": "ROLLBACK_OK original_sha256=370c1ec0ead01a0e8c52b0be915533d5fbc4e62c03729de5ebe90dca1f38c990\n",
+      "stderr": "",
+      "exit_status": 0,
+      "expected_exit_status": 0
+    },
+    {
+      "name": "rollback_rejects_later_edits",
+      "argv": [
+        "python3",
+        "/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/rollback.py",
+        "--target",
+        "/var/folders/37/w1780s5110xgjf0hj4zy4r940000gn/T/pvp-document-patch-ue4i76s7/docs/pvp-battle-design.md"
+      ],
+      "cwd": "/Users/xiexuan/codes/github_projects/stock_website",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/Users/xiexuan/codes/github_projects/stock_website/docs/reviews/pvp-battle-2026-10-11/rollback.py\", line 20, in <module>\n    assert hashlib.sha256(current).hexdigest() == manifest['modified_sha256'], 'target changed; preserve later edits'\nAssertionError: target changed; preserve later edits\n",
+      "exit_status": 1,
+      "expected_exit_status": 1
+    }
+  ],
+  "live_observations": {
+    "version_url": "https://stockgame.xieyw.top/version.json",
+    "version": {
+      "revision": "fb13936984ae9166d58fa2bdc72423aee445933e",
+      "builtAt": "2026-10-11T02:43:38Z",
+      "datasetSha": "f87951444560053c680c2920e06fbd8169ce07d57ff43882f306048f1a809d03"
+    },
+    "config_url": "https://stockgame.xieyw.top/api/v1/config",
+    "config_summary": {
+      "ruleVersion": "sim30-mtm-v1",
+      "ghostDuel": true,
+      "puzzleWeekly": true,
+      "pvpBattle_field_present": false
+    },
+    "limits": "Read-only public pages/configuration; no server login or production load test. API binary revision not independently verified."
+  },
+  "existing_modified_source_files_unchanged": {
+    "server/src/lib/users.js": true,
+    "server/src/middleware/request.js": true,
+    "server/src/routes/auth.js": true
+  },
+  "patch_round_trip": "byte-for-byte verified on disposable copy; edited document retained",
+  "initial_probe_repair": "First probe had one excess parent path component; corrected to ../../../ and rerun successfully. No application file changed."
+}

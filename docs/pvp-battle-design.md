@@ -1,678 +1,623 @@
-# 实时对战（PvP 「对战」）— 开发设计文档
+# 实时对战 PvP「对战」：产品与实施规格
 
-> 状态：**设计稿，未实现**（2026-10-11，基于 `main@0b2e5b4`）。
-> 参考：`docs/ghost-duel.md`、`docs/daily-challenge-f01.md`、`docs/event-protocol-b0-pr1.md`、`docs/jiu-coin.md`、`docs/r5-game-window-dto.md`。
-> Feature flag：`PVP_BATTLE_ENABLED` → `config.pvpBattleEnabled` → `features.pvpBattle`（默认 **OFF**）。
+> 版本：v1.1，2026-10-11；状态：**设计已评审，功能未实现**。
+> 评审基线：线上静态 revision 与本地远端跟踪分支均为 `fb13936984ae9166d58fa2bdc72423aee445933e`。
+> 本文替代原设计稿；原稿备份与修订证据在 `docs/reviews/pvp-battle-2026-10-11/`。文中的新模块、接口、迁移、容量指标都是开发要求，非已上线能力。
 
-## 0. 一句话
+## 0. 结论与阅读顺序
 
-两位登录用户在「对战大厅」互相约战，进入房间后**同时**对**同一只隐藏身份的股票窗口**逐日决策（每日 30 秒，买入 / 卖出 / 观望，超时=观望），服务器按共享引擎 `shared/engine.js` 逐日裁决、逐根揭示 K 线，终局按 `return_ppm` 判胜负并生成双方复盘；战绩、等级、近 N 场点阵进入右上角个人面板。
+**可行，但应实现为独立的服务端裁决双人玩法，不是把幽灵对局换成 WebSocket。** 现有账号、韭币、交易引擎、曲线、图表、API 和 SQLite 可复用；难点在双人一致性、有限信息、计时、资金台账、异常终局和部署恢复。
 
----
+本版定位：两名登录用户主动约战，同一股票窗口、固定次日开盘成交，29 回合同步锁定、30 个交易日估值；终局比较收益及回撤。韭币仅为站内虚拟积分，不引入充值、提现、转让或现金奖励。历史行情可被识别，本功能不宣称竞技级反作弊。
 
-## 1. 现状分析（可复用模块）
+实施顺序：先读 §1 的差异与阻断问题 → §2～7 产品及裁决规则 → §8～11 数据、接口和工程边界 → §12～15 资源、验收、部署与工作包。
 
-| 领域 | 文件 / 函数 | 现状 | PvP 复用方式 |
-|------|-------------|------|--------------|
-| 规则常量 | `shared/rules.js`：`RULE_VERSION='sim30-mtm-v1'`、`GAME_DAYS=30`、`DECISION_DAYS=29`、`INITIAL_CASH=100000`、`FILL_MODES`、`ACTIONS` | 30 根游戏 K 线 = **29 次决策** + 第 30 日收盘估值结算 | 原样复用。PvP「30 天」= 30 根 bar / 29 个决策回合（与现有所有玩法一致，产品文案写「30 个交易日」） |
-| 引擎 | `shared/engine.js`：`replayGame({fillMode,bars,actions,finish})`、`settleGame()`、`roundHalfUp()`、`formatReturnPct()` | 纯函数；T+1（卖出成交日必须 > 买入成交日）、满仓/空仓、无费用；非法动作返回 `{ok:false,code:422}` | 每日裁决 = 对该玩家「已有动作 + 当日动作」调用 `replayGame`（非 finish）校验合法性并得 MTM；终局 `settleGame` |
-| 曲线/回撤/基准 | `shared/equityCurve.js`：`buildEquityCurveCash()`、`mddPpmFromCurve()`、`buyHoldBenchmarkPpm()`、`settleCurveMetrics()`、`revealedGameDay()` | 日挑战已用其做 `mdd_ppm` 次级排序 | 平局判定、复盘曲线、买入持有基准 |
-| 选窗 | `server/src/lib/dataset.js`：`pickRandomWindow({rng,stockIndex,windowStartIndex,historyLength})`、`getBar`/`sliceBars`（列式存储） | 返回 `snapshot{stockCode,stockName,stockIndex,windowStartIndex,history,bars}` + `snapshotSha256` | 建房时调用一次，**双方共用同一 snapshot**；snapshot 存 `pvp_matches.snapshot_json`（仅服务器） |
-| 可见行情 | `server/src/lib/gameProtocol.js`：`buildVisibleMarket(snapshot, actionCount)`（注释：*Never includes stock identity or future bars*） | event-v1 正确地只下发已揭示 bar | PvP 直接复用此函数生成每日 `visible`；**不要**复用 `buildStateDto()` 末尾的 `dto.window = windowFromSessionRow(row)`（R5 全窗口泄露，见 §3.4） |
-| 幽灵对局 | `server/src/lib/ghostDuel.js`：`requireGhostDuelEnabled()`、`getGhostDuelPreview()`、`startGhostDuel()`；`shared/ghost.js`：`ghostRevealAfterPlayerDecisions()`、`ghostRevealedActions()`、`ghostReturnAtDecisionCount()`、`ghostActionLabelZh()`；前端 `js/ghost-duel.js`、`js/ghost-duel-entry.js`、`js/game.js`（`#ghostHudChip` / `#ghostHudAction`，L366「player first → ghost」） | 单人 + 录像对手，「先锁定再揭示」节奏 | **揭示节奏 / HUD 对手芯片 / 交易日志「对手」行 / 中文动作标签** 直接借鉴；`ghostReturnAtDecisionCount` 的逐日收益对比逻辑可抽成通用 `opponentReturnAt()` |
-| 游戏会话 | `server/src/lib/games.js`：`createGame()`、`finishGame()`、`getActiveGame()`、`expireStaleActive()`、`listMyGames()`、`myStats()`；`game_sessions` 唯一索引 `idx_game_sessions_one_active` | 每用户唯一 ACTIVE 局 | PvP **不写 `game_sessions`**（避免再次重建表改 CHECK，见 017），独立 `pvp_*` 表；但入大厅/建房时**检查** `getActiveGame()` 互斥规则（见 §3.3） |
-| 结果 DTO | `server/src/lib/gameResultDto.js`：`resultDto()`；`game_results`（`actions_json`、曲线字段 010） | | 复盘 DTO 结构对齐，便于前端复用 `js/result.js` |
-| 结果页 / 复盘 | `js/result.js`：`endGame()`、`drawResultChart()`、`buildPointNavigator()`、`playAgain()`；`js/analysis-pure.js`：`computeBestPoints()`、`computeBSReport()`、`calcGrade()`、`computeKlineAnalysisModel()`；`js/kline-option.js` | B/S 点标注、最佳买卖点、BS 报告 | PvP 结果页复用 `drawResultChart` 的 K 线 + 双色 markPoint；`computeBestPoints`/`computeBSReport` 为纯函数，可在 **server 端 import** 生成确定性复盘（需确认无 DOM 依赖，仅 `patterns.js` 的 `kbTag`） |
-| 早知道 | `js/hindsight-pure.js`：`findBestSellAfterBuy()`、`periodReturnPct()` | 单笔最优 | 「早知道」单笔最优；多笔最优用 §6 新增 DP |
-| 认证 | `server/src/middleware/request.js`：`loadSession`（cookie `__Host-stockgame_session` → `findValidSession`）、`requireUser`、`checkOrigin`/`originOk`、`requireCsrf`（`deriveCsrfToken`）；`server/src/lib/sessions.js` | | REST 原样；WS 升级时手动跑同一套（§4.4） |
-| 幂等 | `routes/games.js` 读取 `Idempotency-Key`（`createKey`/`commandKey`） | | 约战/应答/行动均带幂等键 |
-| 限流 | `server/src/lib/rateLimit.js`：`consumeRateLimit(key,limit,windowMs)`、`rateLimitFail()`、`checkCreateGameLimits()` | 内存桶，重启清零 | 新增 `checkPvpChallengeLimits()` 等 |
-| 韭币 | `server/src/lib/jiuCoin.js`：`JIU_COIN_GAME_CREATE_COST=20`、`deductGameCreateCost(userId,gameId,db,cost)`、`insertJiuCoinLedger()`；`GHOST_DUEL_COST = JIU_COIN_GAME_CREATE_COST` | 扣费与建局同事务 | 建房事务内双方扣费，结算事务内发奖 |
-| 排行榜 | `server/src/lib/leaderboard.js`：`getLeaderboard()`、`invalidateLeaderboardCache()`；前端 `js/leaderboard.js` | 经典练习榜 | PvP 不进练习榜；对战积分榜 V1 不做（已确认，见 §15-6） |
-| 个人面板 | `js/auth.js`：`ensureAuthDom()` 生成 `#authChip`；`#authUserBtn.onclick = () => openAuthModal("settings")` → `#authSettingsPanel`（头像/昵称/密码） | 右上角头像芯片打开的就是这个「设置」弹窗 | 在 `#authModal` 内新增 Tab「对战」→ `#authBattlePanel`（§8） |
-| 我的战绩 | `js/my-games.js`：`showMyGames()`、`loadMyGamesPanel()`；路由 `Route.MY_GAMES`（`js/screen-router.js`） | 经典局列表 | 对战历史「查看全部」新开 `Route.PVP_HISTORY` 屏，结构参考 my-games |
-| 首页入口 | `js/home-ia.js`（模拟盘 hub）、`index.html` L184「我的战绩」lane | | 新增「对战」lane |
-| Feature flags | `routes/games.js` `/config` 的 `features{...ghostDuel}`；`app.js` `/health/ready` 的 `features: cfg.features`；`lib/config.js` | | 增加 `pvpBattle` |
-| 迁移 | `server/db/migrate.js` 顺序执行 `server/migrations/NNN_*.sql`，最新 `019_puzzle_weekly_board.sql` | | 新增 **`020_pvp_battle.sql`**（纯新表，无需 `foreign_keys=OFF` 重建） |
-| 部署 | `deploy/nginx-stockgame.xieyw.top.conf`（`location /api/` → `proxy_pass 127.0.0.1:8787`，`proxy_read_timeout 60s`）、`deploy/stockgame-api.service`、`deploy/README-api.md` | 仓库模板端口 8787，生产实际 8790（以 `/etc/stockgame/api.env` 为准） | 新增 WS location（§4.3） |
-| App 壳 | `android-app/.../MainActivity.kt`：`addJavascriptInterface(ThemeBridge(), "StockGameApp")`（`setTheme`、`checkUpdate`）；`js/apk-download.js`：`hasStockGameAppBridge()` | | 可选新增 `setKeepScreenOn(bool)` |
-| 服务入口 | `server/src/index.js`：`app.listen(config.port,"127.0.0.1")` | 未持有 `http.Server` 句柄 | 改为 `const server = app.listen(...)`，再 `attachPvpWs(server)` |
+### 0.1 原稿决策的保留与调整
 
----
+保留原稿“已确认”栏目记载的方向：30 根 K 线／29 次决策、对手昵称可见、固定 next_open、每人 20 韭币、胜者到账 35、平局／系统作废退款、每日最多 10 次胜奖、不做免费友谊赛、不做 PvP 排行榜、称号展示、相对价格图表。该栏目是产品输入记录，不代表本轮所有新增取舍已再次经人工确认。
 
-## 2. 产品规格
+本轮给出以下明确默认方案，可据此开发；如要改变，先改文档与对应验收用例：
 
-### 2.1 用户流程（屏幕）
+| 项目 | 定稿 | 相对原稿的改变与原因 |
+|---|---|---|
+| 实时通道 | REST 承担全部业务写入；WS 只推状态与心跳；轮询降级 | 删除两套写协议，复用已有认证、CSRF、错误码和幂等 |
+| 扣费时点 | 双方准备完成、playing 开始时，双人原子扣费 | 准备超时尚未扣款，减少退款分支与争议 |
+| 每日奖励上限 | 双方开局前均须有胜奖资格；当日已领 10 次者暂停新开 PvP | 删除“照收 20、赢了奖 0”的隐性惩罚；本版没有无奖付费局 |
+| 同对手限制 | 同一无序用户对 24 小时最多 3 场已开局对战；第 4 场拒绝开局 | 替代只把积分乘零却继续奖币；系统作废不占此额度 |
+| 断线策略 | WS / REST 心跳统一；自动 hold，连续 5 回合缺席判弃权；双方同批次达到阈值作废 | 轮询玩家不再被误判为离线 |
+| 服务重启 | 首版一律将未完局系统作废并精确退款；正常发布先排空 | 删除“有时恢复、有时中止”的双策略，避免计时补偿和版本混跑 |
+| 部分对局复盘 | 只展示实际共同揭示区间及当时净值；不补满未来 hold | 弃权仍记胜负，但不把反事实收益混入完整局均值 |
+| 等级 | 修正分段公式；固定 K=32；不承诺“再赢几局升级” | 原公式、称号表、示例互相矛盾；预测场次数学上也依赖对手 |
+| 复盘范围 | V1 做双人曲线、成交点、回撤、基准与分歧日；最优 DP / B/S 报告后置 | 避免在关键计时和终局路径运行重分析、或引入前端依赖 |
+| 服务器规模 | 小流量 20 房间起，压测通过再升至 50 | 原“1.6GB、77MB RSS、微秒引擎、200 房间”缺本轮实测支撑 |
 
+## 1. 已部署产品、代码事实与可行性边界
+
+### 1.1 本轮核验（2026-10-11）
+
+| 证据 | 查证结果 | 开发影响 |
+|---|---|---|
+| [线上首页](https://stockgame.xieyw.top/) 浏览器访问 | 纸／墨手绘笔记本、登录／注册、公告、模拟盘／知识馆／悔棋局、安卓下载入口 | 延续现有外观和导航，不另造首页 |
+| 模拟盘及选择玩法页面 | 模拟盘有选择玩法、战绩、榜单；选择玩法可见经典、今日挑战、一把梭、生存模式 | PvP 放模拟盘二级入口，与“选择玩法”并列，减少等待对手时的导航层级 |
+| [版本接口](https://stockgame.xieyw.top/version.json) | revision=`fb13936984ae9166d58fa2bdc72423aee445933e`；builtAt=`2026-10-11T02:43:38Z` | 对应源码用于本次评审；这证明静态版本，不单独证明 API 二进制 revision |
+| [公开配置](https://stockgame.xieyw.top/api/v1/config) | ruleVersion=`sim30-mtm-v1`；event-v1、日挑战、幽灵、残局、韭币答题等开关为 true；尚无 pvpBattle | 原有功能已存在，不能再沿用 9 月“先建账号后台”的规划 |
+| 行情版本 | version/config 均为 `f87951444560053c680c2920e06fbd8169ce07d57ff43882f306048f1a809d03` | 对局建立时固定该类 dataset version，不随更新漂移 |
+| 本地工作区 | main=`da83f941c675a10183d83b0a3fac517bfc08eca0`，落后上述 origin/main 59 个提交；目标文档只在 origin/main 存在 | 本次只提取、修订文档，不切分支、不合并或覆盖已有改动 |
+| 未提交文件 | users.js、request.js、auth.js 有修改，另有 release/ 和残局脚本 | 全部保留，开发前另行整合归属 |
+| 服务器参数 | 未登录服务器，未测真实 RSS／CPU／磁盘／并发／生产端口 | 原稿的 8790、1.6GB 等只能作为待核实参数 |
+
+本轮只读访问页面和公开接口，无生产注册、约战、币操作、服务器重启或性能压测。游客会话未验证登录后的个人面板及后台；这些部分结合对应提交源码评估。
+
+### 1.2 复用清单与真实限制
+
+| 现有模块 | 可以复用 | 需隔离／修改 |
+|---|---|---|
+| `shared/rules.js`、`shared/engine.js` | 29 动作、T+1、全仓、`settleGame` 终局口径 | `replayGame(...finish:false).returnPpm` 不直接作为 PvP 已揭示日净值，见 §4 |
+| `shared/equityCurve.js` | 曲线、MDD、买入持有基准、revealedGameDay | 净值计算只使用已裁决动作；锁定当前动作后不得提前外发派生价格／收益 |
+| `server/src/lib/dataset.js` | `pickRandomWindow`、原始快照、数据版本 | 服务端选窗一次；历史固定 30 根；检查选窗后长度和 OHLCV，无客户端股票选择 |
+| `server/src/lib/gameProtocol.js` | 可见行情切片的思想和函数 | `buildVisibleMarket` 仍带原日期／价格，需再白名单变换；`buildStateDto` 追加完整 window，严禁直接复用 |
+| ghost / 图表 / screen-router | 对手揭示节奏、可见图表构造、路由与主题 | 独立 PvP 状态与屏幕，不接单人完整 window、快进、反悔、自动保存路径 |
+| sessions / request / auth-http | cookie session、REST Origin／CSRF、中文错误 | WS upgrade 不经过 Express 中间件；`originOk` 当前为私有函数，需抽公开纯校验函数 |
+| `jiuCoin.js`、台账 | 余额和通用 `insertJiuCoinLedger` | `deductGameCreateCost` 按 game refId 去重，同 matchId 连扣两人会跳过第二人，必须新增 PvP 经济服务 |
+| 现有 SQLite 与迁移 | 独立 pvp 表、短写事务、备份 | 最新是 019；实施时取下一空闲迁移号，当前候选 020，不改既有迁移 |
+| `js/analysis-pure.js` | 未来可提取纯分析能力 | 依赖 patterns；API 包当前仅含 server/shared，不含 js。不要直接从服务器 import 前端文件 |
+| API 打包与回滚 | `package-api-production.sh`、bootstrap、rollback-api | 打包明确排除 node_modules；原稿“打包 node_modules/ws”与白名单相冲突。回滚脚本也需补 npm ci，见 §14 |
+
+### 1.3 已复现的三个问题
+
+- 固定样例：d1 close=10，d2 open=20／close=22，d1 买入。原引擎非终局 returnPpm 为 **−500000（−50%）**；裁决后已揭示 d2 收盘净值应为 **100000（+10%）**，与 equityCurve 尾点一致。原因是该返回值用旧日收盘除以次日买价。PvP 要明确用曲线尾点，不在本特性里悄悄改全站引擎。
+- `next_open` 的 `['buy','sell']` 是合法动作：d1 决策→d2 买；d2 决策→d3 卖。因此“locked 状态禁用卖出”错误，按钮要判断预计卖出成交日。
+- 原 `floor((rating-700)/100)` 在 1000 得 3，而称号表要求 4；1132 的称号等级也与原返回示例不一致。详见 §7。
+
+## 2. 产品范围与交互
+
+### 2.1 P0 必做
+
+- 大厅、上线可约战、约战／拒绝／取消／超时、准备确认、实时双人房间。
+- 服务端逐回合锁定和揭示、REST 降级、断线重同步、多标签一致性。
+- 正常／弃权／作废结算、双人原子扣费、奖励／退款唯一性、评分和私有历史。
+- 基础双人复盘、举报＋后台处理、屏蔽用户、运维排空／紧急关闭、恢复作废。
+- 浏览器与现有 Android WebView 可玩，无需强制 App 更新。
+
+后置：自动匹配、跨服／多实例、聊天、观战、好友、推送通知、PvP 公开排行榜、免费友谊赛、长断线恢复、最优多笔 DP、升级场次预测、图片分享、新原生 App 能力。结果页 V1 “分享”只复制双方战绩摘要，不生成公开私有复盘链接。
+
+### 2.2 用户流程
+
+```text
+模拟盘 → 对战大厅（游客只见玩法说明与在线人数）
+登录 → 主动开启「可约战」（进入页面不自动公开在线状态）
+选择在线对手 → 约战 20 秒 → 接受 → 双方准备 10 秒
+双方就绪 → 同事务校验与扣费 → 房间首屏（历史30根 + 游戏d1）
+每回合30秒：买／卖／观望 → 锁定 → 等对手或截止
+裁决 → 揭示下一根、对手动作、双方当前净值 → 下一回合
+第29回合裁决 → 第30日收盘估值 → 胜／负／平、收益、币和评分变化
+结果 → 复盘／回大厅／再次约战（重新征求同意，不直接扣费）
 ```
-首页/模拟盘 hub ──[对战]──▶ ① 对战大厅
-   ① 大厅：顶部「我：可约战 ●」开关（进入即开启），下方可约战列表（昵称/头像/等级/胜率/近5场点）
-       │ 点某人「约战」
-       ▼
-   ② 约战中（发起方）：「等待 XX 回应… 20s」[取消]
-   ② 收到约战（接收方）：大厅顶部纸条弹层「XX（3段 · 62%）向你约战」[接受][拒绝] 20s 倒计时
-       │ 接受
-       ▼
-   ③ 准备确认（ready check）：双方头像 + 「准备」按钮，10s；两人都点 → 开局；任一超时 → 回大厅（超时方 5 分钟内不可被约）
-       ▼
-   ④ 对战房间：上方「我 vs 对手(昵称/头像)」HUD + 收益对比条；中间 K 线（历史 + 已揭示 bar）；
-      下方 [买入][卖出][观望] + 30s 圆环倒计时；"第 N / 29 日"
-       │ 点按钮 → 本日锁定
-       ▼
-   ⑤ 等待对手：「已锁定：买入 · 等待对手（12s）」按钮置灰
-       │ 双方都锁定 或 30s 到
-       ▼
-   日结算动画：揭示新 bar + 对手当日动作（纸感闪一下，复用 #ghostHudAction 样式）→ 回到 ④ 下一日
-       │ 第 29 日结算后
-       ▼
-   ⑥ 结果页：胜/负/平大字 + 股票身份揭晓 + 双方收益/回撤 + 双人 B/S K 线 + 数据对比表 + 「早知道」
-      [再来一局(向同一对手发约战)] [回大厅] [分享]
-```
 
-### 2.2 关键规则
+- 房间主标识“决策回合 d/29 · 已见第 d/30 个交易日”；不能把回合数写成 30。
+- 对手当日只显示“尚未锁定／已锁定”，不显示选择、价格、仓位变化或预计算收益。
+- 自己点击后显示“提交中”，收到成功确认才显示“已锁定”。超时／断网先 GET state 确认，再用同一幂等键重试；不先切下一根。
+- 进入准备页说明：双方各付 20、胜者**到账 35（净赚 15）**、负者净减 20、平局退 20、每日胜奖额度、最长约 15 分钟、切后台继续计时。
+- 等待时明确退出和取消入口；房间返回键弹“离开后继续计时／认输”提示。关闭浏览器不自动发送认输。
+- 为动画预留 1 秒：每次裁决后新回合 `opensAt=resolveTime+1000`，`deadlineAt=opensAt+30000`；双方看到相同时间戳。下一回合开放前按钮禁用。
+- 可并存原有单人活动局，但不修改它的状态或期限（当前 games.js 是 7 天，不是原稿的 24 小时）。进入 PvP 后前端离开单人屏并保存既有草稿；禁止由单人模块触发 PvP 自动保存、快进或扣币。
 
-1. **登录必需**：游客可浏览大厅列表（只读，按钮提示「登录后约战」，调用 `openAuthModal("login")`），不能上线可约战。
-2. **同时出手**（推荐，见 §2.5）。
-3. 每日 30s（`PVP_DAY_SECONDS=30` 可配置），超时 = `hold`。
-4. **非法动作在客户端禁用**（空仓不能卖、持仓不能买、T+1 锁定日不能卖），服务器仍按 `replayGame` 校验；非法 → `422 PVP_ILLEGAL_ACTION`，本日仍可重新提交直到截止。
-5. 成交模式：**固定 `next_open`**（V1）。理由：与今日挑战 / 幽灵对局一致（`daily-challenge-f01.md` §冻结规则 2）；`same_close` 下决策时看到当日收盘即按收盘成交，30s 内信息完备性更高、更"像抢答"，而 `next_open` 引入隔夜不确定性，更考验判断。`pvp_matches.fill_mode` 字段保留，后续可做房间选项。
-6. 对手动作**每日结束后揭示**（不实时）：
-   - 实时可见 → 后手可跟单/反向，同时出手变成事实上的交替出手，不公平；
-   - 仅终局可见 → 失去对抗感和「对手买了！」的紧张时刻；
-   - 每日揭示 = 幽灵对局已验证的「先锁定再揭示」节奏，复用 UI。**实时只显示"对手已锁定 ✓"**（不含动作）以减少等待焦虑。
-7. 对手身份：大厅约战是熟人/可见的，**对手昵称可见**；"身份隐藏"指的是**股票身份**（代码/名称/日期）直到终局才揭晓。（若 Bill 希望匿名匹配，见开放问题 Q2。）
+### 2.3 页面与空态
 
-### 2.3 韭币（全部可配置，`config.pvp*`）
+- 新路由：PVP_LOBBY、PVP_ROOM、PVP_RESULT、PVP_HISTORY；深链只含随机 matchId，恢复时先检查权限。
+- 大厅只向已登录用户列出**主动公开可约战**的用户（头像、昵称、称号、最近 5 场，最多 50 条分页）；游客只见人数、说明和登录入口。无在线对手时引导“去玩幽灵对局／稍后再来”，不偷偷匹配机器人。
+- 首页登录芯片菜单增加“对战档案”；个人设置弹层新增对战 Tab，但渲染逻辑独立模块，避免继续扩张 auth.js。
+- 结果同屏突出胜负原因、双方收益／回撤和币变化；收益高但回撤决胜／弃权胜的原因明确展示。
+- 红涨绿跌沿用中国市场规则；胜／负／平用文字和图形，不仅靠颜色。375px 手机、纸／墨主题、键盘焦点和动态状态可访问性均为验收项。
 
-| 项 | 默认 | 常量 |
-|----|------|------|
-| 入场费（每人，建房事务内扣） | 20（同经典 `JIU_COIN_GAME_CREATE_COST`） | `PVP_ENTRY_COST` |
-| 胜者奖励 | 35（双方 40 入池，系统抽 5 作为通缩） | `PVP_WIN_REWARD` |
-| 平局 | 各退 20 | — |
-| 中止（服务器原因 / 双方都未准备） | 全额退还 | — |
-| 认输/逃跑方 | 不退 | — |
-| 每日计奖上限 | 前 10 场胜利计奖，之后 0 奖励（只记积分） | `PVP_DAILY_REWARD_CAP` |
+## 3. 大厅、约战、准备与互斥
 
-余额不足：大厅「约战」按钮置灰并提示；接受时再次校验（事务内），不足 → `402 INSUFFICIENT_JIU_COIN`。台账 `reason='pvp_entry'|'pvp_reward'|'pvp_refund'`，`refType='pvp_match'`。
+### 3.1 presence 不是持久化房间状态
 
-### 2.4 边界情况
+- 内存按 userId 聚合，连接最多 3 条；WS 心跳或鉴权 REST heartbeat 每 15 秒更新 lastSeen。45 秒未收到任一有效活动即判离线、从可约战名单移除。
+- WS 断开不立即移除，REST 正常轮询的用户仍在线；WS protocol pong 仅说明连接健康，JS heartbeat 作为页面存活证据，两者分别记录。
+- 退出大厅关闭可约战；已有 preparing／playing 房间不因此被终止。退出登录撤销对应连接，其他有效登录仍可恢复同一对局。
+- 一名用户：最多 1 个出站 pending、3 个入站 pending、1 个准备中或进行中 PvP。pending 本身不占“房间锁”；列表的“忙碌”只用于 preparing／playing，避免原稿“收一条就忙”与“三条入站”矛盾。
 
-| 场景 | 处理 |
-|------|------|
-| 断线 / 刷新 | WS 断开不影响服务器计时；本日未出手 → 超时 `hold`。重连后 `hello` → 服务器推送 `match.state` 全量快照（已揭示 bar、双方已揭示动作、本日 deadline、我本日是否已锁定）。 |
-| 连续缺席 | 连续 **5** 个交易日超时且 WS 不在线 → 判**弃权负**（`forfeit_reason='afk'`）。在线但一直超时（主动观望）不判负。 |
-| App 切后台 | 计时不暂停（服务器权威）；`visibilitychange→visible` 时立即 `sync`。 |
-| 主动离开 | 「认输」按钮二次确认 → 立即结算为负，对手胜；积分照常结算。关闭页面不等于认输，走 AFK 规则。 |
-| 双方都超时 | 当日双方 `hold`，正常推进。双方均连续 5 日 AFK 且都离线 → `aborted`，全额退费，不计积分。 |
-| 同时互相约战 | A→B 与 B→A 并发：服务器（单进程、同步 better-sqlite3 事务）发现反向 pending 时**直接合并为 accepted** 并进入 ready check。 |
-| 一人收到多个约战 | 允许最多 3 个 pending 入站；接受其一 → 其余自动 `cancelled`（`reason='target_busy'`）。发起方同一时刻只能有 **1** 个出站 pending。 |
-| 多标签页 / 多设备 | presence 以 `user_id` 为键；同一用户多条 WS 连接都接收推送；最新 `hello` 的连接为"主"，旧连接收到 `session.superseded` 提示（不踢下线）。行动以幂等键去重。 |
-| 已有经典活动局 | 允许进入大厅/对战（PvP 不写 `game_sessions`，不冲突）；经典局 24h 过期规则不受影响。 |
-| 已在对战中 | 不能再上线可约战；大厅显示「回到对战」。 |
-| API 重启 | 见 §4.6：可恢复则从 SQLite 恢复并顺延当日 deadline；否则 `aborted` 退费。 |
-| 账号被禁用 | `requireUser` 拒绝；进行中对局判该方弃权。 |
+### 3.2 约战竞态规则
 
-### 2.5 同时 vs 交替出手
+- 自己约自己、目标离线／关闭可约战、互相屏蔽、任一方房间锁被占用、余额或计奖资格不足，直接拒绝；发出时检查一次，正式开局再次检查。
+- 同时 A→B、B→A：唯一无序 pair pending 键；第二个创建返回已有约战及“请接受”状态，**不替用户自动接受**。
+- 接受在 `BEGIN IMMEDIATE` 短事务内：检查 pending 和截止 → 检查双方房间锁 → 创建 waiting_ready、两席 player、两条 active_member → challenge accepted → 取消涉及双方的其他 pending。只允许事务全部成功。
+- 接受 A→B 与 C→B 同时到达，B 的 active_member 主键使其中一个成功；另一方得到 TARGET_BUSY，零扣费。
+- 准备超时／任一取消：aborted(reason=ready_timeout/ready_cancelled)，释放双方锁，零扣费、零胜负。连续 3 次准备超时／15分钟暂停约战 5 分钟，避免单次弱网即惩罚。
+- 两人准备确认后再校验资格与余额；双人扣款任一失败，整笔扣款回滚；随后单独将准备房间作废并释放锁，错误中不暴露对方具体余额。
 
-**推荐同时出手**：两人看同一根 bar，各自 30s 内锁定；双方都锁定立即推进，否则 deadline 到推进。单局最长 29×30s≈14.5 分钟，典型 5–8 分钟。交替出手会使总时长翻倍且后手信息优势无法消除。
+### 3.3 多设备
 
-### 2.6 反作弊基础
+不使用“最新 hello 自动抢主控”。同一账号各端看到同一 match state；第一条被服务器接受的本回合 action 生效。相同 key 重试返回同一确认；另一设备不同 key 返回 ALREADY_LOCKED，再获取状态。明确提示“本账号已在另一设备锁定”；其他设备不可修改。
 
-- 未来 bar **永不下发**；股票代码/名称/日期在 `finished` 前不下发（bar 的 `date` 字段在对局中**剥离或替换为序号**，防止按日期反查行情——注意 `pickRandomWindow` 的 bars 含 `date`）。
-- 价格是否需要归一化（如以第一根 bar 收盘=100 重标）防止按价格反查：V1 建议**做**（`rebasePrice`，成交量同样不暴露绝对值可选），结算仍用原始价格（比例相同，收益一致）。
-- 服务器计时，客户端倒计时仅展示。
-- 行动幂等 + 每日一次锁定（锁定后不可改，防止"看对手已锁定再改"）。
+## 4. 回合裁决与信息隔离（最高优先级）
 
----
+### 4.1 精确日序
 
-## 3. 公平性与信息泄露
+设 `resolvedRounds=k`，范围 0…29：
 
-### 3.1 同窗口
-建房时 `pickRandomWindow()` 一次，`snapshot_json` + `snapshot_sha256` 存 `pvp_matches`，双方共享。随机种子写入 `pvp_matches.window_seed` 便于审计复现。
+- 正在决策 `round=k+1`（仅 k<29），已揭示游戏 bar 数 `k+1`。
+- 首屏 k=0：历史 30 根＋游戏 d1；双人的动作累计为空。
+- round=d 选择，按 d+1 开盘成交。双方锁定或到 deadline 才把两人的该回合动作加入已裁决序列，然后揭示 d+1 完整 K 线。
+- d=29 裁决后 k=29：全部 30 根揭示，按 d30 close 估值终局；没有第 30 次决策，也没有第 31 根游戏 K 线。
+- 末日持仓为 valuation，不伪造 sell，不计入交易笔数。
 
-### 3.2 逐根揭示
-每日推送 `visible = buildVisibleMarket(snapshot, dayIndex)` 中**新增的那一根**（首帧发 history + bar1）。不提供任何返回完整窗口的接口，直到 `status='finished'`。
+### 4.2 锁定时只验证动作，不泄露成交结果
 
-### 3.3 已知泄露（不得复制到 PvP）
-- `gameProtocol.js` `buildStateDto()` 末尾 `dto.window = windowFromSessionRow(row)`（R5 注释"create/active already expose identity"）→ 现有经典/event-v1 state 响应含完整窗口与股票代码。
-- `games.js` `createGame()` / `sessionPublic()` 响应含 `stock_code` 等。
-- 残局 `stockIndex` 在下发数据中可见。
-→ PvP 新写 `pvpMatchView(match, viewerId)`，白名单字段；集成测试断言响应 JSON 中不含 `stockCode/stockName/stockIndex/windowStartIndex/date` 且 `bars.length === revealedDay`（§10）。这些旧泄露另开 issue 处理，不在本特性范围。
+提交 schema：`{round,action}`，action 为 buy/sell/hold；不可带 userId、收益、价格、snapshot、rule、daySeconds。
 
----
+合法性根据**已裁决状态**判断：空仓才可 buy；持仓且预计卖出成交日大于买入成交日才可 sell；hold 总合法。服务端可内部用 `replayGame` 验证，但确认只包含 actionAccepted、round、lockedAction（仅本人）、revision；未来成交价、buyPrice、未揭示日 MTM 和错误内的原始引擎对象一律不返回。
 
-## 4. 实时架构
+例：d1 决策 buy→d2 开盘买。到 d2 决策，显示“可挂卖单，d3 开盘成交”，即使 engine rawPosition 仍标 locked，也允许 sell。
 
-### 4.1 方案对比
+### 4.3 日终收益唯一口径
 
-| | WebSocket（`ws` 挂同一 Express http.Server） | SSE + POST | 长轮询 |
-|---|---|---|---|
-| 双向 | ✅ | 下行 SSE，上行复用现有 REST（CSRF/Origin/幂等现成） | 每次请求 |
-| 内存 | 每连接 ~20–50KB（`ws` 默认 + perMessageDeflate 关闭） | 每连接一个挂起 res，~10–20KB | 挂起请求 + 频繁重建 |
-| nginx | 需 `Upgrade` 块 | 需 `proxy_buffering off` | 现成 |
-| Android WebView | 支持（Chromium） | 支持；后台时同样被冻结 | 支持 |
-| 延迟 | 最低 | 低 | 中，且 30s 倒计时边界抖动 |
-| 安全 | 需在 upgrade 手动做 cookie/Origin 校验，WS 无 CSRF 头 | 写操作走现有 `requireCsrf`/`checkOrigin` | 同 REST |
-| 依赖 | 新增 `ws`（零依赖，~100KB） | 无 | 无 |
-
-**推荐：WebSocket（`ws`，noServer 模式）**，理由：大厅 presence 与房间推送都是高频小消息，双向通道让"锁定/心跳/重同步"都简单；单进程无需跨进程广播；`ws` 无原生依赖。**保守兜底**：所有"写"动作同时提供 REST 端点（`POST /pvp/matches/:id/actions` 等），WS 仅作推送 + 低延迟提交，WS 失败时客户端降级为 REST 提交 + 每 3s `GET /pvp/matches/:id` 轮询。这样即便 nginx WS 配置出问题，功能仍可用。
-
-### 4.2 服务端挂载
+在双方本回合已经裁决的前提下，k=已裁决动作数：
 
 ```js
-// server/src/index.js
-const server = app.listen(config.port, "127.0.0.1", ...);
-if (config.pvpBattleEnabled) attachPvpWs(server); // server/src/lib/pvp/ws.js
-
-// server/src/lib/pvp/ws.js
-const wss = new WebSocketServer({ noServer: true, maxPayload: 4096, perMessageDeflate: false });
-server.on("upgrade", (req, socket, head) => {
-  if (new URL(req.url, "http://x").pathname !== "/api/v1/pvp/ws") return socket.destroy();
-  // 1) Origin：复用 originOk 逻辑，但 WS 必须有 Origin 且在 config.originAllowlist
-  // 2) cookie 解析 → findValidSession(token)；无 → 401 后 destroy
-  // 3) CSRF：WS 无法带自定义头 → 要求 query ?csrf=<deriveCsrfToken(token)>，timingSafeEqualStr 校验
-  //    （或先 POST /pvp/ws-ticket 取一次性 60s ticket，推荐，避免 csrf 出现在日志）
-  // 4) 每用户连接数 ≤3、每 IP ≤10
-  wss.handleUpgrade(req, socket, head, (ws) => onConnection(ws, user));
+// bars 是服务器私有的30日原始快照；actions 只含已裁决动作。
+const curve = buildEquityCurveCash({
+  fillMode: 'next_open', bars, actions, finish: k === 29
 });
+const visibleMtmPpm = roundHalfUp((curve.at(-1) / INITIAL_CASH - 1) * 1e6);
+// k=0 特判空仓、0收益；k=29另用settleGame核对终局收益相等。
 ```
 
-新增文件布局：
+只使用 shared 现有数值与 ppm 量化口径，不为 PvP 另换一套浮点／定点算法。正常终局两个路径的 returnPpm 必须一致；发现差异停止结算并系统作废退款，告警而非静默改分。
 
+### 4.4 PvP 专用白名单 DTO
+
+- `pvpMatchView(match,viewerId)` 独立构造。游戏中 REST、WS、错误、重连、日志给客户端的字段都经过同一视图，禁止 spread 数据库 row 或通用 game DTO。
+- history=30，gameBars=k+1；日期替换为 `h1…h30`／`d1…d30`，不用与真实日期有映射的时间戳。
+- 价格基准固定为游戏 d1 close（双方首屏已知）；所有可见 OHLC 同乘 100/base，展示相对百分比，不返回 base 或真实 costBasis。
+- 成交量相对**只由历史＋d1**确定的固定尺度，如这 31 根正成交量的均值归一化；全为零则尺度=1。禁止用未来 30 日最大值／均值归一化，避免提前信息泄露。
+- MA、区间范围、最佳点、图轴 min/max 仅根据可见 slice 算。服务器逐日净值由原价计算，展示归一化和舍入不参与撮合。
+- 剔除股票名称／代码／index、windowStart、真实行情 date、随机种子、完整快照 hash、未揭示价格、未来分析和原始成交价；双方相同。datasetVersion 可用于规则标识，但不会带具体股票索引。
+- 本人本回合 lockedAction 可见；对手只见 lockedToday，已裁决动作截止 k。任一方锁定到 resolve 之间，双方净值仍为上一已揭示收盘状态。
+- 正常 completed 终局才揭示原股票与全部窗口；弃权结果只返回已揭示段，见 §6。系统作废不开放额外行情。
+- 同域静态行情和历史价格走势仍可用于反查；归一化不是加密或强反作弊。不得据此承诺“查不到股票”。
+
+## 5. 时间、事务、传输与恢复
+
+### 5.1 服务端权威时钟
+
+- 所有 PvP 新时间字段使用 UTC epoch 毫秒；日计奖键独立采用 Asia/Shanghai。客户端使用 serverNow 校准显示，客户端时间无裁决效力。
+- `deadlineAt` 就是唯一有效截止；删除额外不展示的 500ms 宽限。处理函数在进入裁决临界区读取服务器时间，`now < deadlineAt` 才接新 action，等于截止即关闭。
+- 先验 session／归属，再查询幂等记录：已接受的相同 key 即使过截止仍返回旧确认；新 key 才检查时间。客户端自带 sendTs 仅作诊断。
+- 每房间一个定时器是唤醒提示，不是事实来源；timer、收到第二份 action、REST sync、后台巡检都调用同一个幂等 `resolveIfDue`。
+- 每 1 秒扫描逾期活动房间补偿漏 timer；所有更新检查 match 的 status、round、revision。实现不得在事务中 await 网络或跑重分析。
+- 单次进程／宿主机卡顿超过 5 秒导致错过有效截止时，该局标 system_stall 作废，而非把服务故障当玩家 AFK；监控记录。部署排空、连接上限是防止该路径大量触发的第一道保护。
+
+### 5.2 两个必须原子的写路径
+
+**锁定事务**：读当前轮与状态 → 时间／动作／归属校验 → 插入唯一 `(match,user,round)` action → 记录幂等 payload hash → match.revision++ → commit → 推送对手 locked（不含动作）。
+
+**裁决事务**：读并确认未裁决轮 → 对未锁定者插入 timeout hold → 基于两方同时的存活快照计算缺席计数 → 计算两方已揭示净值 → 写双方派生状态和 pvp_rounds → 原子推进 k / 新 opensAt、deadlineAt、revision，或进入终局事务 → commit 后再广播。
+
+最后回合／弃权终局由同一应用服务处理：条件更新未终止状态、写双方 outcome／指标／评分、插入唯一 settlement、转币、更新统计缓存、释放双方 active_member，全部在一个 SQLite 事务中完成。重分析不参与该事务。崩溃于 commit 前则无终局；commit 后但推送前，重连查询得到唯一终局。
+
+### 5.3 传输定稿：REST 写 + WS 状态失效通知
+
+- Node `ws` 挂现有 http.Server（noServer）。保留 app.listen 的返回句柄；不引入独立实时进程、Redis 或消息队列。
+- WS 上行仅 `hello / ping / sync`，不实现 challenge/action/forfeit 等业务命令；所有业务 POST 走相同 service 与幂等规则。
+- 下行用 `lobby.changed / challenge.changed / match.changed` 提醒客户端读取 REST 快照，可附白名单状态；同资源 200ms 内合并通知，不对每个大厅心跳做全量广播。
+- `match.revision` 是数据库持久化版本，每次可见状态变化递增；大厅另用 `(serverRunId,lobbyRevision)`。不拿全局 seq 比较不同资源，不靠进程内 seq 跨重启排序。
+- 乱序／丢帧：较旧 revision 丢弃；收到新 revision 立即 GET；重连无条件 GET active 及当前 state。不实现逐条历史事件补发。
+- WS 建连失败时：大厅 GET 5 秒一轮，房间 GET 2 秒一轮，challenge 状态由 `/me/pvp/state` 合并获取；同时鉴权 heartbeat 每 15 秒保持可约战。退避加随机抖动，页面退出即停止，避免重连风暴。
+- WebSocket send 队列每连接上限 256 KiB，超过就关闭并要求客户端重同步；4 KiB 是上行消息限制，不是完整行情快照的响应大小限制。
+
+### 5.4 WS 认证与会话撤销
+
+1. 浏览器 POST `/api/v1/pvp/ws-ticket`，已有 session＋CSRF＋Origin；生成 32 随机字节、不透明 ticket，TTL=30秒，存摘要，绑定 sessionHash/userId，单次使用。
+2. 连接 `wss://同域/api/v1/pvp/ws?ticket=...`。upgrade 必须精确校验允许 Origin，匹配 active session cookie，原子消费对应 ticket，再接管 socket。
+3. nginx／应用对该路径访问日志只记 `$uri` 而非带参数的 `$request_uri`；不记录 ticket、cookie、CSRF。禁止把长期 CSRF token 放 URL。
+4. 握手限流、连接数与 4KiB 上行、JSON schema、perMessageDeflate=false；浏览器用原生 WebSocket。实现参考 [ws 官方文档](https://github.com/websockets/ws)。
+5. 每 30 秒重新验证会话，收到 logout／revoke／disable／delete 时主动关闭对应连接；每次 REST 写仍查实时账号状态。单次登录退出不是弃权，计时继续；账号禁用／注销是账号不可参赛，走 account_unavailable。
+6. 身份检查先于任何 match 读取。第三人 REST 404，WS 不订阅；WS ticket 无权扩张订阅范围。安全依据见 [OWASP WebSocket Security](https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html)。
+
+### 5.5 断线、缺席与重启
+
+- 已锁定动作落库，断线不丢；未锁定到期填 hold。只在“该回合 source=timeout 且最后45秒无有效应用 heartbeat”时 AFK+1；用户明确 hold 或有效操作归零，在线自动 hold 不算缺席。
+- 同一裁决事务同时检查两方：均 AFK≥5 → aborted(both_afk)；仅一方≥5 → 对方弃权胜；不允许先遍历 A 判负而漏掉 B 的同轮缺席。
+- 检查优先级：系统故障作废 → 双方账号不可用／双方AFK → 单方账号不可用／单方AFK → 正常推进或末轮完成。若同一次裁决同时满足末轮与AFK阈值，按此前置缺席规则处理；明确hold不触发AFK。
+- REST-only 玩家依然更新 heartbeat，不能把 `ws.isOpen=false` 当缺席依据。App 后台 JS 停顿不暂停服务器。
+- 首版每次 API 启动先恢复数据库，再开放 readiness：旧 pending 过期、waiting_ready 作废（零扣费）、playing 系统作废（各退已扣20）；settled 原样。恢复逻辑不依赖 `PVP_BATTLE_ENABLED`，flag OFF 也必须清账。
+- 退款 transaction 可重复执行；恢复失败 ready 返回非成功，禁止带着悬挂扣费开放新局。移除原稿“deadline近120秒恢复并顺延”的分支。
+
+## 6. 胜负、经济与统计
+
+### 6.1 胜负与终局类型
+
+| 类型 | 判定 | 行情／收益展示 | 计胜负／评分 |
+|---|---|---|---|
+| completed | return_ppm 高者胜；相等则 mdd_ppm 小者胜；仍同为平 | 全30日、真实身份、双方最终净值 | 是 |
+| forfeited | 主动认输／单方AFK／单方账号不可用 | 只到 resolvedRounds+1 日，显示“中止时净值”；不补满 hold | 是；胜负由退出原因决定 |
+| aborted | 准备失败／系统重启或卡顿／双方AFK／双方账号不可用 | 仅已揭示区间，原因及退款，不额外揭露身份 | 否 |
+
+认输和末轮裁决并发以首先提交成功的终局事务为准；终局条件更新确保只发生一次。认输时尚未共同裁决的 locked action 作取消处理、不撮合，存审计但不显示为成交。所有 type 不再混用 `finished` 和 `settled`。
+
+交易次数=buy＋sell，valuation 另列；删去原稿“sell＋valuation算交易次数”。个人胜率=(win)/(win+loss+draw)，平局进分母；近20场仅含计胜负局，最新在左。完整局数、完整局均值单独列，forfeited／aborted 不混入平均收益。删除“累计收益 +312%”标签，独立局收益不能解释为一笔资金的累计收益。
+
+### 6.2 韭币资格与费用快照
+
+- 每人入场20、胜者到账35、平局各到账20、作废退各自已扣金额。所有配置在开局时写入 `economy_json`（含 economyVersion），中途调环境变量不改变在途局。
+- 双方开始时需余额≥20、账号 active、注册满24小时且已完成至少3局有效经典练习、各自该日胜奖次数<10、无双人屏蔽、同pair最近24h已开始且非系统作废的场次<3。资格限制与金额在大厅／准备页说明；未满足者可看介绍，不付费参赛。
+- 资格按**开局日 Asia/Shanghai**归属，在 match.reward_ymd 冻结；跨午夜结束仍计开局日。每用户只有一个活动 PvP，计奖槽检查和正式开局同事务，防并发超额。
+- 今日胜奖达到10者暂停新开对战，明日恢复。若后续要做“只计分不奖币”需单独设计免费／不同费率玩法，不在这版暗中引入。
+- 同IP只是诊断信号，不等于同设备／小号；不因同宿舍或家庭网络没收奖励，不引入设备指纹采集。限制账号年龄、有效练习、pair次数、举报及审计仍无法完全阻止小号串通，需监控而非夸大承诺。
+
+### 6.3 转币矩阵（假设A胜）
+
+| 事件 | A变动 | B变动 | 净流通量 |
+|---|---:|---:|---:|
+| 双方准备成功，正式开局 | −20 | −20 | −40 |
+| 正常／弃权胜结算到账 | +35 | 0 | +35；整局净−5 |
+| 平局 | +20 | +20 | +40；整局净0 |
+| 系统／双方AFK作废且此前已收费 | +20 | +20 | +40；整局净0 |
+| 未开局准备取消 | 0 | 0 | 0 |
+
+新增 `chargePvpEntry`、`settlePvpEconomy`，在同一个 db transaction 内调用余额更新与通用 ledger insert。现有 game_create 不改，不用字符串改造 matchId 绕开旧唯一键。
+
+- ledger reason=`pvp_entry / pvp_reward / pvp_refund`，ref_type=`pvp_match`，ref_id=matchId；新增唯一键 `(user_id,ref_id,reason)` 的 PvP 部分索引。
+- `pvp_settlements.match_id UNIQUE` 保证 refund 与 reward 等互斥终局，单靠各 reason 唯一键不足以防止一局先奖后退。
+- 更新余额必须带 `balance>=cost` 条件检查 affectedRows；余额或ledger失败全部回滚，两人不能只扣一人。
+- `coin_delta` 是该用户整局净额（胜+15、负−20、平／退0），响应同时带 entryCharged、payout、netDelta，避免把35当净赚。
+- 账务核对：users余额变化＝流水 delta 之和；每个已开局 match恰好2条 entry，且一个 settlement；任何异常进入告警及新局熔断。
+- 异常作弊举报不自动追回或重写历史奖励；管理员可禁用后续参赛，经济纠错需独立审计补偿单，不删除原流水。
+
+## 7. 评分与称号：可重放的简单版本
+
+- rating 初始1000；V1固定K=32，前10场显示“定级中”但不另设不同K。取开局时双方rating_before（每人一活动局确保无并发变化）。
+- 期望 `Ea=1/(1+10^((Rb-Ra)/400))`；Sa为1／0.5／0，`deltaA=roundHalfUp(32*(Sa-Ea))`，`deltaB=-deltaA`；各自更新为 `max(700, before+delta)`。触底导致实际delta不一定零和，落库实际变化并测试。
+- `level = clamp(floor((rating-700)/100)+1,1,15)`；level≤14区间宽100，level15为2100及以上；不存可与rating不一致的冗余level。
+
+| level | 称号 | 积分 |
+|---|---|---|
+| 1／2／3 | 韭菜 一／二／三段 | 700–799／800–899／900–999 |
+| 4／5／6 | 散户 一／二／三段 | 1000–1099／1100–1199／1200–1299 |
+| 7／8／9 | 股民老手 一／二／三段 | 1300–1399／1400–1499／1500–1599 |
+| 10／11／12 | 游资 一／二／三段 | 1600–1699／1700–1799／1800–1899 |
+| 13／14／15 | 庄家 一／二／三段 | 1900–1999／2000–2099／≥2100 |
+
+新号为散户一段；1132为散户二段、距下一档68分。UI展示称号与本段进度，不显示“N级”，不推算“再赢4局必升级”；满级显示最高段位，无下一档。
+
+- ratingVersion=`pvp-elo-v1`、before／after／actualDelta随终局固化；aborted没有评分事件。
+- `pvp_ratings` 是缓存，可按 `pvp_settlements.id` 的提交顺序和已固化delta重建；不能按游戏开始顺序或今天的配置重算旧局。
+- 历史score事件保留，不因改昵称／关参榜删掉。自身档案与双方历史私有；大厅只在用户主动可约战时展示摘要。删除原稿匿名 `/users/:id/pvp/stats` 公开接口。
+
+## 8. 数据设计与约束
+
+迁移候选 `020_pvp_battle.sql`，实施前检查主线最新号。以下为**待实现契约**，不表示已经创建表。复用当前 users.id INTEGER、datasets.version TEXT；PvP match／challenge ID用随机UUID，新表时间统一 epoch ms。
+
+| 表 | 必需字段 |
+|---|---|
+| pvp_challenges | id PK、from_user_id/to_user_id FK、pair_key（minId:maxId）、status(pending/accepted/declined/cancelled/expired)、create_key、payload_hash、created_at、expires_at、responded_at、cancel_reason |
+| pvp_matches | id PK、challenge_id UNIQUE FK、status(waiting_ready/playing/settled/aborted)、rule_version、pvp_version、rating_version、dataset_version FK、fill_mode CHECK next_open、snapshot_json、snapshot_sha256、history_length、economy_json、reward_ymd、resolved_rounds 0…29、revision、round_opens_at、round_deadline_at、ready_deadline_at、boot_id、winner_user_id、terminal_reason、created_at/started_at/finished_at |
+| pvp_match_players | (match_id,user_id) PK，seat(1/2) UNIQUE within match、ready_at、afk_streak、outcome(win/loss/draw/aborted)、return_ppm/mdd_ppm（正常局；否则NULL）、partial_return_ppm、trade_count、valuation_json、rating_before/after、actual_rating_delta、coin_delta、actions_json（已裁决序列）、analysis_version/analysis_json、analysis_status(pending/ready/failed) |
+| pvp_active_members | user_id PK FK、match_id、seat；复合FK(match_id,user_id)→pvp_match_players；只保留waiting_ready/playing成员，结束同事务删除 |
+| pvp_actions | (match_id,user_id,round) PK；复合FK→players；round CHECK 1…29；action enum；source(player/timeout)；command_key可空、payload_hash、locked_at；不存 forfeit_fill |
+| pvp_rounds | (match_id,round) PK；resolved_at、revealed_day、both_players_state_json（裁决后必要派生值）；用于检测推进一次性、诊断和重放一致性 |
+| pvp_settlements | id INTEGER PK AUTOINCREMENT、match_id UNIQUE FK、terminal_type、reason、winner_user_id、resolved_rounds、economy_version、rating_version、created_at；与双方结果、币、评分原子写 |
+| pvp_commands | (user_id,scope,key) PK；payload_hash、resource_id、ack_json（白名单）、created_at、expires_at；ready/respond/cancel/forfeit/创建等命令重试使用 |
+| pvp_ratings | user_id PK；rating、games、wins/losses/draws、completed_games、completed_return_sum_ppm、updated_at；近期记录按历史查询，不另存recent_json真相源 |
+| pvp_reward_days | (user_id,ymd) PK；win_reward_count；只在发胜奖的事务中+1，可由settlements+ledger重建 |
+| pvp_blocks | (blocker_user_id,blocked_user_id) PK，created_at；CHECK双方不同；任一方向存在即禁止新约战 |
+| pvp_reports | id INTEGER PK、match_id FK、reporter_id、reported_id、reason enum、detail≤500码点、status(open/resolved/dismissed)、resolution、reviewer_id、created_at/closed_at；UNIQUE(match_id,reporter_id) |
+| pvp_runtime_control | key TEXT PK、value_json、version、updated_at；持久化drain及操作原因，避免服务重启自动恢复接单 |
+
+### 8.1 必须落库的约束，不只依赖单进程
+
+- challenge发起人≠接收人；status=pending的from_user_id部分唯一；status=pending的pair_key部分唯一。
+- 容量槽在accept和进入playing时事务内检查，waiting_ready也占20房上限。选窗快照在正式扣费前生成并验证；只记录完整snapshot及SHA即可审计，删除没有实际种子化RNG支撑的window_seed伪承诺。
+- player同局两席独立唯一；每个active_member只属于一个用户；进入playing前确认恰好两席且对应challenge的两人。应用事务维护房间锁生命周期，定期对账检查孤儿锁。
+- action必须引用真实参赛者，而非仅外键users；已裁决轮action不可变；`command_key`按用户／match唯一（忽略NULL）。同key不同payload为409。
+- `pvp_rounds(match,round)`、`pvp_settlements(match)`和PvP ledger部分唯一索引共同兜底重复执行；同事务状态CAS防过时timer。
+- 为matches(status,round_deadline_at)、challenges(to_user_id,status,expires_at)、players(user_id,match_id)、settlements(created_at,id)、reward_days(user_id,ymd)、reports(status,created_at)建索引。
+- 事务使用同步better-sqlite3、BEGIN IMMEDIATE语义；DTO构造和广播在提交后，禁止在DB事务内await。保持现有WAL／备份策略，不迁PostgreSQL、不扩成多实例。
+
+### 8.2 幂等、保留与删除
+
+- Idempotency-Key 16～128个ASCII字符；对写请求以route scope＋规范化payload hash比对；成功确认至少保存7天。action已落库的key在对局保留期内可确认；相同key不同action永远409。
+- 先认证再读幂等缓存，避免撤销会话仍重放敏感响应。传输结果丢失不等于业务失败；任何重试不重复收费、推进和加分。
+- 模式快照、原始行情和动作保留默认180天；之后保留结果／评分／经济摘要，详情显示“复盘已过保留期”。窗口快照供历史重放，不跟随更新后的前复权价格重算。
+- pending命令、过期约战默认30天清理；屏蔽持续到用户解除；举报及审计按现有运营保留策略（实施时对齐）。未经完成的举报关联快照暂停清理。
+- 接入softDeleteUser、admin disable与tombstone流程：进行中先判账号不可用，连接撤销、列表去标识；历史对手显示“已注销用户”，不把旧昵称永久复制进快照。删除任务按FK顺序清理／匿名化，新pvp表必须纳入恢复与tombstone演练。
+
+## 9. REST 与推送契约
+
+统一前缀 `/api/v1`，沿用项目 `{data,requestId}`／`{error,requestId}` 外壳；所有业务写经过 requireUser、checkOrigin、requireCsrf、PvP资格及限流。公开人数接口不返回用户清单。
+
+| 方法与路径 | 输入／返回 | 权限与要点 |
+|---|---|---|
+| GET /pvp/lobby/summary | {availableCount,acceptingNew,disabledReason} | 游客可读，不暴露用户身份 |
+| GET /pvp/lobby | cursor?,limit≤50 → entries,nextCursor | 登录；只列主动可约战用户；屏蔽双向过滤 |
+| POST /pvp/lobby/presence | {available:boolean} | 登录；显式同意上线，无扣费；目标状态幂等 |
+| POST /pvp/heartbeat | {} | 登录；WS／降级统一应用存活，15秒一次 |
+| GET /me/pvp/state | presence、收到／发出的pending、activeMatchId、资格及本人余额 | 登录；轮询时一次读取避免遗漏邀请 |
+| POST /pvp/challenges | {toUserId} | 幂等；201新建／200重复 |
+| POST /pvp/challenges/:id/respond | {accept:boolean} | 仅收件人；确认状态快照 |
+| POST /pvp/challenges/:id/cancel | {} | 仅发件人；重复返回已取消状态 |
+| POST /pvp/ws-ticket | {} → ticket,expiresAt,wsPath | 短期一次性；no-store；丢失可重新申请，不复用旧ticket |
+| GET /pvp/matches/:id | PvP专用state／result | 仅双方；第三人404；后台另用admin路由 |
+| POST /pvp/matches/:id/ready | {} | 双方ready后原子收费并开始 |
+| POST /pvp/matches/:id/cancel-ready | {} | 准备阶段任一方，零扣费 |
+| POST /pvp/matches/:id/actions | {round,action} | 必须Idempotency-Key；首次和重复均200确认 |
+| POST /pvp/matches/:id/forfeit | {} | playing；幂等，终局返回已有状态而非再次结算 |
+| POST /pvp/matches/:id/report | {reason,detail?} | 仅双方，终局后；reportedId由服务端取对手 |
+| POST /pvp/blocks | {userId} | 登录；阻止未来约战，不中断当前局 |
+| DELETE /pvp/blocks/:userId | 无 | 本人屏蔽记录，返回204 |
+| GET /pvp/blocks | 游标列表 | 本人 |
+| GET /me/pvp/stats | 称号、进度、胜负、完整局均值、近期20场 | 私有，不设置公开用户stats |
+| GET /me/pvp/matches | cursor?,limit默认20最大50 | 按finished_at,id倒序，返回自己的结果和对手公开昵称 |
+
+除presence／heartbeat／ticket外，所有业务POST必须带Idempotency-Key；终局写一次；report另有(match,reporter)唯一性。返回错误映射明确：401会话、403资格/Origin/CSRF、404他人资源、402余额、409状态/同key不同payload/重复锁定、422动作非法、429频率、503容量/排空。登录后被禁用显示账号受限，不泄露引擎原始报错中的行情。
+
+### 9.1 房间 state 示例（字段示意，无省略号JSON）
+
+```json
+{
+  "matchId": "example-match",
+  "status": "playing",
+  "revision": 4,
+  "serverNow": 1791676830000,
+  "resolvedRounds": 0,
+  "round": 1,
+  "opensAt": 1791676820000,
+  "deadlineAt": 1791676850000,
+  "market": {
+    "historyLength": 30,
+    "revealedDay": 1,
+    "history": [],
+    "bars": [{"label":"d1","open":99,"high":102,"low":98,"close":100,"volume":1.2}]
+  },
+  "me": {"lockedToday":true,"lockedAction":"buy","mtmPpm":0,"canBuy":false,"canSell":false},
+  "opponent": {"nickname":"对手","lockedToday":false,"mtmPpm":0},
+  "resolvedActions": []
+}
 ```
+
+示例history为缩短篇幅置空；真实playing首屏必须30根，验收不可使用此空数组冒充完整响应。锁定当前buy后me.mtmPpm仍0，不能提前填次日仓位。resolvedActions每项只包含已裁决round及双方动作，长度严格=resolvedRounds。
+
+### 9.2 推送与动作确认
+
+```json
+{"t":"match.changed","matchId":"example-match","revision":5,"serverNow":1791676831000}
+```
+
+```json
+{"data":{"matchId":"example-match","round":1,"lockedAction":"buy","accepted":true,"revision":4},"requestId":"example-request"}
+```
+
+POST响应可能比推送晚到，客户端不可把revision5退回4；action确认和完整状态分开处理。每次重连只同步授权资源。REST响应no-store，WS状态按viewer构造，不广播一份带me信息的DTO给两人。
+
+### 9.3 初始限流与防骚扰
+
+| 项目 | 初始值 | 行为 |
+|---|---|---|
+| 发约战 | 用户6/分钟、60/日 | 429；同目标被拒3次后10分钟冷却 |
+| presence切换 | 用户20/分钟 | 429，不阻断已有房间读取 |
+| ticket | 用户10/分钟、IP60/分钟 | 429；共享IP仅粗粒度防滥用 |
+| WS并发 | 用户3条，IP软限30条，总限见§12 | 超限拒绝新连接，不踢其他正在玩的用户 |
+| action | 用户10/秒、60/分钟 | 包括重试；不重复结算 |
+| 私有state GET | 用户120/分钟 | 足够容纳2秒轮询和多标签；超限提示 |
+| heartbeat | 用户12/分钟 | 多标签合并／随机抖动 |
+| report | 用户10/日 | 超限拒绝；每match一条 |
+
+日级业务额度持久化查询／计数，不能只依赖会随重启清零的内存桶。节流只处理请求，不是作弊判决；禁止用同IP直接定输赢。
+
+## 10. 复盘、个人面板与治理
+
+### 10.1 V1 基础复盘
+
+- 双方完整局收益、最大回撤、每日净值曲线、买入持有基准、真实buy/sell笔数、估值、原始行情（仅正常终局）。
+- K线用“我的买卖”和“对手买卖”两种符号／描边，别用红绿区分玩家以免与涨跌冲突；valuation独立标记。
+- 逐日滑块由只读已裁决数据渲染；交易按钮永不出现；部分局只到lastRevealedDay。
+- “分歧日”：从动作不同的已裁决轮中按双方当日收益差变化绝对值选最多3项；文案只陈述同日操作和差距变化，不把相关性写成因果保证。
+- 分析轻量且确定性；analysisVersion固定。可在终局提交后计算缓存，失败仍可看已保存胜负与基础图，不阻塞奖励。重算使用原快照，结果hash可比对。
+- `computeBSReport`、最优多笔DP、timingScore先不接入V1：原 `return/optimal` 在负收益／optimal=0时无定义，前端依赖也不在API包。未来需迁至shared、明确T+1及0收益基线，并用暴力枚举小样本校验后再做。
+
+### 10.2 私有面板
+
+展示称号（定级中标识）、总胜负平、近20局点阵、胜率、完整局数、平均完整局收益、最佳完整局收益、历史入口、近20场弃权数。零局显示“尚无战绩”，不显示0%胜率冒充已玩。
+
+原稿近10场可在近20条中截取；不新增累计收益，不把partiallyPlayed收益算完整局。当前账号昵称和头像沿用publicUser投影，支持现有12默认头像／自定义头像，不写死10个。
+
+### 10.3 举报与后台
+
+- 结果页举报选项：疑似作弊／恶意弃权／昵称问题／其他；detail 0～500码点；仅举报当前对手。举报本身不自动退款、改分或处罚。
+- 现有非公开admin框架增“对战”：活动房间数／排空状态、终局查询、两方动作审计、金额对账、举报列表、处理备注。
+- admin接口：`GET /admin/pvp/overview`、`GET /admin/pvp/matches`、`GET /admin/pvp/matches/:id`、`GET /admin/pvp/reports`、`PATCH /admin/pvp/reports/:id`、`POST /admin/pvp/drain`、`POST /admin/pvp/abort-active`。
+- 写操作复用requireAdmin、二次验证、Origin／CSRF、幂等、必填reason和audit_logs；abort-active先显示预计房间／退款人数并二次确认。后台不开放编辑return_ppm、删除ledger或随意改胜者。
+- 持久化双向屏蔽过滤大厅和挑战；只阻止未来约战，不给输了的玩家一个“屏蔽即退款”的出口。
+
+## 11. 代码资源、依赖与集成清单
+
+### 11.1 增量模块
+
+```text
 server/src/lib/pvp/
-  config.js      常量（时长、费用、上限）
-  presence.js    内存 presence Map<userId, {state, conns:Set, lastSeen}>
-  challenges.js  约战 CRUD + 定时过期
-  match.js       房间状态机、逐日裁决、恢复
-  settle.js      结算、积分、韭币
-  analysis.js    复盘（import js/analysis-pure.js 纯函数 + shared/equityCurve.js）
-  view.js        白名单 DTO：pvpMatchView / lobbyEntryView
-  ws.js          升级、消息路由、心跳
+  config.js          校验配置／版本化经济参数
+  presence.js        内存连接与统一应用心跳
+  challenges.js      邀请、接受、房间锁、准备
+  match.js           actions、resolveIfDue、状态机
+  economy.js         双人扣费、唯一奖励／退款
+  settlement.js      原子终局、评分、统计事件
+  view.js            按viewer白名单、可见行情归一化
+  realtime.js        ticket、WS升级、推送、backpressure
+  recovery.js        开机清账、定时巡检、排空
+  reports.js         举报、屏蔽、admin治理
 server/src/routes/pvp.js
-js/pvp/lobby.js  js/pvp/room.js  js/pvp/result.js  js/pvp/socket.js  js/pvp/profile-battle.js
+server/migrations/020_pvp_battle.sql   实施时确认序号
+shared/pvpMetrics.js                  曲线净值适配和winner纯函数
+shared/pvpRating.js                   评分／称号纯函数
+js/pvp/{lobby,room,result,transport,profile-battle,store}.js
 css/pvp.css
+server/tests/pvp/ + tests/pvp/
+scripts/pvp-load.mjs                  仅预发布压测
 ```
 
-### 4.3 nginx 变更
+### 11.2 必须修改的已有落点
 
-在 `deploy/nginx-stockgame.xieyw.top.conf` 的 `location /api/` **之前**加入（端口与生产 api.env 一致，生产为 8790）：
+| 文件／区域 | 修改目的 |
+|---|---|
+| server/src/index.js、app.js | 保留http.Server句柄、启动恢复、WS挂载、路由、退出排空；新表已存在时恢复不依赖flag |
+| server/src/lib/config.js、routes/games.js的config响应 | 统一env→config→features.pvpBattle，新增acceptingNew状态、客户端协议版本 |
+| request.js / sessions.js / users.js / admin.js | 导出适用WS的Origin纯校验；会话撤销、禁用、注销回调；避免与当前未提交认证修改相互覆盖 |
+| jiuCoin.js / 新migration | 复用ledger插入，不改旧game收费；增加PvP唯一索引 |
+| index.html、home-ia.js、screen-router.js、auth.js | 入口、独立屏幕、对战档案、feature OFF隐藏；按需加载PvP模块 |
+| kline-option.js | 抽可见数据图表适配、去日期／价格刻度；不引入完整窗口依赖 |
+| deploy/api.env.example、systemd、nginx片段、README-api | flags、WS代理、停机排空、实际端口、包版本 |
+| deploy/rollback-api.sh、发布运维文档 | 正反发布都安装锁定依赖并运行健康检查，不依赖被rsync删除的node_modules |
+| backup / tombstones / user cleanup | PvP表、未完局清账、会话撤销、隐私清理和恢复验证 |
+
+依赖仅新增server的 `ws` 稳定版并锁package-lock；浏览器使用原生WebSocket。不使用第三方实时托管，不添加Redis/Postgres。图形用既有ECharts、头像、CSS与SVG图标，无新图片或字体采购；P0无需Android发版。若以后加keepScreenOn，需单独原生接口审查、生命周期清理和App回归，不阻塞Web发布。
+
+## 12. 资源预算、容量与观测
+
+### 12.1 可执行资源表
+
+| 资源 | V1默认 | 必须核实／交付 |
+|---|---|---|
+| 进程 | 同一台机器、一个API进程管理所有房间 | systemd与反代配置；禁止PM2 cluster或两个写同库的计时进程 |
+| CPU／RAM | 先以2 vCPU、2GiB预发布机为参考；若生产约1.6GiB须按真实规格复测 | 30分钟基线RSS、free、CPU、event-loop lag、经典API延迟 |
+| 初始房间 | PVP_MAX_ACTIVE_MATCHES=20（准备＋进行合计） | 20房＋60大厅用户通过后才灰度；50房需第二次压测 |
+| 总WS连接 | 初始200，单用户3 | 包含大厅／房间／重连重叠；超过拒绝新连接不影响已有局 |
+| 内存 | warm API基线之外，PvP增量RSS目标≤128MiB | 不是容量保证；机器仍需≥25%可用内存，V8限堆不等于进程RSS上限 |
+| 存储 | 预留至少2GiB新增空间再依据实测调整 | 每局snapshot+58 actions+29 rounds+索引／WAL。按50KiB/局粗估，1万局约0.5GiB未含备份；记录实测均值后重算 |
+| 网络 | WS稀疏通知＋按需GET，无全大厅全量高频广播 | 分别压测WS模式和100%轮询降级；后者通常更费HTTP与DB |
+| 备份 | 复用SQLite一致性备份及异机副本 | 恢复后旧playing必须作废、退款一次、旧session撤销 |
+| 人力 | 1全栈主开发＋QA／运维配合 | 见§15约26～35人日，按角色责任交付，不承诺22天包干 |
+
+### 12.2 负载验收目标（待实测）
+
+- 真实30秒回合连续30分钟：20活动房＋60大厅用户；另测50房＋100大厅、同步截止突发、批量重连、多标签、慢消费者和全轮询。
+- action持久化HTTP响应P95<250ms、P99<750ms；服务器裁决延迟P99<250ms；event-loop延迟P99<100ms；非预期5xx<0.1%。数据库一致性错误、重复转币必须0。
+- 同机经典局／登录／日挑战的P95相对无PvP基线恶化不超过20%；超限先降房间数／减负，不能只看PvP自己能跑。
+- 回合1秒／2秒的加速测试只检验逻辑与写入峰值，不可代替30秒真实时长的连接、心跳、GC与过期测试。
+- 监控：active rooms、ws数、queue bytes、action延迟、deadline lateness、AFK、abort原因、SQLite busy、dedupe命中、ledger异常、奖币次数、举报、恢复处理数量。
+- 1分钟内system_stall连发3局、账务对账任一异常、DB写失败、内存/磁盘告警即停止新局并告警；不自动把既有局都判玩家负。
+
+## 13. 测试与验收（发布阻断清单）
+
+| ID | 输入／场景 | 必须满足 |
+|---|---|---|
+| R01 | k=0…29每个阶段 | 已见bar=k+1，决策仅1…29；d29后自动估值，无d31 |
+| R02 | d1close10、d2open20/close22，d1buy | 锁定时净值仍0；裁决后+10%，不能−50% |
+| R03 | d1buy、d2sell | d2买→d3卖合法；按钮不因locked一律禁售 |
+| R04 | d29buy | d30open买，d30close估值；无伪造sell |
+| R05 | 完整随机合法序列1000组 | PvP逐日结果、equityCurve和settleGame终值一致 |
+| R06 | 未锁定／一人锁定／双方锁定前后的所有REST/WS | 只泄露已裁决信息；锁定不变价、不提前变对手净值 |
+| R07 | 两份仅未来bars不同的快照，相同可见前缀与动作 | 进行中响应除随机ID/时钟字段外相同，连归一化volume和错误都不能透露差异 |
+| R08 | 不同deadline边界：−1ms、=、+1ms；相同key晚到重试 | 新请求按统一截止；重复已确认动作可回旧ack |
+| C01 | A→B、B→A | 一条pending；不自动接受；双方显式同意后才准备 |
+| C02 | A→B和C→B并发接受 | 只一个房间占B锁，余额无变化；失败方明确状态 |
+| C03 | 准备超时／取消／第二人余额不足 | 零扣费、释放双方锁、不能半扣款 |
+| C04 | 最后action、timer、forfeit同时触发 | 一轮只裁决一次，一局只一个终局和转币路径 |
+| E01 | 准备成功后两人各20；A赢 | ledger两条entry、A+35；净变动A+15/B−20 |
+| E02 | 并发10次相同结算／重复恢复 | 无重复扣费、退款、奖币、评分；settlement唯一 |
+| E03 | 每日第10次胜奖后请求新局；同pair第4场 | 拒绝开局、无扣费；上海跨日按开局日冻结 |
+| E04 | 同一共享IP两名合格用户 | 不仅凭IP取消奖励；仍受账号/pair规则 |
+| S01 | REST-only、WS掉线、App后台、网络恢复 | 应用heartbeat有效者非AFK；重连回同一局，不重复动作 |
+| S02 | 双方同一轮都达AFK5／仅单方达 | 双方作废退款／单方弃权负，遍历顺序不影响结果 |
+| S03 | commit前进程终止；commit后推送前终止 | 前者按旧活动局恢复退款；后者保持已终局，不重复退 |
+| S04 | flag OFF启动，但库有playing | 恢复先清账；新局关闭，历史与结果仍可读 |
+| A01 | 第三人访问、跨Origin、无CSRF、过期／重用ticket、注销session | 拒绝，连接和订阅立即或30秒内失效，不泄露对局 |
+| A02 | 错key重用、不认识字段、巨大消息、慢消费者 | 明确错误／断开，内存队列有界 |
+| P01 | rating700/999/1000/1099/1100/2100；同分平局 | 称号边界正确，K固定，触底实际delta记录正确 |
+| P02 | 弃权净值／完整局均值／0局／重建rating | 口径正确，重建不按今天算法重算历史delta |
+| G01 | 举报、屏蔽、禁用、删除、恢复旧备份 | 不绕过admin权限和审计；已删除用户不复活，不自动改账 |
+| D01 | 从生产同结构API包启动，安装ws；再回滚旧包 | 没有server import js/失效模块；旧依赖重装；旧游戏不退化 |
+| U01 | 手机375px、桌面、纸/墨、Android旧版、键盘 | 核心按钮可用、计时可见、无登录弹层覆盖关键动作；后台不暂停计时 |
+
+测试工具：Node内置test runner、真实临时SQLite、两个HTTP会话＋ws客户端、浏览器双用户上下文；注入统一Clock和fake timer，不通过改宿主机时间测试。测试必须覆盖现有主线完整回归，不只新增pvp测试。
+
+资源缺口必须产出报告：相同规格机压力报告、事务故障注入、受限公网WS反代、Android前后台、退款及备份恢复。未经验证的20房／50房只是目标，不写成“已支持”。
+
+## 14. 部署、关闭与回滚
+
+### 14.1 配置与基础设施
+
+| 环境变量 | 默认／含义 |
+|---|---|
+| PVP_BATTLE_ENABLED | 0；入口与新会话能力 |
+| PVP_ALLOWLIST_USER_IDS | 灰度用户列表；双方都需在名单 |
+| PVP_MAX_ACTIVE_MATCHES | 20 |
+| PVP_MAX_WS | 200 |
+| PVP_DAY_SECONDS | 30；生产范围固定，测试由注入Clock加速 |
+| PVP_ENTRY_COST / PVP_WIN_REWARD | 20 / 35；写入开局经济快照 |
+| PVP_DAILY_REWARD_CAP | 10 |
+| PVP_PAIR_LIMIT_24H | 3 |
+
+`acceptingNew = featureEnabled && !drain`；drain持久化到 `pvp_runtime_control`（见§8），不能只放内存重启自动解除。只读历史、认输、退款、恢复和已有房间请求不被“全部路由403”挡住。完全未部署功能时不存在这些接口是另一回事。
+
+nginx在实际HTTPS server中增加WS精确location。**精确匹配的优先级不依赖它出现在 `/api/` 前还是后**。使用与现有API相同upstream，不把本轮未核验的8790写成确定生产端口。
 
 ```nginx
-# PvP WebSocket (必须在 location /api/ 之前，精确匹配优先)
+# stockgame_api 为待接入的 upstream 名称；部署时指向经核验的当前API端口。
 location = /api/v1/pvp/ws {
-    proxy_pass http://127.0.0.1:8790;
+    proxy_pass http://stockgame_api;
     proxy_http_version 1.1;
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
     proxy_set_header Host $host;
-    proxy_set_header Origin $http_origin;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 75s;   # > 心跳 25s ×3
-    proxy_send_timeout 75s;
-    proxy_connect_timeout 5s;
+    proxy_read_timeout 90s;
+    proxy_send_timeout 90s;
     proxy_buffering off;
+    # 专用access_log格式只含$uri，不含查询串；在http级定义后启用。
 }
 ```
 
-同步更新 `deploy/nginx-api-proxy.snippet.conf` 与 `deploy/README-api.md`。`nginx -t && systemctl reload nginx`。
-
-### 4.4 时钟与计时（服务器权威）
-
-- 每条推送带 `serverNow`（epoch ms）；当日 `deadlineAt`（epoch ms）。
-- 客户端：`offset = serverNow - (sendTs+recvTs)/2`（`ping`/`pong` 取 RTT 最小的 3 次中位数）；倒计时 = `deadlineAt - (Date.now()+offset)`。
-- 宽限：服务器接受 `deadlineAt + 500ms` 内到达的行动（网络抖动），之后拒绝 `PVP_DAY_CLOSED`。
-- 服务器用单个 `setTimeout` per match（不是 per player）；推进时清除并重设。
-
-### 4.5 心跳与重连
-
-- 服务器每 25s `ws.ping()`；60s 无 pong → `terminate()`，presence 标记 offline（大厅中移除"可约战"需 **30s 宽限**，以容忍 WebView 短暂切后台）。
-- 客户端 `js/pvp/socket.js`：指数退避 0.5/1/2/4/8s（上限 10s），重连后发送 `{"t":"hello","lastSeq":N}`；服务器回 `match.state` 全量（简单可靠，不做增量重放；每条消息带单调 `seq` 仅用于丢弃乱序）。
-
-### 4.6 内存 vs SQLite
+此片段不是可直接覆盖生产配置的完整文件；保留已有证书、反代头、安全限制，创建upstream和无ticket日志格式后 `nginx -t`。Upgrade/Connection转发依据 [nginx官方说明](https://nginx.org/en/docs/http/websocket.html)；25秒协议ping低于代理90秒空闲阈值。
 
-| 内存（可丢） | SQLite（真相源） |
-|---|---|
-| presence Map、WS 连接、限流桶、match 定时器、当前日已锁定动作的缓存 | 约战（`pvp_challenges`）、对局元数据 + snapshot（`pvp_matches`）、**每日每人动作**（`pvp_actions`，锁定即写）、`current_day`、`day_deadline_at`、结果 / 复盘 / 积分 |
+### 14.2 发布流程
 
-每日推进在**一个 better-sqlite3 事务**内：写入超时方的 `hold`、`current_day+1`、新 `day_deadline_at`。
+1. 对齐最新main及用户未提交修改；记录静态／API／schema／规则版本。合并含新表与功能默认OFF代码，不借文档评审直接部署。
+2. CI跑现有测试＋PvP测试；API打包含server/shared/lockfile，不含node_modules、数据库、密钥。新增ws在Linux目标安装阶段通过 `npm ci --omit=dev` 获取锁定版本；浏览器无需ws包。
+3. 先一致性备份→迁移新表及索引→在隔离目录验证API包和依赖→部署API OFF→合并WS nginx配置→nginx -t→检查ready和接口→发布静态。
+4. 打开3～10人双方白名单，至少3天；初始20房上限。检查奖币账、断线、弃权、旧玩法延迟，再扩大。无登录测试账号及Android实体机验证就不全量。
+5. 静态Actions自动发布、API当前需人工运维；原 `deploy-release.sh` 是静态脚本，不拿它当API发布器。使用现有bootstrap流程前检查其停服／依赖安装权限，在运维手册写清执行用户、产物和检查点。
 
-**重启恢复**（`recoverPvpMatchesOnBoot()`，在 `attachPvpWs` 内调用）：
-- `status='playing'` 且 `now - day_deadline_at < 120s` → 恢复：`day_deadline_at = now + 30s`（顺延当日，补偿重启），等待重连。
-- 超过 120s 或 `waiting_ready` → `aborted`（`abort_reason='server_restart'`），全额退费，不计积分。
-- pending 约战全部 `expired`（presence 已丢失）。
+### 14.3 排空、紧急关闭、回滚
 
-### 4.7 容量估算（1.6GB，当前 RSS ~77MB）
+- 常规发布：持久化drain=true→禁止新challenge/accept/开局，已有playing继续→waiting_ready取消且未扣费→等待active=0（上限约16分钟）→备份→停API→部署→ready→恢复接单。
+- 等待超时或严重故障：经管理员确认先系统作废＋退款所有活动局，确保账务成功且active=0，再停服。不要先关flag卸载路由而让钱卡在旧局。
+- 意外退出：新服务启动执行§5.5恢复，即使flag OFF；回到**不认识PvP表的旧API**前，必须用新版清账工具处理活动局并验证active=0。
+- API回滚保留新表与数据，不回滚业务数据库；恢复旧server与shared后重装旧lockfile依赖再启动。当前rollback-api脚本只有依赖注释、没有实际npm ci，且rsync --delete会影响node_modules：修复并实测是上线阻断项。
+- 已终局的历史与奖币不回滚。灾难备份恢复走现有tombstone、会话撤销，再处理旧playing退款；在隔离副本检查ledger一致性后才开放。
+- 发布成功标准是HTTP/WS、两账号短局、奖励、历史、旧单人玩法与回滚报告均通过，不只是systemd显示running。
 
-| 项 | 估算 |
-|---|---|
-| WS 连接（ws + 缓冲） | ~30KB / 连接 |
-| presence 条目 | ~0.5KB / 用户 |
-| 房间内存（无 snapshot，仅 id/当前日/锁定/定时器） | ~2KB；snapshot 按需从 SQLite 读或 LRU 缓存（130 bar×6 字段 JSON ≈ 15KB） |
-| 每房间合计 | 2 连接 60KB + 15KB ≈ **~80KB** |
-| 100 并发房间 + 300 大厅在线 | 200×30KB + 100×17KB + 300×30KB ≈ **17MB** |
-
-结论：目标 RSS 增量 < 30MB @100 房间；CPU 只在每日推进时跑 2 次 `replayGame`（微秒级）。硬上限 `PVP_MAX_ACTIVE_MATCHES=200`、`PVP_MAX_WS=1000`，超限 `503 PVP_BUSY`。
-
----
+## 15. 工作包、交付物与完成定义
 
-## 5. 状态机
+按1名熟悉项目的全栈主开发估算，约26～35人日；可由前后端两人并行但总量不简单减半。测试、运维和设计资源需明确安排，不隐含为开发者“顺手做”。
 
-### 5.1 玩家 presence（内存，按 userId）
+| 阶段 | 内容／产物 | 主责与依赖 | 人日 |
+|---|---|---|---:|
+| M0 基线与规则合同 | 对齐SHA、工作区归属、字段契约、R01～R08固定样例、端口/机器确认 | 主开发＋运维；先于页面 | 2～3 |
+| M1 持久化与账务 | migration、active_members、挑战与准备、ledger唯一、终局纯服务、故障注入 | 后端；依赖M0 | 5～6 |
+| M2 实时房间 | WS ticket/通知、REST动作、timer巡检、有限DTO、降级、缺席、恢复 | 后端＋前端；依赖M1 | 5～7 |
+| M3 用户界面 | 大厅/准备/房间/基础结果、响应式、草稿隔离、状态错误 | 前端；可在M1接口冻结后mock并行 | 4～5 |
+| M4 档案与治理 | Elo、历史、基础复盘、屏蔽、举报后台、隐私删除 | 全栈；依赖M2终局契约 | 4～5 |
+| M5 生产工程 | Linux同规格压测、Android QA、备份退款恢复、反代、依赖打包回滚、白名单 | QA＋运维＋主开发 | 6～9 |
 
-```mermaid
-stateDiagram-v2
-  [*] --> offline
-  offline --> idle: WS hello
-  idle --> available: lobby.join（点「对战」）
-  available --> idle: lobby.leave / 30s 无连接
-  available --> requested: 发出或收到约战(pending)
-  requested --> available: declined/expired/cancelled
-  requested --> in_room: accepted → ready check
-  in_room --> in_game: 双方 ready
-  in_room --> available: ready 超时/取消
-  in_game --> idle: finished/aborted（回大厅后可再点可约战）
-  idle --> offline: WS 全部断开
-```
-
-`requested` 期间对**他人**仍显示为"忙碌"（列表中置灰），避免一人被并发约到多个房间。
-
-### 5.2 约战 challenge
-
-```mermaid
-stateDiagram-v2
-  [*] --> pending: POST /pvp/challenges
-  pending --> accepted: 对方接受（或反向约战合并）
-  pending --> declined: 对方拒绝
-  pending --> expired: 20s 未响应 / 服务重启
-  pending --> cancelled: 发起方取消 / 任一方离开大厅 / 对方已接受别人
-```
-
-### 5.3 对局 match
-
-```mermaid
-stateDiagram-v2
-  [*] --> waiting_ready: challenge accepted（建房，扣费）
-  waiting_ready --> playing: 双方 ready（≤10s）→ day=1
-  waiting_ready --> aborted: ready 超时 → 退费
-  playing --> playing: 双方锁定或 30s 到 → day+1（day≤29）
-  playing --> settling: day 29 推进完毕 / 认输 / AFK 弃权
-  playing --> aborted: 服务重启超时 / 双方 AFK
-  settling --> finished: 结算事务（结果、复盘、积分、韭币）
-```
-
-超时汇总：约战 20s；ready 10s；每日 30s（+500ms 宽限）；AFK 连续 5 日；断线宽限 30s（大厅）。
-
----
-
-## 6. 引擎复用与结算
-
-### 6.1 每日裁决
-
-```js
-// server/src/lib/pvp/match.js
-function resolveDay(match, day) {          // day: 1..29
-  for (const p of match.players) {
-    const a = p.lockedAction ?? "hold";    // 超时 = hold
-    const r = replayGame({ fillMode: match.fillMode, bars: match.snapshot.bars,
-                           actions: [...p.actions, a], finish: false });
-    if (!r.ok) throw ...                   // 锁定时已校验，这里只是断言
-    p.actions.push(a); p.mtmPpm = r.returnPpm;
-  }
-  // 事务：INSERT pvp_actions(超时者 source='timeout')、UPDATE pvp_matches.current_day/day_deadline_at
-}
-```
-
-锁定时校验：`replayGame({actions:[...p.actions, a]})` 返回 `ok:false` → 422。这保证与经典/日挑战/幽灵**完全同一引擎、同一 `RULE_VERSION`**。前端按钮可用性复用 `game-play-usecase.js` 现有的持仓/T+1 判断逻辑。
-
-### 6.2 终局结算
-
-`settleGame({fillMode, bars, actions})`（29 个动作）→ `returnPpm`；`settleCurveMetrics()` → `mddPpm`、曲线、`buyHoldBenchmarkPpm`。
-
-胜负判定（`decideWinner(a,b)`）：
-1. `return_ppm` 高者胜；
-2. 相等 → `mdd_ppm` 低者胜（与日挑战榜次级排序一致）；
-3. 仍相等 → **平局**（不再用交易次数或锁定时间，避免鼓励"秒点"）。
-
-认输/AFK：弃权方负，`result_reason='forfeit'|'afk'`；仍按已有动作 + 剩余日 `hold` 计算双方 `return_ppm` 存档（复盘可看）。
-
-### 6.3 复盘分析（服务器端、确定性、结算时计算一次存 `pvp_match_players.analysis_json`）
-
-| 指标 | 计算 |
-|---|---|
-| 双方权益曲线 | `buildEquityCurveCash({fillMode,bars,actions,finish:true})` |
-| 收益 / 最大回撤 | `returnPpm` / `mddPpmFromCurve()` |
-| 交易次数、胜率 | `trades` 中 sell+valuation 计数；`tradeGains>0` 占比 |
-| 持仓天数 | `holdingDays` |
-| 买入持有基准 | `buyHoldBenchmarkPpm()` |
-| 最优（早知道） | 单笔：`findBestSellAfterBuy()`（`js/hindsight-pure.js`）；多笔：新增纯函数 `optimalMultiTradePpm({fillMode,bars})`（T+1 约束 DP，O(n)），放 `shared/pvpAnalysis.js` |
-| 择时得分 | `timingScore = returnPpm / optimalPpm`（0–100%）；以及每个 B/S 点与 ±3 日局部低/高点的偏离（`(fill - localLow)/localLow`） |
-| B/S 报告 | `computeBSReport()`、`computeBestPoints()`（`js/analysis-pure.js`，纯函数可 server import；若 `kbTag` 有 DOM 依赖则由 `shared/pvpAnalysis.js` 包一层） |
-| 关键分歧日 | 双方动作不同且收益差变化最大的 3 天（"第 12 天你卖了，他拿住，差距拉开 +8.2%"） |
-
-`analysis_version` 字段（`pvp-analysis-v1`）便于将来重算。
-
----
-
-## 7. 数据模型 — `server/migrations/020_pvp_battle.sql`
-
-```sql
--- PvP 实时对战：约战、对局、玩家、逐日动作、积分
-PRAGMA foreign_keys = ON;
-
-CREATE TABLE IF NOT EXISTS pvp_challenges (
-  id TEXT PRIMARY KEY,                       -- uuid
-  from_user_id INTEGER NOT NULL REFERENCES users(id),
-  to_user_id INTEGER NOT NULL REFERENCES users(id),
-  status TEXT NOT NULL CHECK (status IN ('pending','accepted','declined','expired','cancelled')),
-  create_key TEXT NOT NULL,                  -- Idempotency-Key
-  cancel_reason TEXT,
-  match_id TEXT,                             -- accepted 后填
-  created_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  responded_at TEXT,
-  CHECK (from_user_id <> to_user_id),
-  UNIQUE (from_user_id, create_key)
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pvp_ch_one_outgoing
-  ON pvp_challenges(from_user_id) WHERE status = 'pending';
-CREATE INDEX IF NOT EXISTS idx_pvp_ch_to_status ON pvp_challenges(to_user_id, status, expires_at);
-
-CREATE TABLE IF NOT EXISTS pvp_matches (
-  id TEXT PRIMARY KEY,
-  challenge_id TEXT REFERENCES pvp_challenges(id),
-  status TEXT NOT NULL CHECK (status IN ('waiting_ready','playing','settling','finished','aborted')),
-  rule_version TEXT NOT NULL,                -- sim30-mtm-v1
-  dataset_version TEXT NOT NULL REFERENCES datasets(version),
-  fill_mode TEXT NOT NULL DEFAULT 'next_open' CHECK (fill_mode IN ('next_open','same_close')),
-  stock_code TEXT NOT NULL, stock_name TEXT NOT NULL, stock_index INTEGER NOT NULL,
-  window_start INTEGER NOT NULL, history_length INTEGER NOT NULL,
-  window_seed TEXT,
-  snapshot_json TEXT NOT NULL, snapshot_sha256 TEXT NOT NULL,
-  day_seconds INTEGER NOT NULL DEFAULT 30,
-  current_day INTEGER NOT NULL DEFAULT 0 CHECK (current_day BETWEEN 0 AND 29),
-  day_deadline_at INTEGER,                   -- epoch ms
-  ready_deadline_at INTEGER,
-  entry_cost INTEGER NOT NULL DEFAULT 0,
-  winner_user_id INTEGER REFERENCES users(id),   -- NULL = 平局/中止
-  result_reason TEXT CHECK (result_reason IN ('normal','forfeit','afk','draw')),
-  abort_reason TEXT,
-  analysis_version TEXT,
-  created_at TEXT NOT NULL, started_at TEXT, finished_at TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_pvp_matches_status ON pvp_matches(status, day_deadline_at);
-
-CREATE TABLE IF NOT EXISTS pvp_match_players (
-  match_id TEXT NOT NULL REFERENCES pvp_matches(id),
-  user_id INTEGER NOT NULL REFERENCES users(id),
-  seat INTEGER NOT NULL CHECK (seat IN (1,2)),
-  ready_at TEXT,
-  outcome TEXT CHECK (outcome IN ('win','loss','draw','aborted')),
-  return_ppm INTEGER, mdd_ppm INTEGER, trade_count INTEGER, holding_days INTEGER,
-  afk_streak INTEGER NOT NULL DEFAULT 0,
-  rating_before INTEGER, rating_after INTEGER,
-  coin_delta INTEGER NOT NULL DEFAULT 0,
-  actions_json TEXT,                         -- 终局冗余，便于列表/复盘
-  analysis_json TEXT,
-  PRIMARY KEY (match_id, user_id),
-  UNIQUE (match_id, seat)
-);
-CREATE INDEX IF NOT EXISTS idx_pvp_mp_user_finished ON pvp_match_players(user_id, match_id);
--- 每用户最多一个进行中对局（应用层 + 此部分索引需要 status 冗余列，故应用层保证，测试覆盖）
-
-CREATE TABLE IF NOT EXISTS pvp_actions (
-  match_id TEXT NOT NULL REFERENCES pvp_matches(id),
-  user_id INTEGER NOT NULL REFERENCES users(id),
-  day INTEGER NOT NULL CHECK (day BETWEEN 1 AND 29),
-  action TEXT NOT NULL CHECK (action IN ('buy','sell','hold')),
-  source TEXT NOT NULL CHECK (source IN ('player','timeout','forfeit_fill')),
-  command_key TEXT,
-  locked_at INTEGER NOT NULL,                -- epoch ms（服务器时间）
-  PRIMARY KEY (match_id, user_id, day)
-);
-
-CREATE TABLE IF NOT EXISTS pvp_ratings (
-  user_id INTEGER PRIMARY KEY REFERENCES users(id),
-  rating INTEGER NOT NULL DEFAULT 1000,
-  level INTEGER NOT NULL DEFAULT 1,          -- 由 rating 派生，冗余便于排行
-  games INTEGER NOT NULL DEFAULT 0,
-  wins INTEGER NOT NULL DEFAULT 0, losses INTEGER NOT NULL DEFAULT 0, draws INTEGER NOT NULL DEFAULT 0,
-  sum_return_ppm INTEGER NOT NULL DEFAULT 0,
-  recent_json TEXT NOT NULL DEFAULT '[]',    -- 最近 20 场 ['W','L','D',...]
-  daily_reward_ymd TEXT, daily_reward_count INTEGER NOT NULL DEFAULT 0,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_pvp_ratings_board ON pvp_ratings(rating DESC, user_id);
-
-CREATE TABLE IF NOT EXISTS pvp_reports (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  match_id TEXT NOT NULL REFERENCES pvp_matches(id),
-  reporter_user_id INTEGER NOT NULL REFERENCES users(id),
-  reported_user_id INTEGER NOT NULL REFERENCES users(id),
-  reason TEXT NOT NULL, detail TEXT,
-  created_at TEXT NOT NULL,
-  UNIQUE (match_id, reporter_user_id)
-);
-```
-
-`pvp_ratings` 是派生缓存，可由 `pvp_match_players` 全量重建（`scripts/rebuild-pvp-ratings.mjs`）。
-
----
-
-## 8. API 与 WS 协议
-
-### 8.1 REST（`server/src/routes/pvp.js`，全部 `requirePvpEnabled()` → `403 FEATURE_DISABLED`）
-
-写操作照常经过 `checkOrigin` + `requireCsrf`，并支持 `Idempotency-Key`。
-
-| Method | Path | Auth | 说明 |
-|---|---|---|---|
-| POST | `/pvp/lobby/join` | 是 | 设为可约战（同 WS `lobby.join`） |
-| POST | `/pvp/lobby/leave` | 是 | |
-| GET | `/pvp/lobby` | 可选 | 可约战列表（≤50，`lobbyEntryView`：userId、昵称、头像、level、winRate、recent5、busy） |
-| POST | `/pvp/challenges` | 是 | `{toUserId}` → `201 {challengeId, expiresAt}` |
-| POST | `/pvp/challenges/:id/respond` | 是 | `{accept:true|false}` |
-| POST | `/pvp/challenges/:id/cancel` | 是 | |
-| POST | `/pvp/ws-ticket` | 是 | 一次性 60s ticket，用于 WS 握手 |
-| GET | `/pvp/matches/active` | 是 | 我的进行中对局（重连入口） |
-| GET | `/pvp/matches/:id` | 参与者 | `pvpMatchView`；finished 后含身份、完整 bars、双方动作、分析 |
-| POST | `/pvp/matches/:id/ready` | 参与者 | |
-| POST | `/pvp/matches/:id/actions` | 参与者 | `{day, action}`，`Idempotency-Key` 必填（降级通道） |
-| POST | `/pvp/matches/:id/forfeit` | 参与者 | 认输 |
-| POST | `/pvp/matches/:id/report` | 参与者 | `{reason, detail}` |
-| GET | `/me/pvp/stats` | 是 | 面板数据（§9、§10） |
-| GET | `/me/pvp/matches?cursor=` | 是 | 历史分页（复用 `games.js` `encodeCursor` 思路） |
-| GET | `/users/:id/pvp/stats` | 可选 | 他人公开战绩（大厅点头像） |
-
-### 8.2 WS 消息（JSON，`t` = 类型；上行带 `id` 用于 ack）
-
-上行：
-```json
-{"t":"hello","id":"c1","lastSeq":0}
-{"t":"ping","id":"c2","clientTs":1760150000000}
-{"t":"lobby.join","id":"c3"}
-{"t":"challenge.create","id":"c4","toUserId":42,"key":"uuid-1"}
-{"t":"challenge.respond","id":"c5","challengeId":"ch_…","accept":true}
-{"t":"match.ready","id":"c6","matchId":"m_…"}
-{"t":"match.action","id":"c7","matchId":"m_…","day":7,"action":"buy","key":"uuid-2"}
-{"t":"match.forfeit","id":"c8","matchId":"m_…"}
-```
-
-下行：
-```json
-{"t":"ack","id":"c7","ok":true,"seq":101,"serverNow":1760150012345}
-{"t":"pong","id":"c2","clientTs":1760150000000,"serverNow":1760150000020}
-{"t":"lobby.snapshot","seq":5,"entries":[{"userId":42,"nickname":"韭菜王","avatarUrl":"…","level":3,"winRate":0.62,"recent":["W","L","W","W","L"],"busy":false}]}
-{"t":"lobby.delta","seq":6,"upsert":[…],"remove":[17]}
-{"t":"challenge.incoming","seq":7,"challengeId":"ch_…","from":{"userId":17,"nickname":"…","level":2},"expiresAt":1760150030000}
-{"t":"challenge.update","seq":8,"challengeId":"ch_…","status":"declined"}
-{"t":"match.ready_check","seq":9,"matchId":"m_…","opponent":{…},"readyDeadlineAt":1760150040000,"entryCost":20}
-{"t":"match.state","seq":10,"serverNow":…,"matchId":"m_…","status":"playing","day":7,"dayDeadlineAt":1760150070000,
- "visible":{"historyLength":100,"history":[{"o":10.0,"h":10.4,"l":9.9,"c":10.2,"v":1.0}],"revealedDay":7,"bars":[…]},
- "me":{"actions":["hold","buy",…],"lockedToday":false,"position":"holding","canBuy":false,"canSell":true,"mtmPpm":31200},
- "opponent":{"actions":["hold","hold",…],"lockedToday":true,"mtmPpm":-5400}}
-{"t":"match.opponent_locked","seq":11,"matchId":"m_…","day":7}
-{"t":"match.day_resolved","seq":12,"day":7,"newBar":{…},"me":{"action":"buy","mtmPpm":…},"opponent":{"action":"sell","mtmPpm":…},"nextDay":8,"dayDeadlineAt":…}
-{"t":"match.finished","seq":40,"matchId":"m_…","outcome":"win","reason":"normal"}  // 客户端再 GET /pvp/matches/:id 拉完整复盘
-{"t":"error","id":"c7","code":"PVP_DAY_CLOSED","message":"本日已截止"}
-```
-
-注：对局中 bar **不含 `date`**，价格已 rebase（§2.6）；`opponent.actions` 只含已结算日。
-
-### 8.3 错误码
-
-| HTTP / code | 含义 |
-|---|---|
-| 403 `FEATURE_DISABLED` | flag 关闭 |
-| 401 `UNAUTHORIZED` / 403 `ORIGIN_DENIED` / 403 `CSRF_FAILED` | 沿用 |
-| 409 `PVP_BUSY_SELF` | 你已在约战/对局中 |
-| 409 `PVP_TARGET_BUSY` | 对方不可约 |
-| 409 `PVP_CHALLENGE_NOT_PENDING` | 约战已失效 |
-| 402 `INSUFFICIENT_JIU_COIN` | 余额不足 |
-| 409 `PVP_DAY_CLOSED` / `PVP_ALREADY_LOCKED` / `PVP_WRONG_DAY` | 行动时序 |
-| 422 `PVP_ILLEGAL_ACTION` | 引擎拒绝（含 `engineMessage`） |
-| 429 `RATE_LIMITED` | 带 `Retry-After` |
-| 503 `PVP_BUSY` | 达到房间/连接上限 |
-
-幂等：`challenge.create` 以 `(from_user_id, create_key)` 唯一；`match.action` 以 `(match_id,user_id,day)` 主键 + `command_key`——同 key 重放返回原 ack，不同 key 同日 → `PVP_ALREADY_LOCKED`。
-
-### 8.4 限流（`rateLimit.js` 新增 `checkPvpLimits(kind, userId)`）
-
-| 动作 | 限额 |
-|---|---|
-| 发起约战 | 6/分钟、60/天 每用户；对同一目标被拒 3 次后 10 分钟内禁止再约 |
-| lobby join/leave | 20/分钟 |
-| WS 上行消息 | 20/秒（超出断开） |
-| WS 握手 | 10/分钟 每用户，30/分钟 每 IP |
-| 举报 | 10/天 |
-
----
-
-## 9. 积分 / 等级（简单可解释）
-
-**积分（隐藏精度）+ 段位（展示）**：
-- 积分初值 1000；Elo，`K=32`（前 10 场 `K=48` 加速定级）；`expected = 1/(1+10^((Rb-Ra)/400))`；平局 0.5。
-- **段位 = 每 100 分一段**：`level = clamp(floor((rating-700)/100), 1, 15)`，对外**只展示称号**，`level` 仅作内部值（已确认，见 §15-4）。
-- 野狐式提示：`再赢 X 局升 1 级 = ceil((nextLevelFloor - rating) / 16)`、`再输 Y 局降 1 级 = floor((rating - levelFloor) / 16) + 1`（以对等对手的期望增减 16 分估算，文案注明「约」）。
-- **称号表**（`shared/pvpTitles.js`，前后端共用；同一称号内分「一/二/三段」，共 15 档）：
-
-  | level | 称号 | 积分区间 |
-  |---|---|---|
-  | 1–3 | 韭菜 一/二/三段 | 700–999 |
-  | 4–6 | 散户 一/二/三段 | 1000–1299 |
-  | 7–9 | 股民老手 一/二/三段 | 1300–1599 |
-  | 10–12 | 游资 一/二/三段 | 1600–1899 |
-  | 13–15 | 庄家 一/二/三段 | ≥1900 |
-
-  新手从 1000 分开始，即「散户 一段」。升降级文案写成「再赢约 X 局升至 散户 二段」。
-- 防刷：同一对手 24h 内第 4 场起积分变动 ×0（仍记战绩）；积分不低于 700。
-
----
-
-## 10. 个人面板（「对战」Tab）
-
-扩展 **`js/auth.js`**：在 `#authModal` 已登录时显示的 Tab 区加入「设置 | 对战」两个 tab（当前 `openAuthModal("settings")` → 增加 `openAuthModal("battle")`），新增容器 `#authBattlePanel`，渲染逻辑放新文件 **`js/pvp/profile-battle.js`**（`renderBattlePanel(el, stats)`），样式放 `css/pvp.css`，沿用手绘笔记本风格（`.sketch-*` 边框、纸纹背景、手写体数字）。
-
-布局（参考野狐资料页改编）：
-
-```
-┌──────────────────────────────────────┐
-│ [头像]  韭菜王   〔3级〕  ID 10042      │  ← 等级徽章：手绘印章圆框
-├──────────────────────────────────────┤
-│ 📜 查看对局  对局记录与复盘   >        │  ← 打开 Route.PVP_HISTORY
-├──────────────────────────────────────┤
-│ 总战绩   78胜 48负 2平   61% 胜率      │
-│ 近10场   5胜5负 50%                    │
-│ ✔ ✖ ✔ ✔ ✖ ✖ ✔ ✖ ✔ ✖                   │  ← 绿色手绘勾 / 红色手绘叉，最新在左
-│ 累计收益 +312.4%   场均收益 +2.4%      │
-│ 散户 二段 · 再赢约 4 局升 散户 三段     │  ← 下方一条铅笔线进度条
-└──────────────────────────────────────┘
-```
-
-`GET /me/pvp/stats` 返回：
-```json
-{"rating":1132,"level":3,"games":128,"wins":78,"losses":48,"draws":2,"winRate":0.6094,
- "recent":["W","L","W","W","L","L","W","L","W","L"],"sumReturnPpm":3124000,"avgReturnPpm":24406,
- "title":"散户 二段","nextTitle":"散户 三段","toLevelUpWins":4,"toLevelDownLosses":3}
-```
-
-历史列表（`Route.PVP_HISTORY`，结构参考 `js/my-games.js`）：每行「✔ vs 对手昵称 · +8.2% vs +3.1% · 10-11 14:20」，点开 → 复盘页（复用 `js/pvp/result.js` 的只读模式：双人 B/S K 线 + 逐日回放滑块，复用 `buildPointNavigator()`）。
-
----
-
-## 11. Android App 与浏览器
-
-- **浏览器同样可玩**（同一套代码），App 内入口加强调（`hasStockGameAppBridge()` 为真时 lane 加「推荐」角标）。
-- 后台：WebView 切后台时 JS 定时器会被节流/冻结；服务器计时不受影响，回到前台 `visibilitychange` → `sync`（发送 `hello`），若错过当日则显示「已超时，按观望处理」toast。
-- 切后台超过 30s 的提醒：进入对局时一次性提示「对战中切出 App 将按观望处理」。
-- 屏幕常亮：可选 bridge `StockGameApp.setKeepScreenOn(true|false)`（`MainActivity.kt` 中 `window.addFlags(FLAG_KEEP_SCREEN_ON)`，需 `runOnUiThread`），进入房间开、离开关；浏览器端用 `navigator.wakeLock.request('screen')`（支持则用，失败静默）。旧版 App 无该方法时 `typeof` 判断后跳过。
-- 推送通知：v1 不做（约战仅在线用户之间）。
-
----
-
-## 12. 安全与反作弊
-
-| 风险 | 对策 |
-|---|---|
-| 小号对刷（积分/韭币） | 同 IP / 同设备指纹（cookie 无关，记录 `clientIp(req)` 哈希）对战不发韭币、积分×0；同一对手 24h 第 4 场起不计分；每日计奖上限；新号（注册 <24h 或经典局 <3）不可参与计奖 |
-| 输了就跑 | 关闭页面走 AFK（5 日）→ 弃权负；不退入场费；`forfeit_count` 统计，近 20 场逃跑 ≥5 则 30 分钟禁止上线可约战 |
-| 刷约战骚扰 | §8.4 限流；被拒 3 次冷却；用户可「不再接收此人约战」（V1 存内存，M4 落表可选） |
-| 查行情作弊 | 隐藏日期 + 价格 rebase + 隐藏代码；30s 窗口本身也限制 |
-| WS 伪造 | 握手校验 Origin + session + ticket；消息大小 4KB；JSON schema 校验（复用 `lib/validate.js`） |
-| 举报 | 结果页「举报」→ `pvp_reports`；admin 面板（`server/src/routes/admin.js`）新增列表，审计写 `audit_logs`（`lib/audit.js`） |
-
----
-
-## 13. 测试计划
-
-**单元（`node --test`，`tests/` 与 `server/tests/`）**
-- `tests/pvp-engine.test.js`：`resolveDay` 与 `replayGame` 等价（随机 1000 组动作序列，对比 PvP 逐日累积 vs 一次性 `settleGame`）；超时→hold；T+1 拒绝。
-- `tests/pvp-state.test.js`：presence/challenge/match 转换表全覆盖，非法转换抛错；反向约战合并。
-- `tests/pvp-settle.test.js`：胜负/平局/回撤 tie-break；弃权；Elo 与「再赢 X 局」计算。
-- `tests/pvp-analysis.test.js`：`optimalMultiTradePpm` 对小样本暴力枚举校验；复盘确定性（同输入同输出哈希）。
-
-**集成（`server/tests/pvp.integration.test.js`、`pvp-off.integration.test.js`）**
-- 用 `helpers.js` 起服务 + 两个用户 + `ws` 客户端：完整一局（含一方中途断线重连、一方超时）；注入时钟（沿用 `STOCKGAME_NOW_MS` 思路，新增 `PVP_DAY_SECONDS=1` 加速）。
-- **泄露断言**：对局中所有下行消息与 REST 响应不含 `stockCode/stockName/stockIndex/windowStartIndex/date`，`bars.length === revealedDay`。
-- 幂等重放、CSRF/Origin/ticket 拒绝、限流、余额不足、重启恢复（关闭 app 后重建、检查 aborted/恢复分支与退费台账）。
-- flag OFF：所有 `/pvp/*` → 403，WS 握手被拒。
-
-**负载（`scripts/pvp-load.mjs`）**：在 1.6GB 同规格机（或本地 `--max-old-space-size=256`）跑 100 / 200 房间 × 机器人随机出手，`PVP_DAY_SECONDS=2`，记录 RSS、事件循环延迟（`perf_hooks.monitorEventLoopDelay`）p99 < 50ms、SQLite 写入 TPS。
-
-**手工 QA 脚本**：两台设备（App + 桌面浏览器）：① 约战/拒绝/超时/取消；② 同时互约；③ 对局中切后台 40s 回来；④ 飞行模式 10s 再恢复；⑤ 认输；⑥ 双方全程不操作；⑦ 余额 10 韭币时约战；⑧ 结果页 B/S、早知道、再来一局；⑨ 面板数据与历史一致；⑩ 重启 API（`systemctl restart stockgame-api`）观察恢复/中止文案。
-
----
-
-## 14. 上线计划
-
-Flag：`PVP_BATTLE_ENABLED=1` → `config.pvpBattleEnabled` → `/api/v1/config` 与 `/health/ready` 的 `features.pvpBattle`；前端按 flag 显示入口。
-
-| 里程碑 | 内容 | 估算（人日） |
-|---|---|---|
-| M1 大厅 + 约战 | 迁移 020、`ws` 挂载与握手、presence、challenges、REST+WS、大厅 UI、nginx 配置、限流 | 5 |
-| M2 房间 + 对战 | ready check、match 状态机、逐日裁决、计时/时钟同步、重连、重启恢复、房间 UI（复用 K 线 / HUD）、韭币入场 | 6 |
-| M3 结算 + 复盘 | settle、tie-break、`shared/pvpAnalysis.js`、结果页（双人 B/S）、再来一局、举报 | 4 |
-| M4 面板 + 积分 | Elo/段位、`/me/pvp/stats`、`#authBattlePanel`、历史/复盘屏、称号表、keep-screen-on bridge（App 发版） | 4 |
-| 测试/负载/QA 缓冲 | | 3 |
-| **合计** | | **≈22 人日** |
-
-部署注意：
-1. API **手动部署**（非 CI）：`deploy/package-api-production.sh` → 服务器 `deploy-release.sh`；`server/package.json` 新增 `ws` 依赖，打包需含 `node_modules/ws`（检查 `verify-package-whitelist.sh`）。
-2. 先发 API（迁移 020 自动执行，flag 仍 OFF）→ 更新 nginx WS 块，`nginx -t && systemctl reload nginx` → 发 static → 在 `/etc/stockgame/api.env` 置 `PVP_BATTLE_ENABLED=1` → `systemctl restart stockgame-api`。
-3. 回滚：flag 置 0 重启即可（新表不影响其他玩法）；`rollback-api.sh` 不回滚迁移，新表保留无害。
-4. 重启会中止进行中对局（§4.6），部署选低峰期；可选 `/admin` 显示进行中对局数，0 时再重启。
-5. 先灰度：`PVP_ALLOWLIST_USER_IDS` 内测 3 天。
-
----
-
-## 15. 已确认决策（Bill，2026-10-11）
-
-1. **决策次数**：沿用现有规则，30 根 K 线 / 29 次决策，`shared/rules.js` 不动。
-2. **对手昵称**：全程可见。匿名随机匹配暂不做，留到 V2。
-3. **韭币**：按 §2.3 执行，入场 20 / 胜者 35 / 平局与作废全额退还 / 每日计奖 10 场。**V1 不做免费友谊赛。**
-4. **等级展示**：用**称号**，不用「N 级」（见 §9 称号表）。
-5. **成交模式**：固定 `next_open`，房间不可选。
-6. **对战排行榜**：暂不做，M4 只做个人面板。§14 中排行榜相关工作量移除。
-7. **价格缩放**：可以接受。本游戏以收益率为核心，玩家本就不依赖真实股价。对局中 K 线纵轴不显示价格刻度，只显示相对首日的涨跌 %，持仓与资金显示收益率；终局揭晓时再展示真实股票与价格。
+所需非代码资源：至少2个互不共享会话的预发布测试账号、额外若干灰度用户；Android WebView设备＋桌面浏览器；同规格预发布主机与独立数据库；SSH／nginx/systemd操作责任人；备份位置与恢复空间；测试用充币只能在预发布或受审计测试账户，不改生产普通用户余额。
+
+验收资料必须包含：规则／DTO合同、数据库迁移、自动测试结果、事务故障注入记录、账户与币对账、压力测试机器规格／原始指标、截图或录屏、发布与恢复操作记录（命令、输出、退出状态）。
+
+**完成定义：** 功能默认OFF可正常启动；全部P0用例通过；任何一局的动作、揭示、资金和评分可解释且可重放；陌生用户读不到私有局；没有未来bar或锁定结果泄露；系统失败只系统退款而非误判玩家；旧玩法与当前未提交认证工作经过整合回归；发布／回滚不留挂账。未达到这些条件，不能以“大厅和K线画出来了”判定完成。
+
+### 15.1 后续变更控制
+
+优先缩减复盘装饰、分享图、段位动画，不删原子结算／信息隔离／断网恢复。经济规则、截止策略、Elo或日序变化必须提升pvpVersion或economy/ratingVersion，补测试与迁移说明。本文资源额度与工期是规划值，只有压测与实际迭代报告才算验证结果。
+
+## 16. 评审交付与限制
+
+本轮已完成：线上只读产品探查、版本与公开配置核验、对应Git源码核对、三个固定样例实验、文档重写与结构校验。未实现PvP、未修改业务代码、未更新生产、未实测房间容量。
+
+审查材料：原稿 `docs/reviews/pvp-battle-2026-10-11/original.md`；修订diff `changes.patch`；验证记录 `verification.json`；可运行的文档还原工具 `rollback.py`（仅还原这份文档并校验摘要）。这些是本次文档变更证据，不是PvP已通过验收的报告。
+
+开工第一项：**在确认的最新main建立开发分支，先写R02局中净值、R06/R07信息隔离、C02房间互斥、E01/E02双人资金幂等测试，再实现大厅。**

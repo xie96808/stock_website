@@ -17,7 +17,9 @@ import quizRoutes from "./routes/quiz.js";
 import dailyChallengeRoutes from "./routes/dailyChallenge.js";
 import puzzleRoutes from "./routes/puzzles.js";
 import feedbackRoutes from "./routes/feedback.js";
+import pvpRoutes from "./routes/pvp.js";
 import { openDb } from "./db/connection.js";
+import { pvpRecoveryError, runBootRecovery } from "./lib/pvp/recovery.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 import { seedNearDailyChallenges } from "./lib/dailyChallenge.js";
 import { seedAllPuzzleChapters } from "./lib/puzzleChapter.js";
@@ -26,7 +28,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
-  if (!skipMigrate) migrate();
+  if (!skipMigrate) {
+    migrate();
+    try {
+      runBootRecovery(openDb());
+    } catch (err) {
+      console.error("pvp recovery failed:", err && err.message ? err.message : err);
+    }
+  }
   warmDataset();
   if (config.dailyChallengeEnabled || config.ghostDuelEnabled) {
     try {
@@ -55,6 +64,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   app.get("/api/v1/health/ready", (req, res) => {
     try {
       openDb().prepare("SELECT 1 AS ok").get();
+      if (pvpRecoveryError()) return fail(res, 503, "NOT_READY", "对战恢复未完成");
       const cfg = gamesConfigPayload();
       if (!cfg.datasetVersion) return fail(res, 503, "NOT_READY", "行情数据不可用");
       const backupStatus = readBackupStatus();
@@ -85,7 +95,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       return requireCsrf(req, res, next);
     }
     next();
-  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, adminRoutes);
+  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, pvpRoutes, adminRoutes);
 
   app.use("/api", (req, res) => fail(res, 404, "NOT_FOUND", "接口不存在"));
 
@@ -99,8 +109,11 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
   }
 
   app.use((err, req, res, next) => {
-    console.error(err);
     if (res.headersSent) return next(err);
+    if (err?.type === "entity.too.large" || err?.status === 413) {
+      return fail(res, 413, "PAYLOAD_TOO_LARGE", "请求体过大");
+    }
+    console.error(err);
     fail(res, 500, "INTERNAL", "服务器错误");
   });
 

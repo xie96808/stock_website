@@ -125,6 +125,18 @@ export const config = {
   ghostDuelEnabled:
     process.env.GHOST_DUEL_ENABLED === "1" || process.env.GHOST_DUEL_ENABLED === "true",
   /**
+   * Realtime PvP. Default OFF. Recovery of already-stored matches does not
+   * consult this flag; routes that open a new match do.
+   */
+  pvpBattleEnabled:
+    process.env.PVP_BATTLE_ENABLED === "1" || process.env.PVP_BATTLE_ENABLED === "true",
+  pvpMaxActiveMatches: envInt("PVP_MAX_ACTIVE_MATCHES", 20),
+  pvpEntryCost: envInt("PVP_ENTRY_COST", 20),
+  pvpWinReward: envInt("PVP_WIN_REWARD", 35),
+  pvpDailyRewardCap: envInt("PVP_DAILY_REWARD_CAP", 10),
+  pvpPairLimit24h: envInt("PVP_PAIR_LIMIT_24H", 3),
+  pvpDaySeconds: envInt("PVP_DAY_SECONDS", 30),
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {
