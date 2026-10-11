@@ -136,6 +136,7 @@ export const config = {
   pvpDailyRewardCap: envInt("PVP_DAILY_REWARD_CAP", 10),
   pvpPairLimit24h: envInt("PVP_PAIR_LIMIT_24H", 3),
   pvpDaySeconds: envInt("PVP_DAY_SECONDS", 30),
+  pvpMaxWs: envInt("PVP_MAX_WS", 200),
   /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */

@@ -60,17 +60,51 @@ export function findValidSession(sessionToken) {
   return row;
 }
 
+let sessionRevokeHook = () => {};
+
+export function setSessionRevokeHook(fn) {
+  sessionRevokeHook = typeof fn === "function" ? fn : () => {};
+}
+
+function emitSessionRevoke(payload) {
+  try {
+    sessionRevokeHook(payload);
+  } catch (err) {
+    console.error("session revoke hook:", err && err.message ? err.message : err);
+  }
+}
+
+export function sessionStillValidByHash(tokenHash, now = Date.now()) {
+  if (!tokenHash) return null;
+  const row = openDb()
+    .prepare(
+      `SELECT u.id AS id, u.status, s.token_hash, s.expires_at, s.revoked_at, s.created_at AS session_created_at
+       FROM sessions s JOIN users u ON u.id = s.user_id
+       WHERE s.token_hash = ?`
+    )
+    .get(tokenHash);
+  if (!row || row.revoked_at || row.status !== "active") return null;
+  const createdMs = Date.parse(row.session_created_at);
+  if (!Number.isFinite(createdMs) || now >= createdMs + config.sessionAbsoluteMs) return null;
+  if (Date.parse(row.expires_at) <= now) return null;
+  return row;
+}
+
 export function revokeSessionToken(sessionToken) {
   if (!sessionToken) return;
+  const tokenHash = sha256Hex(sessionToken);
+  const row = openDb().prepare("SELECT user_id FROM sessions WHERE token_hash = ?").get(tokenHash);
   openDb()
     .prepare("UPDATE sessions SET revoked_at = datetime('now') WHERE token_hash = ? AND revoked_at IS NULL")
-    .run(sha256Hex(sessionToken));
+    .run(tokenHash);
+  if (row) emitSessionRevoke({ userId: row.user_id, tokenHash, all: false });
 }
 
 export function revokeAllUserSessions(userId) {
   openDb()
     .prepare("UPDATE sessions SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL")
     .run(userId);
+  emitSessionRevoke({ userId, all: true });
 }
 
 export function setSessionCookie(res, sessionToken) {

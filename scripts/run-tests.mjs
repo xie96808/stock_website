@@ -37,6 +37,7 @@ const runs = [
   ["node", ["--test", "server/tests/pvp/view.test.js"]],
   ["node", ["--test", "server/tests/pvp/match.test.js"]],
   ["node", ["--test", "server/tests/pvp/match-http.test.js"]],
+  ["node", ["--test", "server/tests/pvp/realtime.test.js"]],
 ];
 for (const [cmd, args] of runs) {
   const r = spawnSync(cmd, args, { stdio: "inherit" });

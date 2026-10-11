@@ -2,8 +2,10 @@ import { Router } from "express";
 import { ok, fail } from "../lib/http.js";
 import { openDb } from "../db/connection.js";
 import { config } from "../lib/config.js";
+import { clientIp, consumeRateLimit, rateLimitFail } from "../lib/rateLimit.js";
 import { acceptChallenge, cancelReady, createChallenge, markReady } from "../lib/pvp/challenges.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
+import { issueWsTicket, noteChallengeChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
 
 const router = Router();
@@ -55,6 +57,7 @@ router.post("/pvp/matches/:id/actions", requireUser, (req, res) => {
     return fail(res, 500, "RESOLVE_FAILED", "动作没能保存");
   }
   if (!result?.ok) return sendDeny(res, result);
+  noteMatchChanged(req.params.id);
   return ok(res, {
     accepted: true,
     round: result.round,
@@ -80,6 +83,7 @@ router.post("/pvp/matches/:id/forfeit", requireUser, (req, res) => {
     return fail(res, 500, "RESOLVE_FAILED", "认输没能保存");
   }
   if (!result?.ok) return sendDeny(res, result);
+  noteMatchChanged(req.params.id);
   return ok(res, {
     accepted: true,
     forfeited: result.forfeited === true,
@@ -91,6 +95,7 @@ router.post("/pvp/matches/:id/forfeit", requireUser, (req, res) => {
 router.post("/pvp/matches/:id/ready", requireUser, (req, res) => {
   const result = markReady(openDb(), { matchId: req.params.id, userId: req.user.id, now: Date.now() });
   if (!result?.ok) return sendDeny(res, result);
+  noteMatchChanged(req.params.id);
   return ok(res, {
     matchId: result.matchId,
     status: result.status,
@@ -103,6 +108,7 @@ router.post("/pvp/matches/:id/ready", requireUser, (req, res) => {
 router.post("/pvp/matches/:id/cancel-ready", requireUser, (req, res) => {
   const result = cancelReady(openDb(), { matchId: req.params.id, userId: req.user.id, now: Date.now() });
   if (!result?.ok) return sendDeny(res, result);
+  noteMatchChanged(req.params.id);
   return ok(res, { matchId: req.params.id, status: "aborted" });
 });
 
@@ -124,6 +130,7 @@ router.post("/pvp/challenges", requireUser, (req, res) => {
     now: Date.now(),
   });
   if (!result?.ok) return sendDeny(res, result);
+  noteChallengeChanged(result.challenge.id, [result.challenge.from_user_id, result.challenge.to_user_id]);
   const created = result.created === true;
   return ok(res, {
     challengeId: result.challenge.id,
@@ -145,7 +152,25 @@ router.post("/pvp/challenges/:id/respond", requireUser, (req, res) => {
     now: Date.now(),
   });
   if (!result?.ok) return sendDeny(res, result);
+  const challenge = openDb()
+    .prepare(`SELECT from_user_id, to_user_id FROM pvp_challenges WHERE id = ?`)
+    .get(req.params.id);
+  if (challenge) noteChallengeChanged(req.params.id, [challenge.from_user_id, challenge.to_user_id]);
+  noteMatchChanged(result.matchId);
   return ok(res, { matchId: result.matchId, readyDeadlineAt: result.readyDeadlineAt });
+});
+
+router.post("/pvp/ws-ticket", requireUser, (req, res) => {
+  const perUser = consumeRateLimit(`pvp:ticket:u:${req.user.id}`, 10, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "连接凭证申请过于频繁");
+  const perIp = consumeRateLimit(`pvp:ticket:ip:${clientIp(req)}`, 60, 60_000);
+  if (!perIp.ok) return rateLimitFail(res, perIp.retryAfterSec, "连接凭证申请过于频繁");
+  if (req.body != null) {
+    if (typeof req.body !== "object" || Array.isArray(req.body) || Object.keys(req.body).length) {
+      return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+    }
+  }
+  return ok(res, issueWsTicket({ userId: req.user.id, sessionToken: req.sessionToken }));
 });
 
 export default router;

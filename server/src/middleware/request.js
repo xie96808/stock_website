@@ -3,6 +3,7 @@ import { deriveCsrfToken, timingSafeEqualStr } from "../lib/crypto.js";
 import { findValidSession } from "../lib/sessions.js";
 import { publicUser } from "../lib/users.js";
 import { fail } from "../lib/http.js";
+import { httpOriginAllowed } from "../lib/origin.js";
 
 export function attachRequestId(req, res, next) {
   res.locals.requestId = newRequestId();
@@ -34,13 +35,13 @@ export function requireUser(req, res, next) {
 }
 
 function originOk(req) {
-  const origin = req.get("origin");
-  if (!origin) {
-    const host = (req.get("host") || "").split(":")[0];
-    if (!config.isProd && (host === "127.0.0.1" || host === "localhost")) return true;
-    return req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS";
-  }
-  return config.originAllowlist.includes(origin);
+  return httpOriginAllowed({
+    origin: req.get("origin"),
+    host: req.get("host"),
+    method: req.method,
+    allowlist: config.originAllowlist,
+    isProd: config.isProd,
+  });
 }
 
 export function checkOrigin(req, res, next) {
