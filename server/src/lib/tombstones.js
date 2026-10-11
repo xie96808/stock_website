@@ -17,6 +17,17 @@ import { invalidateLeaderboardCache } from "./leaderboard.js";
 
 export const TOMBSTONE_LEDGER_FILENAME = "user-tombstones.jsonl";
 
+let unavailableHook = null;
+
+/** Registered by the PvP account closer. Missing hook leaves live matches for the next resolve. */
+export function setUserUnavailableHook(fn) {
+  unavailableHook = typeof fn === "function" ? fn : null;
+}
+
+export function runUserUnavailableHook(db, userId, now) {
+  if (unavailableHook) unavailableHook(db, userId, now);
+}
+
 export function getTombstoneLedgerPath() {
   return (
     process.env.STOCKGAME_TOMBSTONE_LEDGER_PATH ||
@@ -247,6 +258,7 @@ export function replayUserTombstones() {
           updated_at = datetime('now'), password_hash = '!', recovery_code_hash = NULL
          WHERE id = ?`
       ).run(user.id);
+      runUserUnavailableHook(db, user.id, Date.now());
       revokeAllUserSessions(user.id);
       applied += 1;
     }

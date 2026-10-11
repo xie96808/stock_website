@@ -125,11 +125,14 @@ export const config = {
   ghostDuelEnabled:
     process.env.GHOST_DUEL_ENABLED === "1" || process.env.GHOST_DUEL_ENABLED === "true",
   /**
-   * Realtime PvP. Default OFF. Recovery of already-stored matches does not
-   * consult this flag; routes that open a new match do.
+   * Realtime PvP. Default ON. Set PVP_BATTLE_ENABLED=0 to hide the entry and
+   * refuse new matches. Recovery of stored matches does not consult this flag.
    */
-  pvpBattleEnabled:
-    process.env.PVP_BATTLE_ENABLED === "1" || process.env.PVP_BATTLE_ENABLED === "true",
+  pvpBattleEnabled: (() => {
+    const raw = process.env.PVP_BATTLE_ENABLED;
+    if (raw == null || raw === "") return true;
+    return raw === "1" || raw === "true";
+  })(),
   pvpMaxActiveMatches: envInt("PVP_MAX_ACTIVE_MATCHES", 20),
   pvpEntryCost: envInt("PVP_ENTRY_COST", 20),
   pvpWinReward: envInt("PVP_WIN_REWARD", 35),

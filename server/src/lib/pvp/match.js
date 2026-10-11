@@ -4,6 +4,8 @@ import { buildEquityCurveCash, mddPpmFromCurve } from "../../../../shared/equity
 import { PVP_FILL_MODE, visibleMtmPpm } from "../../../../shared/pvpMetrics.js";
 import { validCreateKey } from "./challenges.js";
 import { REVEAL_GAP_MS } from "./config.js";
+import { loadReplay } from "./analysis.js";
+import { publicNickname } from "./names.js";
 import { finishMatchInTx } from "./settlement.js";
 import { withImmediate } from "./tx.js";
 import { pvpMatchView } from "./view.js";
@@ -518,9 +520,9 @@ export function readMatchView(db, { matchId, viewerId, now }) {
     for (const row of locks) pendingLocks[row.user_id] = row.action;
   }
   const nicknames = {};
-  const names = db.prepare(`SELECT id, nickname FROM users WHERE id IN (?, ?)`).all(players[0].user_id, players[1].user_id);
-  for (const row of names) nicknames[row.id] = row.nickname;
-  return pvpMatchView({
+  const names = db.prepare(`SELECT id, nickname, status FROM users WHERE id IN (?, ?)`).all(players[0].user_id, players[1].user_id);
+  for (const row of names) nicknames[row.id] = publicNickname(row);
+  const view = pvpMatchView({
     match,
     players,
     viewerId,
@@ -529,4 +531,8 @@ export function readMatchView(db, { matchId, viewerId, now }) {
     terminalType: settlement?.terminal_type || null,
     nicknames,
   });
+  if (view && (match.status === "settled" || match.status === "aborted")) {
+    view.replay = loadReplay(db, match, players, viewerId, settlement?.terminal_type || null);
+  }
+  return view;
 }

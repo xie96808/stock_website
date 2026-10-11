@@ -18,6 +18,7 @@ export const SYSTEM_VOID_REASONS = new Set([
   "system_stall",
   "system_restart",
   "mtm_mismatch",
+  "admin_abort",
 ]);
 
 export function currentEconomy(now) {

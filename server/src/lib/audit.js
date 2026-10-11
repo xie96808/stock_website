@@ -19,6 +19,7 @@ const BEFORE_AFTER_ALLOW = new Set([
   "jiuCoinBalance",
   "jiu_coin_balance",
   "imageCount",
+  "drain",
 ]);
 
 function pickAllowed(obj) {

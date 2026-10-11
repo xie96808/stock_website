@@ -326,6 +326,7 @@ test('fingerprint: real package tree game.js has no bare ./result.js', () => {
       'css/hindsight.css',
       'css/fill-mode.css',
       'css/puzzle-chapter.css',
+      'css/pvp.css',
     ]) {
       const src = join(root, rel);
       if (!existsSync(src)) continue;
@@ -369,13 +370,24 @@ test('incident 2026-09-14: fingerprinted release must not keep bare local ESM/CS
 
     // Real package tree: full js/ + shared/*.js + css/ so game/auth/result
     // closure and index styles fingerprint as a real release (skip missing).
+    function copyAssetTree(srcDir, destDir) {
+      for (const name of readdirSync(srcDir)) {
+        if (name === '.DS_Store') continue;
+        const src = join(srcDir, name);
+        const dest = join(destDir, name);
+        if (statSync(src).isDirectory()) {
+          mkdirSync(dest, { recursive: true });
+          copyAssetTree(src, dest);
+          continue;
+        }
+        if (!/\.(js|mjs|css)$/i.test(name)) continue;
+        writeFileSync(dest, readFileSync(src));
+      }
+    }
     for (const sub of ['js', 'css']) {
       const srcDir = join(ROOT, sub);
       if (!existsSync(srcDir)) continue;
-      for (const name of readdirSync(srcDir)) {
-        if (!/\.(js|mjs|css)$/i.test(name)) continue;
-        writeFileSync(join(dir, sub, name), readFileSync(join(srcDir, name)));
-      }
+      copyAssetTree(srcDir, join(dir, sub));
     }
     const sharedDir = join(ROOT, 'shared');
     if (existsSync(sharedDir)) {

@@ -11,6 +11,8 @@ test("resolveHashRoute maps home / sim / aliases / leaderboard", () => {
   assert.equal(resolveHashRoute("hindsight"), Route.HINDSIGHT);
   assert.equal(resolveHashRoute("harmony"), Route.HINDSIGHT);
   assert.equal(resolveHashRoute("leaderboard"), Route.LEADERBOARD);
+  assert.equal(resolveHashRoute("pvp"), Route.PVP_LOBBY);
+  assert.equal(resolveHashRoute("pvp/history"), Route.PVP_HISTORY);
 });
 
 test("resolveHashRoute ignores unknown and unhashed screens", () => {
@@ -18,4 +20,5 @@ test("resolveHashRoute ignores unknown and unhashed screens", () => {
   assert.equal(resolveHashRoute("puzzle"), null);
   assert.equal(resolveHashRoute("game"), null);
   assert.equal(resolveHashRoute("nope"), null);
+  assert.equal(resolveHashRoute("pvp/11111111-1111-4111-8111-111111111111"), null);
 });

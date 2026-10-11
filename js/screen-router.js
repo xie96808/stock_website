@@ -12,6 +12,10 @@ export const Route = {
   PUZZLE: "puzzle",
   GAME: "game",
   RESULT: "result",
+  PVP_LOBBY: "pvp-lobby",
+  PVP_ROOM: "pvp-room",
+  PVP_RESULT: "pvp-result",
+  PVP_HISTORY: "pvp-history",
 };
 
 /** Hash fragment (no #/) → route. Unknown hashes are ignored. */
@@ -24,7 +28,9 @@ const HASH_TO_ROUTE = {
   harmony: Route.HINDSIGHT,
   hindsight: Route.HINDSIGHT,
   leaderboard: Route.LEADERBOARD,
-  // my-games / game / result intentionally unhashed
+  pvp: Route.PVP_LOBBY,
+  "pvp/history": Route.PVP_HISTORY,
+  // my-games / game / result / pvp room deep links intentionally unhashed
 };
 
 /** Canonical hash written for a route (empty string clears hash). */
@@ -34,6 +40,8 @@ const ROUTE_TO_HASH = {
   [Route.ACADEMY]: "academy",
   [Route.HINDSIGHT]: "hindsight",
   [Route.LEADERBOARD]: "leaderboard",
+  [Route.PVP_LOBBY]: "pvp",
+  [Route.PVP_HISTORY]: "pvp/history",
 };
 
 /** Screens that use the `.active` CSS protocol (display toggled via class). */
@@ -45,10 +53,21 @@ const ACTIVE_SCREEN_IDS = {
   [Route.LEADERBOARD]: "leaderboardScreen",
   [Route.MY_GAMES]: "myGamesScreen",
   [Route.PUZZLE]: "puzzleScreen",
+  [Route.PVP_LOBBY]: "pvpLobbyScreen",
+  [Route.PVP_ROOM]: "pvpRoomScreen",
+  [Route.PVP_RESULT]: "pvpResultScreen",
+  [Route.PVP_HISTORY]: "pvpHistoryScreen",
 };
 
 /** LB / my-games historically also set inline display (keep for safety). */
-const INLINE_DISPLAY_ROUTES = new Set([Route.LEADERBOARD, Route.MY_GAMES]);
+const INLINE_DISPLAY_ROUTES = new Set([
+  Route.LEADERBOARD,
+  Route.MY_GAMES,
+  Route.PVP_LOBBY,
+  Route.PVP_ROOM,
+  Route.PVP_RESULT,
+  Route.PVP_HISTORY,
+]);
 
 function startEl() {
   return document.getElementById("startScreen");
@@ -150,6 +169,10 @@ export function prepareScreen(route) {
     case Route.PUZZLE:
     case Route.GAME:
     case Route.RESULT:
+    case Route.PVP_LOBBY:
+    case Route.PVP_ROOM:
+    case Route.PVP_RESULT:
+    case Route.PVP_HISTORY:
       hideTopLevelScreens(route);
       setHeaderChrome("compact");
       {

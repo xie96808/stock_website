@@ -40,6 +40,18 @@ import {
   requireAdmin,
   requireAdminVerified,
 } from "../middleware/admin.js";
+import { openDb } from "../db/connection.js";
+import {
+  adminAbortActive,
+  adminAbortPreview,
+  adminListMatches,
+  adminListReports,
+  adminMatchDetail,
+  adminOverview,
+  adminSetDrain,
+  adminUpdateReport,
+  notifyAborted,
+} from "../lib/pvp/reports.js";
 
 const router = Router();
 
@@ -348,5 +360,101 @@ router.get("/admin/feedback-images/:filename", (req, res) => {
   return res.sendFile(resolved.filePath);
 });
 
+
+const PVP_FORBIDDEN = ["returnPpm", "return_ppm", "winnerUserId", "winner_user_id", "deleteLedger", "ledger"];
+
+function pvpAdminBody(req, res) {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+    fail(res, 400, "BAD_PAYLOAD", "请求格式无效");
+    return null;
+  }
+  if (PVP_FORBIDDEN.some((key) => Object.prototype.hasOwnProperty.call(req.body, key))) {
+    fail(res, 400, "BAD_PAYLOAD", "不能修改收益或流水");
+    return null;
+  }
+  return req.body;
+}
+
+function pvpAdminResult(res, result) {
+  if (!result?.ok) return fail(res, result?.status || 400, result?.code || "BAD_REQUEST", result?.message || "请求无效");
+  return ok(res, result);
+}
+
+router.get("/admin/pvp/overview", (req, res) => {
+  return ok(res, adminOverview(openDb()));
+});
+
+router.get("/admin/pvp/matches", (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  return ok(res, adminListMatches(openDb(), {
+    status: req.query.status || "",
+    cursor: req.query.cursor || "",
+    limit,
+  }));
+});
+
+router.get("/admin/pvp/matches/:id", (req, res) => {
+  const data = adminMatchDetail(openDb(), req.params.id);
+  if (!data) return fail(res, 404, "NOT_FOUND", "对局不存在");
+  return ok(res, data);
+});
+
+router.get("/admin/pvp/reports", (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  return ok(res, adminListReports(openDb(), {
+    status: req.query.status || "open",
+    cursor: req.query.cursor || "",
+    limit,
+  }));
+});
+
+router.patch("/admin/pvp/reports/:id", requireAdminVerified, (req, res) => {
+  const body = pvpAdminBody(req, res);
+  if (!body) return;
+  const reportId = Number(req.params.id);
+  if (!Number.isInteger(reportId)) return fail(res, 400, "INVALID_ID", "举报 ID 无效");
+  const result = adminUpdateReport(openDb(), {
+    reportId,
+    actorId: req.user.id,
+    status: body.status,
+    resolution: body.resolution,
+    reason: body.reason,
+    commandKey: req.get("idempotency-key") || "",
+    requestId: res.locals.requestId,
+    now: Date.now(),
+  });
+  return pvpAdminResult(res, result);
+});
+
+router.post("/admin/pvp/drain", requireAdminVerified, (req, res) => {
+  const body = pvpAdminBody(req, res);
+  if (!body) return;
+  const result = adminSetDrain(openDb(), {
+    actorId: req.user.id,
+    draining: body.drain,
+    reason: body.reason,
+    commandKey: req.get("idempotency-key") || "",
+    requestId: res.locals.requestId,
+    now: Date.now(),
+  });
+  return pvpAdminResult(res, result);
+});
+
+router.post("/admin/pvp/abort-active", requireAdminVerified, (req, res) => {
+  const body = pvpAdminBody(req, res);
+  if (!body) return;
+  if (body.confirm !== true) return ok(res, adminAbortPreview(openDb()));
+  const result = adminAbortActive(openDb(), {
+    actorId: req.user.id,
+    reason: body.reason,
+    commandKey: req.get("idempotency-key") || "",
+    requestId: res.locals.requestId,
+    now: Date.now(),
+  });
+  if (result?.ok) notifyAborted(result.matchIds);
+  return pvpAdminResult(res, result);
+});
 
 export default router;

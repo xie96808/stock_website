@@ -104,6 +104,28 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     })),
   };
 
+  if (match.status === "waiting_ready") {
+    view.readyDeadlineAt = match.ready_deadline_at ?? null;
+    view.me.ready = me.ready_at != null;
+    view.opponent.ready = opponent.ready_at != null;
+  }
+
+  if (match.status === "settled" || match.status === "aborted") {
+    view.terminal = {
+      type: terminalType,
+      reason: match.terminal_reason || null,
+    };
+    view.me.outcome = me.outcome || null;
+    view.me.returnPpm = me.return_ppm ?? null;
+    view.me.mddPpm = me.mdd_ppm ?? null;
+    view.me.coinDelta = me.coin_delta ?? null;
+    view.me.ratingDelta = me.actual_rating_delta ?? null;
+    view.opponent.outcome = opponent.outcome || null;
+    view.opponent.returnPpm = opponent.return_ppm ?? null;
+    view.opponent.mddPpm = opponent.mdd_ppm ?? null;
+    view.opponent.userId = opponent.user_id;
+  }
+
   if (revealAll) {
     view.identity = {
       stockCode: snapshot.stockCode,

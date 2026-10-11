@@ -3,9 +3,12 @@ import { ok, fail } from "../lib/http.js";
 import { openDb } from "../db/connection.js";
 import { config } from "../lib/config.js";
 import { clientIp, consumeRateLimit, rateLimitFail } from "../lib/rateLimit.js";
-import { acceptChallenge, cancelReady, createChallenge, markReady } from "../lib/pvp/challenges.js";
+import { acceptChallenge, cancelChallenge, cancelReady, createChallenge, declineChallenge, markReady } from "../lib/pvp/challenges.js";
+import { challengeCountToday, listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } from "../lib/pvp/lobby.js";
+import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
-import { issueWsTicket, noteChallengeChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
+import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
+import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
 
 const router = Router();
@@ -26,6 +29,53 @@ function objectBody(req, res) {
   }
   return req.body;
 }
+
+router.get("/pvp/lobby/summary", (req, res) => {
+  return ok(res, lobbySummary(openDb(), Date.now()));
+});
+
+router.get("/pvp/lobby", requireUser, (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) {
+    return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  }
+  return ok(res, listLobby(openDb(), req.user.id, {
+    cursor: req.query.cursor || 0,
+    limit,
+    now: Date.now(),
+  }));
+});
+
+router.post("/pvp/lobby/presence", requireUser, (req, res) => {
+  if (!config.pvpBattleEnabled) return fail(res, 403, "FEATURE_DISABLED", "对战未开放");
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "available");
+  if (extra.length || typeof body.available !== "boolean") {
+    return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  }
+  const perUser = consumeRateLimit(`pvp:presence:u:${req.user.id}`, 20, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "在线状态切换过于频繁");
+  setAvailable(req.user.id, body.available, Date.now());
+  noteLobbyChanged();
+  return ok(res, { available: body.available === true });
+});
+
+router.get("/me/pvp/state", requireUser, (req, res) => {
+  return ok(res, readPvpState(openDb(), req.user.id, Date.now()));
+});
+
+router.get("/me/pvp/stats", requireUser, (req, res) => {
+  return ok(res, readMyStats(openDb(), req.user.id));
+});
+
+router.get("/me/pvp/matches", requireUser, (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) {
+    return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  }
+  return ok(res, listMyMatches(openDb(), req.user.id, { cursor: req.query.cursor || "", limit }));
+});
 
 router.get("/pvp/matches/:id", requireUser, (req, res) => {
   const view = readMatchView(openDb(), {
@@ -113,7 +163,9 @@ router.post("/pvp/matches/:id/cancel-ready", requireUser, (req, res) => {
 });
 
 router.post("/pvp/heartbeat", requireUser, (req, res) => {
-  noteHeartbeat(req.user.id, Date.now());
+  const now = Date.now();
+  noteHeartbeat(req.user.id, now);
+  touchPresence(req.user.id, now);
   return ok(res, { ok: true });
 });
 
@@ -123,6 +175,14 @@ router.post("/pvp/challenges", requireUser, (req, res) => {
   if (!body) return;
   const extra = Object.keys(body).filter((key) => key !== "toUserId");
   if (extra.length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:challenge:u:${req.user.id}`, 6, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "约战过于频繁");
+  if (challengeCountToday(openDb(), req.user.id, Date.now()) >= 60) {
+    return rateLimitFail(res, 60, "今日约战次数已用完");
+  }
+  if (!isAvailable(body.toUserId, Date.now())) {
+    return fail(res, 409, "OFFLINE", "对方现在不可约战");
+  }
   const result = createChallenge(openDb(), {
     fromUserId: req.user.id,
     toUserId: body.toUserId,
@@ -145,19 +205,80 @@ router.post("/pvp/challenges/:id/respond", requireUser, (req, res) => {
   if (!body) return;
   const extra = Object.keys(body).filter((key) => key !== "accept");
   if (extra.length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
-  if (body.accept !== true) return fail(res, 422, "BAD_PAYLOAD", "这版只接受约战");
-  const result = acceptChallenge(openDb(), {
-    challengeId: req.params.id,
-    userId: req.user.id,
+  if (body.accept !== true && body.accept !== false) return fail(res, 422, "BAD_PAYLOAD", "需要明确接受或拒绝");
+  const challengeRow = openDb()
+    .prepare(`SELECT from_user_id, to_user_id FROM pvp_challenges WHERE id = ?`)
+    .get(req.params.id);
+  const result = body.accept
+    ? acceptChallenge(openDb(), { challengeId: req.params.id, userId: req.user.id, now: Date.now() })
+    : declineChallenge(openDb(), { challengeId: req.params.id, userId: req.user.id, now: Date.now() });
+  if (!result?.ok) return sendDeny(res, result);
+  if (challengeRow) noteChallengeChanged(req.params.id, [challengeRow.from_user_id, challengeRow.to_user_id]);
+  noteLobbyChanged();
+  if (body.accept) {
+    noteMatchChanged(result.matchId);
+    return ok(res, { matchId: result.matchId, readyDeadlineAt: result.readyDeadlineAt });
+  }
+  return ok(res, { challengeId: req.params.id, status: "declined", unchanged: result.unchanged === true });
+});
+
+router.post("/pvp/challenges/:id/cancel", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  if (Object.keys(body).length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const challengeRow = openDb()
+    .prepare(`SELECT from_user_id, to_user_id FROM pvp_challenges WHERE id = ?`)
+    .get(req.params.id);
+  const result = cancelChallenge(openDb(), { challengeId: req.params.id, userId: req.user.id, now: Date.now() });
+  if (!result?.ok) return sendDeny(res, result);
+  if (challengeRow) noteChallengeChanged(req.params.id, [challengeRow.from_user_id, challengeRow.to_user_id]);
+  noteLobbyChanged();
+  return ok(res, { challengeId: req.params.id, status: "cancelled", unchanged: result.unchanged === true });
+});
+
+router.get("/pvp/blocks", requireUser, (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  return ok(res, listBlocks(openDb(), req.user.id, { cursor: req.query.cursor || 0, limit }));
+});
+
+router.post("/pvp/blocks", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "userId");
+  if (extra.length || !Number.isInteger(body.userId)) return fail(res, 400, "BAD_PAYLOAD", "用户无效");
+  const result = blockPlayer(openDb(), {
+    blockerId: req.user.id,
+    blockedId: body.userId,
+    commandKey: idempotencyKey(req),
     now: Date.now(),
   });
   if (!result?.ok) return sendDeny(res, result);
-  const challenge = openDb()
-    .prepare(`SELECT from_user_id, to_user_id FROM pvp_challenges WHERE id = ?`)
-    .get(req.params.id);
-  if (challenge) noteChallengeChanged(req.params.id, [challenge.from_user_id, challenge.to_user_id]);
-  noteMatchChanged(result.matchId);
-  return ok(res, { matchId: result.matchId, readyDeadlineAt: result.readyDeadlineAt });
+  return ok(res, { userId: result.userId });
+});
+
+router.delete("/pvp/blocks/:userId", requireUser, (req, res) => {
+  const blockedId = Number(req.params.userId);
+  if (!Number.isInteger(blockedId)) return fail(res, 400, "BAD_PAYLOAD", "用户无效");
+  unblockPlayer(openDb(), req.user.id, blockedId);
+  return ok(res, null, 204);
+});
+
+router.post("/pvp/matches/:id/report", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "reason" && key !== "detail");
+  if (extra.length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const result = fileReport(openDb(), {
+    matchId: req.params.id,
+    reporterId: req.user.id,
+    reason: body.reason,
+    detail: body.detail,
+    commandKey: idempotencyKey(req),
+    now: Date.now(),
+  });
+  if (!result?.ok) return sendDeny(res, result);
+  return ok(res, result.report);
 });
 
 router.post("/pvp/ws-ticket", requireUser, (req, res) => {

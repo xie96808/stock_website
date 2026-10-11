@@ -29,6 +29,8 @@ export function prepareTestEnv() {
   process.env.STOCKGAME_DATA_DIR = dir;
   process.env.STOCKGAME_DATASET_PATH = FIXTURE_DATASET;
   process.env.STOCKGAME_ALLOW_PICK_OVERRIDE = "1";
+  // Production leaves this unset and the battle entry stays on. Tests opt out.
+  process.env.PVP_BATTLE_ENABLED = "0";
   return { dir, dbPath };
 }
 

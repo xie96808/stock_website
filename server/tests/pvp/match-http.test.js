@@ -61,7 +61,7 @@ test("S04 A02 boot recovery hides the entry, and strangers cannot read a match",
     assert.equal(mine.json.data.identity, undefined);
     assert.equal(JSON.stringify(mine.json.data).includes(seeded.stockCode), false);
     assert.equal(JSON.stringify(mine.json.data).includes(seeded.stockName), false);
-    assert.equal(mine.json.data.opponent.userId, undefined);
+    assert.equal(mine.json.data.opponent.userId, seeded.b);
 
     const stranger = await http.register(`pvp${Date.now().toString(36)}`.slice(0, 20));
     const peek = await http.api(`/api/v1/pvp/matches/${seeded.matchId}`);

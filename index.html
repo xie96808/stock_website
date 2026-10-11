@@ -171,6 +171,15 @@
                             </span>
                             <span class="cta cta-fill">选择玩法</span>
                         </button>
+                        <button type="button" class="lane" id="pvpEntryCard" hidden onclick="showPvpLobby()">
+                            <span class="mark">战</span>
+                            <span class="copy">
+                                <small>对战</small>
+                                <strong>双人对战</strong>
+                                <p>和在线对手比同一段行情。进入后需手动打开可约战。</p>
+                            </span>
+                            <span class="cta cta-wash">进入对战</span>
+                        </button>
                         <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
                             <span class="mark">残</span>
                             <span class="copy">
@@ -416,6 +425,141 @@
                 </div>
                 <div class="puzzle-progress" id="puzzleProgress" hidden></div>
                 <div id="puzzleScreenBody"></div>
+            </div>
+        </section>
+
+        <section class="pvp-screen" id="pvpLobbyScreen">
+            <div class="pvp-wrap">
+                <div class="pvp-head">
+                    <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
+                    <h2>对战</h2>
+                </div>
+                <p id="pvpLobbyCount" aria-live="polite"></p>
+                <p id="pvpLobbyClosed" hidden></p>
+                <ul class="pvp-rules">
+                    <li>双方各付 20 韭币。</li>
+                    <li>胜者到账 35（净赚 15），负者净减 20。</li>
+                    <li>平局各退 20。</li>
+                    <li>每日胜场奖励有次数上限。</li>
+                    <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
+                </ul>
+                <div id="pvpLobbyGuest">
+                    <p>登录后才能约战。游客只能查看规则和在线人数。</p>
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
+                </div>
+                <div id="pvpLobbyMember" hidden>
+                    <p id="pvpLobbyEligibility" hidden></p>
+                    <p id="pvpLobbyBalance"></p>
+                    <label class="pvp-check"><input type="checkbox" id="pvpAvailable"> 可约战</label>
+                    <p class="pvp-note">进入页面不会自动打开可约战。</p>
+                    <div id="pvpInbound"></div>
+                    <div id="pvpOutbound"></div>
+                    <button type="button" class="pvp-btn" id="pvpActiveMatch" hidden>回到对局</button>
+                    <div id="pvpLobbyList"></div>
+                    <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。去玩幽灵对局，或稍后再来。</p>
+                    <button type="button" class="pvp-btn" id="pvpLobbyModes" hidden>去玩幽灵对局</button>
+                </div>
+                <p id="pvpLobbyError" role="status"></p>
+            </div>
+        </section>
+
+        <section class="pvp-screen" id="pvpRoomScreen">
+            <div class="pvp-wrap">
+                <div class="pvp-head">
+                    <button type="button" class="pvp-back" id="pvpRoomLeave">离开</button>
+                    <h2 id="pvpRoomHeadline">对战</h2>
+                </div>
+                <div id="pvpReadyPanel" hidden>
+                    <p id="pvpReadyCopy">双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。每日胜场奖励有次数上限。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
+                    <p id="pvpReadyMe"></p>
+                    <p id="pvpReadyOpp"></p>
+                    <p id="pvpReadyClock" aria-live="polite"></p>
+                    <div class="pvp-actions">
+                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpReadyBtn">准备</button>
+                        <button type="button" class="pvp-btn" id="pvpCancelReadyBtn">取消准备</button>
+                    </div>
+                </div>
+                <div id="pvpPlayPanel" hidden>
+                    <p id="pvpRoundCaption"></p>
+                    <p id="pvpClock" aria-live="polite"></p>
+                    <p id="pvpSelfLock"></p>
+                    <p id="pvpOppLock"></p>
+                    <p>我的收益 <span id="pvpMeNav">—</span> · 对手 <span id="pvpOppNav">—</span></p>
+                    <div id="pvpChart" class="pvp-chart"></div>
+                    <div class="pvp-actions">
+                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpBuy">买入</button>
+                        <button type="button" class="pvp-btn" id="pvpSell">卖出</button>
+                        <button type="button" class="pvp-btn" id="pvpHold">持有</button>
+                    </div>
+                    <p id="pvpActionError" role="status"></p>
+                </div>
+            </div>
+            <div class="pvp-dialog" id="pvpLeaveDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpLeaveTitle">
+                <div class="pvp-dialog-card">
+                    <h3 id="pvpLeaveTitle">离开这局？</h3>
+                    <p>回到大厅后，这局的计时仍会继续。认输会立刻结束。</p>
+                    <div class="pvp-actions">
+                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLeaveStay">留下</button>
+                        <button type="button" class="pvp-btn" id="pvpLeaveLobby">回到大厅（计时继续）</button>
+                        <button type="button" class="pvp-btn" id="pvpLeaveForfeit">认输</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="pvp-screen" id="pvpResultScreen">
+            <div class="pvp-wrap">
+                <div class="pvp-head">
+                    <button type="button" class="pvp-back" id="pvpResultBack" onclick="showPvpLobby()">← 返回大厅</button>
+                    <h2 id="pvpResultHeadline">对战结果</h2>
+                </div>
+                <p id="pvpResultReason"></p>
+                <p id="pvpResultMe"></p>
+                <p id="pvpResultOpp"></p>
+                <p id="pvpResultRating"></p>
+                <p id="pvpResultIdentity" hidden></p>
+                <p id="pvpResultReplay"></p>
+                <p id="pvpResultAnalysis"></p>
+                <label class="pvp-slider" id="pvpResultSliderLabel" hidden>看到第 <span id="pvpResultDay">1</span> 个交易日
+                    <input type="range" id="pvpResultDaySlider" min="1" max="1" value="1">
+                </label>
+                <div id="pvpResultChart" class="pvp-chart" hidden></div>
+                <p id="pvpResultChartError" hidden>图表暂时打不开，结果仍然有效。</p>
+                <ol id="pvpResultCurve"></ol>
+                <ul id="pvpResultGaps"></ul>
+                <form id="pvpReportForm">
+                    <label>举报对手
+                        <select id="pvpReportReason">
+                            <option value="cheat">疑似作弊</option>
+                            <option value="grief_forfeit">恶意弃权</option>
+                            <option value="nickname">昵称问题</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </label>
+                    <textarea id="pvpReportDetail" maxlength="500" placeholder="补充说明，可以留空"></textarea>
+                    <button type="submit" class="pvp-btn" id="pvpReportSubmit">提交举报</button>
+                    <p id="pvpReportNote"></p>
+                </form>
+                <div class="pvp-actions">
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
+                    <button type="button" class="pvp-btn" id="pvpResultBlock" hidden>屏蔽对手</button>
+                    <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="pvp-screen" id="pvpHistoryScreen">
+            <div class="pvp-wrap">
+                <div class="pvp-head">
+                    <button type="button" class="pvp-back" id="pvpHistoryBack" onclick="showPvpLobby()">← 返回</button>
+                    <h2>对战档案</h2>
+                </div>
+                <p>战绩只对你自己可见。</p>
+                <div id="pvpStats"></div>
+                <p id="pvpHistoryEmpty" hidden>尚无战绩</p>
+                <div id="pvpHistoryList"></div>
+                <h3>我的屏蔽</h3>
+                <div id="pvpBlockList"></div>
             </div>
         </section>
 
@@ -1174,6 +1318,27 @@
         registerHashRoute(Route.ACADEMY, () => showAcademy({ updateHash: false }));
         registerHashRoute(Route.HINDSIGHT, () => showHindsight({ updateHash: false }));
         registerHashRoute(Route.LEADERBOARD, () => { showLeaderboard(); });
+        registerHashRoute(Route.PVP_LOBBY, () => {
+            import('./js/pvp/lobby.js').then((mod) => mod.showPvpLobby()).catch(() => {});
+        });
+        registerHashRoute(Route.PVP_HISTORY, () => {
+            import('./js/pvp/profile-battle.js').then((mod) => mod.showPvpHistory()).catch(() => {});
+        });
+        window.showPvpLobby = function () {
+            import('./js/pvp/lobby.js').then((mod) => mod.showPvpLobby()).catch(() => {});
+        };
+        window.showPvpHistory = function () {
+            import('./js/pvp/profile-battle.js').then((mod) => mod.showPvpHistory()).catch(() => {});
+        };
+        document.addEventListener('stockgame:auth-changed', () => {
+            import('./js/pvp/profile-battle.js').then((mod) => mod.syncPvpProfile()).catch(() => {});
+        });
+        function routePvpHash() {
+            const found = /^pvp\/([0-9a-f-]{36})$/i.exec(parseRouteHash());
+            if (!found) return;
+            import('./js/pvp/lobby.js').then((mod) => mod.openPvpHash(found[1])).catch(() => {});
+        }
+        window.addEventListener('hashchange', routePvpHash);
         // Cold start with empty hash: only sync lane visibility (match prior initHomeIaRouting).
         // Still listen for later hashchange back to home/sim/etc.
         const bootHash = parseRouteHash();
@@ -1190,6 +1355,7 @@
         } else {
             initAppHashRouting();
         }
+        routePvpHash();
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
         window.onHindsightBlur  = onHindsightBlur;
@@ -1202,6 +1368,7 @@
             if (chartRefs.resultChart) chartRefs.resultChart.resize();
             quizState.charts.forEach(c => { if (c && !c.isDisposed()) c.resize(); });
             resizeHindsightChart();
+            if (typeof window.resizePvpChart === 'function') window.resizePvpChart();
         });
     </script>
 

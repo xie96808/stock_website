@@ -80,6 +80,28 @@ export function isBlocked(db, userA, userB) {
  * and it does not include a balance.
  * IP is intentionally not an input.
  */
+export function assessSelf(db, userId, now, economy = currentEconomy(now)) {
+  const user = db.prepare(`SELECT id, status, created_at FROM users WHERE id = ?`).get(userId);
+  if (!user || user.status !== "active") {
+    return denial("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
+  }
+  if (now - sqliteUtcMs(user.created_at) < MIN_ACCOUNT_AGE_MS) {
+    return denial("NOT_ELIGIBLE", "注册满 24 小时后才能参加对战", 403);
+  }
+  if (classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
+    return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);
+  }
+  const balance = getJiuCoinBalance(userId, db);
+  if (balance < economy.entryCost) {
+    return denial("INSUFFICIENT_FUNDS", "韭币不足，无法开始对战", 402);
+  }
+  const ymd = shanghaiYmd(new Date(now));
+  if (rewardCount(db, userId, ymd) >= economy.dailyRewardCap) {
+    return denial("REWARD_CAP", "今日胜场奖励次数已用完", 403);
+  }
+  return { ok: true, balance, rewardYmd: ymd };
+}
+
 export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(now)) {
   if (isBlocked(db, userIdA, userIdB)) {
     return denial("BLOCKED", "双方无法约战", 403);

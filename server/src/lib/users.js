@@ -1,6 +1,6 @@
 import { openDb } from "../db/connection.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
-import { writeUserTombstone } from "./tombstones.js";
+import { runUserUnavailableHook, writeUserTombstone } from "./tombstones.js";
 import { grantRegisterBonus } from "./jiuCoin.js";
 
 export function publicUser(row) {
@@ -118,6 +118,7 @@ export function softDeleteUser(id, opts = {}) {
       source,
       reason,
     });
+    runUserUnavailableHook(db, id, Date.now());
   });
   tx();
   invalidateLeaderboardCache();

@@ -1,0 +1,293 @@
+/* PvP lobby, room, result, archive. Paper/ink, same red-up green-down candles. */
+
+.start-screen #pvpEntryCard[hidden] {
+  display: none !important;
+}
+
+.pvp-screen {
+  display: none;
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100%;
+  padding: 1rem 0.75rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.pvp-screen.active {
+  display: block;
+}
+
+.pvp-screen [hidden] {
+  display: none !important;
+}
+
+.pvp-wrap {
+  width: min(880px, 100%);
+  margin: 0 auto;
+}
+
+.pvp-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.pvp-head h2,
+.pvp-head h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.35;
+}
+
+.pvp-back,
+.pvp-btn {
+  min-height: 44px;
+  padding: 0.4rem 0.9rem;
+  border: var(--border-ink);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pvp-btn-primary {
+  background: var(--terra);
+  color: var(--terra-ink);
+}
+
+.pvp-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pvp-screen button:focus-visible,
+.pvp-screen input:focus-visible,
+.pvp-screen select:focus-visible,
+.pvp-screen textarea:focus-visible,
+.pvp-dialog button:focus-visible,
+.pvp-check input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.pvp-rules {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+}
+
+.pvp-rules li + li {
+  margin-top: 0.25rem;
+}
+
+.pvp-note,
+.pvp-screen p {
+  color: var(--ink-soft);
+}
+
+.pvp-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pvp-person,
+.pvp-invite,
+.pvp-history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0 0 0.6rem;
+  padding: 0.7rem;
+  text-align: left;
+  border: var(--border-ink);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  box-sizing: border-box;
+}
+
+.pvp-history-item {
+  font: inherit;
+  cursor: pointer;
+}
+
+.pvp-person div,
+.pvp-history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.pvp-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--paper-2);
+}
+
+.pvp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.pvp-actions .pvp-btn,
+.pvp-actions button {
+  flex: 1 1 7rem;
+}
+
+.pvp-chart {
+  width: 100%;
+  height: 280px;
+  margin: 0.5rem 0 0.75rem;
+  background: var(--card);
+  border: var(--border-ink);
+  border-radius: 16px;
+}
+
+.pvp-up { color: var(--gain-color); }
+.pvp-down { color: var(--loss-color); }
+.pvp-flat { color: var(--ink); }
+
+.pvp-dialog[hidden] {
+  display: none !important;
+}
+
+.pvp-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(44, 40, 36, 0.45);
+}
+
+.pvp-dialog-card {
+  width: min(22rem, 100%);
+  padding: 1rem;
+  background: var(--card);
+  color: var(--ink);
+  border: var(--border-ink);
+  border-radius: 18px;
+  box-shadow: var(--shadow-nudge);
+}
+
+.pvp-settings {
+  margin: 0.5rem 0 1rem;
+}
+
+.pvp-settings[hidden] {
+  display: none !important;
+}
+
+.pvp-settings-title {
+  margin: 0 0 0.25rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.pvp-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 44px;
+  margin: 0.5rem 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.pvp-slider input {
+  width: 100%;
+  min-height: 44px;
+}
+
+#pvpReportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+#pvpReportForm select,
+#pvpReportForm textarea {
+  min-height: 44px;
+  width: 100%;
+  box-sizing: border-box;
+  border: var(--border-ink);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  padding: 0.45rem 0.7rem;
+}
+
+.pvp-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.6rem;
+}
+
+.pvp-dot {
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-ink);
+  border-radius: 999px;
+  background: var(--card);
+  font-size: 0.85rem;
+}
+
+.pvp-dot-win { color: var(--gain-color); }
+.pvp-dot-loss { color: var(--loss-color); }
+.pvp-dot-draw { color: var(--ink-soft); }
+
+.pvp-block-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  margin: 0 0 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border: var(--border-ink);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+#pvpResultCurve,
+#pvpResultGaps {
+  margin: 0.4rem 0 0.75rem;
+  padding-left: 1.2rem;
+  color: var(--ink);
+}
+
+@media (max-width: 420px) {
+  .pvp-screen {
+    padding-left: 0.7rem;
+    padding-right: 0.7rem;
+  }
+
+  .pvp-person,
+  .pvp-invite {
+    flex-wrap: wrap;
+  }
+
+  .pvp-chart {
+    height: 280px;
+  }
+}

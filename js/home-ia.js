@@ -113,6 +113,9 @@ export function showSimHub(opts = {}) {
   refreshPuzzleChapterFlag()
     .then(() => refreshPuzzleChapterCard())
     .catch(() => {});
+  import("./pvp/lobby.js")
+    .then((mod) => mod.refreshPvpEntry())
+    .catch(() => {});
 }
 
 /** 三级玩法选择：今日挑战 / 经典 / 一把梭 / 生存（hash 仍为 sim） */

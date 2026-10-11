@@ -6,6 +6,35 @@ import {
     MA_DAY_COLORS,
 } from './utils.js';
 
+const PVP_ME_COLOR = '#8a7350';
+const PVP_OPP_COLOR = '#4d6278';
+
+/** Player marks use shape, not red/green, so they stay distinct from up/down candles. */
+function pvpMarkerPoints(bars, marks) {
+    const points = [];
+    for (const mark of Array.isArray(marks) ? marks : []) {
+        const bar = bars.find((item) => item && item.label === mark.label);
+        if (!bar || !mark.kind) continue;
+        const mine = mark.side === 'me';
+        const valuation = mark.kind === 'valuation';
+        const sell = mark.kind === 'sell';
+        const label = valuation ? '估值' : mine
+            ? (sell ? '我卖' : '我买')
+            : (sell ? '对手卖' : '对手买');
+        points.push({
+            name: label,
+            coord: [mark.label, valuation || sell ? bar.high : bar.low],
+            value: label,
+            symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
+            symbolSize: valuation ? 14 : 12,
+            itemStyle: {
+                color: valuation ? '#f5c542' : mine ? PVP_ME_COLOR : PVP_OPP_COLOR,
+            },
+        });
+    }
+    return points;
+}
+
 /**
  * Build ECharts option for the dual-panel K-line (candles + volume + MA).
  * Pure option object — no chart.init / setOption / DOM (except optional syncHover hook
@@ -31,6 +60,7 @@ export function buildKlineOption(vm) {
         bestPoints = null,
         valuation = null,
         mode = 'game',
+        pvpMarks = null,
         maSelected = null,
         syncHover = null,
         resetDataZoom = false,
@@ -38,7 +68,11 @@ export function buildKlineOption(vm) {
     } = vm;
 
     const isResult = mode === 'result';
-    const dayLabels = buildDayIndexLabels(bars.length);
+    const isPvp = mode === 'pvp';
+    const paperChart = isResult || isPvp;
+    const dayLabels = isPvp
+        ? bars.map((bar, index) => (bar && bar.label) || String(index + 1))
+        : buildDayIndexLabels(bars.length);
     const startDayLabel = String(historyLength + 1);
     const ohlc = bars.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = bars.map(d => d.volume);
@@ -49,14 +83,16 @@ export function buildKlineOption(vm) {
     const ma20 = calculateMA(bars, 20);
     const ma30 = calculateMA(bars, 30);
 
-    const markPoints = trades.map(trade => ({
-        name: trade.type === 'buy' ? '买' : '卖',
-        coord: [String(historyLength + trade.day), trade.price],
-        value: trade.type === 'buy' ? '买' : '卖',
-        itemStyle: {
-            color: trade.type === 'buy' ? '#e05252' : '#3db86a'
-        }
-    })).filter(p => Number(p.coord[0]) <= bars.length);
+    const markPoints = isPvp
+        ? pvpMarkerPoints(bars, pvpMarks)
+        : trades.map(trade => ({
+            name: trade.type === 'buy' ? '买' : '卖',
+            coord: [String(historyLength + trade.day), trade.price],
+            value: trade.type === 'buy' ? '买' : '卖',
+            itemStyle: {
+                color: trade.type === 'buy' ? '#e05252' : '#3db86a'
+            }
+        })).filter(p => Number(p.coord[0]) <= bars.length);
 
     if (valuation) {
         markPoints.push({
@@ -101,9 +137,9 @@ export function buildKlineOption(vm) {
         });
     }
 
-    const axisLineColor = isResult ? 'rgba(200, 164, 78, 0.2)' : 'rgba(88,166,255,0.15)';
-    const axisLabelColor = isResult ? '#6b6660' : '#8b949e';
-    const splitLineColor = isResult ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
+    const axisLineColor = paperChart ? 'rgba(200, 164, 78, 0.2)' : 'rgba(88,166,255,0.15)';
+    const axisLabelColor = paperChart ? '#6b6660' : '#8b949e';
+    const splitLineColor = paperChart ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
 
     const xAxisBottomLabel = isResult
         ? {
@@ -270,6 +306,16 @@ export function buildKlineOption(vm) {
                 if (!cs) return '';
                 const idx = cs.dataIndex;
                 const kd = bars[idx];
+                if (isPvp && kd) {
+                    const isUp = kd.close >= kd.open;
+                    const clr = isUp ? '#e05252' : '#3db86a';
+                    return `<div style="padding:4px 2px">
+                        <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${kd.label || ''}</div>
+                        <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
+                        <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
+                        <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>
+                    </div>`;
+                }
 
                 if (!isResult && syncHover && kd) {
                     syncHover(kd, idx);

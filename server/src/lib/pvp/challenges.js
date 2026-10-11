@@ -14,6 +14,7 @@ import {
 } from "./config.js";
 import { chargePvpEntry } from "./economy.js";
 import { assessEntry, isBlocked, pairKey } from "./eligibility.js";
+import { readDrain } from "./drain.js";
 import { finishMatch, finishMatchInTx } from "./settlement.js";
 import { withImmediate } from "./tx.js";
 
@@ -40,6 +41,13 @@ function denyIfClosed() {
   return null;
 }
 
+function denyIfNotAccepting(db) {
+  const closed = denyIfClosed();
+  if (closed) return closed;
+  if (readDrain(db)) return deny("DRAINING", "对战已停止接受新局", 503);
+  return null;
+}
+
 function payloadHash(toUserId) {
   return crypto.createHash("sha256").update(JSON.stringify({ toUserId: Number(toUserId) })).digest("hex");
 }
@@ -55,7 +63,7 @@ function hasLock(db, userId) {
 }
 
 export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
-  const closed = denyIfClosed();
+  const closed = denyIfNotAccepting(db);
   if (closed) return closed;
   if (!validCreateKey(createKey)) {
     return deny("INVALID_IDEMPOTENCY_KEY", "Idempotency-Key 须为 16-128 位可见 ASCII", 400);
@@ -112,7 +120,7 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
 }
 
 export function acceptChallenge(db, { challengeId, userId, now }) {
-  const closed = denyIfClosed();
+  const closed = denyIfNotAccepting(db);
   if (closed) return closed;
   try {
     return withImmediate(db, () => acceptInTx(db, { challengeId, userId, now }));
@@ -198,7 +206,7 @@ function acceptInTx(db, { challengeId, userId, now }) {
 }
 
 export function markReady(db, { matchId, userId, now }) {
-  const closed = denyIfClosed();
+  const closed = denyIfNotAccepting(db);
   if (closed) return closed;
   // Commit the dataset row before the ready transaction. A rolled-back start
   // must not take the datasets insert with it while the process cache stays warm.
@@ -248,6 +256,7 @@ function readyInTx(db, { matchId, userId, now }) {
 }
 
 function startPlayingInTx(db, match, now) {
+  if (readDrain(db)) throw entryRejected("DRAINING", "对战已停止接受新局", 503);
   const players = db
     .prepare(`SELECT * FROM pvp_match_players WHERE match_id = ? ORDER BY seat ASC`)
     .all(match.id);
@@ -311,6 +320,44 @@ function startPlayingInTx(db, match, now) {
       throw err;
     }
   }
+}
+
+export function declineChallenge(db, { challengeId, userId, now }) {
+  const closed = denyIfClosed();
+  if (closed) return closed;
+  return withImmediate(db, () => {
+    const challenge = db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(challengeId);
+    if (!challenge) return deny("NOT_FOUND", "约战不存在", 404);
+    if (challenge.to_user_id !== userId) return deny("NOT_PARTICIPANT", "只有被邀请的人能拒绝", 403);
+    if (challenge.status === "declined") return { ok: true, challenge, unchanged: true };
+    if (challenge.status !== "pending") return deny("CHALLENGE_CLOSED", "约战已结束", 409);
+    if (now >= challenge.expires_at) {
+      db.prepare(
+        `UPDATE pvp_challenges SET status = 'expired', responded_at = ?, cancel_reason = 'expired' WHERE id = ? AND status = 'pending'`
+      ).run(now, challengeId);
+      return deny("CHALLENGE_CLOSED", "约战已超时", 409);
+    }
+    db.prepare(
+      `UPDATE pvp_challenges SET status = 'declined', responded_at = ?, cancel_reason = 'declined' WHERE id = ? AND status = 'pending'`
+    ).run(now, challengeId);
+    return { ok: true, challenge: db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(challengeId), unchanged: false };
+  });
+}
+
+export function cancelChallenge(db, { challengeId, userId, now }) {
+  const closed = denyIfClosed();
+  if (closed) return closed;
+  return withImmediate(db, () => {
+    const challenge = db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(challengeId);
+    if (!challenge) return deny("NOT_FOUND", "约战不存在", 404);
+    if (challenge.from_user_id !== userId) return deny("NOT_PARTICIPANT", "只有发出邀请的人能取消", 403);
+    if (challenge.status === "cancelled") return { ok: true, challenge, unchanged: true };
+    if (challenge.status !== "pending") return deny("CHALLENGE_CLOSED", "约战已结束", 409);
+    db.prepare(
+      `UPDATE pvp_challenges SET status = 'cancelled', responded_at = ?, cancel_reason = 'cancelled' WHERE id = ? AND status = 'pending'`
+    ).run(now, challengeId);
+    return { ok: true, challenge: db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(challengeId), unchanged: false };
+  });
 }
 
 export function cancelReady(db, { matchId, userId, now }) {

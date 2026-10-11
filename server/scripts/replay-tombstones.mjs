@@ -43,6 +43,7 @@ if (dryRun) {
   process.exit(0);
 }
 
+await import("../src/lib/pvp/accounts.js");
 const result = replayUserTombstones();
 console.log("TOMBSTONE_REPLAY_OK", JSON.stringify(result));
 closeDb();

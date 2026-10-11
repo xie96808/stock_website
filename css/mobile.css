@@ -31,6 +31,7 @@
   .hindsight-screen.active,
   .leaderboard-screen.active,
   .my-games-screen.active,
+  .pvp-screen.active,
   .puzzle-screen:not([hidden]) {
     padding-top: var(--mobile-chrome-top);
   }

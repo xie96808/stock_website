@@ -6,6 +6,7 @@ import { revokeAllUserSessions } from "./sessions.js";
 import { writeAuditLog } from "./audit.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { reverseActiveTombstonesForUser } from "./tombstones.js";
+import { closeMatchesForUnavailableUser } from "./pvp/accounts.js";
 
 function requireReason(reason) {
   if (typeof reason !== "string") return "必须填写原因";
@@ -134,6 +135,7 @@ export function setUserStatus({
       `UPDATE users SET status = ?, updated_at = datetime('now') WHERE id = ?`
     ).run(status, targetUserId);
     if (status === "disabled") {
+      closeMatchesForUnavailableUser(db, targetUserId, Date.now());
       revokeAllUserSessions(targetUserId);
     }
     writeAuditLog({
