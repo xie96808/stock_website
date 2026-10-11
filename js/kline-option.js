@@ -46,24 +46,26 @@ function pvpMarkerPoints(bars, marks) {
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
             symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
-            symbolSize: valuation ? 28 : mine ? 32 : 34,
-            symbolOffset: valuation ? [0, -16] : mine ? (above ? [-14, -10] : [-14, 12]) : (above ? [14, -10] : [14, 12]),
+            symbolSize: valuation ? 12 : 14,
+            // Pixel offset lifts the mark off the wick so the candle body stays visible.
+            symbolOffset: valuation ? [0, -22] : mine ? (above ? [-12, -28] : [-12, 28]) : (above ? [12, -28] : [12, 28]),
             itemStyle: {
                 color,
                 borderColor: '#2c2824',
                 borderWidth: 1.5,
             },
             label: {
-                show: true,
+                show: !!valuation,
                 formatter: '{c}',
                 color: '#2c2824',
-                fontSize: 13,
+                fontSize: 11,
                 fontWeight: 'bold',
                 backgroundColor: 'rgba(255, 252, 245, 0.94)',
                 borderColor: color,
-                borderWidth: 1.5,
+                borderWidth: 1,
                 borderRadius: 4,
-                padding: [2, 5],
+                padding: [1, 3],
+                distance: 2,
                 position: above ? 'top' : 'bottom',
             },
         });
@@ -197,7 +199,7 @@ export function buildKlineOption(vm) {
             ? {
                 data: markPoints,
                 symbol: 'circle',
-                symbolSize: 32,
+                symbolSize: 14,
                 animation: false,
             }
             : isResult
