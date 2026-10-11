@@ -28,7 +28,7 @@
 | 幂等 | `routes/games.js` 读取 `Idempotency-Key`（`createKey`/`commandKey`） | | 约战/应答/行动均带幂等键 |
 | 限流 | `server/src/lib/rateLimit.js`：`consumeRateLimit(key,limit,windowMs)`、`rateLimitFail()`、`checkCreateGameLimits()` | 内存桶，重启清零 | 新增 `checkPvpChallengeLimits()` 等 |
 | 韭币 | `server/src/lib/jiuCoin.js`：`JIU_COIN_GAME_CREATE_COST=20`、`deductGameCreateCost(userId,gameId,db,cost)`、`insertJiuCoinLedger()`；`GHOST_DUEL_COST = JIU_COIN_GAME_CREATE_COST` | 扣费与建局同事务 | 建房事务内双方扣费，结算事务内发奖 |
-| 排行榜 | `server/src/lib/leaderboard.js`：`getLeaderboard()`、`invalidateLeaderboardCache()`；前端 `js/leaderboard.js` | 经典练习榜 | PvP 不进练习榜；M4 新增「对战积分榜」（简单 SQL + 60s 缓存，同 `boardCacheKey` 思路） |
+| 排行榜 | `server/src/lib/leaderboard.js`：`getLeaderboard()`、`invalidateLeaderboardCache()`；前端 `js/leaderboard.js` | 经典练习榜 | PvP 不进练习榜；对战积分榜 V1 不做（已确认，见 §15-6） |
 | 个人面板 | `js/auth.js`：`ensureAuthDom()` 生成 `#authChip`；`#authUserBtn.onclick = () => openAuthModal("settings")` → `#authSettingsPanel`（头像/昵称/密码） | 右上角头像芯片打开的就是这个「设置」弹窗 | 在 `#authModal` 内新增 Tab「对战」→ `#authBattlePanel`（§8） |
 | 我的战绩 | `js/my-games.js`：`showMyGames()`、`loadMyGamesPanel()`；路由 `Route.MY_GAMES`（`js/screen-router.js`） | 经典局列表 | 对战历史「查看全部」新开 `Route.PVP_HISTORY` 屏，结构参考 my-games |
 | 首页入口 | `js/home-ia.js`（模拟盘 hub）、`index.html` L184「我的战绩」lane | | 新增「对战」lane |
@@ -485,7 +485,6 @@ CREATE TABLE IF NOT EXISTS pvp_reports (
 | GET | `/me/pvp/stats` | 是 | 面板数据（§9、§10） |
 | GET | `/me/pvp/matches?cursor=` | 是 | 历史分页（复用 `games.js` `encodeCursor` 思路） |
 | GET | `/users/:id/pvp/stats` | 可选 | 他人公开战绩（大厅点头像） |
-| GET | `/pvp/leaderboard` | 否 | 积分榜 Top 50（M4） |
 
 ### 8.2 WS 消息（JSON，`t` = 类型；上行带 `id` 用于 ack）
 
@@ -555,8 +554,19 @@ CREATE TABLE IF NOT EXISTS pvp_reports (
 
 **积分（隐藏精度）+ 段位（展示）**：
 - 积分初值 1000；Elo，`K=32`（前 10 场 `K=48` 加速定级）；`expected = 1/(1+10^((Rb-Ra)/400))`；平局 0.5。
-- **段位 = 每 100 分一段**：`level = clamp(floor((rating-700)/100), 1, 15)`，展示为「1 级 … 15 级」（或映射成「韭菜 → 散户 → 游资 → 庄家」称号，见 Q4）。
+- **段位 = 每 100 分一段**：`level = clamp(floor((rating-700)/100), 1, 15)`，对外**只展示称号**，`level` 仅作内部值（已确认，见 §15-4）。
 - 野狐式提示：`再赢 X 局升 1 级 = ceil((nextLevelFloor - rating) / 16)`、`再输 Y 局降 1 级 = floor((rating - levelFloor) / 16) + 1`（以对等对手的期望增减 16 分估算，文案注明「约」）。
+- **称号表**（`shared/pvpTitles.js`，前后端共用；同一称号内分「一/二/三段」，共 15 档）：
+
+  | level | 称号 | 积分区间 |
+  |---|---|---|
+  | 1–3 | 韭菜 一/二/三段 | 700–999 |
+  | 4–6 | 散户 一/二/三段 | 1000–1299 |
+  | 7–9 | 股民老手 一/二/三段 | 1300–1599 |
+  | 10–12 | 游资 一/二/三段 | 1600–1899 |
+  | 13–15 | 庄家 一/二/三段 | ≥1900 |
+
+  新手从 1000 分开始，即「散户 一段」。升降级文案写成「再赢约 X 局升至 散户 二段」。
 - 防刷：同一对手 24h 内第 4 场起积分变动 ×0（仍记战绩）；积分不低于 700。
 
 ---
@@ -577,8 +587,7 @@ CREATE TABLE IF NOT EXISTS pvp_reports (
 │ 近10场   5胜5负 50%                    │
 │ ✔ ✖ ✔ ✔ ✖ ✖ ✔ ✖ ✔ ✖                   │  ← 绿色手绘勾 / 红色手绘叉，最新在左
 │ 累计收益 +312.4%   场均收益 +2.4%      │
-│ 再赢 4 局升 1 级 / 再输 3 局降 1 级     │  ← 下方一条铅笔线进度条
-│ 积分榜 第 23 名                         │  (M4)
+│ 散户 二段 · 再赢约 4 局升 散户 三段     │  ← 下方一条铅笔线进度条
 └──────────────────────────────────────┘
 ```
 
@@ -586,7 +595,7 @@ CREATE TABLE IF NOT EXISTS pvp_reports (
 ```json
 {"rating":1132,"level":3,"games":128,"wins":78,"losses":48,"draws":2,"winRate":0.6094,
  "recent":["W","L","W","W","L","L","W","L","W","L"],"sumReturnPpm":3124000,"avgReturnPpm":24406,
- "toLevelUpWins":4,"toLevelDownLosses":3,"rank":23}
+ "title":"散户 二段","nextTitle":"散户 三段","toLevelUpWins":4,"toLevelDownLosses":3}
 ```
 
 历史列表（`Route.PVP_HISTORY`，结构参考 `js/my-games.js`）：每行「✔ vs 对手昵称 · +8.2% vs +3.1% · 10-11 14:20」，点开 → 复盘页（复用 `js/pvp/result.js` 的只读模式：双人 B/S K 线 + 逐日回放滑块，复用 `buildPointNavigator()`）。
@@ -645,7 +654,7 @@ Flag：`PVP_BATTLE_ENABLED=1` → `config.pvpBattleEnabled` → `/api/v1/config`
 | M1 大厅 + 约战 | 迁移 020、`ws` 挂载与握手、presence、challenges、REST+WS、大厅 UI、nginx 配置、限流 | 5 |
 | M2 房间 + 对战 | ready check、match 状态机、逐日裁决、计时/时钟同步、重连、重启恢复、房间 UI（复用 K 线 / HUD）、韭币入场 | 6 |
 | M3 结算 + 复盘 | settle、tie-break、`shared/pvpAnalysis.js`、结果页（双人 B/S）、再来一局、举报 | 4 |
-| M4 面板 + 积分 | Elo/段位、`/me/pvp/stats`、`#authBattlePanel`、历史/复盘屏、积分榜、keep-screen-on bridge（App 发版） | 4 |
+| M4 面板 + 积分 | Elo/段位、`/me/pvp/stats`、`#authBattlePanel`、历史/复盘屏、称号表、keep-screen-on bridge（App 发版） | 4 |
 | 测试/负载/QA 缓冲 | | 3 |
 | **合计** | | **≈22 人日** |
 
@@ -658,12 +667,12 @@ Flag：`PVP_BATTLE_ENABLED=1` → `config.pvpBattleEnabled` → `/api/v1/config`
 
 ---
 
-## 15. 开放问题（请 Bill 拍板）
+## 15. 已确认决策（Bill，2026-10-11）
 
-1. 「30 天」按现有规则是 30 根 K 线 / **29 次决策**，可以吗？（改 30 次决策需动 `shared/rules.js`，会影响所有玩法，不建议）
-2. 对手昵称是否全程可见？还是想要「匿名随机匹配」（V2 可加快速匹配队列）？
-3. 韭币：入场 20 / 胜者 35 / 平局退还 / 每日计奖 10 场——数值 OK 吗？是否要「免费友谊赛」（不扣不奖不计分）？
-4. 等级展示：纯数字「N 级」还是称号（韭菜/散户/游资/庄家…）？
-5. 成交模式固定 `next_open` 可以吗？还是要房间可选 `same_close`？
-6. 对战是否需要独立排行榜（M4），还是只在面板显示个人名次？
-7. 价格 rebase（隐藏真实价位）会让 K 线纵轴不是真实股价，能接受吗？
+1. **决策次数**：沿用现有规则，30 根 K 线 / 29 次决策，`shared/rules.js` 不动。
+2. **对手昵称**：全程可见。匿名随机匹配暂不做，留到 V2。
+3. **韭币**：按 §2.3 执行，入场 20 / 胜者 35 / 平局与作废全额退还 / 每日计奖 10 场。**V1 不做免费友谊赛。**
+4. **等级展示**：用**称号**，不用「N 级」（见 §9 称号表）。
+5. **成交模式**：固定 `next_open`，房间不可选。
+6. **对战排行榜**：暂不做，M4 只做个人面板。§14 中排行榜相关工作量移除。
+7. **价格缩放**：可以接受。本游戏以收益率为核心，玩家本就不依赖真实股价。对局中 K 线纵轴不显示价格刻度，只显示相对首日的涨跌 %，持仓与资金显示收益率；终局揭晓时再展示真实股票与价格。
