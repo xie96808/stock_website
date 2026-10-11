@@ -1,14 +1,17 @@
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { formatRemain, remainingMs } from "./copy.js";
+import { fillDossier } from "./profile-battle.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 
 let showing = false;
 let stopPoll = null;
-let stopHeartbeat = null;
 let releaseSocket = null;
 let wired = false;
-let lastAvailable = false;
+let presenceWired = false;
+let presenceOn = false;
+let stopPresenceBeat = null;
+let presenceChain = Promise.resolve();
 let waitingOutbound = false;
 let latestState = null;
 let acceptingNew = true;
@@ -34,35 +37,55 @@ export async function refreshPvpEntry() {
 function stopLoops() {
   if (stopPoll) stopPoll();
   stopPoll = null;
-  if (stopHeartbeat) stopHeartbeat();
-  stopHeartbeat = null;
   if (releaseSocket) releaseSocket();
   releaseSocket = null;
 }
 
-export function leavePvpLobby() {
-  const clear = showing && lastAvailable;
-  showing = false;
-  stopLoops();
-  if (clear) {
-    lastAvailable = false;
-    pvpFetch("/pvp/lobby/presence", { method: "POST", body: { available: false } }).catch(() => {});
-  }
-}
-
-function syncHeartbeat(available) {
-  if (available && showing) {
-    if (!stopHeartbeat) {
+async function applyPresence(want) {
+  if (want) {
+    if (!presenceOn) {
+      await pvpFetch("/pvp/lobby/presence", { method: "POST", body: { available: true } });
+      presenceOn = true;
+    }
+    if (!stopPresenceBeat) {
       const beat = () => pvpFetch("/pvp/heartbeat", { method: "POST", body: {} });
       beat().catch(() => {});
-      stopHeartbeat = startPoll(beat, 15_000);
+      stopPresenceBeat = startPoll(beat, 15_000);
     }
     return;
   }
-  if (stopHeartbeat) {
-    stopHeartbeat();
-    stopHeartbeat = null;
+  if (stopPresenceBeat) {
+    stopPresenceBeat();
+    stopPresenceBeat = null;
   }
+  if (!presenceOn) return;
+  presenceOn = false;
+  await pvpFetch("/pvp/lobby/presence", { method: "POST", body: { available: false } }).catch(() => {});
+}
+
+/** Logged-in players are available while the app is open. There is no opt-in switch. */
+export function syncSessionPresence() {
+  wirePresence();
+  presenceChain = presenceChain.then(async () => {
+    const auth = getAuthState();
+    if (!auth.ready) return;
+    const visible = typeof document === "undefined" || document.visibilityState !== "hidden";
+    const want = !!(auth.user && visible && await pvpEnabled());
+    await applyPresence(want);
+  }).catch(() => {});
+  return presenceChain;
+}
+
+function wirePresence() {
+  if (presenceWired || typeof document === "undefined") return;
+  presenceWired = true;
+  document.addEventListener("stockgame:auth-changed", () => { syncSessionPresence(); });
+  document.addEventListener("visibilitychange", () => { syncSessionPresence(); });
+}
+
+export function leavePvpLobby() {
+  showing = false;
+  stopLoops();
 }
 
 function outcomeGlyph(outcome) {
@@ -143,6 +166,16 @@ async function cancelOutbound(challengeId) {
   }
 }
 
+function faceImage(person) {
+  const img = document.createElement("img");
+  img.className = "pvp-avatar";
+  img.alt = "";
+  img.width = 40;
+  img.height = 40;
+  img.src = displayAvatarUrl(person || { avatarId: 1 });
+  return img;
+}
+
 function renderInvites(state) {
   const inbound = document.getElementById("pvpInbound");
   const outbound = document.getElementById("pvpOutbound");
@@ -159,7 +192,7 @@ function renderInvites(state) {
     button.className = "pvp-btn";
     button.textContent = "取消约战";
     button.addEventListener("click", () => { cancelOutbound(state.outbound.challengeId).catch(() => {}); });
-    row.append(text, button);
+    row.append(faceImage(state.outbound), text, button);
     outbound.append(row);
   }
   for (const card of state.inbound || []) {
@@ -167,7 +200,9 @@ function renderInvites(state) {
     const row = document.createElement("div");
     row.className = "pvp-invite";
     const text = document.createElement("p");
-    text.textContent = `${card.nickname || "对手"} 邀请你对战`;
+    const who = document.createElement("strong");
+    who.textContent = card.nickname || "对手";
+    text.append(who, document.createTextNode(" 邀请你对战"));
     const accept = document.createElement("button");
     accept.type = "button";
     accept.className = "pvp-btn pvp-btn-primary";
@@ -179,7 +214,7 @@ function renderInvites(state) {
     decline.className = "pvp-btn";
     decline.textContent = "拒绝";
     decline.addEventListener("click", () => { respond(card.challengeId, false).catch(() => {}); });
-    row.append(text, accept, decline);
+    row.append(faceImage(card), text, accept, decline);
     inbound.append(row);
   }
 }
@@ -231,11 +266,44 @@ function renderList(entries, state) {
   }
 }
 
+function paintLobbyMe(state) {
+  const node = document.getElementById("pvpLobbyMe");
+  if (state?.me) {
+    fillDossier(node, state.me);
+    return;
+  }
+  const auth = getAuthState().user;
+  if (!auth) {
+    if (node) node.hidden = true;
+    return;
+  }
+  fillDossier(node, {
+    nickname: auth.nickname,
+    avatarId: auth.avatarId || 1,
+    avatarUrl: auth.avatarUrl || null,
+    title: "散户一段",
+    inPlacement: true,
+    empty: true,
+  });
+  pvpFetch("/me/pvp/stats").then(({ data }) => {
+    if (!showing) return;
+    fillDossier(node, {
+      nickname: auth.nickname,
+      avatarId: auth.avatarId || 1,
+      avatarUrl: auth.avatarUrl || null,
+      title: data?.title?.name || "散户一段",
+      inPlacement: data ? !!data.title?.inPlacement : true,
+      wins: data?.wins || 0,
+      losses: data?.losses || 0,
+      draws: data?.draws || 0,
+      winRate: data?.winRate,
+      empty: !data || data.empty,
+    });
+  }).catch(() => {});
+}
+
 function renderState(state) {
   latestState = state;
-  lastAvailable = state.available === true;
-  const box = document.getElementById("pvpAvailable");
-  if (box) box.checked = lastAvailable;
   const eligibility = document.getElementById("pvpLobbyEligibility");
   if (eligibility) {
     eligibility.hidden = !!state.eligibility?.ok;
@@ -244,8 +312,8 @@ function renderState(state) {
   setText("pvpLobbyBalance", `余额 ${state.balance} 韭币`);
   const active = document.getElementById("pvpActiveMatch");
   if (active) active.hidden = !state.activeMatchId;
+  paintLobbyMe(state);
   renderInvites(state);
-  syncHeartbeat(lastAvailable);
 }
 
 async function refresh() {
@@ -270,7 +338,6 @@ async function refresh() {
   if (!auth.user) {
     if (guest) guest.hidden = false;
     if (member) member.hidden = true;
-    syncHeartbeat(false);
     return;
   }
   if (guest) guest.hidden = true;
@@ -324,17 +391,6 @@ function wireLobby() {
     const id = latestState?.activeMatchId;
     if (id) enterMatch(id).catch((err) => setError(err.message || ""));
   });
-  document.getElementById("pvpAvailable")?.addEventListener("change", async (event) => {
-    const want = event.target.checked === true;
-    try {
-      await pvpFetch("/pvp/lobby/presence", { method: "POST", body: { available: want } });
-      lastAvailable = want;
-      if (showing) await refresh();
-    } catch (err) {
-      event.target.checked = !want;
-      setError(err.message || "没能切换可约战");
-    }
-  });
   document.addEventListener("stockgame:auth-changed", () => {
     if (showing) refresh().catch(() => {});
   });
@@ -351,7 +407,9 @@ export async function showPvpLobby() {
   activateScreen(Route.PVP_LOBBY);
   setRouteHash(Route.PVP_LOBBY);
   wireLobby();
+  wirePresence();
   showing = true;
+  syncSessionPresence();
   setError("");
   const guest = document.getElementById("pvpLobbyGuest");
   const member = document.getElementById("pvpLobbyMember");

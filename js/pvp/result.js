@@ -1,5 +1,6 @@
-import { openAuthModal } from "../auth.js";
+import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
+import { amountWithCoinHtml } from "../jiu-coin.js";
 import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { formatCoin, formatPpm, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
@@ -27,6 +28,33 @@ function destroyChart() {
 export function releasePvpResult() {
   destroyChart();
   shown = null;
+  const dialog = document.getElementById("pvpWinDialog");
+  if (dialog) dialog.hidden = true;
+}
+
+function paintSeat(prefix, face, fallback) {
+  const img = document.getElementById(`${prefix}Avatar`);
+  const name = document.getElementById(`${prefix}Name`);
+  const who = face?.nickname || fallback;
+  if (name) name.textContent = who;
+  if (img) {
+    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    img.alt = "";
+  }
+}
+
+function paintSeats(view) {
+  const auth = getAuthState().user;
+  paintSeat("pvpResultMe", {
+    nickname: view?.me?.nickname || auth?.nickname,
+    avatarId: view?.me?.avatarId || auth?.avatarId || 1,
+    avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
+  }, "我");
+  paintSeat("pvpResultOpp", view?.opponent, "对手");
+  const meCard = document.getElementById("pvpResultMeCard");
+  const oppCard = document.getElementById("pvpResultOppCard");
+  if (meCard) meCard.dataset.outcome = view?.me?.outcome || "";
+  if (oppCard) oppCard.dataset.outcome = view?.opponent?.outcome || "";
 }
 
 function showIdentity(view) {
@@ -52,37 +80,23 @@ function paintReturn(id, ppm) {
   node.classList.add(value > 0 ? "pvp-up" : value < 0 ? "pvp-down" : "pvp-flat");
 }
 
-function gameDay(label) {
-  const match = /^d(\d+)$/.exec(String(label || ""));
-  return match ? Number(match[1]) : 0;
-}
-
-function slicedView(view, day) {
-  const market = view?.market;
-  if (!market) return view;
-  const bars = (market.bars || []).filter((bar) => gameDay(bar.label) >= 1 && gameDay(bar.label) <= day);
-  const resolvedActions = (view.resolvedActions || []).filter((row) => row.round + 1 <= day);
-  return {
-    ...view,
-    resolvedActions,
-    market: { ...market, bars, revealedDay: day },
-  };
-}
-
 function paintReplay(view) {
   const replay = view?.replay;
   const curve = document.getElementById("pvpResultCurve");
   const gaps = document.getElementById("pvpResultGaps");
+  const holdBox = document.getElementById("pvpResultHoldBox");
   if (curve) curve.replaceChildren();
   if (gaps) gaps.replaceChildren();
   if (!replay || replay.status !== "ready" || !replay.me) {
+    if (holdBox) holdBox.hidden = true;
     text("pvpResultReplay", "");
     text("pvpResultAnalysis", "复盘分析暂时不可用，胜负和奖励不受影响。");
     return;
   }
   text("pvpResultAnalysis", "");
-  const hold = replay.buyHoldPpm == null ? "" : `买入持有 ${formatPpm(replay.buyHoldPpm)}`;
-  text("pvpResultReplay", hold);
+  const hold = replay.buyHoldPpm;
+  if (holdBox) holdBox.hidden = hold == null;
+  text("pvpResultReplay", hold == null ? "" : formatPpm(hold));
   const rows = [
     ["我", replay.me],
     [view.opponent?.nickname || "对手", replay.opponent],
@@ -102,28 +116,7 @@ function paintReplay(view) {
   }
 }
 
-function wireSlider(view) {
-  const label = document.getElementById("pvpResultSliderLabel");
-  const slider = document.getElementById("pvpResultDaySlider");
-  const day = document.getElementById("pvpResultDay");
-  const max = view?.market?.revealedDay || view?.market?.bars?.length || 0;
-  if (!label || !slider || !max) {
-    if (label) label.hidden = true;
-    return;
-  }
-  label.hidden = false;
-  slider.min = "1";
-  slider.max = String(max);
-  slider.value = String(max);
-  if (day) day.textContent = String(max);
-  slider.oninput = () => {
-    const next = Number(slider.value) || 1;
-    if (day) day.textContent = String(next);
-    paintChart(view, next).catch(() => {});
-  };
-}
-
-async function paintChart(view, day) {
+async function paintChart(view) {
   const node = document.getElementById("pvpResultChart");
   const error = document.getElementById("pvpResultChartError");
   const market = view?.market;
@@ -132,8 +125,7 @@ async function paintChart(view, day) {
     return;
   }
   const mine = ++paintToken;
-  const slice = slicedView(view, day);
-  const bars = [...(market.history || []), ...(slice.market?.bars || [])];
+  const bars = [...(market.history || []), ...(market.bars || [])];
   try {
     const echarts = await ensureEcharts();
     if (mine !== paintToken || shown?.matchId !== view.matchId) return;
@@ -147,8 +139,10 @@ async function paintChart(view, day) {
       mode: "pvp",
       bars,
       historyLength: market.historyLength || 0,
-      pvpMarks: marksFromView(slice),
+      pvpMarks: marksFromView(view),
       showDataZoomSlider: false,
+      chartWidth: node.clientWidth,
+      zoomAnchor: "start",
     }), true);
     chart.resize();
   } catch {
@@ -156,6 +150,72 @@ async function paintChart(view, day) {
     if (error) error.hidden = false;
     node.hidden = true;
   }
+}
+
+function ensureSparks() {
+  const host = document.getElementById("pvpFireworks");
+  if (!host || host.childElementCount) return;
+  const colors = ["#e05252", "#c45c3a", "#f5c542", "#8a7350", "#3db86a"];
+  for (let i = 0; i < 18; i += 1) {
+    const spark = document.createElement("i");
+    const angle = (i / 18) * Math.PI * 2;
+    spark.style.left = `${20 + (i * 11) % 60}%`;
+    spark.style.top = `${18 + (i * 7) % 22}%`;
+    spark.style.background = colors[i % colors.length];
+    spark.style.color = colors[i % colors.length];
+    spark.style.setProperty("--dx", `${Math.round(Math.cos(angle) * 128)}px`);
+    spark.style.setProperty("--dy", `${Math.round(Math.sin(angle) * 86)}px`);
+    spark.style.animationDelay = `${(i % 7) * 0.08}s`;
+    host.append(spark);
+  }
+}
+
+function showWin(view) {
+  const dialog = document.getElementById("pvpWinDialog");
+  if (!dialog) return;
+  if (view?.me?.outcome !== "win") {
+    dialog.hidden = true;
+    return;
+  }
+  ensureSparks();
+  const coin = document.getElementById("pvpWinCoin");
+  const delta = Number(view?.me?.coinDelta);
+  if (coin) {
+    if (Number.isFinite(delta) && delta > 0) {
+      coin.innerHTML = `获得 ${amountWithCoinHtml(delta, { size: 28 })}`;
+    } else {
+      coin.textContent = "";
+    }
+  }
+  dialog.hidden = false;
+  document.getElementById("pvpWinOk")?.focus();
+}
+
+function wireWin() {
+  const dialog = document.getElementById("pvpWinDialog");
+  const button = document.getElementById("pvpWinOk");
+  if (!button || button.dataset.wired === "1") return;
+  button.dataset.wired = "1";
+  button.addEventListener("click", () => {
+    if (dialog) dialog.hidden = true;
+  });
+}
+
+function paintRating(view) {
+  const box = document.getElementById("pvpResultRatingBox");
+  const delta = view?.me?.ratingDelta;
+  if (!box) return;
+  if (delta == null || !Number.isFinite(Number(delta))) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  text("pvpResultRating", formatCoin(delta));
+  const title = view?.me?.ratingTitle ? `现在是${view.me.ratingTitle}。` : "";
+  text(
+    "pvpResultRatingNote",
+    `这是段位分的变化，不是这局操作打几分。${title}赢了加分，输了减分。胜负只看收益，收益一样再比回撤。`,
+  );
 }
 
 function wireReport(view) {
@@ -224,11 +284,12 @@ export function showPvpResult(view) {
   text("pvpResultOppLabel", `${view?.opponent?.nickname || "对手"}收益`);
   paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
   text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
-  const delta = view?.me?.ratingDelta;
-  text("pvpResultRating", delta == null ? "" : `评分 ${formatCoin(delta)}`);
+  paintSeats(view);
+  paintRating(view);
   showIdentity(view);
   paintReplay(view);
-  wireSlider(view);
+  wireWin();
+  showWin(view);
   wireReport(view);
   wireBlock(view);
   const again = document.getElementById("pvpResultAgain");
@@ -241,8 +302,7 @@ export function showPvpResult(view) {
         .catch(() => {});
     };
   }
-  const day = view?.market?.revealedDay || view?.market?.bars?.length || 1;
-  paintChart(view, day).catch(() => {});
+  paintChart(view).catch(() => {});
 }
 
 export async function openPvpMatch(matchId) {

@@ -6,6 +6,7 @@ import { validCreateKey } from "./challenges.js";
 import { REVEAL_GAP_MS } from "./config.js";
 import { loadReplay } from "./analysis.js";
 import { publicNickname } from "./names.js";
+import { titleForRating } from "../../../../shared/pvpRating.js";
 import { finishMatchInTx } from "./settlement.js";
 import { withImmediate } from "./tx.js";
 import { pvpMatchView } from "./view.js";
@@ -520,8 +521,20 @@ export function readMatchView(db, { matchId, viewerId, now }) {
     for (const row of locks) pendingLocks[row.user_id] = row.action;
   }
   const nicknames = {};
-  const names = db.prepare(`SELECT id, nickname, status FROM users WHERE id IN (?, ?)`).all(players[0].user_id, players[1].user_id);
-  for (const row of names) nicknames[row.id] = publicNickname(row);
+  const faces = {};
+  const names = db.prepare(
+    `SELECT id, nickname, status, avatar_id, avatar_custom_path FROM users WHERE id IN (?, ?)`
+  ).all(players[0].user_id, players[1].user_id);
+  for (const row of names) {
+    nicknames[row.id] = publicNickname(row);
+    faces[row.id] = {
+      nickname: publicNickname(row),
+      avatarId: row.avatar_id || 1,
+      avatarUrl: row.avatar_custom_path
+        ? `/api/v1/avatars/${encodeURIComponent(row.avatar_custom_path)}`
+        : null,
+    };
+  }
   const view = pvpMatchView({
     match,
     players,
@@ -530,7 +543,13 @@ export function readMatchView(db, { matchId, viewerId, now }) {
     pendingLocks,
     terminalType: settlement?.terminal_type || null,
     nicknames,
+    faces,
   });
+  if (view?.me && Number.isFinite(Number(view.me.ratingAfter))) {
+    const games = db.prepare(`SELECT games FROM pvp_ratings WHERE user_id = ?`).get(viewerId);
+    const title = titleForRating(Number(view.me.ratingAfter), Number(games?.games) || 0);
+    view.me.ratingTitle = title.inPlacement ? `${title.name} · 定级中` : title.name;
+  }
   if (view && (match.status === "settled" || match.status === "aborted")) {
     view.replay = loadReplay(db, match, players, viewerId, settlement?.terminal_type || null);
   }

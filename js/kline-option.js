@@ -47,8 +47,8 @@ function pvpMarkerPoints(bars, marks) {
             value: label,
             symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
             symbolSize: valuation ? 12 : 14,
-            // Pixel offset lifts the mark off the wick so the candle body stays visible.
-            symbolOffset: valuation ? [0, -22] : mine ? (above ? [-12, -28] : [-12, 28]) : (above ? [12, -28] : [12, 28]),
+            // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
+            symbolOffset: valuation ? [0, -20] : mine ? (above ? [0, -28] : [0, 30]) : (above ? [0, -46] : [0, 48]),
             itemStyle: {
                 color,
                 borderColor: '#2c2824',
@@ -74,6 +74,32 @@ function pvpMarkerPoints(bars, marks) {
 }
 
 /**
+ * Keep a 14px mark on its own candle. Returns null when there is no match day yet.
+ * The room anchors on the latest day. The result starts at the first match day.
+ */
+function pvpZoomWindow(barCount, historyLength, chartWidth, anchor) {
+    const history = Math.max(0, historyLength || 0);
+    if (barCount <= history) return null;
+    const gameBars = barCount - history;
+    let visible = gameBars;
+    let maxSpan = 100;
+    const width = Number(chartWidth);
+    if (width >= 80) {
+        const plot = Math.max(120, width - 48);
+        const maxVisible = Math.max(6, Math.floor(plot / 26));
+        visible = Math.min(gameBars, maxVisible);
+        maxSpan = Math.min(100, (maxVisible / barCount) * 100);
+    }
+    const startIndex = anchor === "start" ? history : barCount - visible;
+    const endIndex = Math.min(barCount, startIndex + visible);
+    return {
+        start: (startIndex / barCount) * 100,
+        end: (endIndex / barCount) * 100,
+        maxSpan,
+    };
+}
+
+/**
  * Build ECharts option for the dual-panel K-line (candles + volume + MA).
  * Pure option object — no chart.init / setOption / DOM (except optional syncHover hook
  * invoked only from the tooltip formatter when provided by the live game adapter).
@@ -89,6 +115,7 @@ function pvpMarkerPoints(bars, marks) {
  * @param {(bar: object, idx: number) => void|null} [vm.syncHover] - game OHLC panel sync
  * @param {boolean} [vm.resetDataZoom=false] - force dataZoom window back to full range
  * @param {boolean} [vm.showDataZoomSlider] - desktop slider; default true for result, false for game
+ * @param {number} [vm.chartWidth] - host width in px; PvP uses it to keep marks off the next candle
  */
 export function buildKlineOption(vm) {
     const {
@@ -194,6 +221,7 @@ export function buildKlineOption(vm) {
 
     const candleSeries = {
         name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
+        ...(isPvp ? { barWidth: '76%' } : {}),
         itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
         markPoint: isPvp
             ? {
@@ -303,6 +331,8 @@ export function buildKlineOption(vm) {
 
     const wantSlider = showDataZoomSlider != null ? !!showDataZoomSlider : isResult;
     const dataZoomWindow = resetDataZoom ? { start: 0, end: 100 } : {};
+    // PvP opens on the match days, and never packs candles closer than a 14px mark.
+    const pvpZoom = isPvp ? pvpZoomWindow(bars.length, historyLength, vm.chartWidth, vm.zoomAnchor) : null;
     // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
     // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
     const dataZoom = [
@@ -314,8 +344,8 @@ export function buildKlineOption(vm) {
             moveOnMouseMove: true,
             moveOnMouseWheel: false,
             preventDefaultMouseMove: true,
-            minSpan: 8,
-            ...dataZoomWindow,
+            minSpan: isPvp ? 2 : 8,
+            ...(pvpZoom || dataZoomWindow),
         },
     ];
     if (wantSlider) {
@@ -422,8 +452,8 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp
             ? [
-                { left: 52, right: 78, top: '16%', bottom: '40%' },
-                { left: 52, right: 78, top: '70%', bottom: 24 }
+                { left: 40, right: 8, top: 28, bottom: '30%' },
+                { left: 40, right: 8, top: '74%', bottom: 18 }
             ]
             : isResult
             ? [

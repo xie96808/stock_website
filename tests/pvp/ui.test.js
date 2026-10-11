@@ -21,7 +21,7 @@ test("pvp copy names the round, the lock, and the result in words", () => {
   assert.equal(pvpEntryVisible({ pvpBattle: true }), true);
   assert.equal(
     roundCaption({ status: "playing", round: 4, market: { revealedDay: 4 } }),
-    "决策回合 4/29 · 已见第 4/30 个交易日"
+    "决策回合 4/29"
   );
   assert.equal(lockCaption({ submitting: true }), "提交中");
   assert.equal(lockCaption({ locked: true }), "已锁定");
@@ -85,9 +85,11 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(mine.symbol, "circle");
   assert.equal(mine.itemStyle.color, "#8a7350");
   assert.ok(mine.symbolSize >= 12 && mine.symbolSize <= 16);
+  assert.equal(mine.symbolOffset[0], 0);
   assert.ok(mine.symbolOffset[1] >= 24);
   assert.equal(mine.label.show, false);
   assert.equal(opp.label.show, false);
+  assert.equal(opp.symbolOffset[0], 0);
   assert.ok(opp.symbolOffset[1] <= -24);
   assert.equal(opp.symbol, "triangle");
   assert.equal(opp.itemStyle.color, "#4d6278");
@@ -98,6 +100,31 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.series[0].itemStyle.color, "#e05252");
   assert.equal(opt.series[0].itemStyle.color0, "#3db86a");
   assert.equal(opt.series[0].markLine, undefined);
+  assert.equal(opt.series[0].barWidth, "76%");
+  assert.ok(opt.grid[0].right <= 12);
+  assert.ok(opt.grid[0].left <= 44);
+  assert.equal(opt.dataZoom[0].end, 100);
+  assert.ok(opt.dataZoom[0].start >= 40);
+  const many = Array.from({ length: 60 }, (_, i) => ({
+    label: `d${i}`, open: 1, close: 1, low: 1, high: 1, volume: 1,
+  }));
+  const wide = buildKlineOption({
+    mode: "pvp", bars: many, historyLength: 30, chartWidth: 1200, showDataZoomSlider: false,
+  });
+  assert.equal(wide.dataZoom[0].start, 50);
+  assert.equal(wide.dataZoom[0].end, 100);
+  assert.ok(wide.dataZoom[0].maxSpan > 50);
+  const narrow = buildKlineOption({
+    mode: "pvp", bars: many, historyLength: 30, chartWidth: 360, showDataZoomSlider: false, zoomAnchor: "start",
+  });
+  assert.equal(narrow.dataZoom[0].start, 50);
+  assert.ok(narrow.dataZoom[0].end > 60 && narrow.dataZoom[0].end < 80);
+  assert.ok(narrow.dataZoom[0].maxSpan < 30);
+  const live = buildKlineOption({
+    mode: "pvp", bars: many, historyLength: 30, chartWidth: 360, showDataZoomSlider: false,
+  });
+  assert.equal(live.dataZoom[0].end, 100);
+  assert.ok(live.dataZoom[0].start > 70);
   const tip = opt.tooltip.formatter([{ seriesName: "K线", dataIndex: 0, data: [] }]);
   assert.match(tip, /h1/);
   assert.match(tip, /量 /);
@@ -114,7 +141,13 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpResultScreen"/);
   assert.match(html, /id="pvpHistoryScreen"/);
   assert.match(html, /现在没有可约战的对手。去玩幽灵对局，或稍后再来。/);
-  assert.match(html, /进入页面不会自动打开可约战/);
+  assert.match(html, /打开应用就能被约到/);
+  assert.match(html, /id="pvpWinDialog"/);
+  assert.match(html, /id="pvpResultRatingBox"/);
+  assert.match(html, /买入持有/);
+  assert.doesNotMatch(html, /id="pvpAvailable"/);
+  assert.doesNotMatch(html, /看到第/);
+  assert.doesNotMatch(html, /已见第/);
   assert.match(html, /留下/);
   assert.match(html, /回到大厅（计时继续）/);
   assert.match(html, /认输/);

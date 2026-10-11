@@ -9,7 +9,8 @@
   background: var(--paper);
   color: var(--ink);
   min-height: 100%;
-  padding: 1rem 0.75rem 2.5rem;
+  /* Clears the fixed 纸/墨 and zoom control at the top left. */
+  padding: 4.6rem 0.75rem 2.5rem;
   box-sizing: border-box;
 }
 
@@ -24,6 +25,12 @@
 .pvp-wrap {
   width: min(880px, 100%);
   margin: 0 auto;
+}
+
+/* Room and result use the side blank so candles are wide enough for the marks. */
+#pvpRoomScreen .pvp-wrap,
+#pvpResultScreen .pvp-wrap {
+  width: min(1180px, 100%);
 }
 
 .pvp-head {
@@ -172,6 +179,12 @@
 .pvp-mark-legend .is-me { color: #8a7350; }
 .pvp-mark-legend .is-opp { color: #4d6278; }
 
+.pvp-screen .pvp-chart-pan {
+  margin: -0.2rem 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--mute);
+}
+
 .pvp-back,
 .pvp-btn {
   min-height: 44px;
@@ -192,6 +205,11 @@
 .pvp-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.pvp-trade-actions .pvp-btn:disabled {
+  opacity: 0.4;
+  box-shadow: none;
 }
 
 .pvp-screen button:focus-visible,
@@ -280,7 +298,7 @@
 
 .pvp-chart {
   width: 100%;
-  height: 440px;
+  height: 520px;
   margin: 0.5rem 0 0.75rem;
   background: var(--card);
   border: var(--border-ink);
@@ -408,6 +426,325 @@
   color: var(--ink);
 }
 
+.start-screen #pvpEntryCard.lane-duel {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--terra) 16%, var(--card)), var(--card));
+  border-width: 2px;
+  box-shadow: 3px 4px 0 var(--line);
+}
+
+.start-screen #pvpEntryCard .mark {
+  width: 40px;
+  height: 40px;
+  font-size: 1.15rem;
+  background: var(--terra);
+  color: var(--terra-ink);
+}
+
+.start-screen #pvpEntryCard .copy strong {
+  font-size: 1.28rem;
+}
+
+.pvp-title-block h2,
+.pvp-kicker,
+.pvp-seat strong,
+.pvp-person strong,
+.pvp-btn {
+  font-family: var(--kaiti);
+}
+
+.pvp-kicker {
+  margin: 0;
+  letter-spacing: 0.22em;
+  font-size: 0.78rem;
+  color: var(--mute);
+}
+
+.pvp-title-block h2 {
+  margin: 0;
+  font-size: clamp(1.7rem, 5vw, 2.2rem);
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+}
+
+.pvp-lobby-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: center;
+  margin: 0 0 0.85rem;
+}
+
+.pvp-sketch {
+  width: min(220px, 100%);
+  height: auto;
+  display: block;
+}
+
+.pvp-sketch-paper {
+  fill: var(--card);
+  stroke: var(--line);
+  stroke-width: 2.2;
+}
+
+.pvp-sketch-ink {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pvp-sketch-up { fill: #e05252; }
+.pvp-sketch-down { fill: #3db86a; }
+
+.pvp-screen .pvp-lead {
+  margin: 0 0 0.35rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.pvp-screen .pvp-rules {
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.pvp-seat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.pvp-seat {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.pvp-score .pvp-seat-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+.pvp-seat-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: var(--border-ink);
+  background: var(--paper-2);
+  flex: none;
+}
+
+.pvp-seat strong {
+  display: block;
+  font-size: 1.08rem;
+  letter-spacing: 0.06em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pvp-seat-role {
+  display: block;
+  color: var(--mute);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+}
+
+.pvp-score[data-outcome="win"] { box-shadow: inset 4px 0 0 var(--gain-color); }
+.pvp-score[data-outcome="loss"] { box-shadow: inset 4px 0 0 var(--loss-color); }
+.pvp-score[data-outcome="draw"] { box-shadow: inset 4px 0 0 var(--ink-soft); }
+
+.pvp-explain {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border: var(--border-ink);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.pvp-screen .pvp-explain-label {
+  margin: 0;
+  font-family: var(--kaiti);
+  letter-spacing: 0.2em;
+  color: var(--mute);
+}
+
+.pvp-explain-num {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--mono);
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.pvp-screen .pvp-explain-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.pvp-trade-actions .pvp-btn {
+  font-size: 1.2rem;
+  letter-spacing: 0.22em;
+  min-height: 54px;
+  border-radius: 18px 22px 16px 20px;
+  box-shadow: 2px 3px 0 var(--line);
+}
+
+.pvp-btn-buy { background: var(--gain-color); color: #fffaf3; }
+.pvp-btn-sell { background: var(--loss-color); color: #f7fff4; }
+.pvp-btn-hold { background: var(--paper-2); color: var(--ink); }
+
+.pvp-person .pvp-btn-primary,
+#pvpActiveMatch {
+  letter-spacing: 0.16em;
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.pvp-dossier {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.45rem 0.8rem;
+  margin: 0 0 0.9rem;
+  padding: 0.85rem 0.9rem;
+  border: var(--border-ink);
+  border-radius: 18px 24px 16px 22px;
+  background: var(--card);
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.pvp-dossier-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50% 46% 50% 42%;
+  object-fit: cover;
+  border: var(--border-ink);
+  background: var(--paper-2);
+}
+
+.pvp-dossier-body { min-width: 0; }
+
+.pvp-screen .pvp-dossier-name,
+.pvp-screen .pvp-dossier-place,
+.pvp-screen .pvp-dossier-score,
+.pvp-screen .pvp-dossier-more {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.pvp-screen .pvp-dossier-name {
+  font-family: var(--kaiti);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.pvp-screen .pvp-dossier-rank {
+  margin: 0.05rem 0 0;
+  font-family: var(--kaiti);
+  font-size: clamp(1.7rem, 6vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.pvp-dossier-record {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.9rem;
+  align-items: baseline;
+}
+
+.pvp-record {
+  font-family: var(--kaiti);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.pvp-record-win { color: var(--gain-color); }
+.pvp-record-loss { color: var(--loss-color); }
+.pvp-record-draw { color: var(--ink-soft); }
+
+.pvp-history-outcome.is-win { color: var(--gain-color); }
+.pvp-history-outcome.is-loss { color: var(--loss-color); }
+.pvp-history-outcome.is-draw { color: var(--ink-soft); }
+
+.pvp-settings-rank {
+  margin: 0 0 0.35rem;
+  font-family: var(--kaiti);
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+}
+
+.pvp-win-card {
+  position: relative;
+  overflow: visible;
+  text-align: center;
+}
+
+.pvp-win-card > :not(.pvp-fireworks) {
+  position: relative;
+  z-index: 1;
+}
+
+.pvp-win-card h3 {
+  margin: 0.1rem 0 0.35rem;
+  font-family: var(--kaiti);
+  font-size: clamp(2.4rem, 8vw, 3.2rem);
+  letter-spacing: 0.22em;
+}
+
+.pvp-screen .pvp-win-coin {
+  margin: 0 0 0.8rem;
+  font-family: var(--kaiti);
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.pvp-win-coin .jiu-coin-icon {
+  color: var(--terra);
+  vertical-align: -0.15em;
+}
+
+.pvp-fireworks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pvp-fireworks i {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+  animation: pvp-burst 1.25s ease-out infinite;
+}
+
+@keyframes pvp-burst {
+  0% { transform: translate(0, 0) scale(0.35); opacity: 0.35; }
+  18% { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pvp-fireworks i { animation: none; opacity: 0.85; }
+}
+
 @media (max-width: 420px) {
   .pvp-screen {
     padding-left: 0.7rem;
@@ -420,6 +757,10 @@
   }
 
   .pvp-chart {
-    height: 360px;
+    height: 440px;
+  }
+
+  .pvp-lobby-hero {
+    grid-template-columns: 1fr;
   }
 }

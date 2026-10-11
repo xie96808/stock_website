@@ -22,12 +22,11 @@ export function formatCoin(delta) {
   return `${sign}${value}`;
 }
 
-/** Decision rounds are 1–29. The seen day is 1–30. */
+/** Decision rounds are 1–29. */
 export function roundCaption(view) {
   if (!view || view.status !== "playing") return "";
-  const seen = view.market?.revealedDay || (Number(view.resolvedRounds) || 0) + 1;
-  if (!view.round) return `已见第 ${seen}/30 个交易日`;
-  return `决策回合 ${view.round}/29 · 已见第 ${seen}/30 个交易日`;
+  if (!view.round) return "等待下一手";
+  return `决策回合 ${view.round}/29`;
 }
 
 export function lockCaption({ submitting = false, locked = false } = {}) {

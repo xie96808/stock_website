@@ -39,10 +39,21 @@ function publicBar(bar, label, base, scale) {
  * The only client view of a match. `terminalType` is completed, forfeited, or aborted.
  * A pending lock is shown only to its owner and does not change NAV.
  */
-export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks = {}, terminalType = null, nicknames = {} }) {
+function faceOf(faces, userId, fallbackName) {
+  const face = faces?.[userId] || {};
+  return {
+    nickname: face.nickname || fallbackName,
+    avatarId: face.avatarId || 1,
+    avatarUrl: face.avatarUrl || null,
+  };
+}
+
+export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks = {}, terminalType = null, nicknames = {}, faces = {} }) {
   const me = players.find((player) => player.user_id === viewerId);
   const opponent = players.find((player) => player.user_id !== viewerId);
   if (!me || !opponent) return null;
+  const mineFace = faceOf(faces, viewerId, "我");
+  const oppFace = faceOf(faces, opponent.user_id, nicknames[opponent.user_id] || "对手");
 
   const k = match.resolved_rounds ?? 0;
   const clock = roundView(k);
@@ -85,6 +96,9 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     deadlineAt: match.round_deadline_at ?? null,
     market,
     me: {
+      nickname: mineFace.nickname,
+      avatarId: mineFace.avatarId,
+      avatarUrl: mineFace.avatarUrl,
       lockedToday: myLock != null,
       lockedAction: myLock,
       mtmPpm: mineNav.ok ? mineNav.visibleMtmPpm : null,
@@ -93,7 +107,9 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
       canHold: open && legal.canHold,
     },
     opponent: {
-      nickname: nicknames[opponent.user_id] || "对手",
+      nickname: oppFace.nickname,
+      avatarId: oppFace.avatarId,
+      avatarUrl: oppFace.avatarUrl,
       lockedToday: pendingLocks[opponent.user_id] != null,
       mtmPpm: theirNav.ok ? theirNav.visibleMtmPpm : null,
     },
@@ -120,6 +136,8 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     view.me.mddPpm = me.mdd_ppm ?? null;
     view.me.coinDelta = me.coin_delta ?? null;
     view.me.ratingDelta = me.actual_rating_delta ?? null;
+    view.me.ratingBefore = me.rating_before ?? null;
+    view.me.ratingAfter = me.rating_after ?? null;
     view.opponent.outcome = opponent.outcome || null;
     view.opponent.returnPpm = opponent.return_ppm ?? null;
     view.opponent.mddPpm = opponent.mdd_ppm ?? null;

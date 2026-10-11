@@ -94,15 +94,43 @@ export function listLobby(db, viewerId, { cursor = 0, limit = 20, now = Date.now
   return { entries: page, nextCursor };
 }
 
+function selfProfile(db, userId) {
+  const user = db
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path FROM users WHERE id = ?`)
+    .get(userId);
+  if (!user) return null;
+  const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
+  const title = titleForRating(rating?.rating ?? PVP_RATING_INITIAL, rating?.games ?? 0);
+  const wins = Number(rating?.wins) || 0;
+  const losses = Number(rating?.losses) || 0;
+  const draws = Number(rating?.draws) || 0;
+  return {
+    nickname: user.nickname || "我",
+    avatarId: user.avatar_id || 1,
+    avatarUrl: avatarUrl(user),
+    title: title.name,
+    inPlacement: title.inPlacement,
+    rating: rating?.rating ?? PVP_RATING_INITIAL,
+    wins,
+    losses,
+    draws,
+    empty: wins + losses + draws === 0,
+  };
+}
+
 function challengeCard(db, row, viewerId) {
   const otherId = row.from_user_id === viewerId ? row.to_user_id : row.from_user_id;
-  const other = db.prepare(`SELECT nickname FROM users WHERE id = ?`).get(otherId);
+  const other = db
+    .prepare(`SELECT nickname, status, avatar_id, avatar_custom_path FROM users WHERE id = ?`)
+    .get(otherId);
   return {
     challengeId: row.id,
     fromUserId: row.from_user_id,
     toUserId: row.to_user_id,
     direction: row.from_user_id === viewerId ? "outbound" : "inbound",
-    nickname: other?.nickname || "对手",
+    nickname: publicNickname(other),
+    avatarId: other?.avatar_id || 1,
+    avatarUrl: avatarUrl(other),
     expiresAt: row.expires_at,
   };
 }
@@ -135,6 +163,7 @@ export function readPvpState(db, userId, now = Date.now()) {
     activeMatchStatus: active?.status || null,
     eligibility: gate.ok ? { ok: true } : { ok: false, code: gate.code, message: gate.message },
     balance,
+    me: selfProfile(db, userId),
     serverNow: now,
   };
 }

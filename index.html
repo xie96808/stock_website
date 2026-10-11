@@ -171,14 +171,14 @@
                             </span>
                             <span class="cta cta-fill">选择玩法</span>
                         </button>
-                        <button type="button" class="lane" id="pvpEntryCard" hidden onclick="showPvpLobby()">
+                        <button type="button" class="lane lane-duel" id="pvpEntryCard" hidden onclick="showPvpLobby()">
                             <span class="mark">战</span>
                             <span class="copy">
-                                <small>对战</small>
+                                <small>在线对弈</small>
                                 <strong>双人对战</strong>
-                                <p>和在线对手比同一段行情。进入后需手动打开可约战。</p>
+                                <p>同一段行情，和在线的人比一比。打开应用就能被约到。</p>
                             </span>
-                            <span class="cta cta-wash">进入对战</span>
+                            <span class="cta cta-fill">进入对战</span>
                         </button>
                         <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
                             <span class="mark">残</span>
@@ -432,9 +432,30 @@
             <div class="pvp-wrap">
                 <div class="pvp-head">
                     <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
-                    <h2>对战</h2>
+                    <div class="pvp-title-block">
+                        <p class="pvp-kicker">在线对弈</p>
+                        <h2>双人对战</h2>
+                    </div>
                 </div>
-                <p id="pvpLobbyCount" aria-live="polite"></p>
+                <div class="pvp-lobby-hero">
+                    <svg class="pvp-sketch" viewBox="0 0 280 168" role="img" aria-label="两人对着同一张 K 线">
+                        <path class="pvp-sketch-paper" d="M18 22 C16 14 28 10 40 14 L236 12 C252 8 266 18 262 34 L258 132 C262 148 246 158 230 154 L42 156 C24 160 12 146 16 130 Z"/>
+                        <path class="pvp-sketch-ink" d="M46 118 C48 86 58 78 62 70 C66 78 74 88 76 118"/>
+                        <circle class="pvp-sketch-ink" cx="64" cy="58" r="10"/>
+                        <path class="pvp-sketch-ink" d="M196 120 C198 90 208 80 214 72 C220 82 228 92 230 120"/>
+                        <circle class="pvp-sketch-ink" cx="214" cy="60" r="10"/>
+                        <path class="pvp-sketch-ink" d="M108 124 V92 M124 124 V78 M140 124 V96 M156 124 V70"/>
+                        <path class="pvp-sketch-up" d="M104 108 h8 v16 h-8 z"/>
+                        <path class="pvp-sketch-down" d="M120 86 h8 v22 h-8 z"/>
+                        <path class="pvp-sketch-up" d="M136 100 h8 v18 h-8 z"/>
+                        <path class="pvp-sketch-down" d="M152 74 h8 v28 h-8 z"/>
+                        <path class="pvp-sketch-ink" d="M92 132 H188"/>
+                    </svg>
+                    <div>
+                        <p class="pvp-lead">同一段行情，两个人各做各的决定。打开应用就能被约到。</p>
+                        <p id="pvpLobbyCount" aria-live="polite"></p>
+                    </div>
+                </div>
                 <p id="pvpLobbyClosed" hidden></p>
                 <ul class="pvp-rules">
                     <li>双方各付 20 韭币。</li>
@@ -447,13 +468,13 @@
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
                 </div>
                 <div id="pvpLobbyMember" hidden>
+                    <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
                     <p id="pvpLobbyBalance"></p>
-                    <label class="pvp-check"><input type="checkbox" id="pvpAvailable"> 可约战</label>
-                    <p class="pvp-note">进入页面不会自动打开可约战。</p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
-                    <button type="button" class="pvp-btn" id="pvpActiveMatch" hidden>回到对局</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpActiveMatch" hidden>回到对局</button>
+                    <h3 class="pvp-kicker">可约的人</h3>
                     <div id="pvpLobbyList"></div>
                     <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。去玩幽灵对局，或稍后再来。</p>
                     <button type="button" class="pvp-btn" id="pvpLobbyModes" hidden>去玩幽灵对局</button>
@@ -467,6 +488,22 @@
                 <div class="pvp-head">
                     <button type="button" class="pvp-back" id="pvpRoomLeave">离开</button>
                     <h2 id="pvpRoomHeadline">对战</h2>
+                </div>
+                <div class="pvp-seat-row">
+                    <div class="pvp-seat">
+                        <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                        <div>
+                            <span class="pvp-seat-role">我</span>
+                            <strong id="pvpSeatMeName">我</strong>
+                        </div>
+                    </div>
+                    <div class="pvp-seat">
+                        <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                        <div>
+                            <span class="pvp-seat-role">对手</span>
+                            <strong id="pvpSeatOppName">对手</strong>
+                        </div>
+                    </div>
                 </div>
                 <div id="pvpReadyPanel" hidden>
                     <p id="pvpReadyCopy">双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
@@ -504,14 +541,15 @@
                             <strong class="pvp-score-value" id="pvpOppNav">—</strong>
                         </div>
                     </div>
-                    <div id="pvpChart" class="pvp-chart"></div>
-                    <p class="pvp-mark-legend"><span class="is-me">● 我的买卖</span><span class="is-opp">▲ 对手买卖</span></p>
-                    <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpBuy">买入</button>
-                        <button type="button" class="pvp-btn" id="pvpSell">卖出</button>
-                        <button type="button" class="pvp-btn" id="pvpHold">持有</button>
+                    <div class="pvp-actions pvp-trade-actions">
+                        <button type="button" class="pvp-btn pvp-btn-buy" id="pvpBuy">买入</button>
+                        <button type="button" class="pvp-btn pvp-btn-sell" id="pvpSell">卖出</button>
+                        <button type="button" class="pvp-btn pvp-btn-hold" id="pvpHold">持有</button>
                     </div>
                     <p id="pvpActionError" role="status"></p>
+                    <div id="pvpChart" class="pvp-chart"></div>
+                    <p class="pvp-mark-legend"><span class="is-me">● 我的买卖</span><span class="is-opp">▲ 对手买卖</span></p>
+                    <p class="pvp-chart-pan">左右拖动，可看其余交易日。</p>
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpLeaveDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpLeaveTitle">
@@ -536,24 +574,44 @@
                 <p class="pvp-stock-name" id="pvpResultIdentity" hidden></p>
                 <p id="pvpResultReason"></p>
                 <div class="pvp-score-row">
-                    <div class="pvp-score">
+                    <div class="pvp-score" id="pvpResultMeCard">
+                        <div class="pvp-seat">
+                            <img id="pvpResultMeAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
+                            <div>
+                                <span class="pvp-seat-role">我</span>
+                                <strong id="pvpResultMeName">我</strong>
+                            </div>
+                        </div>
                         <span class="pvp-score-label">我的收益</span>
                         <strong class="pvp-score-value" id="pvpResultMe">—</strong>
                         <span class="pvp-score-meta" id="pvpResultMeMeta"></span>
                     </div>
-                    <div class="pvp-score">
+                    <div class="pvp-score" id="pvpResultOppCard">
+                        <div class="pvp-seat">
+                            <img id="pvpResultOppAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
+                            <div>
+                                <span class="pvp-seat-role">对手</span>
+                                <strong id="pvpResultOppName">对手</strong>
+                            </div>
+                        </div>
                         <span class="pvp-score-label" id="pvpResultOppLabel">对手收益</span>
                         <strong class="pvp-score-value" id="pvpResultOpp">—</strong>
                         <span class="pvp-score-meta" id="pvpResultOppMeta"></span>
                     </div>
                 </div>
-                <p id="pvpResultRating"></p>
-                <p id="pvpResultReplay"></p>
+                <div class="pvp-explain" id="pvpResultRatingBox" hidden>
+                    <p class="pvp-explain-label">段位分</p>
+                    <strong class="pvp-explain-num" id="pvpResultRating"></strong>
+                    <p class="pvp-explain-note" id="pvpResultRatingNote"></p>
+                </div>
+                <div class="pvp-explain" id="pvpResultHoldBox" hidden>
+                    <p class="pvp-explain-label">买入持有</p>
+                    <strong class="pvp-explain-num" id="pvpResultReplay"></strong>
+                    <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。用来对照你的操作，不决定胜负。</p>
+                </div>
                 <p id="pvpResultAnalysis"></p>
-                <label class="pvp-slider" id="pvpResultSliderLabel" hidden>看到第 <span id="pvpResultDay">1</span> 个交易日
-                    <input type="range" id="pvpResultDaySlider" min="1" max="1" value="1">
-                </label>
                 <div id="pvpResultChart" class="pvp-chart" hidden></div>
+                <p class="pvp-chart-pan">左右拖动，可看其余交易日。</p>
                 <p id="pvpResultChartError" hidden>图表暂时打不开，结果仍然有效。</p>
                 <ol id="pvpResultCurve"></ol>
                 <ul id="pvpResultGaps"></ul>
@@ -574,6 +632,15 @@
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
                     <button type="button" class="pvp-btn" id="pvpResultBlock" hidden>屏蔽对手</button>
                     <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
+                </div>
+            </div>
+            <div class="pvp-dialog" id="pvpWinDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpWinTitle">
+                <div class="pvp-dialog-card pvp-win-card">
+                    <div class="pvp-fireworks" id="pvpFireworks" aria-hidden="true"></div>
+                    <p class="pvp-kicker">这局</p>
+                    <h3 id="pvpWinTitle">获胜</h3>
+                    <p class="pvp-win-coin" id="pvpWinCoin"></p>
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">收下</button>
                 </div>
             </div>
         </section>
@@ -1362,6 +1429,7 @@
         };
         document.addEventListener('stockgame:auth-changed', () => {
             import('./js/pvp/profile-battle.js').then((mod) => mod.syncPvpProfile()).catch(() => {});
+            import('./js/pvp/lobby.js').then((mod) => mod.syncSessionPresence()).catch(() => {});
         });
         function routePvpHash() {
             const found = /^pvp\/([0-9a-f-]{36})$/i.exec(parseRouteHash());

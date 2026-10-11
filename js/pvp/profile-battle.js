@@ -10,6 +10,74 @@ function outcomeText(outcome) {
   return "结束";
 }
 
+function recordChip(label, count, kind) {
+  const node = document.createElement("span");
+  node.className = `pvp-record pvp-record-${kind}`;
+  node.textContent = `${count} ${label}`;
+  return node;
+}
+
+/** Fox-style rank card: large title, colored win/loss. */
+export function fillDossier(node, profile) {
+  if (!node) return;
+  node.replaceChildren();
+  if (!profile) {
+    node.hidden = true;
+    return;
+  }
+  node.hidden = false;
+  const img = document.createElement("img");
+  img.className = "pvp-dossier-avatar";
+  img.alt = "";
+  img.width = 72;
+  img.height = 72;
+  img.src = displayAvatarUrl(profile);
+  const body = document.createElement("div");
+  body.className = "pvp-dossier-body";
+  const name = document.createElement("p");
+  name.className = "pvp-dossier-name";
+  name.textContent = profile.nickname || "我";
+  const rank = document.createElement("p");
+  rank.className = "pvp-dossier-rank";
+  rank.textContent = profile.title || "散户一段";
+  body.append(name, rank);
+  if (profile.inPlacement) {
+    const place = document.createElement("p");
+    place.className = "pvp-dossier-place";
+    place.textContent = "定级中";
+    body.append(place);
+  }
+  if (profile.rating != null) {
+    const score = document.createElement("p");
+    score.className = "pvp-dossier-score";
+    score.textContent = `段位分 ${profile.rating}`;
+    body.append(score);
+  }
+  const record = document.createElement("div");
+  record.className = "pvp-dossier-record";
+  const scored = (Number(profile.wins) || 0) + (Number(profile.losses) || 0) + (Number(profile.draws) || 0);
+  if (!scored || profile.empty) {
+    const empty = document.createElement("span");
+    empty.className = "pvp-dossier-empty";
+    empty.textContent = "尚无战绩";
+    record.append(empty);
+  } else {
+    record.append(
+      recordChip("胜", profile.wins || 0, "win"),
+      recordChip("负", profile.losses || 0, "loss"),
+      recordChip("平", profile.draws || 0, "draw"),
+    );
+    const rate = formatWinRate(profile.winRate);
+    if (rate) {
+      const winRate = document.createElement("span");
+      winRate.className = "pvp-dossier-rate";
+      winRate.textContent = `胜率 ${rate}`;
+      record.append(winRate);
+    }
+  }
+  node.append(img, body, record);
+}
+
 export async function syncPvpProfile() {
   const on = await pvpEnabled();
   const auth = getAuthState();
@@ -37,6 +105,10 @@ export async function syncPvpProfile() {
     const title = document.createElement("p");
     title.className = "pvp-settings-title";
     title.textContent = "对战";
+    const rank = document.createElement("p");
+    rank.id = "pvpSettingsRank";
+    rank.className = "pvp-settings-rank";
+    rank.textContent = "段位";
     const note = document.createElement("p");
     note.id = "pvpSettingsNote";
     note.textContent = "战绩只对你自己可见。";
@@ -45,27 +117,40 @@ export async function syncPvpProfile() {
     button.className = "auth-secondary";
     button.textContent = "打开对战档案";
     button.addEventListener("click", () => { showPvpHistory().catch(() => {}); });
-    section.append(title, note, button);
+    section.append(title, rank, note, button);
     panel.insertBefore(section, panel.querySelector("hr") || null);
   }
   if (section) section.hidden = !on;
+  const rank = document.getElementById("pvpSettingsRank");
+  if (rank && on && loggedIn) {
+    pvpFetch("/me/pvp/stats").then(({ data }) => {
+      const place = data?.title?.inPlacement ? " · 定级中" : "";
+      rank.textContent = `${data?.title?.name || "散户一段"}${place}`;
+    }).catch(() => {});
+  }
 }
 
-function renderStats(stats) {
+function renderStats(stats, user) {
   const node = document.getElementById("pvpStats");
   if (!node) return;
   node.replaceChildren();
-  if (!stats || stats.empty) {
-    const empty = document.createElement("p");
-    empty.textContent = "尚无战绩";
-    node.append(empty);
-    return;
-  }
-  const title = document.createElement("p");
-  const placement = stats.title?.inPlacement ? " · 定级中" : "";
-  title.textContent = `${stats.title?.name || "称号"}${placement}`;
-  const record = document.createElement("p");
-  record.textContent = `胜 ${stats.wins} · 负 ${stats.losses} · 平 ${stats.draws} · 胜率 ${formatWinRate(stats.winRate)}`;
+  const card = document.createElement("div");
+  card.className = "pvp-dossier";
+  fillDossier(card, {
+    nickname: user?.nickname || "我",
+    avatarId: user?.avatarId || 1,
+    avatarUrl: user?.avatarUrl || null,
+    title: stats?.title?.name || "散户一段",
+    inPlacement: stats?.title?.inPlacement !== false,
+    rating: null,
+    wins: stats?.wins || 0,
+    losses: stats?.losses || 0,
+    draws: stats?.draws || 0,
+    winRate: stats?.winRate,
+    empty: !stats || stats.empty,
+  });
+  node.append(card);
+  if (!stats || stats.empty) return;
   const dots = document.createElement("div");
   dots.className = "pvp-dots";
   for (const outcome of stats.recent || []) {
@@ -75,8 +160,9 @@ function renderStats(stats) {
     dots.append(dot);
   }
   const completed = document.createElement("p");
+  completed.className = "pvp-dossier-more";
   completed.textContent = `完整局 ${stats.completedGames} · 完整局平均收益 ${formatPpm(stats.meanCompletedReturnPpm)} · 最佳完整局收益 ${formatPpm(stats.bestCompletedReturnPpm)} · 近 20 场认输 ${stats.recentForfeits}`;
-  node.append(title, record, dots, completed);
+  node.append(dots, completed);
 }
 
 function renderBlocks(data) {
@@ -143,7 +229,7 @@ export async function showPvpHistory() {
       pvpFetch("/me/pvp/matches?limit=20"),
       pvpFetch("/pvp/blocks"),
     ]);
-    renderStats(statsRes.data);
+    renderStats(statsRes.data, auth.user);
     renderBlocks(blocksRes.data);
     const entries = matchesRes.data.entries || [];
     if (!entries.length) {
@@ -158,6 +244,7 @@ export async function showPvpHistory() {
       item.type = "button";
       item.className = "pvp-history-item";
       const title = document.createElement("strong");
+      title.className = `pvp-history-outcome is-${row.outcome || "end"}`;
       title.textContent = `${outcomeText(row.outcome)} · ${row.opponentNickname || "对手"}`;
       const meta = document.createElement("span");
       meta.textContent = `${reasonLabel(row.terminalReason)} · 收益 ${formatPpm(row.returnPpm)}`;

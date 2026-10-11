@@ -101,6 +101,29 @@ test("R07 future bars do not change the in-progress view", () => {
   assert.equal(a.market.bars[0].volume, 1);
 });
 
+test("faces carry nickname and avatar, and still hide the pending action", () => {
+  const bars = makeBars({ 1: { open: 10, close: 10 } });
+  const view = pvpMatchView({
+    match: matchOf(snapshot(bars)),
+    players,
+    viewerId: 1,
+    serverNow: 2_000,
+    pendingLocks: { 1: "buy" },
+    faces: {
+      1: { nickname: "甲", avatarId: 3, avatarUrl: "/api/v1/avatars/a.png" },
+      2: { nickname: "乙", avatarId: 4, avatarUrl: null },
+    },
+  });
+  assert.equal(view.me.nickname, "甲");
+  assert.equal(view.me.avatarId, 3);
+  assert.equal(view.me.avatarUrl, "/api/v1/avatars/a.png");
+  assert.equal(view.opponent.nickname, "乙");
+  assert.equal(view.opponent.avatarId, 4);
+  assert.equal(view.opponent.avatarUrl, null);
+  assert.equal(JSON.stringify(view.opponent).includes("buy"), false);
+  assert.equal(view.opponent.userId, undefined);
+});
+
 test("a completed match reveals identity and all 30 bars; a forfeit does not", () => {
   const bars = makeBars({ 1: { open: 10, close: 10 }, 2: { open: 20, close: 22 } });
   const played = players.map((player) => ({ ...player, actions_json: JSON.stringify(Array.from({ length: 29 }, () => "hold")) }));

@@ -1,3 +1,4 @@
+import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
 import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen } from "../screen-router.js";
@@ -51,6 +52,27 @@ function paintClockFace(id, seconds, kicker, urgent) {
   if (kickerNode) kickerNode.textContent = kicker;
   if (num) num.textContent = seconds == null ? "—" : String(seconds);
   if (box) box.classList.toggle("is-urgent", urgent === true);
+}
+
+function paintSeat(prefix, face, fallback) {
+  const img = document.getElementById(`${prefix}Avatar`);
+  const name = document.getElementById(`${prefix}Name`);
+  const who = face?.nickname || fallback;
+  if (name) name.textContent = who;
+  if (img) {
+    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    img.alt = "";
+  }
+}
+
+function paintSeats() {
+  const auth = getAuthState().user;
+  paintSeat("pvpSeatMe", {
+    nickname: view?.me?.nickname || auth?.nickname,
+    avatarId: view?.me?.avatarId || auth?.avatarId || 1,
+    avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
+  }, "我");
+  paintSeat("pvpSeatOpp", view?.opponent, "对手");
 }
 
 function paintStatus(id, who, detail, state) {
@@ -241,6 +263,7 @@ async function paintChart() {
       historyLength: market.historyLength || 0,
       pvpMarks: marksFromView(view),
       showDataZoomSlider: false,
+      chartWidth: node.clientWidth,
     }), true);
     chartKey = key;
   } catch {
@@ -251,6 +274,7 @@ async function paintChart() {
 function render() {
   const ready = document.getElementById("pvpReadyPanel");
   const play = document.getElementById("pvpPlayPanel");
+  paintSeats();
   if (view?.status === "waiting_ready") {
     if (ready) ready.hidden = false;
     if (play) play.hidden = true;
