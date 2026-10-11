@@ -3,7 +3,9 @@ import { ensureEcharts } from "../echarts-loader.js";
 import { amountWithCoinHtml } from "../jiu-coin.js";
 import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
+import { buildPvpKlineAnalysis } from "./analysis-view.js";
 import { formatCoin, formatPpm, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
+import { appendRankProgress } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
 let chart = null;
@@ -90,10 +92,8 @@ function paintReplay(view) {
   if (!replay || replay.status !== "ready" || !replay.me) {
     if (holdBox) holdBox.hidden = true;
     text("pvpResultReplay", "");
-    text("pvpResultAnalysis", "复盘分析暂时不可用，胜负和奖励不受影响。");
     return;
   }
-  text("pvpResultAnalysis", "");
   const hold = replay.buyHoldPpm;
   if (holdBox) holdBox.hidden = hold == null;
   text("pvpResultReplay", hold == null ? "" : formatPpm(hold));
@@ -116,7 +116,24 @@ function paintReplay(view) {
   }
 }
 
-async function paintChart(view) {
+function paintAnalysis(view) {
+  const node = document.getElementById("pvpResultAnalysis");
+  if (!node) return null;
+  try {
+    const built = buildPvpKlineAnalysis(view);
+    if (!built) {
+      node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
+      return null;
+    }
+    node.innerHTML = built.html;
+    return built.bestPoints;
+  } catch {
+    node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
+    return null;
+  }
+}
+
+async function paintChart(view, bestPoints) {
   const node = document.getElementById("pvpResultChart");
   const error = document.getElementById("pvpResultChartError");
   const market = view?.market;
@@ -140,10 +157,10 @@ async function paintChart(view) {
       bars,
       historyLength: market.historyLength || 0,
       pvpMarks: marksFromView(view),
+      bestPoints: bestPoints || null,
       showDataZoomSlider: false,
-      chartWidth: node.clientWidth,
-      zoomAnchor: "start",
-    }), true);
+      resetDataZoom: true,
+    }), { replaceMerge: ["series"] });
     chart.resize();
   } catch {
     if (mine !== paintToken) return;
@@ -216,12 +233,30 @@ function paintRating(view) {
     "pvpResultRatingNote",
     `这是段位分的变化，不是这局操作打几分。${title}赢了加分，输了减分。胜负只看收益，收益一样再比回撤。`,
   );
+  const progress = document.getElementById("pvpResultRankProgress");
+  if (progress) {
+    progress.replaceChildren();
+    appendRankProgress(progress, view?.me?.ratingAfter);
+  }
 }
 
 function wireReport(view) {
   const form = document.getElementById("pvpReportForm");
   const note = document.getElementById("pvpReportNote");
+  const toggle = document.getElementById("pvpReportToggle");
+  const panel = document.getElementById("pvpReportPanel");
   if (note) note.textContent = "";
+  if (panel) panel.hidden = true;
+  if (toggle) toggle.setAttribute("aria-expanded", "false");
+  if (toggle && toggle.dataset.wired !== "1") {
+    toggle.dataset.wired = "1";
+    toggle.addEventListener("click", () => {
+      if (!panel) return;
+      const open = panel.hidden;
+      panel.hidden = !open;
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  }
   if (!form) return;
   form.onsubmit = async (event) => {
     event.preventDefault();
@@ -242,6 +277,35 @@ function wireReport(view) {
       if (note) note.textContent = err.message || "举报没有提交";
     }
   };
+}
+
+function wireGifts(view) {
+  const box = document.getElementById("pvpGifts");
+  const note = document.getElementById("pvpGiftNote");
+  if (note) note.textContent = "";
+  const buttons = [...document.querySelectorAll("#pvpGifts .pvp-gift-send")];
+  const canSend = !!view?.opponent?.userId && !!view?.matchId;
+  if (box) box.hidden = !canSend;
+  for (const button of buttons) {
+    button.disabled = !canSend;
+    button.onclick = async () => {
+      if (!canSend || button.disabled) return;
+      for (const item of buttons) item.disabled = true;
+      try {
+        await pvpFetch(`/pvp/matches/${encodeURIComponent(view.matchId)}/reactions`, {
+          method: "POST",
+          body: { kind: button.dataset.kind },
+        });
+        if (note) note.textContent = "已送出。";
+      } catch (err) {
+        if (note) note.textContent = err.message || "没能送出";
+      } finally {
+        window.setTimeout(() => {
+          for (const item of buttons) item.disabled = false;
+        }, 1300);
+      }
+    };
+  }
 }
 
 function wireBlock(view) {
@@ -288,9 +352,11 @@ export function showPvpResult(view) {
   paintRating(view);
   showIdentity(view);
   paintReplay(view);
+  const bestPoints = paintAnalysis(view);
   wireWin();
   showWin(view);
   wireReport(view);
+  wireGifts(view);
   wireBlock(view);
   const again = document.getElementById("pvpResultAgain");
   if (again) {
@@ -302,7 +368,7 @@ export function showPvpResult(view) {
         .catch(() => {});
     };
   }
-  paintChart(view).catch(() => {});
+  paintChart(view, bestPoints).catch(() => {});
 }
 
 export async function openPvpMatch(matchId) {

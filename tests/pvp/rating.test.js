@@ -6,6 +6,7 @@ import {
   PVP_RATING_VERSION,
   applyPair,
   levelForRating,
+  rankProgress,
   titleForRating,
 } from '../../shared/pvpRating.js';
 
@@ -33,6 +34,10 @@ test('P01 title boundaries and the fixed K', () => {
     assert.equal(title.inPlacement, false);
   }
   assert.equal(titleForRating(1000, 9).inPlacement, true);
+  assert.deepEqual(rankProgress(780), { current: 80, span: 100, text: "80/100", remain: 20, maxed: false });
+  assert.deepEqual(rankProgress(1000), { current: 0, span: 100, text: "0/100", remain: 100, maxed: false });
+  assert.equal(rankProgress(2100).maxed, true);
+  assert.equal(rankProgress(2100).text, "100/100");
   assert.equal(titleForRating(1000, 0).name, '散户一段');
   assert.equal(levelForRating(699), 1);
 });

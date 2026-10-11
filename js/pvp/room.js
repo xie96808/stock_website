@@ -20,6 +20,7 @@ let view = null;
 let fetchedAt = 0;
 let chart = null;
 let chartKey = "";
+let chartZoomKey = "";
 let stopPoll = null;
 let stopHeartbeat = null;
 let releaseSocket = null;
@@ -75,6 +76,14 @@ function paintSeats() {
   paintSeat("pvpSeatOpp", view?.opponent, "对手");
 }
 
+function paintReadyMark(id, ready, show) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.hidden = !show;
+  node.dataset.ready = ready ? "1" : "0";
+  node.setAttribute("aria-label", ready ? "已准备" : "还未准备");
+}
+
 function paintStatus(id, who, detail, state) {
   const node = document.getElementById(id);
   if (!node) return;
@@ -107,6 +116,7 @@ function stopLoops() {
 
 function destroyChart() {
   chartKey = "";
+  chartZoomKey = "";
   if (chart) {
     chart.dispose();
     chart = null;
@@ -251,6 +261,8 @@ async function paintChart() {
   if (key === chartKey && chart) return;
   const bars = [...(market.history || []), ...(market.bars || [])];
   if (!bars.length) return;
+  const zoomKey = `${bars.length}:${market.historyLength || 0}`;
+  const resetDataZoom = zoomKey !== chartZoomKey;
   try {
     const echarts = await ensureEcharts();
     if (!chart) {
@@ -263,8 +275,9 @@ async function paintChart() {
       historyLength: market.historyLength || 0,
       pvpMarks: marksFromView(view),
       showDataZoomSlider: false,
-      chartWidth: node.clientWidth,
-    }), true);
+      resetDataZoom,
+    }), { replaceMerge: ["series"] });
+    chartZoomKey = zoomKey;
     chartKey = key;
   } catch {
     node.textContent = "图表暂时打不开，决策按钮仍然可用。";
@@ -280,8 +293,8 @@ function render() {
     if (play) play.hidden = true;
     setText("pvpRoomHeadline", "准备");
     setText("pvpReadyCopy", READY_COPY);
-    paintStatus("pvpReadyMe", "我", view.me?.ready ? "已准备" : "还未准备", view.me?.ready ? "ready" : "open");
-    paintStatus("pvpReadyOpp", "对手", view.opponent?.ready ? "已准备" : "未准备", view.opponent?.ready ? "ready" : "open");
+    paintReadyMark("pvpReadyMarkMe", !!view.me?.ready, true);
+    paintReadyMark("pvpReadyMarkOpp", !!view.opponent?.ready, true);
     const readyBtn = document.getElementById("pvpReadyBtn");
     const cancelBtn = document.getElementById("pvpCancelReadyBtn");
     if (readyBtn) readyBtn.disabled = !!view.me?.ready;
@@ -289,6 +302,8 @@ function render() {
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
+    paintReadyMark("pvpReadyMarkMe", false, false);
+    paintReadyMark("pvpReadyMarkOpp", false, false);
     setText("pvpRoomHeadline", roundCaption(view));
     paintReturn("pvpMeNav", view.me?.mtmPpm);
     paintReturn("pvpOppNav", view.opponent?.mtmPpm);

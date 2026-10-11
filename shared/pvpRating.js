@@ -68,3 +68,24 @@ export function titleForRating(rating, games = null) {
     inPlacement: games != null && games < PVP_PLACEMENT_GAMES,
   };
 }
+
+/**
+ * Points already earned inside the current 100-point band, over the band size.
+ * Level 15 is full. Example: rating 780 is 80/100, with 20 still to go.
+ */
+export function rankProgress(rating) {
+  const value = Number(rating);
+  if (!Number.isFinite(value)) return null;
+  const title = titleForRating(value);
+  if (title.level >= 15 || title.pointsToNext == null) {
+    return { current: 100, span: 100, text: "100/100", remain: 0, maxed: true };
+  }
+  const current = Math.max(0, Math.min(100, Math.round(value - title.bandLow)));
+  return {
+    current,
+    span: 100,
+    text: `${current}/100`,
+    remain: title.pointsToNext,
+    maxed: false,
+  };
+}

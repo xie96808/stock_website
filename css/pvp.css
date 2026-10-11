@@ -525,6 +525,40 @@
   min-width: 0;
 }
 
+.pvp-seat-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.28rem;
+  flex: none;
+}
+
+.pvp-ready-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.pvp-ready-mark[data-ready="1"] {
+  border-color: #e6b325;
+  background: #e6b325;
+  animation: pvp-check-pop 0.32s ease;
+}
+
+.pvp-ready-mark[data-ready="1"]::after {
+  content: "";
+  display: block;
+  width: 4px;
+  height: 8px;
+  margin: 2px auto 0;
+  border: solid #2c2824;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .pvp-score .pvp-seat-avatar {
   width: 44px;
   height: 44px;
@@ -741,8 +775,168 @@
   100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
 }
 
+@keyframes pvp-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pvp-check-pop {
+  from { transform: scale(0.4); }
+  to { transform: scale(1); }
+}
+
+.pvp-screen.active .pvp-wrap,
+.pvp-invite-dialog .pvp-dialog-card {
+  animation: pvp-rise 0.42s ease;
+}
+
+#pvpReadyPanel:not([hidden]),
+#pvpPlayPanel:not([hidden]) {
+  animation: pvp-rise 0.38s ease;
+}
+
+.pvp-invite-dialog {
+  z-index: 130;
+}
+
+.pvp-invite-dialog .pvp-seat-avatar {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 0.45rem;
+}
+
+.pvp-rank-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 0.55rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
+.pvp-rank-bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.pvp-rank-bar span {
+  display: block;
+  height: 100%;
+  background: #e6b325;
+}
+
+.pvp-rank-fraction,
+.pvp-rank-remain {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.pvp-rank-remain {
+  color: var(--ink-soft);
+}
+
+.pvp-report-toggle {
+  min-height: 28px;
+  margin: 0.2rem 0 0.55rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mute);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.pvp-gifts {
+  margin: 0.4rem 0 0.8rem;
+}
+
+.pvp-gift-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pvp-gift {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(16rem, 80vw);
+  text-align: center;
+  animation: pvp-gift-life 2.6s ease forwards;
+}
+
+.pvp-gift p {
+  margin: 0.35rem 0 0;
+  font-family: var(--kaiti);
+  font-size: 1.35rem;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.pvp-gift-art {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 8px 0 rgba(44, 40, 36, 0.12));
+}
+
+.pvp-gift-flower { animation: pvp-gift-bloom 2.6s ease forwards; }
+.pvp-gift-tomato { top: 8%; animation: pvp-gift-drop 2.6s ease forwards; }
+.pvp-gift-pipe .pvp-smoke { animation: pvp-smoke 2.6s ease-out forwards; }
+
+@keyframes pvp-gift-life {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.7); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -68%) scale(1.04); }
+}
+
+@keyframes pvp-gift-bloom {
+  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.4) rotate(-8deg); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(0deg); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -70%) scale(1.12); }
+}
+
+@keyframes pvp-gift-drop {
+  0% { opacity: 0; transform: translate(-50%, -10vh) scale(0.8); }
+  28% { opacity: 1; transform: translate(-50%, 28vh) scale(1); }
+  40% { transform: translate(-50%, 30vh) scale(1.15, 0.8); }
+  52% { transform: translate(-50%, 28vh) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 24vh) scale(1.05); }
+}
+
+@keyframes pvp-smoke {
+  from { opacity: 0; transform: translateY(6px); }
+  30% { opacity: 0.8; }
+  to { opacity: 0; transform: translateY(-16px); }
+}
+
+.pvp-analysis-note {
+  margin: 0 0 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pvp-fireworks i { animation: none; opacity: 0.85; }
+  .pvp-screen.active .pvp-wrap,
+  .pvp-invite-dialog .pvp-dialog-card,
+  #pvpReadyPanel,
+  #pvpPlayPanel,
+  .pvp-ready-mark,
+  .pvp-gift,
+  .pvp-gift-pipe .pvp-smoke {
+    animation: none;
+  }
 }
 
 @media (max-width: 420px) {

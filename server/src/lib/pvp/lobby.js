@@ -202,6 +202,7 @@ export function readMyStats(db, userId) {
   ).all(userId);
   return {
     empty: scored === 0,
+    rating: rating?.rating ?? PVP_RATING_INITIAL,
     title: {
       name: title.name,
       inPlacement: title.inPlacement,

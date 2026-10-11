@@ -293,6 +293,7 @@ function paintLobbyMe(state) {
       avatarUrl: auth.avatarUrl || null,
       title: data?.title?.name || "散户一段",
       inPlacement: data ? !!data.title?.inPlacement : true,
+      rating: data?.rating,
       wins: data?.wins || 0,
       losses: data?.losses || 0,
       draws: data?.draws || 0,
@@ -392,6 +393,9 @@ function wireLobby() {
     if (id) enterMatch(id).catch((err) => setError(err.message || ""));
   });
   document.addEventListener("stockgame:auth-changed", () => {
+    if (showing) refresh().catch(() => {});
+  });
+  document.addEventListener("pvp:refresh-lobby", () => {
     if (showing) refresh().catch(() => {});
   });
 }

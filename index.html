@@ -491,14 +491,20 @@
                 </div>
                 <div class="pvp-seat-row">
                     <div class="pvp-seat">
-                        <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                        <div class="pvp-seat-face">
+                            <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                            <span class="pvp-ready-mark" id="pvpReadyMarkMe" hidden></span>
+                        </div>
                         <div>
                             <span class="pvp-seat-role">我</span>
                             <strong id="pvpSeatMeName">我</strong>
                         </div>
                     </div>
                     <div class="pvp-seat">
-                        <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                        <div class="pvp-seat-face">
+                            <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="52" height="52">
+                            <span class="pvp-ready-mark" id="pvpReadyMarkOpp" hidden></span>
+                        </div>
                         <div>
                             <span class="pvp-seat-role">对手</span>
                             <strong id="pvpSeatOppName">对手</strong>
@@ -511,10 +517,6 @@
                         <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
                         <strong class="pvp-clock-num" id="pvpReadyClockNum">10</strong>
                         <span class="pvp-clock-unit">秒</span>
-                    </div>
-                    <div class="pvp-status-row">
-                        <div class="pvp-status" id="pvpReadyMe" data-state="open">我 · 还未准备</div>
-                        <div class="pvp-status" id="pvpReadyOpp" data-state="open">对手 · 未准备</div>
                     </div>
                     <div class="pvp-actions">
                         <button type="button" class="pvp-btn pvp-btn-primary" id="pvpReadyBtn">准备</button>
@@ -549,7 +551,7 @@
                     <p id="pvpActionError" role="status"></p>
                     <div id="pvpChart" class="pvp-chart"></div>
                     <p class="pvp-mark-legend"><span class="is-me">● 我的买卖</span><span class="is-opp">▲ 对手买卖</span></p>
-                    <p class="pvp-chart-pan">左右拖动，可看其余交易日。</p>
+                    <p class="pvp-chart-pan">滚轮或双指缩放，左右拖动查看。</p>
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpLeaveDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpLeaveTitle">
@@ -603,34 +605,47 @@
                     <p class="pvp-explain-label">段位分</p>
                     <strong class="pvp-explain-num" id="pvpResultRating"></strong>
                     <p class="pvp-explain-note" id="pvpResultRatingNote"></p>
+                    <div id="pvpResultRankProgress"></div>
                 </div>
                 <div class="pvp-explain" id="pvpResultHoldBox" hidden>
                     <p class="pvp-explain-label">买入持有</p>
                     <strong class="pvp-explain-num" id="pvpResultReplay"></strong>
                     <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。用来对照你的操作，不决定胜负。</p>
                 </div>
-                <p id="pvpResultAnalysis"></p>
+                <div id="pvpResultAnalysis" class="analysis-container"></div>
                 <div id="pvpResultChart" class="pvp-chart" hidden></div>
-                <p class="pvp-chart-pan">左右拖动，可看其余交易日。</p>
+                <p class="pvp-chart-pan">滚轮或双指缩放，左右拖动查看。</p>
                 <p id="pvpResultChartError" hidden>图表暂时打不开，结果仍然有效。</p>
                 <ol id="pvpResultCurve"></ol>
                 <ul id="pvpResultGaps"></ul>
-                <form id="pvpReportForm">
-                    <label>举报对手
-                        <select id="pvpReportReason">
-                            <option value="cheat">疑似作弊</option>
-                            <option value="grief_forfeit">恶意弃权</option>
-                            <option value="nickname">昵称问题</option>
-                            <option value="other">其他</option>
-                        </select>
-                    </label>
-                    <textarea id="pvpReportDetail" maxlength="500" placeholder="补充说明，可以留空"></textarea>
-                    <button type="submit" class="pvp-btn" id="pvpReportSubmit">提交举报</button>
-                    <p id="pvpReportNote"></p>
-                </form>
+                <button type="button" class="pvp-report-toggle" id="pvpReportToggle" aria-expanded="false" aria-controls="pvpReportPanel">举报</button>
+                <div id="pvpReportPanel" hidden>
+                    <form id="pvpReportForm">
+                        <label>举报对手
+                            <select id="pvpReportReason">
+                                <option value="cheat">疑似作弊</option>
+                                <option value="grief_forfeit">恶意弃权</option>
+                                <option value="nickname">昵称问题</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </label>
+                        <textarea id="pvpReportDetail" maxlength="500" placeholder="补充说明，可以留空"></textarea>
+                        <button type="submit" class="pvp-btn" id="pvpReportSubmit">提交举报</button>
+                        <p id="pvpReportNote"></p>
+                    </form>
+                    <button type="button" class="pvp-btn" id="pvpResultBlock" hidden>屏蔽对手</button>
+                </div>
+                <div class="pvp-gifts" id="pvpGifts" hidden>
+                    <p class="pvp-kicker">送给对手</p>
+                    <div class="pvp-actions">
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower">鲜花</button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato">臭番茄</button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe">烟斗</button>
+                    </div>
+                    <p id="pvpGiftNote"></p>
+                </div>
                 <div class="pvp-actions">
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
-                    <button type="button" class="pvp-btn" id="pvpResultBlock" hidden>屏蔽对手</button>
                     <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
                 </div>
             </div>
@@ -659,6 +674,20 @@
                 <div id="pvpBlockList"></div>
             </div>
         </section>
+
+        <div class="pvp-dialog pvp-invite-dialog" id="pvpInviteDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpInviteTitle">
+            <div class="pvp-dialog-card">
+                <img id="pvpInviteAvatar" class="pvp-seat-avatar" alt="" width="64" height="64">
+                <h3 id="pvpInviteTitle">约战邀请</h3>
+                <p id="pvpInviteCopy"></p>
+                <p id="pvpInviteNote"></p>
+                <div class="pvp-actions">
+                    <button type="button" class="pvp-btn" id="pvpInviteIgnore">忽略</button>
+                    <button type="button" class="pvp-btn" id="pvpInviteDecline">拒绝</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpInviteAccept">接受</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Game Screen -->
         <section class="game-screen" id="gameScreen">
@@ -1430,7 +1459,9 @@
         document.addEventListener('stockgame:auth-changed', () => {
             import('./js/pvp/profile-battle.js').then((mod) => mod.syncPvpProfile()).catch(() => {});
             import('./js/pvp/lobby.js').then((mod) => mod.syncSessionPresence()).catch(() => {});
+            import('./js/pvp/notices.js').then((mod) => mod.startPvpNotices()).catch(() => {});
         });
+        import('./js/pvp/notices.js').then((mod) => mod.startPvpNotices()).catch(() => {});
         function routePvpHash() {
             const found = /^pvp\/([0-9a-f-]{36})$/i.exec(parseRouteHash());
             if (!found) return;

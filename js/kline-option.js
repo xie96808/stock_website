@@ -73,30 +73,45 @@ function pvpMarkerPoints(bars, marks) {
     return points;
 }
 
-/**
- * Keep a 14px mark on its own candle. Returns null when there is no match day yet.
- * The room anchors on the latest day. The result starts at the first match day.
- */
-function pvpZoomWindow(barCount, historyLength, chartWidth, anchor) {
-    const history = Math.max(0, historyLength || 0);
-    if (barCount <= history) return null;
-    const gameBars = barCount - history;
-    let visible = gameBars;
-    let maxSpan = 100;
-    const width = Number(chartWidth);
-    if (width >= 80) {
-        const plot = Math.max(120, width - 48);
-        const maxVisible = Math.max(6, Math.floor(plot / 26));
-        visible = Math.min(gameBars, maxVisible);
-        maxSpan = Math.min(100, (maxVisible / barCount) * 100);
-    }
-    const startIndex = anchor === "start" ? history : barCount - visible;
-    const endIndex = Math.min(barCount, startIndex + visible);
-    return {
-        start: (startIndex / barCount) * 100,
-        end: (endIndex / barCount) * 100,
-        maxSpan,
+/** History categories stay `hN` for mark lookup. The axis does not print that prefix. */
+function pvpAxisText(value) {
+    const text = String(value ?? "");
+    if (/^h\d+$/i.test(text)) return "";
+    const day = /^d(\d+)$/i.exec(text);
+    return day ? day[1] : "";
+}
+
+function pvpTipTitle(label) {
+    const day = pvpAxisText(label);
+    return day ? `第${day}天` : "";
+}
+
+function pvpSignalMarks(bars, historyLength, bestPoints) {
+    if (!bestPoints) return [];
+    const points = [];
+    const push = (list, buy) => {
+        for (const point of list || []) {
+            const bar = bars[historyLength + point.day - 1];
+            if (!bar || !bar.label) continue;
+            points.push({
+                name: buy ? "信号买" : "信号卖",
+                coord: [bar.label, buy ? bar.low : bar.high],
+                value: buy ? "信号买" : "信号卖",
+                symbol: "diamond",
+                symbolSize: 11,
+                symbolOffset: [0, buy ? 16 : -16],
+                itemStyle: {
+                    color: buy ? "#f5c542" : "#a78bfa",
+                    borderColor: "#2c2824",
+                    borderWidth: 1,
+                },
+                label: { show: false },
+            });
+        }
     };
+    push(bestPoints.buys, true);
+    push(bestPoints.sells, false);
+    return points;
 }
 
 /**
@@ -115,7 +130,7 @@ function pvpZoomWindow(barCount, historyLength, chartWidth, anchor) {
  * @param {(bar: object, idx: number) => void|null} [vm.syncHover] - game OHLC panel sync
  * @param {boolean} [vm.resetDataZoom=false] - force dataZoom window back to full range
  * @param {boolean} [vm.showDataZoomSlider] - desktop slider; default true for result, false for game
- * @param {number} [vm.chartWidth] - host width in px; PvP uses it to keep marks off the next candle
+ * @param {boolean} [vm.resetDataZoom=true] - PvP: false keeps the player's zoom; true shows every bar
  */
 export function buildKlineOption(vm) {
     const {
@@ -149,7 +164,7 @@ export function buildKlineOption(vm) {
     const ma30 = calculateMA(bars, 30);
 
     const markPoints = isPvp
-        ? pvpMarkerPoints(bars, pvpMarks)
+        ? [...pvpMarkerPoints(bars, pvpMarks), ...pvpSignalMarks(bars, historyLength, bestPoints)]
         : trades.map(trade => ({
             name: trade.type === 'buy' ? '买' : '卖',
             coord: [String(historyLength + trade.day), trade.price],
@@ -206,7 +221,12 @@ export function buildKlineOption(vm) {
     const axisLabelColor = paperChart ? '#6b6660' : '#8b949e';
     const splitLineColor = paperChart ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
 
-    const xAxisBottomLabel = isResult
+    const xAxisBottomLabel = isPvp
+        ? {
+            color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, hideOverlap: true,
+            formatter: (value) => pvpAxisText(value),
+        }
+        : isResult
         ? {
             color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, rotate: 0,
             formatter: (v) => (v === startDayLabel ? '{start|' + v + '}' : v),
@@ -331,8 +351,10 @@ export function buildKlineOption(vm) {
 
     const wantSlider = showDataZoomSlider != null ? !!showDataZoomSlider : isResult;
     const dataZoomWindow = resetDataZoom ? { start: 0, end: 100 } : {};
-    // PvP opens on the match days, and never packs candles closer than a 14px mark.
-    const pvpZoom = isPvp ? pvpZoomWindow(bars.length, historyLength, vm.chartWidth, vm.zoomAnchor) : null;
+    // Same window as the solo chart: history plus every revealed day, and the player can zoom back out.
+    const pvpZoom = isPvp
+        ? { minSpan: 2, maxSpan: 100, ...(vm.resetDataZoom === false ? {} : { start: 0, end: 100 }) }
+        : null;
     // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
     // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
     const dataZoom = [
@@ -384,8 +406,9 @@ export function buildKlineOption(vm) {
                 if (isPvp && kd) {
                     const isUp = kd.close >= kd.open;
                     const clr = isUp ? '#e05252' : '#3db86a';
+                    const title = pvpTipTitle(kd.label);
                     return `<div style="padding:4px 2px">
-                        <div style="margin-bottom:5px;color:#8b949e;font-size:11px">${kd.label || ''}</div>
+                        ${title ? `<div style="margin-bottom:5px;color:#8b949e;font-size:11px">${title}</div>` : ""}
                         <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
                         <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
                         <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>

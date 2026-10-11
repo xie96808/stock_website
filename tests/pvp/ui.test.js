@@ -103,32 +103,41 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.series[0].barWidth, "76%");
   assert.ok(opt.grid[0].right <= 12);
   assert.ok(opt.grid[0].left <= 44);
+  assert.equal(opt.dataZoom[0].start, 0);
   assert.equal(opt.dataZoom[0].end, 100);
-  assert.ok(opt.dataZoom[0].start >= 40);
+  assert.equal(opt.dataZoom[0].maxSpan, 100);
+  assert.equal(opt.xAxis[1].axisLabel.formatter("h1"), "");
+  assert.equal(opt.xAxis[1].axisLabel.formatter("h15"), "");
+  assert.equal(opt.xAxis[1].axisLabel.formatter("d1"), "1");
+  assert.equal(opt.xAxis[1].axisLabel.formatter("d12"), "12");
   const many = Array.from({ length: 60 }, (_, i) => ({
-    label: `d${i}`, open: 1, close: 1, low: 1, high: 1, volume: 1,
+    label: i < 30 ? `h${i + 1}` : `d${i - 29}`, open: 1, close: 1, low: 1, high: 1, volume: 1,
   }));
+  const dayOne = many.slice(0, 31);
   const wide = buildKlineOption({
-    mode: "pvp", bars: many, historyLength: 30, chartWidth: 1200, showDataZoomSlider: false,
+    mode: "pvp", bars: dayOne, historyLength: 30, chartWidth: 1200, showDataZoomSlider: false,
   });
-  assert.equal(wide.dataZoom[0].start, 50);
+  assert.equal(wide.dataZoom[0].start, 0);
   assert.equal(wide.dataZoom[0].end, 100);
-  assert.ok(wide.dataZoom[0].maxSpan > 50);
+  assert.equal(wide.dataZoom[0].maxSpan, 100);
   const narrow = buildKlineOption({
-    mode: "pvp", bars: many, historyLength: 30, chartWidth: 360, showDataZoomSlider: false, zoomAnchor: "start",
-  });
-  assert.equal(narrow.dataZoom[0].start, 50);
-  assert.ok(narrow.dataZoom[0].end > 60 && narrow.dataZoom[0].end < 80);
-  assert.ok(narrow.dataZoom[0].maxSpan < 30);
-  const live = buildKlineOption({
     mode: "pvp", bars: many, historyLength: 30, chartWidth: 360, showDataZoomSlider: false,
   });
-  assert.equal(live.dataZoom[0].end, 100);
-  assert.ok(live.dataZoom[0].start > 70);
+  assert.equal(narrow.dataZoom[0].start, 0);
+  assert.equal(narrow.dataZoom[0].end, 100);
+  assert.ok(narrow.dataZoom[0].maxSpan >= 100);
+  const kept = buildKlineOption({
+    mode: "pvp", bars: many, historyLength: 30, showDataZoomSlider: false, resetDataZoom: false,
+  });
+  assert.equal(kept.dataZoom[0].start, undefined);
+  assert.equal(kept.dataZoom[0].end, undefined);
+  assert.equal(kept.dataZoom[0].maxSpan, 100);
   const tip = opt.tooltip.formatter([{ seriesName: "K线", dataIndex: 0, data: [] }]);
-  assert.match(tip, /h1/);
+  assert.doesNotMatch(tip, /h1/);
   assert.match(tip, /量 /);
   assert.doesNotMatch(tip, /2024|万手/);
+  const dayTip = opt.tooltip.formatter([{ seriesName: "K线", dataIndex: 1, data: [] }]);
+  assert.match(dayTip, /第1天/);
 });
 
 test("hub keeps 选择玩法 and hides the battle entry until the flag is on", () => {
@@ -142,6 +151,12 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpHistoryScreen"/);
   assert.match(html, /现在没有可约战的对手。去玩幽灵对局，或稍后再来。/);
   assert.match(html, /打开应用就能被约到/);
+  assert.match(html, /id="pvpReadyMarkMe"/);
+  assert.match(html, /id="pvpReadyMarkOpp"/);
+  assert.match(html, /id="pvpInviteIgnore"/);
+  assert.match(html, /id="pvpInviteAccept"/);
+  assert.match(html, /id="pvpInviteDecline"/);
+  assert.match(html, /id="pvpReportToggle"/);
   assert.match(html, /id="pvpWinDialog"/);
   assert.match(html, /id="pvpResultRatingBox"/);
   assert.match(html, /买入持有/);
@@ -164,12 +179,21 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(resultHtml, /恶意弃权/);
   assert.match(resultHtml, /昵称问题/);
   assert.match(resultHtml, />其他</);
+  assert.match(resultHtml, /鲜花/);
+  assert.match(resultHtml, /臭番茄/);
+  assert.match(resultHtml, /烟斗/);
+  assert.match(resultHtml, /id="pvpReportPanel" hidden/);
+  assert.doesNotMatch(resultHtml.split('id="pvpReadyPanel"')[0], /还未准备/);
   assert.doesNotMatch(resultHtml, /id="pvpBuy"/);
   const profile = readFileSync(new URL("js/pvp/profile-battle.js", root), "utf8");
   const resultJs = readFileSync(new URL("js/pvp/result.js", root), "utf8");
   assert.doesNotMatch(profile, /累计收益/);
   assert.match(profile, /formatWinRate/);
   assert.match(resultJs, /复盘分析暂时不可用，胜负和奖励不受影响/);
+  assert.match(readFileSync(new URL("js/pvp/analysis-view.js", root), "utf8"), /波段分析/);
+  assert.match(readFileSync(new URL("js/pvp/analysis-view.js", root), "utf8"), /当时信号/);
+  assert.match(readFileSync(new URL("js/pvp/analysis-view.js", root), "utf8"), /不决定胜负/);
+  assert.match(profile, /升级还需/);
   assert.match(resultJs, /已屏蔽，之后不能再约战。这局的结果不变。/);
   assert.doesNotMatch(resultJs, /pvpBuy|累计收益/);
 });

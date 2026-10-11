@@ -1,5 +1,6 @@
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
+import { rankProgress } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
 import { pvpEnabled, pvpFetch, whenAuthReady } from "./transport.js";
 
@@ -8,6 +9,31 @@ function outcomeText(outcome) {
   if (outcome === "loss") return "负";
   if (outcome === "draw") return "平";
   return "结束";
+}
+
+export function appendRankProgress(parent, rating) {
+  const band = rankProgress(rating);
+  if (!band || !parent) return;
+  const box = document.createElement("div");
+  box.className = "pvp-rank-progress";
+  const bar = document.createElement("div");
+  bar.className = "pvp-rank-bar";
+  bar.setAttribute("role", "progressbar");
+  bar.setAttribute("aria-valuemin", "0");
+  bar.setAttribute("aria-valuemax", String(band.span));
+  bar.setAttribute("aria-valuenow", String(band.current));
+  bar.setAttribute("aria-label", band.maxed ? "已满级" : `段位进度 ${band.text}`);
+  const fill = document.createElement("span");
+  fill.style.width = `${band.current}%`;
+  bar.append(fill);
+  const fraction = document.createElement("span");
+  fraction.className = "pvp-rank-fraction";
+  fraction.textContent = band.text;
+  const remain = document.createElement("span");
+  remain.className = "pvp-rank-remain";
+  remain.textContent = band.maxed ? "已满级" : `升级还需 ${band.remain}`;
+  box.append(bar, fraction, remain);
+  parent.append(box);
 }
 
 function recordChip(label, count, kind) {
@@ -47,11 +73,12 @@ export function fillDossier(node, profile) {
     place.textContent = "定级中";
     body.append(place);
   }
-  if (profile.rating != null) {
+  if (profile.rating != null && Number.isFinite(Number(profile.rating))) {
     const score = document.createElement("p");
     score.className = "pvp-dossier-score";
     score.textContent = `段位分 ${profile.rating}`;
     body.append(score);
+    appendRankProgress(body, profile.rating);
   }
   const record = document.createElement("div");
   record.className = "pvp-dossier-record";
@@ -105,7 +132,7 @@ export async function syncPvpProfile() {
     const title = document.createElement("p");
     title.className = "pvp-settings-title";
     title.textContent = "对战";
-    const rank = document.createElement("p");
+    const rank = document.createElement("div");
     rank.id = "pvpSettingsRank";
     rank.className = "pvp-settings-rank";
     rank.textContent = "段位";
@@ -125,7 +152,11 @@ export async function syncPvpProfile() {
   if (rank && on && loggedIn) {
     pvpFetch("/me/pvp/stats").then(({ data }) => {
       const place = data?.title?.inPlacement ? " · 定级中" : "";
-      rank.textContent = `${data?.title?.name || "散户一段"}${place}`;
+      rank.textContent = "";
+      const title = document.createElement("span");
+      title.textContent = `${data?.title?.name || "散户一段"}${place}`;
+      rank.append(title);
+      appendRankProgress(rank, data?.rating);
     }).catch(() => {});
   }
 }
@@ -142,7 +173,7 @@ function renderStats(stats, user) {
     avatarUrl: user?.avatarUrl || null,
     title: stats?.title?.name || "散户一段",
     inPlacement: stats?.title?.inPlacement !== false,
-    rating: null,
+    rating: stats?.rating,
     wins: stats?.wins || 0,
     losses: stats?.losses || 0,
     draws: stats?.draws || 0,

@@ -7,6 +7,7 @@ import { acceptChallenge, cancelChallenge, cancelReady, createChallenge, decline
 import { listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } from "../lib/pvp/lobby.js";
 import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
+import { listIncoming, sendReaction } from "../lib/pvp/reactions.js";
 import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
 import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
@@ -259,6 +260,29 @@ router.delete("/pvp/blocks/:userId", requireUser, (req, res) => {
   if (!Number.isInteger(blockedId)) return fail(res, 400, "BAD_PAYLOAD", "用户无效");
   unblockPlayer(openDb(), req.user.id, blockedId);
   return ok(res, null, 204);
+});
+
+router.post("/pvp/matches/:id/reactions", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "kind");
+  if (extra.length || typeof body.kind !== "string") return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:react:u:${req.user.id}`, 20, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "送得太快了");
+  const result = sendReaction(openDb(), {
+    matchId: req.params.id,
+    fromUserId: req.user.id,
+    kind: body.kind,
+    now: Date.now(),
+  });
+  if (!result?.ok) return sendDeny(res, result);
+  return ok(res, result.event, 201);
+});
+
+router.get("/pvp/reactions", requireUser, (req, res) => {
+  const after = Number(req.query.after || 0);
+  if (!Number.isFinite(after) || after < 0) return fail(res, 400, "BAD_PAYLOAD", "游标无效");
+  return ok(res, listIncoming(req.user.id, after, Date.now()));
 });
 
 router.post("/pvp/matches/:id/report", requireUser, (req, res) => {
