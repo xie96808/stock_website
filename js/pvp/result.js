@@ -34,11 +34,22 @@ function showIdentity(view) {
   if (!node) return;
   if (view.identity?.stockName) {
     node.hidden = false;
-    node.textContent = `${view.identity.stockName} ${view.identity.stockCode}`;
+    const code = view.identity.stockCode ? ` (${view.identity.stockCode})` : "";
+    node.textContent = `${view.identity.stockName}${code}`;
   } else {
     node.hidden = true;
     node.textContent = "";
   }
+}
+
+function paintReturn(id, ppm) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = formatPpm(ppm);
+  node.classList.remove("pvp-up", "pvp-down", "pvp-flat");
+  const value = Number(ppm);
+  if (!Number.isFinite(value)) return;
+  node.classList.add(value > 0 ? "pvp-up" : value < 0 ? "pvp-down" : "pvp-flat");
 }
 
 function gameDay(label) {
@@ -208,8 +219,11 @@ export function showPvpResult(view) {
   }
   text("pvpResultHeadline", resultHeadline(view));
   text("pvpResultReason", view?.terminal?.reason ? reasonLabel(view.terminal.reason) : "");
-  text("pvpResultMe", `我的收益 ${formatPpm(view?.me?.returnPpm)} · 回撤 ${formatPpm(view?.me?.mddPpm)} · 韭币 ${formatCoin(view?.me?.coinDelta)}`);
-  text("pvpResultOpp", `${view?.opponent?.nickname || "对手"} 收益 ${formatPpm(view?.opponent?.returnPpm)} · 回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
+  paintReturn("pvpResultMe", view?.me?.returnPpm);
+  text("pvpResultMeMeta", `回撤 ${formatPpm(view?.me?.mddPpm)} · 韭币 ${formatCoin(view?.me?.coinDelta)}`);
+  text("pvpResultOppLabel", `${view?.opponent?.nickname || "对手"}收益`);
+  paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
+  text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
   const delta = view?.me?.ratingDelta;
   text("pvpResultRating", delta == null ? "" : `评分 ${formatCoin(delta)}`);
   showIdentity(view);

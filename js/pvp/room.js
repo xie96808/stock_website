@@ -3,7 +3,6 @@ import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen } from "../screen-router.js";
 import {
   formatPpm,
-  formatRemain,
   lockCaption,
   marksFromView,
   opponentLockText,
@@ -13,7 +12,7 @@ import {
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
 import { actionKey, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 
-const READY_COPY = "双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。每日胜场奖励有次数上限。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。";
+const READY_COPY = "双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。";
 
 let matchId = null;
 let view = null;
@@ -40,9 +39,37 @@ function toneWord(ppm) {
   return "持平";
 }
 
-function navText(ppm) {
+function secondsLeft(ms) {
+  if (ms == null) return null;
+  return Math.max(0, Math.ceil(ms / 1000));
+}
+
+function paintClockFace(id, seconds, kicker, urgent) {
+  const box = document.getElementById(id);
+  const num = document.getElementById(`${id}Num`);
+  const kickerNode = document.getElementById(`${id}Kicker`);
+  if (kickerNode) kickerNode.textContent = kicker;
+  if (num) num.textContent = seconds == null ? "—" : String(seconds);
+  if (box) box.classList.toggle("is-urgent", urgent === true);
+}
+
+function paintStatus(id, who, detail, state) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.dataset.state = state;
+  node.textContent = `${who} · ${detail}`;
+}
+
+function paintReturn(id, ppm) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = formatPpm(ppm);
+  node.classList.remove("pvp-up", "pvp-down", "pvp-flat");
+  const value = Number(ppm);
+  if (!Number.isFinite(value)) return;
+  node.classList.add(value > 0 ? "pvp-up" : value < 0 ? "pvp-down" : "pvp-flat");
   const word = toneWord(ppm);
-  return word ? `${formatPpm(ppm)} ${word}` : formatPpm(ppm);
+  node.setAttribute("aria-label", word ? `${formatPpm(ppm)} ${word}` : formatPpm(ppm));
 }
 
 function stopLoops() {
@@ -133,7 +160,8 @@ function paintClock() {
   if (!view || !matchId) return;
   if (view.status === "waiting_ready") {
     const left = remainingMs(view.readyDeadlineAt, view.serverNow, fetchedAt);
-    setText("pvpReadyClock", left == null ? "" : `准备剩余 ${formatRemain(left)}`);
+    const seconds = secondsLeft(left);
+    paintClockFace("pvpReadyClock", seconds, "准备剩余", seconds != null && seconds <= 5);
     if (left != null && left <= 0) {
       if (nudgeKey !== "ready-due") {
         nudgeKey = "ready-due";
@@ -147,9 +175,14 @@ function paintClock() {
   if (view.status !== "playing") return;
   const opensIn = remainingMs(view.opensAt, view.serverNow, fetchedAt);
   const left = remainingMs(view.deadlineAt, view.serverNow, fetchedAt);
-  const openText = opensIn != null && opensIn > 0 ? `下一手 ${formatRemain(opensIn)} 后可操作` : "";
-  const deadText = left == null ? "" : `本手剩余 ${formatRemain(left)}`;
-  setText("pvpClock", [openText, deadText].filter(Boolean).join(" · "));
+  const waiting = opensIn != null && opensIn > 0;
+  const seconds = secondsLeft(waiting ? opensIn : left);
+  paintClockFace(
+    "pvpClock",
+    seconds,
+    waiting ? "下一手可操作" : "本手剩余",
+    !waiting && seconds != null && seconds <= 5,
+  );
   if (opensIn != null && opensIn > 0) {
     nudgeKey = `wait:${view.revision}`;
   } else if (left != null && left <= 0) {
@@ -176,8 +209,16 @@ function paintActions() {
   if (buy) buy.disabled = closed || !view?.me?.canBuy;
   if (sell) sell.disabled = closed || !view?.me?.canSell;
   if (hold) hold.disabled = closed || !view?.me?.canHold;
-  setText("pvpSelfLock", `我 ${lockCaption({ submitting: isSubmitting(), locked: postedLock || !!view?.me?.lockedToday })}`);
-  setText("pvpOppLock", `对手 ${opponentLockText(!!view?.opponent?.lockedToday)}`);
+  const submitting = isSubmitting();
+  const locked = postedLock || !!view?.me?.lockedToday;
+  paintStatus(
+    "pvpSelfLock",
+    "我",
+    lockCaption({ submitting, locked }),
+    submitting ? "pending" : locked ? "locked" : "open",
+  );
+  const oppLocked = !!view?.opponent?.lockedToday;
+  paintStatus("pvpOppLock", "对手", opponentLockText(oppLocked), oppLocked ? "locked" : "open");
 }
 
 async function paintChart() {
@@ -215,8 +256,8 @@ function render() {
     if (play) play.hidden = true;
     setText("pvpRoomHeadline", "准备");
     setText("pvpReadyCopy", READY_COPY);
-    setText("pvpReadyMe", view.me?.ready ? "我已准备" : "我还未准备");
-    setText("pvpReadyOpp", view.opponent?.ready ? "对手已准备" : "对手未准备");
+    paintStatus("pvpReadyMe", "我", view.me?.ready ? "已准备" : "还未准备", view.me?.ready ? "ready" : "open");
+    paintStatus("pvpReadyOpp", "对手", view.opponent?.ready ? "已准备" : "未准备", view.opponent?.ready ? "ready" : "open");
     const readyBtn = document.getElementById("pvpReadyBtn");
     const cancelBtn = document.getElementById("pvpCancelReadyBtn");
     if (readyBtn) readyBtn.disabled = !!view.me?.ready;
@@ -225,8 +266,8 @@ function render() {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
     setText("pvpRoomHeadline", roundCaption(view));
-    setText("pvpMeNav", navText(view.me?.mtmPpm));
-    setText("pvpOppNav", navText(view.opponent?.mtmPpm));
+    paintReturn("pvpMeNav", view.me?.mtmPpm);
+    paintReturn("pvpOppNav", view.opponent?.mtmPpm);
     paintChart().catch(() => {});
   }
   paintClock();

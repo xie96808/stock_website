@@ -178,7 +178,7 @@ test("a draw refunds both entries and a system abort refunds only once", () => {
   );
 });
 
-test("E03 reward cap, pair limit, and system voids", () => {
+test("E03 a full reward day and repeated pairs can still start", () => {
   const capped = startMatch("cap");
   db.prepare(`INSERT INTO pvp_reward_days (user_id, ymd, win_reward_count) VALUES (?, '2026-10-11', 9)`).run(capped.a);
   finishMatch(db, {
@@ -200,7 +200,7 @@ test("E03 reward cap, pair limit, and system voids", () => {
     createKey: key("cap-next"),
     now: NOW,
   });
-  assert.equal(again.code, "REWARD_CAP");
+  assert.equal(again.ok, true, JSON.stringify(again));
 
   const a = user("pair-a");
   const b = user("pair-b");
@@ -212,10 +212,11 @@ test("E03 reward cap, pair limit, and system voids", () => {
   assert.equal(accepted.ok, true, JSON.stringify(accepted));
   insertStarted(a, b);
   assert.equal(markReady(db, { matchId: accepted.matchId, userId: a, now: NOW + 1 }).waiting, true);
-  const blocked = markReady(db, { matchId: accepted.matchId, userId: b, now: NOW + 2 });
-  assert.equal(blocked.code, "PAIR_LIMIT");
-  assert.equal(balanceOf(db, a), 500);
-  assert.equal(balanceOf(db, b), 500);
+  const started = markReady(db, { matchId: accepted.matchId, userId: b, now: NOW + 2 });
+  assert.equal(started.ok, true, JSON.stringify(started));
+  assert.equal(started.started, true);
+  assert.equal(balanceOf(db, a), 480);
+  assert.equal(balanceOf(db, b), 480);
 
   const c = user("void-a");
   const d = user("void-b");

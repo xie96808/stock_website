@@ -28,8 +28,9 @@
 
 .pvp-head {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.75rem;
   margin-bottom: 0.75rem;
 }
 
@@ -39,6 +40,137 @@
   font-size: 1.35rem;
   line-height: 1.35;
 }
+
+#pvpRoomHeadline,
+#pvpResultHeadline {
+  flex: 1 1 12rem;
+  min-width: 0;
+  font-family: var(--kaiti);
+  font-size: clamp(1.35rem, 4.2vw, 1.9rem);
+  letter-spacing: 0.04em;
+}
+
+#pvpResultIdentity.pvp-stock-name {
+  margin: 0 0 0.65rem;
+  font-family: var(--kaiti);
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.pvp-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0.15rem 0 0.75rem;
+  padding: 0.45rem 0.8rem 0.65rem;
+  border: var(--border-ink);
+  border-radius: 18px;
+  background: var(--card);
+}
+
+.pvp-clock-kicker,
+.pvp-clock-unit {
+  color: var(--mute);
+  letter-spacing: 0.16em;
+  font-size: 0.78rem;
+}
+
+.pvp-clock-num {
+  font-family: var(--mono);
+  font-size: clamp(3.2rem, 14vw, 4.8rem);
+  font-weight: 700;
+  line-height: 0.95;
+  color: var(--ink);
+}
+
+.pvp-clock.is-urgent {
+  border-color: var(--terra);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--terra) 28%, transparent);
+}
+
+.pvp-clock.is-urgent .pvp-clock-num,
+.pvp-clock.is-urgent .pvp-clock-kicker {
+  color: var(--terra);
+}
+
+.pvp-status-row,
+.pvp-score-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.pvp-status {
+  min-width: 0;
+  min-height: 3.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.55rem;
+  border: var(--border-ink);
+  border-radius: 16px;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  font-size: clamp(0.98rem, 3.8vw, 1.12rem);
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.pvp-status[data-state="locked"],
+.pvp-status[data-state="ready"] {
+  background: var(--card);
+  color: var(--ink);
+  border-width: 2px;
+  box-shadow: 2px 2px 0 var(--line);
+}
+
+.pvp-status[data-state="pending"] {
+  color: var(--terra);
+  border-color: var(--terra);
+}
+
+.pvp-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-height: 5.2rem;
+  padding: 0.7rem 0.8rem 0.75rem;
+  border: var(--border-ink);
+  border-radius: 16px;
+  background: var(--card);
+}
+
+.pvp-score-label,
+.pvp-score-meta {
+  color: var(--mute);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+
+.pvp-score-value {
+  font-family: var(--mono);
+  font-size: clamp(2rem, 6.5vw, 3.1rem);
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.pvp-mark-legend {
+  display: flex;
+  gap: 1rem;
+  margin: -0.35rem 0 0.75rem;
+  font-weight: 700;
+}
+
+.pvp-mark-legend .is-me { color: #8a7350; }
+.pvp-mark-legend .is-opp { color: #4d6278; }
 
 .pvp-back,
 .pvp-btn {
@@ -148,7 +280,7 @@
 
 .pvp-chart {
   width: 100%;
-  height: 280px;
+  height: 440px;
   margin: 0.5rem 0 0.75rem;
   background: var(--card);
   border: var(--border-ink);
@@ -288,6 +420,6 @@
   }
 
   .pvp-chart {
-    height: 280px;
+    height: 360px;
   }
 }

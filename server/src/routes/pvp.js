@@ -4,7 +4,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "../lib/config.js";
 import { clientIp, consumeRateLimit, rateLimitFail } from "../lib/rateLimit.js";
 import { acceptChallenge, cancelChallenge, cancelReady, createChallenge, declineChallenge, markReady } from "../lib/pvp/challenges.js";
-import { challengeCountToday, listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } from "../lib/pvp/lobby.js";
+import { listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } from "../lib/pvp/lobby.js";
 import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
 import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
@@ -177,9 +177,6 @@ router.post("/pvp/challenges", requireUser, (req, res) => {
   if (extra.length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
   const perUser = consumeRateLimit(`pvp:challenge:u:${req.user.id}`, 6, 60_000);
   if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "约战过于频繁");
-  if (challengeCountToday(openDb(), req.user.id, Date.now()) >= 60) {
-    return rateLimitFail(res, 60, "今日约战次数已用完");
-  }
   if (!isAvailable(body.toUserId, Date.now())) {
     return fail(res, 409, "OFFLINE", "对方现在不可约战");
   }

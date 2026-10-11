@@ -9,6 +9,24 @@ import {
 const PVP_ME_COLOR = '#8a7350';
 const PVP_OPP_COLOR = '#4d6278';
 
+function pvpNiceStep(span) {
+    const target = Math.max(span / 5, 1e-6);
+    const pow = 10 ** Math.floor(Math.log10(target));
+    const n = target / pow;
+    const unit = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+    return unit * pow;
+}
+
+function pvpAxisBound(value, ratio, toward) {
+    const span = (value.max - value.min) || Math.abs(value.max) || 1;
+    const raw = toward > 0 ? value.max + span * ratio : value.min - span * ratio;
+    const step = pvpNiceStep(span);
+    const snapped = toward > 0 ? Math.ceil(raw / step) * step : Math.floor(raw / step) * step;
+    const digits = Math.min(6, Math.max(0, -Math.floor(Math.log10(step))));
+    const factor = 10 ** digits;
+    return Math.round(snapped * factor) / factor;
+}
+
 /** Player marks use shape, not red/green, so they stay distinct from up/down candles. */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
@@ -21,14 +39,32 @@ function pvpMarkerPoints(bars, marks) {
         const label = valuation ? '估值' : mine
             ? (sell ? '我卖' : '我买')
             : (sell ? '对手卖' : '对手买');
+        const color = valuation ? '#f5c542' : mine ? PVP_ME_COLOR : PVP_OPP_COLOR;
+        const above = valuation || sell;
         points.push({
             name: label,
-            coord: [mark.label, valuation || sell ? bar.high : bar.low],
+            coord: [mark.label, above ? bar.high : bar.low],
             value: label,
             symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
-            symbolSize: valuation ? 14 : 12,
+            symbolSize: valuation ? 28 : mine ? 32 : 34,
+            symbolOffset: valuation ? [0, -16] : mine ? (above ? [-14, -10] : [-14, 12]) : (above ? [14, -10] : [14, 12]),
             itemStyle: {
-                color: valuation ? '#f5c542' : mine ? PVP_ME_COLOR : PVP_OPP_COLOR,
+                color,
+                borderColor: '#2c2824',
+                borderWidth: 1.5,
+            },
+            label: {
+                show: true,
+                formatter: '{c}',
+                color: '#2c2824',
+                fontSize: 13,
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(255, 252, 245, 0.94)',
+                borderColor: color,
+                borderWidth: 1.5,
+                borderRadius: 4,
+                padding: [2, 5],
+                position: above ? 'top' : 'bottom',
             },
         });
     }
@@ -157,7 +193,14 @@ export function buildKlineOption(vm) {
     const candleSeries = {
         name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0, data: ohlc,
         itemStyle: { color: '#e05252', color0: '#3db86a', borderColor: '#e05252', borderColor0: '#3db86a' },
-        markPoint: isResult
+        markPoint: isPvp
+            ? {
+                data: markPoints,
+                symbol: 'circle',
+                symbolSize: 32,
+                animation: false,
+            }
+            : isResult
             ? {
                 data: [...markPoints, ...bestMarkPoints],
                 symbol: 'pin', symbolSize: 40,
@@ -375,7 +418,12 @@ export function buildKlineOption(vm) {
             }
         },
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        grid: isResult
+        grid: isPvp
+            ? [
+                { left: 52, right: 78, top: '16%', bottom: '40%' },
+                { left: 52, right: 78, top: '70%', bottom: 24 }
+            ]
+            : isResult
             ? [
                 { left: '10%', right: '2%', top: '12%', bottom: wantSlider ? '38%' : '35%' },
                 { left: '10%', right: '2%', top: wantSlider ? '70%' : '72%', bottom: wantSlider ? '14%' : '8%' }
@@ -402,7 +450,11 @@ export function buildKlineOption(vm) {
                 type: 'value', scale: true, gridIndex: 0,
                 axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
-                splitLine: { lineStyle: { color: splitLineColor } }
+                splitLine: { lineStyle: { color: splitLineColor } },
+                ...(isPvp ? {
+                    min: (value) => pvpAxisBound(value, 0.28, -1),
+                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                } : {}),
             },
             { type: 'value', scale: true, gridIndex: 1, show: false }
         ],

@@ -136,6 +136,7 @@ export const config = {
   pvpMaxActiveMatches: envInt("PVP_MAX_ACTIVE_MATCHES", 20),
   pvpEntryCost: envInt("PVP_ENTRY_COST", 20),
   pvpWinReward: envInt("PVP_WIN_REWARD", 35),
+  // Kept on the match snapshot. They no longer refuse another battle.
   pvpDailyRewardCap: envInt("PVP_DAILY_REWARD_CAP", 10),
   pvpPairLimit24h: envInt("PVP_PAIR_LIMIT_24H", 3),
   pvpDaySeconds: envInt("PVP_DAY_SECONDS", 30),

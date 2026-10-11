@@ -2,8 +2,6 @@ import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
 import {
   MIN_ACCOUNT_AGE_MS,
   MIN_CLASSIC_GAMES,
-  PAIR_WINDOW_MS,
-  SYSTEM_VOID_REASONS,
   currentEconomy,
 } from "./config.js";
 
@@ -40,30 +38,6 @@ export function classicSettledCount(db, userId) {
   return Number(row.c) || 0;
 }
 
-export function rewardCount(db, userId, ymd) {
-  const row = db
-    .prepare(`SELECT win_reward_count AS c FROM pvp_reward_days WHERE user_id = ? AND ymd = ?`)
-    .get(userId, ymd);
-  return row ? Number(row.c) : 0;
-}
-
-export function startedPairCount(db, key, now, windowMs = PAIR_WINDOW_MS) {
-  const reasons = [...SYSTEM_VOID_REASONS];
-  const placeholders = reasons.map(() => "?").join(", ");
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS c
-       FROM pvp_matches m
-       JOIN pvp_challenges c ON c.id = m.challenge_id
-       WHERE c.pair_key = ?
-         AND m.started_at IS NOT NULL
-         AND m.started_at >= ?
-         AND COALESCE(m.terminal_reason, '') NOT IN (${placeholders})`
-    )
-    .get(key, now - windowMs, ...reasons);
-  return Number(row.c) || 0;
-}
-
 export function isBlocked(db, userA, userB) {
   const row = db
     .prepare(
@@ -95,11 +69,7 @@ export function assessSelf(db, userId, now, economy = currentEconomy(now)) {
   if (balance < economy.entryCost) {
     return denial("INSUFFICIENT_FUNDS", "韭币不足，无法开始对战", 402);
   }
-  const ymd = shanghaiYmd(new Date(now));
-  if (rewardCount(db, userId, ymd) >= economy.dailyRewardCap) {
-    return denial("REWARD_CAP", "今日胜场奖励次数已用完", 403);
-  }
-  return { ok: true, balance, rewardYmd: ymd };
+  return { ok: true, balance, rewardYmd: shanghaiYmd(new Date(now)) };
 }
 
 export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(now)) {
@@ -121,13 +91,6 @@ export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(
     if (getJiuCoinBalance(userId, db) < economy.entryCost) {
       return denial("INSUFFICIENT_FUNDS", "韭币不足，无法开始对战", 402);
     }
-    if (rewardCount(db, userId, ymd) >= economy.dailyRewardCap) {
-      return denial("REWARD_CAP", "今日胜场奖励次数已用完", 403);
-    }
-  }
-  const used = startedPairCount(db, pairKey(userIdA, userIdB), now);
-  if (used >= economy.pairLimit24h) {
-    return denial("PAIR_LIMIT", "24 小时内与该对手的对战已达上限", 403);
   }
   return { ok: true, rewardYmd: ymd };
 }

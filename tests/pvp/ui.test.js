@@ -84,8 +84,13 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   const opp = points.find((point) => point.value === "对手卖");
   assert.equal(mine.symbol, "circle");
   assert.equal(mine.itemStyle.color, "#8a7350");
+  assert.ok(mine.symbolSize >= 28);
+  assert.equal(mine.label.fontWeight, "bold");
+  assert.equal(mine.label.position, "bottom");
+  assert.equal(opp.label.position, "top");
   assert.equal(opp.symbol, "triangle");
   assert.equal(opp.itemStyle.color, "#4d6278");
+  assert.ok(opp.symbolSize >= 28);
   assert.notEqual(mine.itemStyle.color, "#e05252");
   assert.notEqual(mine.itemStyle.color, "#3db86a");
   assert.equal(opt.series[0].itemStyle.color, "#e05252");
