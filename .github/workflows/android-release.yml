@@ -37,6 +37,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Annotated tag messages are the update notes. Default checkout omits tag objects.
+          fetch-tags: true
 
       - name: Read and check version
         id: ver
@@ -55,9 +57,9 @@ jobs:
           NOTES="$IN_NOTES"
           if [[ "$REF_TYPE" == "tag" ]]; then
             [[ "$REF_NAME" == "$TAG" ]] || { echo "tag $REF_NAME != gradle versionName ($TAG)" >&2; exit 1; }
-            if [[ -z "$NOTES" ]]; then
-              # Annotated tag message (if any) becomes the notes.
-              NOTES="$(git tag -l --format='%(contents)' "$REF_NAME" | sed '/-----BEGIN PGP/,$d')"
+            if [[ -z "$NOTES" ]] && git cat-file -t "$REF_NAME" 2>/dev/null | grep -qx tag; then
+              # Annotated tag message becomes the notes. A lightweight tag must not fall through to the commit subject.
+              NOTES="$(git cat-file tag "$REF_NAME" | sed '1,/^$/d' | sed '/-----BEGIN PGP/,$d')"
             fi
           fi
           [[ -n "${NOTES//[[:space:]]/}" ]] || NOTES="修复问题并优化体验。"
