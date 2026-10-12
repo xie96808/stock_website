@@ -23,7 +23,8 @@ test("signed bare deltas are colored too", () => {
   assert.doesNotMatch(html, /pvp-\w+">0</);
 });
 
-test("completed_return no longer says 收益决胜", () => {
-  assert.equal(reasonLabel("completed_return"), "正常结束");
+test("completed_return no longer says 收益决胜 or 正常结束", () => {
+  assert.equal(reasonLabel("completed_return"), "");
   assert.notEqual(reasonLabel("completed_return"), "收益决胜");
+  assert.notEqual(reasonLabel("completed_return"), "正常结束");
 });

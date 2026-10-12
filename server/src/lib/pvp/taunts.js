@@ -39,7 +39,7 @@ function deny(code, message, status) {
  */
 export function sendTaunt(db, { matchId, fromUserId, text, now = Date.now() }) {
   if (typeof text !== "string" || !LINE_SET.has(text)) {
-    return deny("BAD_PAYLOAD", "不认识这句嘲讽", 400);
+    return deny("BAD_PAYLOAD", "不认识这句消息", 400);
   }
   const players = db.prepare(
     `SELECT user_id FROM pvp_match_players WHERE match_id = ?`
@@ -53,8 +53,8 @@ export function sendTaunt(db, { matchId, fromUserId, text, now = Date.now() }) {
   prune(now);
   const sent = events.filter((event) => event.matchId === matchId && event.fromUserId === fromUserId);
   const last = sent[sent.length - 1];
-  if (last && now - last.at < MIN_GAP_MS) return deny("RATE_LIMITED", "嘲讽太快了", 429);
-  if (sent.length >= MATCH_CAP) return deny("RATE_LIMITED", "这局嘲讽已经够多了", 429);
+  if (last && now - last.at < MIN_GAP_MS) return deny("RATE_LIMITED", "消息发太快了", 429);
+  if (sent.length >= MATCH_CAP) return deny("RATE_LIMITED", "这局消息已经够多了", 429);
   const user = db.prepare(`SELECT nickname, status FROM users WHERE id = ?`).get(fromUserId);
   const event = {
     id: seq,

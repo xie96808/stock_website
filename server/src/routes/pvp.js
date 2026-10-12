@@ -314,7 +314,7 @@ router.post("/pvp/matches/:id/taunts", requireUser, (req, res) => {
   const extra = Object.keys(body).filter((key) => key !== "text");
   if (extra.length || typeof body.text !== "string") return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
   const perUser = consumeRateLimit(`pvp:taunt:u:${req.user.id}`, 12, 60_000);
-  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "嘲讽太快了");
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "消息发太快了");
   const result = sendTaunt(openDb(), {
     matchId: req.params.id,
     fromUserId: req.user.id,

@@ -171,11 +171,16 @@ export function buildKlineOption(vm) {
         syncHover = null,
         resetDataZoom = false,
         showDataZoomSlider,
+        showLegend,
+        pvpBottom = null, // 'volume' | 'macd' — battle two-pane indicator toggle
     } = vm;
 
     const isResult = mode === 'result';
     const isPvp = mode === 'pvp';
     const paperChart = isResult || isPvp;
+    const bottomMode = isPvp && (pvpBottom === 'macd' || pvpBottom === 'volume') ? pvpBottom : null;
+    const pvpTwoPane = !!bottomMode;
+    const legendOn = showLegend != null ? !!showLegend : true;
     const dayLabels = isPvp
         ? bars.map((bar, index) => (bar && bar.label) || String(index + 1))
         : buildDayIndexLabels(bars.length);
@@ -344,9 +349,10 @@ export function buildKlineOption(vm) {
             : { color: params => volumeColors[params.dataIndex] }
     };
 
+    const macdAxis = pvpTwoPane ? 1 : 2;
     const macdSeries = isPvp && macd ? [
         {
-            name: 'MACD', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: macd.hist,
+            name: 'MACD', type: 'bar', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.hist,
             itemStyle: {
                 color: (params) => {
                     const v = Number(params.data);
@@ -356,24 +362,35 @@ export function buildKlineOption(vm) {
             },
         },
         {
-            name: 'DIF', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dif,
+            name: 'DIF', type: 'line', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.dif,
             smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#42a5f5' },
         },
         {
-            name: 'DEA', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dea,
+            name: 'DEA', type: 'line', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.dea,
             smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#f5c542' },
         },
     ] : [];
 
     // Preserve prior series order: game = K + MAs + vol; result = K + vol + MAs; pvp adds MACD.
-    const series = isResult
-        ? [candleSeries, volumeSeries, ...maSeries]
-        : isPvp
-        ? [candleSeries, ...maSeries, volumeSeries, ...macdSeries]
-        : [candleSeries, ...maSeries, volumeSeries];
+    // Battle with pvpBottom: two panes — candles + volume XOR MACD.
+    let series;
+    if (isResult) {
+        series = [candleSeries, volumeSeries, ...maSeries];
+    } else if (isPvp && pvpTwoPane) {
+        series = bottomMode === 'macd'
+            ? [candleSeries, ...maSeries, ...macdSeries]
+            : [candleSeries, ...maSeries, volumeSeries];
+    } else if (isPvp) {
+        series = [candleSeries, ...maSeries, volumeSeries, ...macdSeries];
+    } else {
+        series = [candleSeries, ...maSeries, volumeSeries];
+    }
 
-    const legend = isResult
-        ? {
+    let legend;
+    if (!legendOn || (isPvp && showLegend === false)) {
+        legend = { show: false };
+    } else if (isResult) {
+        legend = {
             data: ['5日线', '10日线', '20日线', '30日线'],
             top: 0,
             left: 10,
@@ -381,9 +398,9 @@ export function buildKlineOption(vm) {
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
-        }
-        : isPvp
-        ? {
+        };
+    } else if (isPvp) {
+        legend = {
             data: [...MA_DAY_LABELS, 'DIF', 'DEA'],
             selected: {
                 '5日线': true,
@@ -401,8 +418,9 @@ export function buildKlineOption(vm) {
             itemWidth: 14,
             itemHeight: 2,
             itemGap: 8
-        }
-        : {
+        };
+    } else {
+        legend = {
             data: MA_DAY_LABELS.slice(),
             selected: maSelected || {
                 '5日线': true,
@@ -418,6 +436,7 @@ export function buildKlineOption(vm) {
             itemHeight: 2,
             itemGap: 12
         };
+    }
 
     const wantSlider = showDataZoomSlider != null ? !!showDataZoomSlider : isResult;
     const dataZoomWindow = resetDataZoom ? { start: 0, end: 100 } : {};
@@ -427,7 +446,7 @@ export function buildKlineOption(vm) {
         : null;
     // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
     // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
-    const zoomAxes = isPvp ? [0, 1, 2] : [0, 1];
+    const zoomAxes = isPvp ? (pvpTwoPane ? [0, 1] : [0, 1, 2]) : [0, 1];
     const dataZoom = [
         {
             type: 'inside',
@@ -554,7 +573,12 @@ export function buildKlineOption(vm) {
             }
         },
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        grid: isPvp
+        grid: isPvp && pvpTwoPane
+            ? [
+                { left: 40, right: 8, top: 12, bottom: '34%' },
+                { left: 40, right: 8, top: '72%', bottom: 16 }
+            ]
+            : isPvp
             ? [
                 { left: 40, right: 8, top: 26, bottom: '42%' },
                 { left: 40, right: 8, top: '62%', bottom: '24%' },
@@ -569,7 +593,21 @@ export function buildKlineOption(vm) {
                 { left: '8%', right: '2%', top: '8%', bottom: '34%' },
                 { left: '8%', right: '2%', top: '73%', bottom: '6%' }
             ],
-        xAxis: isPvp
+        xAxis: isPvp && pvpTwoPane
+            ? [
+                {
+                    type: 'category', data: dayLabels, gridIndex: 0,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
+                },
+                {
+                    type: 'category', data: dayLabels, gridIndex: 1,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: xAxisBottomLabel,
+                    splitLine: { show: false }
+                }
+            ]
+            : isPvp
             ? [
                 {
                     type: 'category', data: dayLabels, gridIndex: 0,
@@ -601,7 +639,23 @@ export function buildKlineOption(vm) {
                 splitLine: { show: false }
             }
         ],
-        yAxis: isPvp
+        yAxis: isPvp && pvpTwoPane
+            ? [
+                {
+                    type: 'value', scale: true, gridIndex: 0,
+                    name: '相对价 (d1=100)',
+                    nameLocation: 'middle',
+                    nameGap: 36,
+                    nameTextStyle: { color: axisLabelColor, fontSize: 10 },
+                    axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: splitLineColor } },
+                    min: (value) => pvpAxisBound(value, 0.28, -1),
+                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                },
+                { type: 'value', scale: true, gridIndex: 1, show: false, splitLine: { show: false } },
+            ]
+            : isPvp
             ? [
                 {
                     type: 'value', scale: true, gridIndex: 0,

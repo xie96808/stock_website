@@ -167,17 +167,23 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpShareBtn"/);
   assert.match(html, /id="pvpLobbyLoading"/);
   assert.match(html, /id="pvpTradePrimary"/);
-  assert.match(html, /id="pvpTauntOpen"/);
-  assert.match(html, /id="pvpTauntPicker"/);
+  assert.match(html, /id="pvpMsgOpen"/);
+  assert.match(html, /id="pvpMsgPicker"/);
+  assert.match(html, /assets\/pvp\/btn-buy\.png/);
+  assert.match(html, /assets\/pvp\/btn-message\.png/);
+  assert.match(html, /assets\/pvp\/btn-hold\.png/);
   assert.match(html, /这你都买？进厂打螺丝吧/);
   assert.match(html, /技术回调，慌个锤子/);
   assert.match(html, /id="pvpHold"/);
+  assert.match(html, /aria-label="保持"/);
   assert.match(html, /id="pvpBuy"/);
   assert.match(html, /id="pvpSell"/);
   assert.match(html, /id="pvpTradeSegment"/);
   assert.match(html, /assets\/pvp\/settle-rank-badge\.png/);
   assert.match(html, /assets\/pvp\/settle-buy-hold\.png/);
   assert.doesNotMatch(html, /收益决胜/);
+  assert.doesNotMatch(html, /嘲讽/);
+  assert.doesNotMatch(html, /正常结束/);
   assert.match(html, /id="pvpBattleTop"/);
   assert.doesNotMatch(html, /id="pvpTrade"/);
   assert.match(html, /id="pvpReadyClockNum">15</);
@@ -270,7 +276,8 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(css, /pvp-recent-mark/);
   assert.match(room, /pvpTradePrimary/);
   assert.match(room, /postTaunt|match\.taunt/);
-  assert.match(room, /pvp-trade-bar|paintTopClocks|pvpTauntOpen/);
+  assert.match(room, /pvp-trade-bar|paintTopClocks|pvpMsgOpen|pvpBottom|bottomMode/);
+  assert.match(room, /btn-sell\.png|btn-buy\.png/);
   assert.match(resultJs, /marketMissing|paintResultBody/);
   assert.match(resultJs, /pvpResultRatingRange/);
   assert.match(resultJs, /对手收益/);
@@ -278,7 +285,10 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(resultJs, /nickname \|\| "对手"\}收益/);
   assert.match(readFileSync(new URL("js/pvp/profile-battle.js", root), "utf8"), /更换头像/);
   assert.match(readFileSync(new URL("js/auth.js", root), "utf8"), /for="settingsAvatarFile"/);
-  assert.match(css, /pvp-settle-art|pvp-taunt-bubble|pvp-trade-primary/);
+  assert.match(css, /pvp-settle-art|pvp-taunt-bubble|pvp-sketch-ctl/);
+  assert.match(css, /white-space:\s*nowrap/);
+  assert.match(css, /pvp-score\[data-outcome="win"\][\s\S]*box-shadow:\s*none/);
+  assert.doesNotMatch(css, /嘲讽/);
 });
 
 test("pvp y-axis names relative price so it is not read as a real quote", () => {
@@ -318,3 +328,23 @@ test("pvp chart includes MA legend and MACD panel", () => {
   assert.match(tip, /DIF/);
 });
 
+
+test("battle chart can hide MA legend and toggle bottom indicator pane", () => {
+  const bars = [
+    { label: "h1", open: 10, close: 11, low: 9, high: 12, volume: 1.5 },
+    { label: "d1", open: 11, close: 10, low: 9.5, high: 12.5, volume: 2 },
+  ];
+  const vol = buildKlineOption({
+    mode: "pvp", bars, historyLength: 1, showLegend: false, pvpBottom: "volume", resetDataZoom: true,
+  });
+  assert.equal(vol.legend.show, false);
+  assert.equal(vol.grid.length, 2);
+  assert.ok(vol.series.some((s) => s.name === "成交量"));
+  assert.ok(!vol.series.some((s) => s.name === "MACD"));
+  const macd = buildKlineOption({
+    mode: "pvp", bars, historyLength: 1, showLegend: false, pvpBottom: "macd", resetDataZoom: true,
+  });
+  assert.equal(macd.grid.length, 2);
+  assert.ok(macd.series.some((s) => s.name === "MACD"));
+  assert.ok(!macd.series.some((s) => s.name === "成交量"));
+});

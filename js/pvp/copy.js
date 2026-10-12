@@ -85,7 +85,7 @@ export function opponentLockText(locked) {
 }
 
 const REASON_LABEL = {
-  completed_return: "正常结束",
+  completed_return: "",
   completed_drawdown: "回撤决胜",
   completed_draw: "平局",
   forfeit: "认输",
@@ -103,7 +103,8 @@ const REASON_LABEL = {
 };
 
 export function reasonLabel(reason) {
-  return REASON_LABEL[reason] || "已结束";
+  if (Object.prototype.hasOwnProperty.call(REASON_LABEL, reason)) return REASON_LABEL[reason];
+  return "已结束";
 }
 
 export function resultHeadline(view) {
