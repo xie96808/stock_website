@@ -1323,20 +1323,21 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   min-width: 0;
   width: 100%;
   height: 32px;
-  padding: 0 2px 0 4px;
+  padding: 0 0 0 3px;
 }
-#pvpBattleTop .pvp-seat-opp.ctl-seat-panel .pvp-seat-meta { padding: 0 4px 0 2px; align-items: flex-end; }
+#pvpBattleTop .pvp-seat-opp.ctl-seat-panel .pvp-seat-meta { padding: 0 3px 0 0; align-items: flex-end; }
 #pvpRoomScreen #pvpBattleTop .ctl-seat-panel .pvp-seat-role { font-size: 0.6rem; line-height: 12px; color: #6b6258; letter-spacing: 0.1em; }
 #pvpRoomScreen #pvpBattleTop .ctl-seat-panel strong {
   max-width: 100%;
   font-family: var(--kaiti);
-  font-size: 0.82rem;
+  letter-spacing: 0;
+  font-size: 0.76rem;
   line-height: 17px;
   color: #2c2824;
 }
 /* Wider name zone: text may run into the panel's plain right/left edge band. */
-#pvpBattleTop .pvp-seat-me.ctl-seat-panel .pvp-seat-meta { margin-right: -16px; width: calc(100% + 16px); }
-#pvpBattleTop .pvp-seat-opp.ctl-seat-panel .pvp-seat-meta { margin-left: -16px; width: calc(100% + 16px); }
+#pvpBattleTop .pvp-seat-me.ctl-seat-panel .pvp-seat-meta { margin-right: -22px; width: calc(100% + 22px); }
+#pvpBattleTop .pvp-seat-opp.ctl-seat-panel .pvp-seat-meta { margin-left: -22px; width: calc(100% + 22px); }
 #pvpBattleTop:has(.ctl-seat-panel) { column-gap: 4px; }
 
 /* ----- ctl-timer-ring 72×72 · track + conic-masked fill / urgent ----- */
