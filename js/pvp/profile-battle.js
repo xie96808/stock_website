@@ -58,6 +58,13 @@ export function fillDossier(node, profile) {
   img.width = 72;
   img.height = 72;
   img.src = displayAvatarUrl(profile);
+  const avatarBtn = document.createElement("button");
+  avatarBtn.type = "button";
+  avatarBtn.className = "pvp-dossier-avatar-btn";
+  avatarBtn.title = "更换头像";
+  avatarBtn.setAttribute("aria-label", "更换头像");
+  avatarBtn.append(img);
+  avatarBtn.addEventListener("click", () => openAuthModal("settings"));
   const body = document.createElement("div");
   body.className = "pvp-dossier-body";
   const name = document.createElement("p");
@@ -102,7 +109,7 @@ export function fillDossier(node, profile) {
       record.append(winRate);
     }
   }
-  node.append(img, body, record);
+  node.append(avatarBtn, body, record);
 }
 
 export async function syncPvpProfile() {

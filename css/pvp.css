@@ -791,6 +791,31 @@
   box-sizing: border-box;
 }
 
+.pvp-settle-side-flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.25rem 0.2rem;
+}
+
+.pvp-settle-side-flat img {
+  border: 0;
+  box-shadow: none;
+}
+
+.pvp-score-flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.35rem 0.15rem;
+  min-height: 0;
+}
+
+.pvp-score-flat .pvp-seat-avatar {
+  border: 0;
+}
+
 .pvp-settle-side img {
   width: 44px;
   height: 44px;
@@ -1292,57 +1317,167 @@
   letter-spacing: 0.1em;
 }
 
-/* One cream segmented buy | hold | sell control. */
-.pvp-trade-segment {
+/* Single buy/sell primary + middle taunt tap zone. */
+.pvp-trade-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0;
+  grid-template-columns: minmax(7.5rem, 0.42fr) minmax(0, 1fr);
+  gap: 0.45rem;
   margin: 0.35rem 0 0.35rem;
-  border: var(--border-ink);
-  border-radius: 18px;
-  background: var(--card);
-  box-shadow: 2px 3px 0 var(--line);
-  overflow: hidden;
   position: sticky;
   bottom: 0;
   z-index: 2;
+  background: var(--paper);
+  padding-bottom: 0.2rem;
 }
 
-.pvp-trade-segment .pvp-seg {
+.pvp-trade-primary {
   min-height: 48px;
   margin: 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  font-size: 1.02rem;
-  letter-spacing: 0.14em;
+  border: var(--border-ink);
+  border-radius: 16px;
+  box-shadow: 2px 3px 0 var(--line);
+  font-size: 1.08rem;
+  letter-spacing: 0.18em;
   font-weight: 700;
-  color: var(--ink);
   cursor: pointer;
 }
 
-.pvp-trade-segment .pvp-seg + .pvp-seg {
-  border-left: 1px solid var(--line);
+.pvp-trade-primary.pvp-btn-buy:not(:disabled) {
+  background: var(--gain-color);
+  color: #fffaf3;
 }
 
-.pvp-trade-segment .pvp-btn-buy:not(:disabled) {
-  color: var(--gain-color);
+.pvp-trade-primary.pvp-btn-sell:not(:disabled) {
+  background: var(--loss-color);
+  color: #f7fff4;
 }
 
-.pvp-trade-segment .pvp-btn-sell:not(:disabled) {
-  color: var(--loss-color);
-}
-
-.pvp-trade-segment .pvp-seg:disabled {
+.pvp-trade-primary:disabled {
   opacity: 0.38;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pvp-taunt-open {
+  min-height: 48px;
+  margin: 0;
+  border: 1.5px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pvp-taunt-open:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.pvp-trade-segment .pvp-seg:focus-visible {
+.pvp-taunt-open:focus-visible,
+.pvp-trade-primary:focus-visible {
   outline: 2px solid var(--ink);
-  outline-offset: -2px;
-  z-index: 1;
+  outline-offset: 2px;
+}
+
+.pvp-taunt-picker {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  padding: 0.55rem;
+  border: var(--border-ink);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 2px 3px 0 var(--line);
+}
+
+.pvp-taunt-picker[hidden] {
+  display: none !important;
+}
+
+.pvp-taunt-line {
+  min-height: 40px;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pvp-taunt-line:active {
+  background: var(--paper-2);
+}
+
+.pvp-taunt-bubble {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: min(11rem, 46vw);
+  padding: 0.35rem 0.55rem;
+  border: var(--border-ink);
+  border-radius: 12px;
+  background: #fffdf6;
+  color: var(--ink);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  box-shadow: 2px 3px 0 var(--line);
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.pvp-seat-opp .pvp-taunt-bubble {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.pvp-explain-with-art {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem 0.75rem;
+  align-items: center;
+}
+
+.pvp-explain-main {
+  min-width: 0;
+}
+
+.pvp-settle-art {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #f5efe0;
+  flex: none;
+}
+
+@media (max-width: 420px) {
+  .pvp-settle-art {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.pvp-dossier-avatar-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50% 46% 50% 42%;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.pvp-dossier-avatar-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 #pvpPlayPanel .pvp-score-row {

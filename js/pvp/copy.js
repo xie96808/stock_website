@@ -28,16 +28,27 @@ export function escapeHtml(value) {
  * Amplitude, range position, and loss magnitude are left as written.
  */
 export function colorReturnHtml(html) {
-  return String(html ?? "").replace(
-    /(振幅|位置|亏损)(\s*)([+-]?\d+(?:\.\d+)?)%|([+-]?\d+(?:\.\d+)?)%/g,
-    (full, skip, _gap, _skipped, num) => {
-      if (skip) return full;
-      const value = Number(num);
-      if (!Number.isFinite(value) || value === 0) return full;
-      const cls = value > 0 ? "pvp-up" : "pvp-down";
-      return `<span class="${cls}">${num}%</span>`;
-    },
-  );
+  // A-share: positive red, negative green. Skip amplitude/position/loss magnitude labels.
+  return String(html ?? "")
+    .replace(
+      /(振幅|位置|亏损)(\s*)([+-]?\d+(?:\.\d+)?)%|([+-]?\d+(?:\.\d+)?)%/g,
+      (full, skip, _gap, _skipped, num) => {
+        if (skip) return full;
+        const value = Number(num);
+        if (!Number.isFinite(value) || value === 0) return full;
+        const cls = value > 0 ? "pvp-up" : "pvp-down";
+        return `<span class="${cls}">${num}%</span>`;
+      },
+    )
+    .replace(
+      /(^|[^\w.])([+-]\d+(?:\.\d+)?)(?!%|[\d.])/g,
+      (full, lead, num) => {
+        const value = Number(num);
+        if (!Number.isFinite(value) || value === 0) return full;
+        const cls = value > 0 ? "pvp-up" : "pvp-down";
+        return `${lead}<span class="${cls}">${num}</span>`;
+      },
+    );
 }
 
 /** Calendar span of a finished match. Empty until the server reveals it. */
@@ -74,7 +85,7 @@ export function opponentLockText(locked) {
 }
 
 const REASON_LABEL = {
-  completed_return: "收益决胜",
+  completed_return: "正常结束",
   completed_drawdown: "回撤决胜",
   completed_draw: "平局",
   forfeit: "认输",

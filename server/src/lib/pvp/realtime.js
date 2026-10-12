@@ -196,6 +196,16 @@ export function noteLobbyChanged() {
   }));
 }
 
+/** Immediate taunt push (no coalesce) so both seats see the bubble quickly. */
+export function noteMatchTaunt(matchId, event) {
+  if (!matchId || !event) return;
+  const players = openDb().prepare(`SELECT user_id FROM pvp_match_players WHERE match_id = ?`).all(matchId);
+  deliver({
+    userIds: players.map((player) => player.user_id),
+    payload: { t: "match.taunt", matchId, event, serverNow: Date.now() },
+  });
+}
+
 function allowedMessage(msg) {
   if (!msg || typeof msg !== "object" || Array.isArray(msg)) return false;
   const keys = Object.keys(msg);

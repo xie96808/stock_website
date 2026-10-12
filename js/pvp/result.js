@@ -127,7 +127,7 @@ function paintReplay(view) {
     const last = side.curve?.[side.curve.length - 1];
     const item = document.createElement("li");
     const valued = side.valued ? " · 已估值" : "";
-    item.innerHTML = `${escapeHtml(name)} ${colorReturnHtml(formatPpm(last?.returnPpm))} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${escapeHtml(formatPpm(side.curveMddPpm))}${escapeHtml(valued)}`;
+    item.innerHTML = `${escapeHtml(name)} ${colorReturnHtml(formatPpm(last?.returnPpm))} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${colorReturnHtml(formatPpm(side.curveMddPpm))}${escapeHtml(valued)}`;
     curve?.appendChild(item);
   }
   for (const row of replay.divergences || []) {
@@ -478,10 +478,10 @@ function paintResultBody(view, { celebrate = false } = {}) {
   text("pvpResultHeadline", resultHeadline(view));
   text("pvpResultReason", view?.terminal?.reason ? reasonLabel(view.terminal.reason) : "");
   paintReturn("pvpResultMe", view?.me?.returnPpm);
-  html("pvpResultMeMeta", `回撤 ${escapeHtml(formatPpm(view?.me?.mddPpm))} · ${coinPhrase(view?.me?.coinDelta)}`);
-  text("pvpResultOppLabel", `${view?.opponent?.nickname || "对手"}收益`);
+  html("pvpResultMeMeta", coinPhrase(view?.me?.coinDelta));
+  text("pvpResultOppLabel", "对手收益");
   paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
-  text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
+  text("pvpResultOppMeta", "");
   paintSeats(view);
   try { paintRating(view); } catch (err) {
     console.warn("pvp rating paint failed", err);

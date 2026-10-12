@@ -28,7 +28,10 @@ function pvpAxisBound(value, ratio, toward) {
     return Math.round(snapped * factor) / factor;
 }
 
-/** Player marks use shape, not red/green, so they stay distinct from up/down candles. */
+/**
+ * PvP marks: red「买」/ green「卖」text pills (A-share), not diamond/triangle.
+ * Valuation on d30 is day-30 MTM of leftover shares → label「期末估值」.
+ */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
     for (const mark of Array.isArray(marks) ? marks : []) {
@@ -37,37 +40,48 @@ function pvpMarkerPoints(bars, marks) {
         const mine = mark.side === 'me';
         const valuation = mark.kind === 'valuation';
         const sell = mark.kind === 'sell';
-        const label = valuation ? '估值' : mine
-            ? (sell ? '我卖' : '我买')
-            : (sell ? '对手卖' : '对手买');
-        const color = valuation ? '#f5c542' : mine ? PVP_ME_COLOR : PVP_OPP_COLOR;
+        const buy = mark.kind === 'buy';
+        let label;
+        let color;
+        let bg;
+        if (valuation) {
+            label = '期末估值';
+            color = '#8a6a20';
+            bg = 'rgba(245, 197, 66, 0.92)';
+        } else if (buy) {
+            label = mine ? '买' : '对手买';
+            color = '#fffaf3';
+            bg = mine ? '#e05252' : 'rgba(224, 82, 82, 0.78)';
+        } else {
+            label = mine ? '卖' : '对手卖';
+            color = '#f7fff4';
+            bg = mine ? '#3db86a' : 'rgba(61, 184, 106, 0.78)';
+        }
         const above = valuation || sell;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
-            symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
-            symbolSize: valuation ? 12 : 14,
+            symbol: 'roundRect',
+            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [44, 18],
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
-            symbolOffset: valuation ? [0, -20] : mine ? (above ? [0, -28] : [0, 30]) : (above ? [0, -46] : [0, 48]),
+            symbolOffset: valuation ? [0, -22] : mine ? (above ? [0, -26] : [0, 28]) : (above ? [0, -44] : [0, 46]),
             itemStyle: {
-                color,
-                borderColor: '#2c2824',
-                borderWidth: 1.5,
+                color: bg,
+                borderColor: valuation ? '#c9a227' : (buy ? '#e05252' : '#3db86a'),
+                borderWidth: 1,
             },
             label: {
-                show: !!valuation,
+                show: true,
                 formatter: '{c}',
-                color: '#2c2824',
+                color,
                 fontSize: 11,
                 fontWeight: 'bold',
-                backgroundColor: 'rgba(255, 252, 245, 0.94)',
-                borderColor: color,
-                borderWidth: 1,
-                borderRadius: 4,
-                padding: [1, 3],
-                distance: 2,
-                position: above ? 'top' : 'bottom',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                padding: 0,
+                distance: 0,
+                position: 'inside',
             },
         });
     }
@@ -97,16 +111,27 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
             points.push({
                 name: buy ? "信号买" : "信号卖",
                 coord: [bar.label, buy ? bar.low : bar.high],
-                value: buy ? "信号买" : "信号卖",
-                symbol: "diamond",
-                symbolSize: 11,
-                symbolOffset: [0, buy ? 16 : -16],
+                value: buy ? "↑买" : "↓卖",
+                symbol: "roundRect",
+                symbolSize: [34, 16],
+                symbolOffset: [0, buy ? 18 : -18],
                 itemStyle: {
-                    color: buy ? "#f5c542" : "#a78bfa",
-                    borderColor: "#2c2824",
+                    color: buy ? "rgba(245, 197, 66, 0.92)" : "rgba(167, 139, 250, 0.92)",
+                    borderColor: buy ? "#c9a227" : "#7c6bc4",
                     borderWidth: 1,
                 },
-                label: { show: false },
+                label: {
+                    show: true,
+                    formatter: "{c}",
+                    color: "#2c2824",
+                    fontSize: 10,
+                    fontWeight: "bold",
+                    position: "inside",
+                    distance: 0,
+                    padding: 0,
+                    backgroundColor: "transparent",
+                    borderWidth: 0,
+                },
             });
         }
     };
@@ -178,9 +203,9 @@ export function buildKlineOption(vm) {
 
     if (valuation) {
         markPoints.push({
-            name: '估值',
+            name: '期末估值',
             coord: [String(historyLength + valuation.day), valuation.price],
-            value: '估值',
+            value: '期末估值',
             symbol: 'diamond',
             symbolSize: 14,
             itemStyle: { color: '#f5c542' },

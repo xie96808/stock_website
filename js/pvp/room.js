@@ -149,6 +149,9 @@ export function leavePvpRoom({ deferChart = false } = {}) {
   clearActionKeys();
   stopLoops();
   closeLeave();
+  closeTauntPicker();
+  showTauntBubble("me", "");
+  showTauntBubble("opp", "");
   if (deferChart) window.setTimeout(() => destroyChart(), 0);
   else destroyChart();
 }
@@ -284,16 +287,30 @@ function paintActions() {
     || pendingNetwork
     || isSubmitting()
     || view.me?.lockedToday;
-  const buy = document.getElementById("pvpBuy");
-  const sell = document.getElementById("pvpSell");
-  const hold = document.getElementById("pvpHold");
-  // One segmented control: 买入 | 观望/持有 | 卖出.
-  if (hold) {
-    hold.disabled = closed || !view?.me?.canHold;
-    hold.textContent = view?.me?.holding ? "持有" : "观望";
+  // Single primary: flat → 买入 (red); holding → 卖出 (green).
+  // Explicit 观望 is hidden; server timeout still locks hold.
+  const primary = document.getElementById("pvpTradePrimary");
+  const holding = !!view?.me?.holding;
+  const wantSell = holding && !!view?.me?.canSell;
+  const wantBuy = !holding && !!view?.me?.canBuy;
+  if (primary) {
+    primary.hidden = !playing;
+    if (wantSell) {
+      primary.dataset.action = "sell";
+      primary.textContent = "卖出";
+      primary.classList.remove("pvp-btn-buy");
+      primary.classList.add("pvp-btn-sell");
+      primary.disabled = closed || !view?.me?.canSell;
+    } else {
+      primary.dataset.action = "buy";
+      primary.textContent = "买入";
+      primary.classList.remove("pvp-btn-sell");
+      primary.classList.add("pvp-btn-buy");
+      primary.disabled = closed || !wantBuy;
+    }
   }
-  if (buy) buy.disabled = closed || !view?.me?.canBuy;
-  if (sell) sell.disabled = closed || !view?.me?.canSell;
+  const tauntOpen = document.getElementById("pvpTauntOpen");
+  if (tauntOpen) tauntOpen.disabled = !playing;
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
   const locked = postedLock || pendingNetwork || submitting || !!view?.me?.lockedToday;
@@ -496,9 +513,63 @@ async function postCancelReady() {
 }
 
 function onSocket(msg) {
-  if (!matchId || !msg || msg.t !== "match.changed" || msg.matchId !== matchId) return;
+  if (!matchId || !msg || msg.matchId !== matchId) return;
+  if (msg.t === "match.taunt") {
+    onTauntEvent(msg);
+    return;
+  }
+  if (msg.t !== "match.changed") return;
   if (!noteRevision(matchId, msg.revision)) return;
   refresh().catch(() => {});
+}
+
+
+const TAUNT_MS = 3200;
+let tauntHideTimers = { me: 0, opp: 0 };
+
+function closeTauntPicker() {
+  const picker = document.getElementById("pvpTauntPicker");
+  const open = document.getElementById("pvpTauntOpen");
+  if (picker) picker.hidden = true;
+  if (open) open.setAttribute("aria-expanded", "false");
+}
+
+function showTauntBubble(side, text) {
+  const id = side === "me" ? "pvpTauntBubbleMe" : "pvpTauntBubbleOpp";
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = text || "";
+  node.hidden = !text;
+  window.clearTimeout(tauntHideTimers[side]);
+  if (text) {
+    tauntHideTimers[side] = window.setTimeout(() => {
+      node.hidden = true;
+      node.textContent = "";
+    }, TAUNT_MS);
+  }
+}
+
+function onTauntEvent(msg) {
+  if (!matchId || !msg || msg.t !== "match.taunt" || msg.matchId !== matchId) return;
+  const event = msg.event;
+  if (!event?.text) return;
+  const auth = getAuthState().user;
+  const mine = auth && Number(event.fromUserId) === Number(auth.id);
+  showTauntBubble(mine ? "me" : "opp", event.text);
+}
+
+async function postTaunt(text) {
+  if (!matchId || !text || view?.status !== "playing") return;
+  closeTauntPicker();
+  showTauntBubble("me", text);
+  try {
+    await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/taunts`, {
+      method: "POST",
+      body: { text },
+    });
+  } catch (err) {
+    setText("pvpActionError", err.message || "嘲讽没能发送");
+  }
 }
 
 function wireRoom() {
@@ -522,6 +593,23 @@ function wireRoom() {
   document.getElementById("pvpHold")?.addEventListener("click", () => { postAction("hold").catch(() => {}); });
   document.getElementById("pvpBuy")?.addEventListener("click", () => { postAction("buy").catch(() => {}); });
   document.getElementById("pvpSell")?.addEventListener("click", () => { postAction("sell").catch(() => {}); });
+  document.getElementById("pvpTradePrimary")?.addEventListener("click", () => {
+    const action = document.getElementById("pvpTradePrimary")?.dataset?.action;
+    if (action === "buy" || action === "sell") postAction(action).catch(() => {});
+  });
+  document.getElementById("pvpTauntOpen")?.addEventListener("click", () => {
+    const picker = document.getElementById("pvpTauntPicker");
+    const open = document.getElementById("pvpTauntOpen");
+    if (!picker) return;
+    const next = picker.hidden;
+    picker.hidden = !next;
+    open?.setAttribute("aria-expanded", next ? "true" : "false");
+  });
+  document.getElementById("pvpTauntPicker")?.addEventListener("click", (event) => {
+    const btn = event.target?.closest?.(".pvp-taunt-line");
+    if (!btn) return;
+    postTaunt(btn.textContent || "").catch(() => {});
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && matchId) refresh().catch(() => {});
   });
