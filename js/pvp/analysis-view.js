@@ -3,6 +3,7 @@ import {
   computeBSReport,
   computeKlineAnalysisModel,
 } from "../analysis-pure.js";
+import { colorReturnHtml } from "./copy.js";
 
 function mineTrades(view, kline, historyLength) {
   const trades = [];
@@ -89,11 +90,10 @@ export function buildPvpKlineAnalysis(view) {
   const model = computeKlineAnalysisModel({ kline, historyLength, gameDays });
   const bestPoints = computeBestPoints({ kline, historyLength, gameDays });
   const tags = (model.tags || []).map((tag) => `<span class="trend-tag ${tag.cls}">${tag.text}</span>`).join("");
-  const html = `<p class="pvp-analysis-note">下面是这段行情的技术复盘，用来对照操作。不决定胜负。</p>
-    <div class="analysis-title">波段分析</div>
+  const html = colorReturnHtml(`<div class="analysis-title">波段分析</div>
     <div class="trend-tags">${tags}</div>
     <div class="analysis-text">${model.analysisHtml || ""}</div>
     ${signalCards(bestPoints)}
-    ${operationReview(view, kline, historyLength, gameDays)}`;
+    ${operationReview(view, kline, historyLength, gameDays)}`);
   return { html, bestPoints };
 }

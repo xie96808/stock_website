@@ -89,3 +89,12 @@ export function rankProgress(rating) {
     maxed: false,
   };
 }
+
+/**
+ * The number labeled 段位分. Stored Elo starts at 1000; the label is only the
+ * points already inside the current 100-point band. Rating 998 is 98, not 998.
+ */
+export function rankPoints(rating) {
+  const band = rankProgress(rating);
+  return band ? band.current : null;
+}
