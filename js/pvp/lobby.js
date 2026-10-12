@@ -139,12 +139,17 @@ export async function sendChallenge(userId) {
   if (!Number.isInteger(id) || id <= 0) return;
   setError("");
   try {
-    await pvpFetch("/pvp/challenges", {
+    const res = await pvpFetch("/pvp/challenges", {
       method: "POST",
       body: { toUserId: id },
       idempotencyKey: challengeKey(id),
     });
     dropChallengeKey(id);
+    if (res?.data?.matchId && res.data.autoAccepted) {
+      waitingOutbound = false;
+      await enterMatch(res.data.matchId);
+      return;
+    }
     waitingOutbound = true;
     if (showing) await refresh();
   } catch (err) {

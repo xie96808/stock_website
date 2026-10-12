@@ -96,6 +96,10 @@ function freshHeartbeat(userId, now) {
   return at != null && now >= at && now - at <= HEARTBEAT_FRESH_MS;
 }
 
+function isBotId(db, userId) {
+  return Number(db.prepare(`SELECT is_bot FROM users WHERE id = ?`).get(userId)?.is_bot) === 1;
+}
+
 function catchDeny(err) {
   if (err?.pvpDeny) return deny(err.code, err.message, err.status);
   throw err;
@@ -225,8 +229,10 @@ function resolveInTx(db, { matchId, now }) {
     const row = byUser.get(player.user_id);
     const source = row ? row.source : "timeout";
     const action = row ? row.action : "hold";
-    const streak = source === "player" || freshHeartbeat(player.user_id, now)
-      ? (source === "player" ? 0 : player.afk_streak)
+    const bot = isBotId(db, player.user_id);
+    // Bots never AFK: no WS/heartbeat, but they always act or timeout-hold via scanner.
+    const streak = bot || source === "player" || source === "bot" || freshHeartbeat(player.user_id, now)
+      ? (bot || source === "player" || source === "bot" ? 0 : player.afk_streak)
       : player.afk_streak + 1;
     return {
       player,
@@ -468,6 +474,98 @@ function lockInTx(db, { matchId, userId, round, action, commandKey, now }) {
   return ack;
 }
 
+
+/** Server-side bot lock. Same legality as players; source='bot'; never AFK. */
+export function lockBotAction(db, { matchId, userId, round, action, commandKey, now }) {
+  try {
+    return withImmediate(db, () => lockBotInTx(db, { matchId, userId, round, action, commandKey, now }));
+  } catch (err) {
+    return catchDeny(err);
+  }
+}
+
+function lockBotInTx(db, { matchId, userId, round, action, commandKey, now }) {
+  if (!validCreateKey(commandKey)) return deny("INVALID_IDEMPOTENCY_KEY", "Idempotency-Key 须为 16-128 位可见 ASCII", 400);
+  if (!Number.isInteger(round) || round < 1 || round > 29) return deny("BAD_PAYLOAD", "回合无效", 400);
+  if (!ACTIONS.has(action)) return deny("ILLEGAL_ACTION", "这步不能这样操作", 422);
+  if (!isBotId(db, userId)) return deny("NOT_PARTICIPANT", "仅机器人可走此路径", 403);
+
+  const found = participantMatch(db, matchId, userId);
+  if (!found) return deny("NOT_FOUND", "对局不存在", 404);
+  const { match, players } = found;
+  const scope = `match-action:${matchId}`;
+  const hash = actionHash(round, action);
+  const prior = readCommand(db, userId, scope, commandKey);
+  if (prior) {
+    if (prior.payload_hash !== hash) return deny("IDEMPOTENCY_CONFLICT", "这个幂等键已经用于另一个动作", 409);
+    return JSON.parse(prior.ack_json);
+  }
+  if (match.status !== "playing") return deny("MATCH_CLOSED", "对局已结束", 409);
+  const closed = closeIfUnavailable(db, { match, players, now });
+  if (closed) return closed;
+  if (round !== match.resolved_rounds + 1) return deny("ROUND_CLOSED", "这一轮已经结束", 409);
+  if (now < match.round_opens_at) return deny("ROUND_CLOSED", "回合还没开始", 409);
+  if (now >= match.round_deadline_at) return deny("ROUND_CLOSED", "回合已截止", 409);
+
+  const mine = players.find((player) => player.user_id === userId);
+  const bars = barsOf(match);
+  const priorActions = parseActions(mine.actions_json, match.resolved_rounds);
+  let legal = false;
+  let chosen = action;
+  if (bars) {
+    try {
+      legal = replayGame({
+        fillMode: PVP_FILL_MODE,
+        bars,
+        actions: [...priorActions, chosen],
+        finish: false,
+      }).ok === true;
+    } catch {
+      legal = false;
+    }
+  }
+  if (!legal) {
+    chosen = "hold";
+    try {
+      legal = bars
+        ? replayGame({
+            fillMode: PVP_FILL_MODE,
+            bars,
+            actions: [...priorActions, chosen],
+            finish: false,
+          }).ok === true
+        : false;
+    } catch {
+      legal = false;
+    }
+  }
+  if (!legal) return deny("ILLEGAL_ACTION", "这步不能这样操作", 422);
+
+  const bumped = db.prepare(
+    `UPDATE pvp_matches SET revision = revision + 1
+     WHERE id = ? AND status = 'playing' AND resolved_rounds = ?`
+  ).run(matchId, match.resolved_rounds);
+  if (bumped.changes !== 1) rollbackDeny("MATCH_CLOSED", "对局已结束", 409);
+  const revision = db.prepare(`SELECT revision FROM pvp_matches WHERE id = ?`).get(matchId).revision;
+  const finalHash = actionHash(round, chosen);
+  try {
+    db.prepare(
+      `INSERT INTO pvp_actions (
+        match_id, user_id, round, action, source, command_key, payload_hash, locked_at
+      ) VALUES (?, ?, ?, ?, 'bot', ?, ?, ?)`
+    ).run(matchId, userId, round, chosen, commandKey, finalHash, now);
+  } catch (err) {
+    if (String(err.message || "").includes("UNIQUE")) rollbackDeny("ALREADY_LOCKED", "这一轮已经锁定", 409);
+    throw err;
+  }
+  const ack = { ok: true, accepted: true, round, lockedAction: chosen, revision, source: "bot" };
+  storeCommand(db, { userId, scope, key: commandKey, hash: finalHash, resourceId: matchId, ack, now });
+  const locked = db.prepare(`SELECT COUNT(*) AS c FROM pvp_actions WHERE match_id = ? AND round = ?`).get(matchId, round).c;
+  if (locked >= 2) resolveInTx(db, { matchId, now });
+  else touchCommit();
+  return ack;
+}
+
 export function forfeitMatch(db, { matchId, userId, commandKey, now }) {
   try {
     return withImmediate(db, () => forfeitInTx(db, { matchId, userId, commandKey, now }));
@@ -522,7 +620,7 @@ export function readMatchView(db, { matchId, viewerId, now }) {
   if (match.status === "playing") {
     const round = match.resolved_rounds + 1;
     const locks = db
-      .prepare(`SELECT user_id, action FROM pvp_actions WHERE match_id = ? AND round = ? AND source = 'player'`)
+      .prepare(`SELECT user_id, action FROM pvp_actions WHERE match_id = ? AND round = ? AND source IN ('player', 'bot')`)
       .all(matchId, round);
     for (const row of locks) pendingLocks[row.user_id] = row.action;
   }

@@ -13,6 +13,7 @@ import {
   maxActiveMatches,
 } from "./config.js";
 import { chargePvpEntry } from "./economy.js";
+import { botMatchAllowed, botsFeatureOn, isBotUser } from "./botUsers.js";
 import { assessEntry, isBlocked, pairKey } from "./eligibility.js";
 import { readDrain } from "./drain.js";
 import { finishMatch, finishMatchInTx } from "./settlement.js";
@@ -105,20 +106,28 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
       return { ok: true, challenge: pendingPair, alreadyPending: true };
     }
 
-    const target = db.prepare(`SELECT id, status FROM users WHERE id = ?`).get(toUserId);
+    const target = db.prepare(`SELECT id, status, is_bot FROM users WHERE id = ?`).get(toUserId);
     if (!target || target.status !== "active") return deny("NOT_FOUND", "找不到这位对手", 404);
+    const targetIsBot = Number(target.is_bot) === 1;
+    if (targetIsBot && !botsFeatureOn()) return deny("NOT_FOUND", "找不到这位对手", 404);
+    if (isBotUser(db, fromUserId)) return deny("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
     if (isBlocked(db, fromUserId, toUserId)) return deny("BLOCKED", "双方无法约战", 403);
     if (hasLock(db, fromUserId) || hasLock(db, toUserId)) {
       return deny("TARGET_BUSY", "有一方正在对战", 409);
+    }
+    if (targetIsBot && !botMatchAllowed(db)) {
+      return deny("CAPACITY", "对战房间已满", 503);
     }
     const outbound = db
       .prepare(`SELECT id FROM pvp_challenges WHERE from_user_id = ? AND status = 'pending' AND expires_at > ?`)
       .get(fromUserId, now);
     if (outbound) return deny("OUTBOUND_PENDING", "你还有一条未结束的约战", 409);
-    const inbound = db
-      .prepare(`SELECT COUNT(*) AS c FROM pvp_challenges WHERE to_user_id = ? AND status = 'pending' AND expires_at > ?`)
-      .get(toUserId, now).c;
-    if (inbound >= 3) return deny("TOO_MANY_INBOUND", "对方的约战太多", 409);
+    if (!targetIsBot) {
+      const inbound = db
+        .prepare(`SELECT COUNT(*) AS c FROM pvp_challenges WHERE to_user_id = ? AND status = 'pending' AND expires_at > ?`)
+        .get(toUserId, now).c;
+      if (inbound >= 3) return deny("TOO_MANY_INBOUND", "对方的约战太多", 409);
+    }
 
     const gate = assessEntry(db, fromUserId, toUserId, now);
     if (!gate.ok) return gate;
@@ -129,7 +138,33 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
         id, from_user_id, to_user_id, pair_key, status, create_key, payload_hash, created_at, expires_at
       ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)`
     ).run(id, fromUserId, toUserId, key, createKey, hash, now, now + CHALLENGE_MS);
-    return { ok: true, challenge: db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(id), created: true };
+    const challenge = db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(id);
+
+    if (targetIsBot) {
+      const opened = openReadyMatch(db, challenge, now);
+      if (!opened.ok) {
+        db.prepare(
+          `UPDATE pvp_challenges
+           SET status = 'cancelled', responded_at = ?, cancel_reason = 'bot_open_failed'
+           WHERE id = ? AND status = 'pending'`
+        ).run(now, id);
+        return opened;
+      }
+      db.prepare(
+        `UPDATE pvp_match_players SET ready_at = ? WHERE match_id = ? AND user_id = ?`
+      ).run(now, opened.matchId, toUserId);
+      return {
+        ok: true,
+        challenge: db.prepare(`SELECT * FROM pvp_challenges WHERE id = ?`).get(id),
+        created: true,
+        autoAccepted: true,
+        matchId: opened.matchId,
+        readyDeadlineAt: opened.readyDeadlineAt,
+        economy: opened.economy,
+      };
+    }
+
+    return { ok: true, challenge, created: true };
   });
 }
 

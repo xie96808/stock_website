@@ -74,11 +74,12 @@ export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(
   }
   const ymd = shanghaiYmd(new Date(now));
   for (const userId of [userIdA, userIdB]) {
-    const user = db.prepare(`SELECT id, status, created_at FROM users WHERE id = ?`).get(userId);
+    const user = db.prepare(`SELECT id, status, created_at, is_bot FROM users WHERE id = ?`).get(userId);
     if (!user || user.status !== "active") {
       return denial("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
     }
-    if (classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
+    // Companion bots skip the classic-practice gate; they still need entry balance.
+    if (Number(user.is_bot) !== 1 && classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
       return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);
     }
     if (getJiuCoinBalance(userId, db) < economy.entryCost) {

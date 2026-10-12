@@ -85,6 +85,10 @@ router.post("/auth/login", async (req, res) => {
     return rateLimitFail(res, failLimit.retryAfterSec, failLimit.message);
   }
   const row = findUserByUsername(username);
+  if (row && Number(row.is_bot) === 1) {
+    recordLoginFailure(username || "_", ip);
+    return fail(res, 401, "INVALID_CREDENTIALS", "账号或密码错误");
+  }
   const good = row && row.status === "active" && (await verifyPassword(row.password_hash, password));
   if (!good) {
     recordLoginFailure(username || "_", ip);

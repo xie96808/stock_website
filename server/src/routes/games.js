@@ -159,6 +159,7 @@ export function gamesConfigPayload() {
       survivalMode: !!config.survivalModeEnabled,
       ghostDuel: !!config.ghostDuelEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
+      pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,
       adminEnabled: !!config.adminEnabled,
     },
