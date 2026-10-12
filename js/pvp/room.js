@@ -1,19 +1,22 @@
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
+import { coinIconHtml } from "../jiu-coin.js";
 import { buildKlineOption } from "../kline-option.js";
-import { Route, prepareScreen, activateScreen } from "../screen-router.js";
+import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import {
   formatPpm,
-  lockCaption,
   marksFromView,
-  opponentLockText,
   remainingMs,
   roundCaption,
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
 import { actionKey, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 
-const READY_COPY = "双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。";
+function stake(amount) {
+  return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 14 })}</span>`;
+}
+
+const READY_COPY = `双方各付 ${stake(20)}。胜者到账 ${stake(35)}（净赚 ${stake(15)}），负者净减 ${stake(20)}，平局退回 ${stake(20)}。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。`;
 
 let matchId = null;
 let view = null;
@@ -32,6 +35,11 @@ let nudgeKey = "";
 function setText(id, value) {
   const node = document.getElementById(id);
   if (node) node.textContent = value == null ? "" : String(value);
+}
+
+function setHtml(id, html) {
+  const node = document.getElementById(id);
+  if (node) node.innerHTML = html || "";
 }
 
 function toneWord(ppm) {
@@ -76,19 +84,12 @@ function paintSeats() {
   paintSeat("pvpSeatOpp", view?.opponent, "对手");
 }
 
-function paintReadyMark(id, ready, show) {
+function paintReadyMark(id, ready, show, label) {
   const node = document.getElementById(id);
   if (!node) return;
   node.hidden = !show;
   node.dataset.ready = ready ? "1" : "0";
-  node.setAttribute("aria-label", ready ? "已准备" : "还未准备");
-}
-
-function paintStatus(id, who, detail, state) {
-  const node = document.getElementById(id);
-  if (!node) return;
-  node.dataset.state = state;
-  node.textContent = `${who} · ${detail}`;
+  node.setAttribute("aria-label", label || (ready ? "已准备" : "还未准备"));
 }
 
 function paintReturn(id, ppm) {
@@ -124,13 +125,14 @@ function destroyChart() {
   if (window.resizePvpChart) window.resizePvpChart = null;
 }
 
-export function leavePvpRoom() {
+export function leavePvpRoom({ deferChart = false } = {}) {
   matchId = null;
   view = null;
   postedLock = false;
   stopLoops();
-  destroyChart();
   closeLeave();
+  if (deferChart) window.setTimeout(() => destroyChart(), 0);
+  else destroyChart();
 }
 
 function dialog() {
@@ -241,16 +243,12 @@ function paintActions() {
   if (buy) buy.disabled = closed || !view?.me?.canBuy;
   if (sell) sell.disabled = closed || !view?.me?.canSell;
   if (hold) hold.disabled = closed || !view?.me?.canHold;
+  if (view?.status !== "playing") return;
   const submitting = isSubmitting();
-  const locked = postedLock || !!view?.me?.lockedToday;
-  paintStatus(
-    "pvpSelfLock",
-    "我",
-    lockCaption({ submitting, locked }),
-    submitting ? "pending" : locked ? "locked" : "open",
-  );
+  const locked = postedLock || submitting || !!view?.me?.lockedToday;
   const oppLocked = !!view?.opponent?.lockedToday;
-  paintStatus("pvpOppLock", "对手", opponentLockText(oppLocked), oppLocked ? "locked" : "open");
+  paintReadyMark("pvpReadyMarkMe", locked, locked, "已行动");
+  paintReadyMark("pvpReadyMarkOpp", oppLocked, oppLocked, "已行动");
 }
 
 async function paintChart() {
@@ -292,7 +290,7 @@ function render() {
     if (ready) ready.hidden = false;
     if (play) play.hidden = true;
     setText("pvpRoomHeadline", "准备");
-    setText("pvpReadyCopy", READY_COPY);
+    setHtml("pvpReadyCopy", READY_COPY);
     paintReadyMark("pvpReadyMarkMe", !!view.me?.ready, true);
     paintReadyMark("pvpReadyMarkOpp", !!view.opponent?.ready, true);
     const readyBtn = document.getElementById("pvpReadyBtn");
@@ -302,8 +300,6 @@ function render() {
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
-    paintReadyMark("pvpReadyMarkMe", false, false);
-    paintReadyMark("pvpReadyMarkOpp", false, false);
     setText("pvpRoomHeadline", roundCaption(view));
     paintReturn("pvpMeNav", view.me?.mtmPpm);
     paintReturn("pvpOppNav", view.opponent?.mtmPpm);
@@ -347,7 +343,7 @@ async function postAction(action) {
   } catch (err) {
     if (err.code === "ALREADY_LOCKED") {
       confirmed = true;
-      setText("pvpActionError", "本账号已在另一设备锁定");
+      setText("pvpActionError", "这手已经在另一台设备提交了");
     } else if (!err.status) {
       setText("pvpActionError", "网络中断，正在核对是否已经提交");
     } else {
@@ -415,8 +411,12 @@ function wireRoom() {
   document.getElementById("pvpLeaveStay")?.addEventListener("click", closeLeave);
   document.getElementById("pvpLeaveLobby")?.addEventListener("click", () => {
     closeLeave();
-    leavePvpRoom();
-    import("./lobby.js").then((mod) => mod.showPvpLobby()).catch(() => {});
+    document.getElementById("pvpLobbyScreen")?.classList.add("pvp-instant");
+    prepareScreen(Route.PVP_LOBBY);
+    activateScreen(Route.PVP_LOBBY);
+    setRouteHash(Route.PVP_LOBBY);
+    leavePvpRoom({ deferChart: true });
+    import("./lobby.js").then((mod) => mod.showPvpLobby({ instant: true })).catch(() => {});
   });
   document.getElementById("pvpLeaveForfeit")?.addEventListener("click", () => { postForfeit().catch(() => {}); });
   document.getElementById("pvpLeaveDialog")?.addEventListener("keydown", onLeaveKey);

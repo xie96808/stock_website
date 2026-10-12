@@ -140,7 +140,7 @@ test("lobby presence, decline, ready reveal, forfeit, and flag-off summary", asy
     });
     assert.equal(accepted.status, 200);
     const matchId = accepted.json.data.matchId;
-    expireDueReady(openDb(), Date.now() + 20_000);
+    expireDueReady(openDb(), Date.now() + 60_000);
     const timedOut = await call(host.session, `/api/v1/pvp/matches/${matchId}`);
     assert.equal(timedOut.json.data.status, "aborted");
     assert.equal(timedOut.json.data.terminal.reason, "ready_timeout");

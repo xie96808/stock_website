@@ -3,7 +3,8 @@ import { ensureEcharts } from "../echarts-loader.js";
 import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
-import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
+import { coinIconHtml } from "../jiu-coin.js";
+import { colorReturnHtml, escapeHtml, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
 import { appendRankProgress } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
@@ -14,6 +15,11 @@ let shown = null;
 function text(id, value) {
   const node = document.getElementById(id);
   if (node) node.textContent = value == null ? "" : String(value);
+}
+
+function html(id, value) {
+  const node = document.getElementById(id);
+  if (node) node.innerHTML = value || "";
 }
 
 function destroyChart() {
@@ -58,16 +64,24 @@ function paintSeats(view) {
   if (oppCard) oppCard.dataset.outcome = view?.opponent?.outcome || "";
 }
 
-function showIdentity(view) {
-  const node = document.getElementById("pvpResultIdentity");
-  if (!node) return;
-  if (view.identity?.stockName) {
-    node.hidden = false;
-    const code = view.identity.stockCode ? ` (${view.identity.stockCode})` : "";
-    node.textContent = `${view.identity.stockName}${code}`;
-  } else {
-    node.hidden = true;
-    node.textContent = "";
+function paintIdentity(prefix, view) {
+  const name = document.getElementById(`${prefix}Identity`);
+  const period = document.getElementById(`${prefix}Period`);
+  const identity = view?.identity;
+  if (name) {
+    if (identity?.stockName) {
+      name.hidden = false;
+      const code = identity.stockCode ? ` (${identity.stockCode})` : "";
+      name.textContent = `${identity.stockName}${code}`;
+    } else {
+      name.hidden = true;
+      name.textContent = "";
+    }
+  }
+  if (period) {
+    const windowText = formatWindow(identity);
+    period.hidden = !windowText;
+    period.textContent = windowText;
   }
 }
 
@@ -187,11 +201,19 @@ function ensureSparks() {
 }
 
 function coinPhrase(delta) {
-  if (delta == null || !Number.isFinite(Number(delta))) return "韭币 —";
+  const icon = coinIconHtml({ size: 14 });
+  if (delta == null || !Number.isFinite(Number(delta))) {
+    return `<span class="jiu-coin-amt" aria-label="韭币未知">—${icon}</span>`;
+  }
   const value = Number(delta);
-  if (value > 0) return `获得 ${value} 韭币`;
-  if (value < 0) return `失去 ${Math.abs(value)} 韭币`;
-  return "韭币 0";
+  if (value > 0) {
+    return `<span class="jiu-coin-amt" aria-label="获得 ${value} 韭币">获得 <span class="jiu-price-num">${value}</span>${icon}</span>`;
+  }
+  if (value < 0) {
+    const lost = Math.abs(value);
+    return `<span class="jiu-coin-amt" aria-label="失去 ${lost} 韭币">失去 <span class="jiu-price-num">${lost}</span>${icon}</span>`;
+  }
+  return `<span class="jiu-coin-amt" aria-label="韭币 0"><span class="jiu-price-num">0</span>${icon}</span>`;
 }
 
 function paintSettleReturn(id, ppm) {
@@ -213,8 +235,7 @@ function paintSettleSide(which, face, fallback) {
     img.alt = "";
   }
   paintSettleReturn(`pvpWin${which}Return`, face?.returnPpm);
-  text(`pvpWin${which}Coin`, coinPhrase(face?.coinDelta));
-  text(`pvpWin${which}Mdd`, `回撤 ${formatPpm(face?.mddPpm)}`);
+  html(`pvpWin${which}Coin`, coinPhrase(face?.coinDelta));
 }
 
 function showSettle(view, celebrate) {
@@ -229,6 +250,7 @@ function showSettle(view, celebrate) {
   if (fireworks) fireworks.hidden = outcome !== "win";
   if (outcome === "win") ensureSparks();
   text("pvpWinTitle", resultHeadline(view));
+  paintIdentity("pvpWin", view);
   const auth = getAuthState().user;
   paintSettleSide("Me", {
     nickname: view?.me?.nickname || auth?.nickname,
@@ -320,6 +342,9 @@ function wireGifts(view) {
     button.disabled = !canSend;
     button.onclick = async () => {
       if (!canSend || button.disabled) return;
+      button.classList.remove("is-sent");
+      void button.offsetWidth;
+      button.classList.add("is-sent");
       for (const item of buttons) item.disabled = true;
       try {
         await pvpFetch(`/pvp/matches/${encodeURIComponent(view.matchId)}/reactions`, {
@@ -374,13 +399,13 @@ export function showPvpResult(view, { celebrate = false } = {}) {
   text("pvpResultHeadline", resultHeadline(view));
   text("pvpResultReason", view?.terminal?.reason ? reasonLabel(view.terminal.reason) : "");
   paintReturn("pvpResultMe", view?.me?.returnPpm);
-  text("pvpResultMeMeta", `回撤 ${formatPpm(view?.me?.mddPpm)} · 韭币 ${formatCoin(view?.me?.coinDelta)}`);
+  html("pvpResultMeMeta", `回撤 ${escapeHtml(formatPpm(view?.me?.mddPpm))} · ${coinPhrase(view?.me?.coinDelta)}`);
   text("pvpResultOppLabel", `${view?.opponent?.nickname || "对手"}收益`);
   paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
   text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
   paintSeats(view);
   paintRating(view);
-  showIdentity(view);
+  paintIdentity("pvpResult", view);
   paintReplay(view);
   const bestPoints = paintAnalysis(view);
   wireWin();

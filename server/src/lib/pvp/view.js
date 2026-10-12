@@ -149,6 +149,8 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     view.identity = {
       stockCode: snapshot.stockCode,
       stockName: snapshot.stockName,
+      periodStart: snapshot.bars[0]?.date || null,
+      periodEnd: snapshot.bars[snapshot.bars.length - 1]?.date || null,
     };
   }
   return view;

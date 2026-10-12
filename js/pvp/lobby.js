@@ -1,6 +1,7 @@
-import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
+import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../auth.js";
+import { coinIconHtml } from "../jiu-coin.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
-import { formatRemain, remainingMs } from "./copy.js";
+import { escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier } from "./profile-battle.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 
@@ -20,6 +21,31 @@ const seenRevision = new Map();
 function setText(id, value) {
   const node = document.getElementById(id);
   if (node) node.textContent = value == null ? "" : String(value);
+}
+
+const SHARE_BLURB = "我正在【早知道当初不炒了】的模拟盘对战里大杀四方，等你来战！";
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch { /* fall through to the older copy path */ }
+  try {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.append(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 function setError(message) {
@@ -86,6 +112,7 @@ function wirePresence() {
 export function leavePvpLobby() {
   showing = false;
   stopLoops();
+  document.getElementById("pvpLobbyScreen")?.classList.remove("pvp-instant");
 }
 
 function outcomeGlyph(outcome) {
@@ -168,23 +195,20 @@ async function shareBattle() {
   setError("");
   const note = document.getElementById("pvpShareNote");
   if (note) note.textContent = "";
+  const button = document.getElementById("pvpShareBtn");
+  if (button) button.disabled = true;
   try {
     const { data } = await pvpFetch("/pvp/shares", { method: "POST", body: {} });
     const url = `${location.origin}${location.pathname}${location.search}#/pvp/join/${data.code}`;
-    let copied = false;
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        copied = true;
-      }
-    } catch { copied = false; }
-    if (note) {
-      note.textContent = copied
-        ? "链接已复制，10 分钟内有效。对方点开后会直接进入准备。"
-        : `把链接发给朋友。对方点开后会直接进入准备。 ${url}`;
-    }
+    const copied = await copyText(`${SHARE_BLURB}\n${url}`);
+    showToast(
+      copied ? "已复制到剪贴板，发给朋友就能进房间" : "没能复制，请再点一次分享",
+      copied ? "success" : "error",
+    );
   } catch (err) {
     setError(err.message || "没能生成分享链接");
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -362,7 +386,12 @@ function renderState(state) {
     eligibility.hidden = !!state.eligibility?.ok;
     eligibility.textContent = state.eligibility?.ok ? "" : (state.eligibility?.message || "");
   }
-  setText("pvpLobbyBalance", `余额 ${state.balance} 韭币`);
+  const balance = state.balance == null ? "—" : escapeHtml(state.balance);
+  const balanceNode = document.getElementById("pvpLobbyBalance");
+  if (balanceNode) {
+    balanceNode.innerHTML = `余额 <span class="jiu-coin-amt"><span class="jiu-price-num">${balance}</span>${coinIconHtml({ size: 14 })}</span>`;
+    balanceNode.setAttribute("aria-label", `余额 ${state.balance ?? "—"} 韭币`);
+  }
   const active = document.getElementById("pvpActiveMatch");
   if (active) active.hidden = !state.activeMatchId;
   paintLobbyMe(state);
@@ -453,25 +482,28 @@ function wireLobby() {
   });
 }
 
-export async function showPvpLobby() {
-  import("./result.js").then((mod) => mod.releasePvpResult()).catch(() => {});
-  const on = await pvpEnabled();
-  if (!on) {
-    if (typeof window.showSimHub === "function") window.showSimHub();
-    return;
-  }
+export async function showPvpLobby({ instant = false } = {}) {
+  const lobby = document.getElementById("pvpLobbyScreen");
+  if (instant) lobby?.classList.add("pvp-instant");
+  else lobby?.classList.remove("pvp-instant");
   prepareScreen(Route.PVP_LOBBY);
   activateScreen(Route.PVP_LOBBY);
   setRouteHash(Route.PVP_LOBBY);
+  window.setTimeout(() => {
+    import("./result.js").then((mod) => mod.releasePvpResult()).catch(() => {});
+  }, 0);
   wireLobby();
   wirePresence();
   showing = true;
   syncSessionPresence();
   setError("");
-  const guest = document.getElementById("pvpLobbyGuest");
-  const member = document.getElementById("pvpLobbyMember");
-  if (guest) guest.hidden = true;
-  if (member) member.hidden = true;
+  const on = await pvpEnabled();
+  if (!showing) return;
+  if (!on) {
+    showing = false;
+    if (typeof window.showSimHub === "function") window.showSimHub();
+    return;
+  }
   await whenAuthReady();
   if (!showing) return;
   try {

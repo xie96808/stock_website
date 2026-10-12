@@ -14,14 +14,20 @@ export function whenAuthReady() {
   });
 }
 
+let enabledKnown = null;
+let enabledAt = 0;
+
 export async function pvpEnabled() {
+  if (enabledKnown === true && Date.now() - enabledAt < 30_000) return true;
   try {
     const res = await fetch("/api/v1/config", {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
     const json = await res.json().catch(() => ({}));
-    return !!(json?.data?.features?.pvpBattle);
+    enabledKnown = !!(json?.data?.features?.pvpBattle);
+    enabledAt = Date.now();
+    return enabledKnown;
   } catch {
     return false;
   }
