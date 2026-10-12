@@ -61,8 +61,11 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
   const myActions = parseActions(me.actions_json).slice(0, k);
   const theirActions = parseActions(opponent.actions_json).slice(0, k);
   const snapshot = match.snapshot_json ? JSON.parse(match.snapshot_json) : null;
-  const revealAll = terminalType === "completed" && snapshot?.bars?.length === 30;
-  const revealedGameBars = revealAll ? 30 : (clock.ok ? clock.revealedBars : 1);
+  // Completed matches reveal the full window. Accept >= 30 in case a pack ever
+  // ships a longer slice; shorter snapshots fall back to resolved-round reveal.
+  const barCount = Array.isArray(snapshot?.bars) ? snapshot.bars.length : 0;
+  const revealAll = terminalType === "completed" && barCount >= 30;
+  const revealedGameBars = revealAll ? barCount : (clock.ok ? clock.revealedBars : 1);
 
   let market = null;
   if (snapshot?.bars?.length >= revealedGameBars && Array.isArray(snapshot.history)) {

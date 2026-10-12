@@ -158,3 +158,20 @@ test("a completed match reveals identity and all 30 bars; a forfeit does not", (
   assert.equal(stopped.me.mtmPpm, 100000);
   assert.equal(JSON.stringify(stopped).includes("600000"), false);
 });
+
+test("bars longer than 30 still reveal on completed matches", () => {
+  const bars = makeBars({ 1: { open: 10, close: 10 } });
+  bars.push({ date: "2024-01-31", open: 10, high: 11, low: 9, close: 10.5, volume: 10 });
+  assert.equal(bars.length, 31);
+  const played = players.map((player) => ({ ...player, actions_json: JSON.stringify(Array.from({ length: 29 }, () => "hold")) }));
+  const done = pvpMatchView({
+    match: matchOf(snapshot(bars), { status: "settled", resolved_rounds: 29 }),
+    players: played,
+    viewerId: 1,
+    serverNow: 90_000,
+    terminalType: "completed",
+    nicknames: { 2: "对手甲" },
+  });
+  assert.equal(done.market.bars.length, 31);
+  assert.ok(done.identity);
+});

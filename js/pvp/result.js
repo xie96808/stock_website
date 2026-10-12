@@ -140,6 +140,11 @@ function paintReplay(view) {
 function paintAnalysis(view) {
   const node = document.getElementById("pvpResultAnalysis");
   if (!node) return null;
+  const bars = view?.market?.bars;
+  if (!Array.isArray(bars) || !bars.length) {
+    node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
+    return null;
+  }
   try {
     const built = buildPvpKlineAnalysis(view);
     if (!built) {
@@ -148,10 +153,25 @@ function paintAnalysis(view) {
     }
     node.innerHTML = built.html;
     return built.bestPoints;
-  } catch {
+  } catch (err) {
+    console.warn("pvp analysis failed", err);
     node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
     return null;
   }
+}
+
+function waitFrames(count = 2) {
+  return new Promise((resolve) => {
+    const step = () => {
+      if (count <= 0) {
+        resolve();
+        return;
+      }
+      count -= 1;
+      window.requestAnimationFrame(step);
+    };
+    step();
+  });
 }
 
 async function paintChart(view, bestPoints) {
@@ -169,6 +189,9 @@ async function paintChart(view, bestPoints) {
     if (mine !== paintToken || shown?.matchId !== view.matchId) return;
     node.hidden = false;
     if (error) error.hidden = true;
+    // Two rAFs so the result screen has a real box before echarts.init.
+    await waitFrames(2);
+    if (mine !== paintToken || shown?.matchId !== view.matchId) return;
     if (!chart) {
       chart = echarts.init(node);
       window.resizePvpChart = () => { if (chart) chart.resize(); };
@@ -178,7 +201,6 @@ async function paintChart(view, bestPoints) {
         });
         chartObserver.observe(node);
       }
-      window.setTimeout(() => { if (chart) chart.resize(); }, 50);
     }
     chart.setOption(buildKlineOption({
       mode: "pvp",
@@ -190,7 +212,9 @@ async function paintChart(view, bestPoints) {
       resetDataZoom: true,
     }), { replaceMerge: ["series"] });
     chart.resize();
-  } catch {
+    window.setTimeout(() => { if (chart && mine === paintToken) chart.resize(); }, 80);
+  } catch (err) {
+    console.warn("pvp result chart failed", err);
     if (mine !== paintToken) return;
     if (error) error.hidden = false;
     node.hidden = true;
@@ -302,19 +326,57 @@ function wireWin() {
 
 function paintRating(view) {
   const box = document.getElementById("pvpResultRatingBox");
-  const delta = view?.me?.ratingDelta;
+  const num = document.getElementById("pvpResultRating");
+  const range = document.getElementById("pvpResultRatingRange");
+  const progress = document.getElementById("pvpResultRankProgress");
   if (!box) return;
-  if (delta == null || !Number.isFinite(Number(delta))) {
+
+  const delta = view?.me?.ratingDelta;
+  const before = view?.me?.ratingBefore;
+  const after = view?.me?.ratingAfter;
+  const scored = view?.terminal?.type === "completed" || view?.terminal?.type === "forfeited";
+  const deltaOk = delta != null && Number.isFinite(Number(delta));
+
+  // Never leave the box visible while empty (prior formatCoin throw did that).
+  if (!scored || !deltaOk) {
     box.hidden = true;
+    if (num) {
+      num.textContent = "";
+      num.classList.remove("pvp-up", "pvp-down", "pvp-flat");
+    }
+    if (range) {
+      range.hidden = true;
+      range.textContent = "";
+    }
+    if (progress) progress.replaceChildren();
     return;
   }
-  box.hidden = false;
-  text("pvpResultRating", formatCoin(delta));
-  const progress = document.getElementById("pvpResultRankProgress");
+
+  const value = Number(delta);
+  const deltaText = formatCoin(value);
+  if (num) {
+    num.textContent = deltaText;
+    num.classList.remove("pvp-up", "pvp-down", "pvp-flat");
+    num.classList.add(value > 0 ? "pvp-up" : value < 0 ? "pvp-down" : "pvp-flat");
+  }
+  if (range) {
+    if (before != null && after != null && Number.isFinite(Number(before)) && Number.isFinite(Number(after))) {
+      range.hidden = false;
+      range.textContent = `${Number(before)} → ${Number(after)}`;
+    } else {
+      range.hidden = true;
+      range.textContent = "";
+    }
+  }
   if (progress) {
     progress.replaceChildren();
-    appendRankProgress(progress, view?.me?.ratingAfter);
+    try {
+      appendRankProgress(progress, after);
+    } catch (err) {
+      console.warn("pvp rank progress failed", err);
+    }
   }
+  box.hidden = false;
 }
 
 function wireReport(view) {
@@ -412,15 +474,7 @@ function wireBlock(view) {
   };
 }
 
-export function showPvpResult(view, { celebrate = false } = {}) {
-  destroyChart();
-  shown = view || null;
-  prepareScreen(Route.PVP_RESULT);
-  activateScreen(Route.PVP_RESULT);
-  setRouteHash(Route.PVP_RESULT);
-  if (view?.matchId) {
-    try { history.replaceState(null, "", `#/pvp/${view.matchId}`); } catch { /* ignore */ }
-  }
+function paintResultBody(view, { celebrate = false } = {}) {
   text("pvpResultHeadline", resultHeadline(view));
   text("pvpResultReason", view?.terminal?.reason ? reasonLabel(view.terminal.reason) : "");
   paintReturn("pvpResultMe", view?.me?.returnPpm);
@@ -429,7 +483,11 @@ export function showPvpResult(view, { celebrate = false } = {}) {
   paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
   text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
   paintSeats(view);
-  try { paintRating(view); } catch { /* rating chrome must not block chart/analysis */ }
+  try { paintRating(view); } catch (err) {
+    console.warn("pvp rating paint failed", err);
+    const box = document.getElementById("pvpResultRatingBox");
+    if (box) box.hidden = true;
+  }
   paintIdentity("pvpResult", view);
   paintReplay(view);
   let bestPoints = null;
@@ -453,6 +511,40 @@ export function showPvpResult(view, { celebrate = false } = {}) {
     };
   }
   paintChart(view, bestPoints).catch(() => {});
+  return bestPoints;
+}
+
+function marketMissing(view) {
+  const settled = view?.status === "settled" || view?.status === "aborted";
+  if (!settled || !view?.matchId) return false;
+  const completed = view?.terminal?.type === "completed";
+  const bars = view?.market?.bars;
+  return completed && (!Array.isArray(bars) || bars.length < 30);
+}
+
+export function showPvpResult(view, { celebrate = false } = {}) {
+  destroyChart();
+  shown = view || null;
+  prepareScreen(Route.PVP_RESULT);
+  activateScreen(Route.PVP_RESULT);
+  setRouteHash(Route.PVP_RESULT);
+  if (view?.matchId) {
+    try { history.replaceState(null, "", `#/pvp/${view.matchId}`); } catch { /* ignore */ }
+  }
+  paintResultBody(view, { celebrate });
+  // Completed matches must carry all 30 bars. If the first payload omitted them,
+  // refetch once so 段位分 / 复盘 / K 线 do not stay blank.
+  if (marketMissing(view)) {
+    const matchId = view.matchId;
+    pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}`)
+      .then(({ data }) => {
+        if (!data || shown?.matchId !== matchId) return;
+        shown = data;
+        destroyChart();
+        paintResultBody(data, { celebrate: false });
+      })
+      .catch((err) => { console.warn("pvp result refetch failed", err); });
+  }
 }
 
 export async function openPvpMatch(matchId) {

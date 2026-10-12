@@ -23,4 +23,14 @@ test("result screen imports formatCoin so rating paint cannot throw ReferenceErr
   );
   assert.match(resultJs, /paintRating\(view\)/);
   assert.match(resultJs, /try \{ paintRating\(view\); \}/);
+  // Atomic rating paint: hide first when unscored; only unhide after text is set.
+  assert.match(resultJs, /box\.hidden = false/);
+  assert.match(resultJs, /pvpResultRatingRange/);
+  assert.match(resultJs, /marketMissing/);
+  assert.match(resultJs, /paintResultBody/);
+  const html = readFileSync(new URL("index.html", root), "utf8");
+  assert.match(html, /id="pvpBattleTop"/);
+  assert.match(html, /id="pvpTradeSegment"/);
+  // Per-hand timer stays 30s (design); only READY_MS is 15s.
+  assert.match(html, /id="pvpClockNum">30</);
 });
