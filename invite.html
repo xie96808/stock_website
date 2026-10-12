@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>来对战 · 早知道当初不炒了</title>
+    <meta name="description" content="朋友邀请你来【早知道当初不炒了】模拟盘对战。点开就能进房间，用真实 A 股数据一较高下。">
+    <link rel="icon" href="/favicon.ico?v=20260908" type="image/x-icon" sizes="any">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=20260908">
+    <!-- WeChat / iMessage / Discord link-card preview (path URL, not hash). -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="早知道当初不炒了">
+    <meta property="og:title" content="来【早知道当初不炒了】模拟盘对战">
+    <meta property="og:description" content="朋友在等你。点开就能进房间，用真实 A 股数据一较高下。">
+    <meta property="og:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:url" content="https://stockgame.xieyw.top/invite.html">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="来【早知道当初不炒了】模拟盘对战">
+    <meta name="twitter:description" content="朋友在等你。点开就能进房间，用真实 A 股数据一较高下。">
+    <meta name="twitter:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0; min-height: 100dvh; display: grid; place-items: center;
+        font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+        background: #f7f1e6; color: #2a241c;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #1a1814; color: #efe6d6; }
+      }
+      .card {
+        max-width: 22rem; margin: 1.5rem; padding: 1.4rem 1.2rem;
+        border: 1px solid rgba(42, 36, 28, 0.18); border-radius: 14px;
+        text-align: center; line-height: 1.5;
+      }
+      h1 { font-size: 1.15rem; margin: 0 0 0.6rem; font-weight: 600; }
+      p { margin: 0 0 0.8rem; font-size: 0.95rem; opacity: 0.9; }
+      a {
+        display: inline-block; margin-top: 0.4rem; padding: 0.55rem 1rem;
+        border-radius: 999px; background: #2a241c; color: #f7f1e6;
+        text-decoration: none; font-size: 0.95rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        .card { border-color: rgba(239, 230, 214, 0.2); }
+        a { background: #efe6d6; color: #1a1814; }
+      }
+    </style>
+    <script>
+      (function () {
+        function codeFromLocation() {
+          var q = new URLSearchParams(location.search || "");
+          var c = String(q.get("c") || q.get("code") || "").trim().toLowerCase();
+          if (/^[a-z2-9]{8}$/.test(c)) return c;
+          var path = String(location.pathname || "");
+          var m = /\/(?:invite\.html|invite|pvp\/join)\/?([a-z2-9]{8})\/?$/i.exec(path);
+          return m ? m[1].toLowerCase() : "";
+        }
+        var code = codeFromLocation();
+        var target = code ? ("/#/pvp/join/" + code) : "/";
+        // Replace so back does not bounce through the landing page.
+        try { location.replace(target); } catch (e) { location.href = target; }
+      })();
+    </script>
+</head>
+<body>
+    <main class="card">
+        <h1>正在进入对战…</h1>
+        <p>若没有自动跳转，请点下面按钮。链接约 10 分钟内有效，对方需登录。</p>
+        <a id="inviteGo" href="/">进入游戏</a>
+    </main>
+    <script>
+      (function () {
+        var q = new URLSearchParams(location.search || "");
+        var c = String(q.get("c") || q.get("code") || "").trim().toLowerCase();
+        var a = document.getElementById("inviteGo");
+        if (a && /^[a-z2-9]{8}$/.test(c)) a.href = "/#/pvp/join/" + c;
+      })();
+    </script>
+</body>
+</html>

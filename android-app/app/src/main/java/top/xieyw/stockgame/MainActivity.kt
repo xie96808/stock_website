@@ -209,6 +209,30 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun getVersion(): String = BuildConfig.VERSION_NAME
+
+        /**
+         * System share sheet (ACTION_SEND). Lets the player pick WeChat / other
+         * apps. This is not WeChat JS-SDK deep-open; it only hands off a URL.
+         */
+        @JavascriptInterface
+        fun share(title: String?, text: String?, url: String?) {
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                val body = listOfNotNull(text?.takeIf { it.isNotBlank() }, url?.takeIf { it.isNotBlank() })
+                    .joinToString("\n")
+                if (body.isBlank()) return@runOnUiThread
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, title ?: "")
+                    putExtra(Intent.EXTRA_TEXT, body)
+                }
+                try {
+                    startActivity(Intent.createChooser(send, title ?: "分享"))
+                } catch (_: ActivityNotFoundException) {
+                    // No handler; web fallback already copies to clipboard.
+                }
+            }
+        }
     }
 
     companion object {

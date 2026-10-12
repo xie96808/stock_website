@@ -16,10 +16,17 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16.png?v=20260908">
     <link rel="icon" type="image/png" href="/favicon.png?v=20260908">
     <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=20260908">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="早知道当初不炒了">
     <meta property="og:title" content="早知道当初不炒了">
-    <meta property="og:description" content="用真实 A 股数据，重走每一次错过的行情">
+    <meta property="og:description" content="用真实 A 股数据，重走每一次错过的行情。也可分享对战邀请链接约朋友。">
     <meta property="og:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
-    <meta name="twitter:card" content="summary">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:url" content="https://stockgame.xieyw.top/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="早知道当初不炒了">
+    <meta name="twitter:description" content="用真实 A 股数据，重走每一次错过的行情">
     <meta name="twitter:image" content="https://stockgame.xieyw.top/images/og-mascot-day.jpg">
     <!-- R6: ECharts loaded async via js/echarts-loader.js (idle prefetch + ensure on chart screens). -->
     <!-- Preload matches echarts-loader inject (no crossorigin; classic script). -->
@@ -1529,6 +1536,15 @@
             if (!found) return;
             import('./js/pvp/lobby.js').then((mod) => mod.openPvpHash(found[1])).catch(() => {});
         }
+        function routePvpPath() {
+            const path = String(location.pathname || "");
+            const join = /\/pvp\/join\/([a-z2-9]{8})\/?$/i.exec(path);
+            if (!join) return;
+            const code = join[1].toLowerCase();
+            // Normalize to hash route so refresh / further SPA nav stay consistent.
+            try { history.replaceState(null, "", "/#/pvp/join/" + code); } catch (e) {}
+            import('./js/pvp/lobby.js').then((mod) => mod.joinSharedBattle(code)).catch(() => {});
+        }
         window.addEventListener('hashchange', routePvpHash);
         // Cold start with empty hash: only sync lane visibility (match prior initHomeIaRouting).
         // Still listen for later hashchange back to home/sim/etc.
@@ -1546,6 +1562,7 @@
         } else {
             initAppHashRouting();
         }
+        routePvpPath();
         routePvpHash();
         window.hideHindsight    = hideHindsight;
         window.onHindsightInput = onHindsightInput;
