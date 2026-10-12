@@ -10,7 +10,10 @@ export const PVP_RATING_FLOOR = 700;
 export const PVP_RATING_INITIAL = 1000;
 export const PVP_PLACEMENT_GAMES = 10;
 
-const GROUPS = ['韭菜', '散户', '股民老手', '游资', '庄家'];
+/** Five title groups; icons live at assets/pvp/rank-icons/rank-<slug>.png */
+export const RANK_GROUPS = ['韭菜', '散户', '股民老手', '游资', '庄家'];
+export const RANK_ICON_SLUGS = ['jiucai', 'sanhu', 'laoshou', 'youzi', 'zhuangjia'];
+const GROUPS = RANK_GROUPS;
 const DUAN = ['一段', '二段', '三段'];
 
 export function expectedScore(ratingA, ratingB) {
@@ -49,19 +52,52 @@ export function levelForRating(rating) {
   return Math.min(15, Math.max(1, raw));
 }
 
+export function rankGroupIndex(rating) {
+  const level = levelForRating(rating);
+  return Math.min(4, Math.max(0, Math.floor((level - 1) / 3)));
+}
+
+/** Slug for assets/pvp/rank-icons/rank-<slug>.png */
+export function rankIconSlug(rating) {
+  return RANK_ICON_SLUGS[rankGroupIndex(rating)] || RANK_ICON_SLUGS[0];
+}
+
+export function rankIconPath(rating) {
+  return `assets/pvp/rank-icons/rank-${rankIconSlug(rating)}.png`;
+}
+
+/**
+ * Resolve icon path from a display title like "散户二段" or group name "散户".
+ * Falls back to 散户 when unknown.
+ */
+export function rankIconPathForTitle(titleName) {
+  const raw = String(titleName || "");
+  for (let i = 0; i < RANK_GROUPS.length; i++) {
+    if (raw.startsWith(RANK_GROUPS[i])) {
+      return `assets/pvp/rank-icons/rank-${RANK_ICON_SLUGS[i]}.png`;
+    }
+  }
+  return `assets/pvp/rank-icons/rank-${RANK_ICON_SLUGS[1]}.png`;
+}
+
 /**
  * Display title. `level` is for tests and band math; the product shows `name`, not "N级".
  * @param {number|null} [games] rated games so far. Below 10 is placement, same K.
  */
 export function titleForRating(rating, games = null) {
   const level = levelForRating(rating);
-  const group = GROUPS[Math.floor((level - 1) / 3)];
+  const groupIndex = Math.floor((level - 1) / 3);
+  const group = GROUPS[groupIndex];
   const duan = DUAN[(level - 1) % 3];
   const bandLow = level === 15 ? 2100 : PVP_RATING_FLOOR + (level - 1) * 100;
   const pointsToNext = level === 15 ? null : bandLow + 100 - rating;
   return {
     level,
     name: `${group}${duan}`,
+    group,
+    groupIndex,
+    iconSlug: RANK_ICON_SLUGS[groupIndex],
+    iconPath: `assets/pvp/rank-icons/rank-${RANK_ICON_SLUGS[groupIndex]}.png`,
     bandLow,
     bandHigh: level === 15 ? null : bandLow + 99,
     pointsToNext,
@@ -92,7 +128,7 @@ export function rankProgress(rating) {
 
 /**
  * The number labeled 段位分. Stored Elo starts at 1000; the label is only the
- * points already inside the current 100-point band. Rating 998 is 98, not 998.
+ * points already earned inside the current 100-point band. Rating 998 is 98, not 998.
  */
 export function rankPoints(rating) {
   const band = rankProgress(rating);

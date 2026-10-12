@@ -1,8 +1,35 @@
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
-import { rankPoints, rankProgress } from "../../shared/pvpRating.js";
+import { rankPoints, rankProgress, rankIconPathForTitle } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
 import { pvpEnabled, pvpFetch, whenAuthReady } from "./transport.js";
+
+
+function escapeAttr(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
+/** Inline rank-group icon next to a title string. */
+export function rankTitleWithIcon(titleText, { className = "pvp-rank-title" } = {}) {
+  const wrap = document.createElement("span");
+  wrap.className = className;
+  const icon = document.createElement("img");
+  icon.className = "pvp-rank-icon";
+  icon.alt = "";
+  icon.width = 22;
+  icon.height = 22;
+  icon.decoding = "async";
+  icon.src = rankIconPathForTitle(titleText);
+  icon.onerror = () => { icon.hidden = true; };
+  const label = document.createElement("span");
+  label.className = "pvp-rank-title-text";
+  label.textContent = titleText || "";
+  wrap.append(icon, label);
+  return wrap;
+}
 
 function outcomeText(outcome) {
   if (outcome === "win") return "胜";
@@ -72,7 +99,7 @@ export function fillDossier(node, profile) {
   name.textContent = profile.nickname || "我";
   const rank = document.createElement("p");
   rank.className = "pvp-dossier-rank";
-  rank.textContent = profile.title || "散户一段";
+  rank.append(rankTitleWithIcon(profile.title || "散户一段"));
   body.append(name, rank);
   if (profile.inPlacement) {
     const place = document.createElement("p");
@@ -138,20 +165,12 @@ export async function syncPvpProfile() {
     section.className = "pvp-settings";
     const title = document.createElement("p");
     title.className = "pvp-settings-title";
-    title.textContent = "对战";
+    title.textContent = "对战段位";
     const rank = document.createElement("div");
     rank.id = "pvpSettingsRank";
     rank.className = "pvp-settings-rank";
     rank.textContent = "段位";
-    const note = document.createElement("p");
-    note.id = "pvpSettingsNote";
-    note.textContent = "战绩只对你自己可见。";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "auth-secondary";
-    button.textContent = "打开对战档案";
-    button.addEventListener("click", () => { showPvpHistory().catch(() => {}); });
-    section.append(title, rank, note, button);
+    section.append(title, rank);
     panel.insertBefore(section, panel.querySelector("hr") || null);
   }
   if (section) section.hidden = !on;
@@ -159,10 +178,9 @@ export async function syncPvpProfile() {
   if (rank && on && loggedIn) {
     pvpFetch("/me/pvp/stats").then(({ data }) => {
       const place = data?.title?.inPlacement ? " · 定级中" : "";
+      const name = `${data?.title?.name || "散户一段"}${place}`;
       rank.textContent = "";
-      const title = document.createElement("span");
-      title.textContent = `${data?.title?.name || "散户一段"}${place}`;
-      rank.append(title);
+      rank.append(rankTitleWithIcon(name));
       appendRankProgress(rank, data?.rating);
     }).catch(() => {});
   }

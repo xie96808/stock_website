@@ -121,7 +121,10 @@ test("faces carry nickname and avatar, and still hide the pending action", () =>
   assert.equal(view.opponent.avatarId, 4);
   assert.equal(view.opponent.avatarUrl, null);
   assert.equal(JSON.stringify(view.opponent).includes("buy"), false);
-  assert.equal(view.opponent.userId, undefined);
+  // Opponent card (tap avatar) needs userId + public card fields mid-match.
+  assert.equal(view.opponent.userId, 2);
+  assert.equal(view.opponent.signature, "");
+  assert.deepEqual(view.opponent.recent, []);
 });
 
 test("a completed match reveals identity and all 30 bars; a forfeit does not", () => {

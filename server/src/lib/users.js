@@ -15,6 +15,7 @@ export function publicUser(row) {
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,
+    signature: row.signature == null ? "" : String(row.signature),
     jiuCoinBalance: Number(row.jiu_coin_balance) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -49,18 +50,19 @@ export function insertUser({ username, passwordHash, nickname, avatarId, leaderb
   return findUserById(id);
 }
 
-export function updateUserProfile(id, { nickname, avatarId, leaderboardOptIn }) {
+export function updateUserProfile(id, { nickname, avatarId, leaderboardOptIn, signature }) {
   const row = findUserById(id);
   if (!row || row.status === "deleted") return null;
   const nn = nickname != null ? nickname : row.nickname;
   const av = avatarId != null ? avatarId : row.avatar_id;
   const opt = leaderboardOptIn != null ? (leaderboardOptIn ? 1 : 0) : row.leaderboard_opt_in;
   const optChanged = leaderboardOptIn != null && opt !== row.leaderboard_opt_in;
+  const sig = signature != null ? signature : (row.signature == null ? "" : row.signature);
   const nickOrAvatarChanged =
     (nickname != null && nickname !== row.nickname) ||
     (avatarId != null && avatarId !== row.avatar_id);
-  openDb().prepare(`UPDATE users SET nickname = ?, avatar_id = ?, leaderboard_opt_in = ?,
-    updated_at = datetime('now') WHERE id = ?`).run(nn, av, opt, id);
+  openDb().prepare(`UPDATE users SET nickname = ?, avatar_id = ?, leaderboard_opt_in = ?, signature = ?,
+    updated_at = datetime('now') WHERE id = ?`).run(nn, av, opt, sig, id);
   // Opt-in flips membership; nickname/avatar refresh public Top N display.
   if (optChanged || nickOrAvatarChanged) invalidateLeaderboardCache();
   return findUserById(id);

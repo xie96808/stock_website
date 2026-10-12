@@ -5,7 +5,7 @@ import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-ro
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
 import { coinIconHtml } from "../jiu-coin.js";
 import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
-import { appendRankProgress } from "./profile-battle.js";
+import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
 let chart = null;
@@ -371,6 +371,13 @@ function paintRating(view) {
   if (progress) {
     progress.replaceChildren();
     try {
+      const titleText = view?.me?.ratingTitle || view?.me?.title || "";
+      if (titleText) {
+        const titleRow = document.createElement("p");
+        titleRow.className = "pvp-result-rank-title";
+        titleRow.append(rankTitleWithIcon(titleText));
+        progress.append(titleRow);
+      }
       appendRankProgress(progress, after);
     } catch (err) {
       console.warn("pvp rank progress failed", err);

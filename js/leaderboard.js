@@ -12,7 +12,7 @@ import {
 import { formatShanghaiDateTime } from "./time.js";
 
 const REASON_TEXT = {
-  not_opted_in: "尚未开启排行榜参与，可在设置中打开",
+  not_opted_in: "尚未列入排行榜，打开资料设置并保存即可参与",
   no_eligible_game: "暂无有效上榜战绩（需至少一笔买入的已结算局）",
   admin_role: "管理员成绩不进入公共榜",
   account_not_active: "账号当前不可参与排行榜",
@@ -147,7 +147,7 @@ function renderPanel(data) {
   const auth = getAuthState();
   if (mineEl) {
     if (!auth.user) {
-      mineEl.innerHTML = `<div class="mine-card guest">游客可浏览榜单。登录并在设置中开启「参与排行榜」后显示你的名次。
+      mineEl.innerHTML = `<div class="mine-card guest">游客可浏览榜单。登录后即可显示你的名次。
           <button type="button" class="leaderboard-link" id="lbLoginBtn">登录 / 注册</button></div>`;
       mineEl.querySelector("#lbLoginBtn")?.addEventListener("click", () => openAuthModal("login"));
     } else if (data.myRank != null) {
@@ -158,7 +158,7 @@ function renderPanel(data) {
       const reason = REASON_TEXT[data.ineligibilityReason] || "暂未上榜";
       const optBtn =
         data.ineligibilityReason === "not_opted_in"
-          ? `<button type="button" class="leaderboard-link" id="lbSettingsBtn">打开设置</button>`
+          ? `<button type="button" class="leaderboard-link" id="lbSettingsBtn">打开资料设置并保存</button>`
           : "";
       mineEl.innerHTML = `<div class="mine-card">${escapeHtml(reason)} ${optBtn}</div>`;
       mineEl.querySelector("#lbSettingsBtn")?.addEventListener("click", () => openAuthModal("settings"));

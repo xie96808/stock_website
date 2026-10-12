@@ -118,7 +118,8 @@ test("R08 a new action closes at the deadline, and the same key still replays", 
   assert.equal(JSON.stringify(mine).includes("600519"), false);
   assert.equal(JSON.stringify(mine).includes("贵州茅台"), false);
   assert.equal(JSON.stringify(mine).includes("2019-03"), false);
-  assert.equal(mine.opponent.userId, undefined);
+  assert.ok(mine.opponent.userId); // public card mid-match
+  assert.equal(typeof mine.opponent.signature, "string");
 
   assert.equal(lockAction(db, {
     matchId, userId: b, round: 1, action: "hold", commandKey: key("eq"), now: deadline,

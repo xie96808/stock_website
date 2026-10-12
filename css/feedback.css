@@ -1,6 +1,6 @@
 
 /* User feedback modal — paper/ink, matches auth/announcements */
-.feedback-modal{position:fixed;inset:0;background:rgba(20,16,12,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:16px}
+.feedback-modal{position:fixed;inset:0;background:rgba(20,16,12,.45);z-index:160;display:flex;align-items:center;justify-content:center;padding:16px}
 .feedback-modal[hidden]{display:none!important}
 .feedback-dialog{position:relative;width:min(460px,100%);max-height:90vh;overflow:auto;background:var(--paper,#f7f1e6);color:var(--ink,#222);
   border:2px solid #2a2a2a;border-radius:16px;padding:20px 18px 18px;box-shadow:6px 6px 0 rgba(0,0,0,.18)}
