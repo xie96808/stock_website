@@ -11,6 +11,7 @@ Production packaging no longer relies on `?v=<git-sha>` query busting for js/css
 
 - `index.html`, `version.json`, and `data/pack-meta.json` stay **no-store** / unhashed entry points.
 - Release tree prefers **hashed filenames only** for fingerprinted assets (unhashed sources remain for local dev).
+- Top-level `assets/` images (e.g. `assets/pvp/*.png`) are **packed but not fingerprinted**, so HTML/JS stable paths and live `/assets/...` URLs keep working.
 - `deploy/precompress-assets.mjs` still walks the tree, so `.gz` / `.br` are produced for hashed names.
 - `deploy/stamp-asset-revision.mjs` is **deprecated** for packaging (kept for emergency `?v=` on an unfingerprinted tree).
 

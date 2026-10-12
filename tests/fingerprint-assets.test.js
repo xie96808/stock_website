@@ -507,3 +507,37 @@ test('incident 2026-09-14: fingerprinted release must not keep bare local ESM/CS
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('fingerprint: assets/ images stay unhashed (JS string paths)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-assets-'));
+  try {
+    mkdirSync(join(dir, 'assets', 'pvp'), { recursive: true });
+    mkdirSync(join(dir, 'images'), { recursive: true });
+    writeFileSync(join(dir, 'assets', 'pvp', 'btn-buy.png'), Buffer.from([1, 2, 3, 4]));
+    writeFileSync(join(dir, 'assets', 'pvp', 'btn-sell.png'), Buffer.from([5, 6, 7, 8]));
+    writeFileSync(join(dir, 'images', 'icon.png'), Buffer.from([9, 10, 11, 12]));
+    writeFileSync(
+      join(dir, 'index.html'),
+      [
+        '<img src="assets/pvp/btn-buy.png">',
+        '<img src="/images/icon.png">',
+        '<script type="module">',
+        '  img.src = "assets/pvp/btn-sell.png";',
+        '  img.src = "assets/pvp/btn-buy.png";',
+        '</script>',
+      ].join('\n')
+    );
+    const r = spawnSync(process.execPath, [SCRIPT, dir], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr || r.stdout);
+    const pvp = readdirSync(join(dir, 'assets', 'pvp')).sort();
+    assert.deepEqual(pvp, ['btn-buy.png', 'btn-sell.png']);
+    const imgs = readdirSync(join(dir, 'images'));
+    assert.equal(imgs.length, 1);
+    assert.match(imgs[0], /^icon\.[a-f0-9]{10}\.png$/);
+    const html = readFileSync(join(dir, 'index.html'), 'utf8');
+    assert.match(html, /src="assets\/pvp\/btn-buy\.png"/);
+    assert.match(html, new RegExp(`/images/${imgs[0].replace('.', '\\.')}`));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

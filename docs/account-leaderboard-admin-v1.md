@@ -339,7 +339,7 @@ deploy/stockgame-api.service     # systemd
 
 现有文件改动重点：`index.html` 入口与路由；`js/state.js` 增加云端状态但不混入凭证；`js/game.js` 调共享引擎；`js/result.js` 权威结算与保存状态；`js/analysis.js` 区分估值／成交；`js/load-stocks.js` 校验行情版本；`deploy/*` 扩展服务端发布。
 
-新增 `images/avatars` 利用现有打包目录，避免新建 `assets/` 后忘记加入发布清单；新增 `shared/`、`vendor/`、`admin/` 仍须显式打包。
+新增 `images/avatars` 利用现有 `images/` 打包路径；顶层 `assets/`（含 `assets/pvp/*`）已列入 `deploy/package-production.sh` 发布清单且指纹阶段保持未改名（JS 字符串路径）。新增 `shared/`、`vendor/`、`admin/` 仍须显式打包。
 
 ## 9. 数据模型与约束
 
