@@ -1,4 +1,5 @@
 import { PVP_FILL_MODE, actionAvailability, roundView, visibleMtmPpm } from "../../../../shared/pvpMetrics.js";
+import { currentEconomy } from "./config.js";
 
 function parseActions(raw) {
   if (Array.isArray(raw)) return raw;
@@ -84,6 +85,15 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     && serverNow >= match.round_opens_at
     && serverNow < match.round_deadline_at;
   const myLock = pendingLocks[viewerId] || null;
+  let economy = null;
+  try {
+    economy = match.economy_json ? JSON.parse(match.economy_json) : null;
+  } catch {
+    economy = null;
+  }
+  if (!economy || typeof economy !== "object") {
+    economy = currentEconomy(serverNow);
+  }
 
   const view = {
     matchId: match.id,
@@ -95,6 +105,10 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     opensAt: match.round_opens_at ?? null,
     deadlineAt: match.round_deadline_at ?? null,
     market,
+    economy: {
+      entryCost: Number(economy.entryCost) || 0,
+      winReward: Number(economy.winReward) || 0,
+    },
     me: {
       nickname: mineFace.nickname,
       avatarId: mineFace.avatarId,
@@ -102,6 +116,7 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
       lockedToday: myLock != null,
       lockedAction: myLock,
       mtmPpm: mineNav.ok ? mineNav.visibleMtmPpm : null,
+      holding: !!legal.canSell,
       canBuy: open && legal.canBuy,
       canSell: open && legal.canSell,
       canHold: open && legal.canHold,

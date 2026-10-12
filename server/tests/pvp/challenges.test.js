@@ -180,16 +180,45 @@ test("a block and a full room reject a new match without charging", () => {
   }
 });
 
-test("a one-hour-old account can open a challenge, and a short classic history cannot", () => {
+test("accounts under 24h and short classic history cannot open a challenge", () => {
   const veteran = user("vet");
-  const young = user("young", { createdAt: new Date(NOW - 60 * 60 * 1000).toISOString() });
+  const young = user("young-hour", { createdAt: new Date(NOW - 60 * 60 * 1000).toISOString() });
   const short = user("short", { classics: 2 });
-  assert.equal(
-    createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW }).ok,
-    true
-  );
+  const youngDenied = createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW });
+  assert.equal(youngDenied.ok, false);
+  assert.equal(youngDenied.code, "NOT_ELIGIBLE");
+  assert.match(youngDenied.message, /24/);
   assert.equal(
     createChallenge(db, { fromUserId: short, toUserId: veteran, createKey: key("short"), now: NOW }).code,
     "NOT_ELIGIBLE"
   );
+  // Just past 24h is eligible (when classics and balance are fine).
+  const okAge = user("day-old", { createdAt: new Date(NOW - 24 * 60 * 60 * 1000 - 1).toISOString() });
+  assert.equal(
+    createChallenge(db, { fromUserId: okAge, toUserId: veteran, createKey: key("day"), now: NOW }).ok,
+    true
+  );
 });
+
+test("expired pending challenges are swept and no longer block outbound", () => {
+  const a = user("exp-a");
+  const b = user("exp-b");
+  const c = user("exp-c");
+  const first = createChallenge(db, { fromUserId: a, toUserId: b, createKey: key("exp1"), now: NOW });
+  assert.equal(first.ok, true);
+  assert.equal(first.created, true);
+  // Still pending in DB past expiry — createChallenge must expire then allow a new one.
+  db.prepare(`UPDATE pvp_challenges SET expires_at = ? WHERE id = ?`).run(NOW - 1, first.challenge.id);
+  const ghost = createChallenge(db, { fromUserId: a, toUserId: b, createKey: key("exp-replay"), now: NOW + 1 });
+  assert.equal(ghost.alreadyPending, undefined);
+  assert.equal(ghost.created, true);
+  assert.notEqual(ghost.challenge.id, first.challenge.id);
+  assert.equal(
+    db.prepare(`SELECT status FROM pvp_challenges WHERE id = ?`).get(first.challenge.id).status,
+    "expired"
+  );
+  const other = createChallenge(db, { fromUserId: a, toUserId: c, createKey: key("exp-other"), now: NOW + 2 });
+  // outbound still pending (ghost) so this should be OUTBOUND_PENDING
+  assert.equal(other.code, "OUTBOUND_PENDING");
+});
+

@@ -253,13 +253,17 @@ export async function showPvpHistory() {
   if (list) list.replaceChildren();
   if (statsNode) statsNode.replaceChildren();
   if (blocks) blocks.replaceChildren();
-  if (empty) empty.hidden = true;
+  if (empty) {
+    empty.hidden = false;
+    empty.textContent = "档案加载中…";
+  }
   try {
     const [statsRes, matchesRes, blocksRes] = await Promise.all([
       pvpFetch("/me/pvp/stats"),
       pvpFetch("/me/pvp/matches?limit=20"),
       pvpFetch("/pvp/blocks"),
     ]);
+    if (empty) empty.hidden = true;
     renderStats(statsRes.data, auth.user);
     renderBlocks(blocksRes.data);
     const entries = matchesRes.data.entries || [];

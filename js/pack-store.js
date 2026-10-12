@@ -423,10 +423,12 @@ export function prefetchStocksPack(gameState) {
   });
 }
 
+let stocksLoadLogged = false;
 export function ensureStocksLoaded(gameState, onProgress) {
   return loadPack(onProgress).then(function () {
     apply(gameState);
-    if (gameState && Array.isArray(gameState.stocksData)) {
+    if (!stocksLoadLogged && gameState && Array.isArray(gameState.stocksData)) {
+      stocksLoadLogged = true;
       console.log('Loaded ' + gameState.stocksData.length + ' stocks');
     }
     if (onProgress) onProgress(1);

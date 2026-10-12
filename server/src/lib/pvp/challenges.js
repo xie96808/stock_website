@@ -62,6 +62,19 @@ function hasLock(db, userId) {
   return !!db.prepare(`SELECT 1 AS hit FROM pvp_active_members WHERE user_id = ?`).get(userId);
 }
 
+
+/** Flip pending rows past expires_at so they stop blocking outbound/inbound caps. */
+export function expirePendingChallenges(db, now) {
+  const result = db
+    .prepare(
+      `UPDATE pvp_challenges
+       SET status = 'expired', responded_at = ?, cancel_reason = 'expired'
+       WHERE status = 'pending' AND expires_at <= ?`
+    )
+    .run(now, now);
+  return Number(result.changes) || 0;
+}
+
 export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
   const closed = denyIfNotAccepting(db);
   if (closed) return closed;
@@ -72,6 +85,7 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
     return deny("SELF_CHALLENGE", "不能和自己约战", 422);
   }
   return withImmediate(db, () => {
+    expirePendingChallenges(db, now);
     const hash = payloadHash(toUserId);
     const prior = db
       .prepare(`SELECT * FROM pvp_challenges WHERE from_user_id = ? AND create_key = ?`)
@@ -85,8 +99,8 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
 
     const key = pairKey(fromUserId, toUserId);
     const pendingPair = db
-      .prepare(`SELECT * FROM pvp_challenges WHERE pair_key = ? AND status = 'pending'`)
-      .get(key);
+      .prepare(`SELECT * FROM pvp_challenges WHERE pair_key = ? AND status = 'pending' AND expires_at > ?`)
+      .get(key, now);
     if (pendingPair) {
       return { ok: true, challenge: pendingPair, alreadyPending: true };
     }
@@ -98,12 +112,12 @@ export function createChallenge(db, { fromUserId, toUserId, createKey, now }) {
       return deny("TARGET_BUSY", "有一方正在对战", 409);
     }
     const outbound = db
-      .prepare(`SELECT id FROM pvp_challenges WHERE from_user_id = ? AND status = 'pending'`)
-      .get(fromUserId);
+      .prepare(`SELECT id FROM pvp_challenges WHERE from_user_id = ? AND status = 'pending' AND expires_at > ?`)
+      .get(fromUserId, now);
     if (outbound) return deny("OUTBOUND_PENDING", "你还有一条未结束的约战", 409);
     const inbound = db
-      .prepare(`SELECT COUNT(*) AS c FROM pvp_challenges WHERE to_user_id = ? AND status = 'pending'`)
-      .get(toUserId).c;
+      .prepare(`SELECT COUNT(*) AS c FROM pvp_challenges WHERE to_user_id = ? AND status = 'pending' AND expires_at > ?`)
+      .get(toUserId, now).c;
     if (inbound >= 3) return deny("TOO_MANY_INBOUND", "对方的约战太多", 409);
 
     const gate = assessEntry(db, fromUserId, toUserId, now);
@@ -163,9 +177,9 @@ export function openReadyMatch(db, challenge, now) {
   db.prepare(
     `INSERT INTO pvp_matches (
       id, challenge_id, status, rule_version, pvp_version, rating_version, fill_mode,
-      ready_deadline_at, created_at, revision
-    ) VALUES (?, ?, 'waiting_ready', ?, ?, ?, 'next_open', ?, ?, 0)`
-  ).run(matchId, challenge.id, RULE_VERSION, PVP_VERSION, PVP_RATING_VERSION, now + READY_MS, now);
+      economy_json, ready_deadline_at, created_at, revision
+    ) VALUES (?, ?, 'waiting_ready', ?, ?, ?, 'next_open', ?, ?, ?, 0)`
+  ).run(matchId, challenge.id, RULE_VERSION, PVP_VERSION, PVP_RATING_VERSION, JSON.stringify(economy), now + READY_MS, now);
 
   const seats = [
     [challenge.from_user_id, 1],
@@ -386,11 +400,10 @@ export function expireDueReady(db, now) {
     .all(now);
   const done = [];
   for (const row of due) {
-    done.push(
-      withImmediate(db, () =>
-        finishMatchInTx(db, { matchId: row.id, terminalType: "aborted", reason: "ready_timeout", now })
-      )
+    const result = withImmediate(db, () =>
+      finishMatchInTx(db, { matchId: row.id, terminalType: "aborted", reason: "ready_timeout", now })
     );
+    done.push({ matchId: row.id, ...result });
   }
   return done;
 }

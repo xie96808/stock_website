@@ -3,7 +3,7 @@ import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
 import { roundHalfUp } from "../../../../shared/engine.js";
 import { PVP_RATING_INITIAL, titleForRating } from "../../../../shared/pvpRating.js";
 import { assessSelf, isBlocked } from "./eligibility.js";
-import { maxActiveMatches } from "./config.js";
+import { currentEconomy, maxActiveMatches } from "./config.js";
 import { readDrain } from "./drain.js";
 import { publicNickname } from "./names.js";
 import { isAvailable, listAvailableIds } from "./presence.js";
@@ -13,7 +13,7 @@ function avatarUrl(row) {
   return `/api/v1/avatars/${encodeURIComponent(row.avatar_custom_path)}`;
 }
 
-export function lobbySummary(db, now = Date.now()) {
+export function lobbySummary(db, now = Date.now(), viewerId = null) {
   if (!config.pvpBattleEnabled) {
     return { availableCount: 0, acceptingNew: false, disabledReason: "对战未开放" };
   }
@@ -26,8 +26,10 @@ export function lobbySummary(db, now = Date.now()) {
   let disabledReason = null;
   if (draining) disabledReason = "对战已停止接受新局";
   else if (full) disabledReason = "对战房间已满";
+  const viewer = viewerId == null ? null : Number(viewerId);
+  const availableCount = listAvailableIds(now).filter((id) => id !== viewer).length;
   return {
-    availableCount: listAvailableIds(now).length,
+    availableCount,
     acceptingNew,
     disabledReason,
   };
@@ -155,6 +157,7 @@ export function readPvpState(db, userId, now = Date.now()) {
     )
     .all(now, userId, userId)
     .map((row) => challengeCard(db, row, userId));
+  const economy = currentEconomy(now);
   return {
     available: isAvailable(userId, now),
     outbound: pending.find((row) => row.direction === "outbound") || null,
@@ -163,6 +166,7 @@ export function readPvpState(db, userId, now = Date.now()) {
     activeMatchStatus: active?.status || null,
     eligibility: gate.ok ? { ok: true } : { ok: false, code: gate.code, message: gate.message },
     balance,
+    economy: { entryCost: economy.entryCost, winReward: economy.winReward },
     me: selfProfile(db, userId),
     serverNow: now,
   };

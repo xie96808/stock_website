@@ -240,6 +240,8 @@ body {
 }
 .top-left-chrome.is-chrome-collapsed .chrome-overflow-btn:not([hidden]) {
     display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
 }
 .chrome-overflow-inline {
     display: flex;

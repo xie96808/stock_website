@@ -16,6 +16,7 @@ let presenceChain = Promise.resolve();
 let waitingOutbound = false;
 let latestState = null;
 let acceptingNew = true;
+let respondInFlight = false;
 const seenRevision = new Map();
 
 function setText(id, value) {
@@ -213,7 +214,10 @@ async function shareBattle() {
 }
 
 async function respond(challengeId, accept) {
+  if (respondInFlight) return;
+  respondInFlight = true;
   setError("");
+  if (showing) renderInvites(latestState || { inbound: [], outbound: null });
   try {
     const { data } = await pvpFetch(`/pvp/challenges/${encodeURIComponent(challengeId)}/respond`, {
       method: "POST",
@@ -226,6 +230,9 @@ async function respond(challengeId, accept) {
     if (showing) await refresh();
   } catch (err) {
     setError(err.message || "没能处理这条约战");
+  } finally {
+    respondInFlight = false;
+    if (showing) renderInvites(latestState || { inbound: [], outbound: null });
   }
 }
 
@@ -283,12 +290,13 @@ function renderInvites(state) {
     accept.type = "button";
     accept.className = "pvp-btn pvp-btn-primary";
     accept.textContent = "接受";
-    accept.disabled = !acceptingNew;
+    accept.disabled = !acceptingNew || respondInFlight;
     accept.addEventListener("click", () => { respond(card.challengeId, true).catch(() => {}); });
     const decline = document.createElement("button");
     decline.type = "button";
     decline.className = "pvp-btn";
     decline.textContent = "拒绝";
+    decline.disabled = respondInFlight;
     decline.addEventListener("click", () => { respond(card.challengeId, false).catch(() => {}); });
     row.append(faceImage(card), text, accept, decline);
     inbound.append(row);
@@ -304,6 +312,7 @@ function renderList(entries, state) {
   const showEmpty = rows.length === 0;
   if (empty) empty.hidden = !showEmpty;
   if (modes) modes.hidden = !showEmpty;
+  document.getElementById("pvpLobbyScreen")?.classList.toggle("pvp-lobby-empty", showEmpty);
   const blocked = !acceptingNew || !state?.eligibility?.ok || !!state?.outbound;
   for (const entry of rows) {
     if (!list) break;
@@ -379,12 +388,37 @@ function paintLobbyMe(state) {
   }).catch(() => {});
 }
 
+
+function paintLobbyRules(economy) {
+  const entry = Number(economy?.entryCost);
+  const win = Number(economy?.winReward);
+  const entryCost = Number.isFinite(entry) && entry > 0 ? entry : 20;
+  const winReward = Number.isFinite(win) && win > 0 ? win : 35;
+  const net = winReward - entryCost;
+  const coin = (n) => `<span class="jiu-coin-amt"><span class="jiu-price-num">${n}</span>${coinIconHtml({ size: 14 })}</span>`;
+  const list = document.querySelector("#pvpLobbyScreen .pvp-rules");
+  if (!list) return;
+  list.innerHTML = [
+    `<li>双方各付 ${coin(entryCost)}。</li>`,
+    `<li>胜者到账 ${coin(winReward)}（净赚 ${coin(net)}），负者净减 ${coin(entryCost)}。</li>`,
+    `<li>平局各退 ${coin(entryCost)}。</li>`,
+    `<li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>`,
+  ].join("");
+}
+
 function renderState(state) {
   latestState = state;
+  paintLobbyRules(state.economy);
   const eligibility = document.getElementById("pvpLobbyEligibility");
   if (eligibility) {
     eligibility.hidden = !!state.eligibility?.ok;
     eligibility.textContent = state.eligibility?.ok ? "" : (state.eligibility?.message || "");
+  }
+  const shareBtn = document.getElementById("pvpShareBtn");
+  if (shareBtn) {
+    const ok = !!state.eligibility?.ok && acceptingNew;
+    shareBtn.hidden = !ok;
+    shareBtn.disabled = !ok;
   }
   const balance = state.balance == null ? "—" : escapeHtml(state.balance);
   const balanceNode = document.getElementById("pvpLobbyBalance");
@@ -417,6 +451,14 @@ async function refresh() {
   const auth = getAuthState();
   const guest = document.getElementById("pvpLobbyGuest");
   const member = document.getElementById("pvpLobbyMember");
+  const loading = document.getElementById("pvpLobbyLoading");
+  if (!auth.ready) {
+    if (guest) guest.hidden = true;
+    if (member) member.hidden = true;
+    if (loading) loading.hidden = false;
+    return;
+  }
+  if (loading) loading.hidden = true;
   if (!auth.user) {
     if (guest) guest.hidden = false;
     if (member) member.hidden = true;
@@ -497,6 +539,12 @@ export async function showPvpLobby({ instant = false } = {}) {
   showing = true;
   syncSessionPresence();
   setError("");
+  const guest = document.getElementById("pvpLobbyGuest");
+  const member = document.getElementById("pvpLobbyMember");
+  const loading = document.getElementById("pvpLobbyLoading");
+  if (guest) guest.hidden = true;
+  if (member) member.hidden = true;
+  if (loading) loading.hidden = false;
   const on = await pvpEnabled();
   if (!showing) return;
   if (!on) {
