@@ -211,6 +211,7 @@ export function openFeedbackModal() {
   const body = document.getElementById("feedbackBody");
   if (body) body.value = "";
   clearPreviews();
+  // Sit above 资料设置 (auth z-index 150). Keep settings open underneath.
   const modal = document.getElementById("feedbackModal");
   modal.hidden = false;
   body?.focus();
@@ -335,6 +336,9 @@ export function initFeedback() {
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     const m = document.getElementById("feedbackModal");
-    if (m && !m.hidden) closeFeedbackModal();
-  });
+    if (m && !m.hidden) {
+      e.stopPropagation();
+      closeFeedbackModal();
+    }
+  }, true);
 }

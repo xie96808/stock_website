@@ -7,6 +7,7 @@ import { REVEAL_GAP_MS } from "./config.js";
 import { loadReplay } from "./analysis.js";
 import { publicNickname } from "./names.js";
 import { titleForRating } from "../../../../shared/pvpRating.js";
+import { publicPlayerCard } from "./lobby.js";
 import { finishMatchInTx } from "./settlement.js";
 import { withImmediate } from "./tx.js";
 import { pvpMatchView } from "./view.js";
@@ -626,18 +627,11 @@ export function readMatchView(db, { matchId, viewerId, now }) {
   }
   const nicknames = {};
   const faces = {};
-  const names = db.prepare(
-    `SELECT id, nickname, status, avatar_id, avatar_custom_path FROM users WHERE id IN (?, ?)`
-  ).all(players[0].user_id, players[1].user_id);
-  for (const row of names) {
-    nicknames[row.id] = publicNickname(row);
-    faces[row.id] = {
-      nickname: publicNickname(row),
-      avatarId: row.avatar_id || 1,
-      avatarUrl: row.avatar_custom_path
-        ? `/api/v1/avatars/${encodeURIComponent(row.avatar_custom_path)}`
-        : null,
-    };
+  for (const player of players) {
+    const card = publicPlayerCard(db, player.user_id);
+    if (!card) continue;
+    nicknames[player.user_id] = card.nickname;
+    faces[player.user_id] = card;
   }
   const view = pvpMatchView({
     match,

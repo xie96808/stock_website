@@ -296,7 +296,7 @@ function ensureAuthDom() {
             <label class="avatar-preview-btn" id="registerAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="registerAvatarFile">
               <img class="avatar-preview" id="registerAvatarImg" alt="头像预览">
             </label>
-            <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
+            <input type="file" id="registerAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
             <div class="avatar-actions">
               <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
             </div>
@@ -309,7 +309,7 @@ function ensureAuthDom() {
             <label class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="settingsAvatarFile">
               <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
             </label>
-            <input type="file" id="settingsAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
+            <input type="file" id="settingsAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
             <div class="avatar-actions">
               <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
             </div>
@@ -320,7 +320,9 @@ function ensureAuthDom() {
             </label>
             <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">🎲</button>
           </div>
-          <label class="auth-check"><input type="checkbox" id="settingsOptIn"> 参与排行榜</label>
+          <label class="auth-nick-field">个性签名
+            <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
+          </label>
           <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
           <button type="button" class="auth-secondary" id="settingsFeedbackBtn">反馈</button>
           <hr>
@@ -339,6 +341,8 @@ function ensureAuthDom() {
   // Backdrop click must NOT close the auth modal (product feedback).
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
+      const feedback = document.getElementById("feedbackModal");
+      if (feedback && !feedback.hidden) return; // feedback owns Escape
       const m = document.getElementById("authModal");
       if (m && !m.hidden) closeAuthModal();
     }
@@ -402,8 +406,14 @@ function setSettingsAvatar(id, customUrl) {
 
 function validateImageFile(file) {
   if (!file) return "请选择图片";
-  const okType = ["image/jpeg", "image/png", "image/webp"].includes(file.type);
-  if (!okType) return "仅支持 JPEG / PNG / WebP";
+  const type = String(file.type || "").toLowerCase();
+  const name = String(file.name || "").toLowerCase();
+  const okType = ["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(type)
+    || type === "image/*"
+    || (!type && /\.(jpe?g|png|webp)$/.test(name));
+  // Android WebView sometimes reports empty or generic image/* — accept and let server reject bad bytes.
+  const looksImage = okType || type.startsWith("image/");
+  if (!looksImage) return "仅支持 JPEG / PNG / WebP";
   if (file.size > 1024 * 1024) return "头像不能超过 1MB";
   return null;
 }
@@ -551,7 +561,8 @@ export function openAuthModal(tab = "login") {
       tab = "login";
     } else {
       document.getElementById("settingsNickname").value = authState.user.nickname;
-      document.getElementById("settingsOptIn").checked = !!authState.user.leaderboardOptIn;
+      const sig = document.getElementById("settingsSignature");
+      if (sig) sig.value = authState.user.signature || "";
       pendingSettingsFile = null;
       if (pendingSettingsObjectUrl) {
         URL.revokeObjectURL(pendingSettingsObjectUrl);
@@ -758,7 +769,8 @@ async function onSaveSettings() {
       body: {
         nickname: document.getElementById("settingsNickname").value,
         avatarId: pendingSettingsAvatarId,
-        leaderboardOptIn: document.getElementById("settingsOptIn").checked,
+        signature: document.getElementById("settingsSignature")?.value ?? "",
+        leaderboardOptIn: true,
       },
     });
     applyAuth({ type: "USER_UPDATED", user: data.user });

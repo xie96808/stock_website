@@ -11,6 +11,7 @@ import {
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
 import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
+import { rankTitleWithIcon } from "./profile-battle.js";
 
 function stake(amount) {
   return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 14 })}</span>`;
@@ -76,6 +77,106 @@ function paintClockFace(id, seconds, kicker, urgent) {
   if (box) box.classList.toggle("is-urgent", urgent === true);
 }
 
+
+function outcomeGlyph(outcome) {
+  if (outcome === "win") return '<span class="pvp-recent-mark is-win" title="胜" aria-label="胜">✓</span>';
+  if (outcome === "loss") return '<span class="pvp-recent-mark is-loss" title="负" aria-label="负">✕</span>';
+  if (outcome === "draw") return '<span class="pvp-recent-mark is-draw" title="平" aria-label="平">–</span>';
+  return "";
+}
+
+function ensureOppCardDom() {
+  if (document.getElementById("pvpOppCardModal")) return;
+  const root = document.createElement("div");
+  root.id = "pvpOppCardModal";
+  root.className = "pvp-opp-card-modal";
+  root.hidden = true;
+  root.innerHTML = `
+    <div class="pvp-opp-card-dialog" role="dialog" aria-modal="true" aria-labelledby="pvpOppCardName">
+      <button type="button" class="pvp-opp-card-close" id="pvpOppCardClose" aria-label="关闭">×</button>
+      <img id="pvpOppCardAvatar" class="pvp-opp-card-avatar" alt="" width="64" height="64">
+      <h3 id="pvpOppCardName">对手</h3>
+      <p id="pvpOppCardTitle" class="pvp-opp-card-title"></p>
+      <p id="pvpOppCardRecord" class="pvp-opp-card-record"></p>
+      <p id="pvpOppCardRecent" class="pvp-opp-card-recent"></p>
+      <p id="pvpOppCardSignature" class="pvp-opp-card-signature"></p>
+    </div>`;
+  document.body.appendChild(root);
+  root.addEventListener("click", (e) => {
+    if (e.target === root) closeOppCard();
+  });
+  document.getElementById("pvpOppCardClose").onclick = closeOppCard;
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const m = document.getElementById("pvpOppCardModal");
+    if (m && !m.hidden) {
+      e.stopPropagation();
+      closeOppCard();
+    }
+  }, true);
+}
+
+function closeOppCard() {
+  const m = document.getElementById("pvpOppCardModal");
+  if (m) m.hidden = true;
+}
+
+function openOppCard(face) {
+  if (!face) return;
+  ensureOppCardDom();
+  const modal = document.getElementById("pvpOppCardModal");
+  const avatar = document.getElementById("pvpOppCardAvatar");
+  const name = document.getElementById("pvpOppCardName");
+  const title = document.getElementById("pvpOppCardTitle");
+  const record = document.getElementById("pvpOppCardRecord");
+  const recent = document.getElementById("pvpOppCardRecent");
+  const signature = document.getElementById("pvpOppCardSignature");
+  if (avatar) {
+    avatar.src = displayAvatarUrl(face);
+    avatar.alt = "";
+  }
+  if (name) name.textContent = face.nickname || "对手";
+  if (title) {
+    title.replaceChildren();
+    title.append(rankTitleWithIcon(face.title || face.titleName || "散户一段"));
+  }
+  if (record) {
+    const w = Number(face.wins) || 0;
+    const l = Number(face.losses) || 0;
+    const d = Number(face.draws) || 0;
+    record.textContent = (w + l + d) ? `战绩 ${w}胜 ${l}负 ${d}平` : "尚无战绩";
+  }
+  if (recent) {
+    const marks = (face.recent || []).map(outcomeGlyph).join("");
+    recent.innerHTML = marks ? `近况 ${marks}` : "暂无近况";
+  }
+  if (signature) {
+    const sig = String(face.signature || "").trim();
+    signature.textContent = sig ? sig : "这个人很懒，还没有个性签名";
+    signature.classList.toggle("is-empty", !sig);
+  }
+  modal.hidden = false;
+}
+
+function wireOppAvatarClick() {
+  const img = document.getElementById("pvpSeatOppAvatar");
+  const face = img?.closest(".pvp-seat-face") || img;
+  if (!face || face.dataset.oppCardWired === "1") return;
+  face.dataset.oppCardWired = "1";
+  face.classList.add("pvp-seat-face--tappable");
+  face.setAttribute("role", "button");
+  face.setAttribute("tabindex", "0");
+  face.setAttribute("aria-label", "查看对手资料");
+  const open = () => openOppCard(view?.opponent);
+  face.addEventListener("click", open);
+  face.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      open();
+    }
+  });
+}
+
 function paintSeat(prefix, face, fallback) {
   const img = document.getElementById(`${prefix}Avatar`);
   const name = document.getElementById(`${prefix}Name`);
@@ -95,6 +196,7 @@ function paintSeats() {
     avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
   }, "我");
   paintSeat("pvpSeatOpp", view?.opponent, "对手");
+  wireOppAvatarClick();
 }
 
 function paintReadyMark(id, ready, show, label) {
@@ -144,6 +246,7 @@ function destroyChart() {
 }
 
 export function leavePvpRoom({ deferChart = false } = {}) {
+  closeOppCard();
   matchId = null;
   view = null;
   postedLock = false;

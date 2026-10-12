@@ -52,9 +52,39 @@ function recentOutcomes(db, userId) {
     .filter(Boolean);
 }
 
+
+/** Public card for opponent modal / match seat enrichment. */
+export function publicPlayerCard(db, userId) {
+  const user = db
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
+    .get(userId);
+  if (!user) return null;
+  const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
+  const title = titleForRating(rating?.rating ?? PVP_RATING_INITIAL, rating?.games ?? 0);
+  const wins = Number(rating?.wins) || 0;
+  const losses = Number(rating?.losses) || 0;
+  const draws = Number(rating?.draws) || 0;
+  return {
+    userId: user.id,
+    nickname: publicNickname(user),
+    avatarId: user.avatar_id || 1,
+    avatarUrl: avatarUrl(user),
+    signature: user.signature == null ? "" : String(user.signature),
+    title: title.inPlacement ? `${title.name} · 定级中` : title.name,
+    titleName: title.name,
+    iconPath: title.iconPath,
+    inPlacement: !!title.inPlacement,
+    rating: rating?.rating ?? PVP_RATING_INITIAL,
+    wins,
+    losses,
+    draws,
+    recent: recentOutcomes(db, userId),
+  };
+}
+
 function entryFor(db, userId, busy) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -64,7 +94,10 @@ function entryFor(db, userId, busy) {
     nickname: user.nickname || "对手",
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
+    signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
+    titleName: title.name,
+    iconPath: title.iconPath,
     inPlacement: title.inPlacement,
     recent: recentOutcomes(db, userId),
     busy: busy.has(userId),
@@ -111,7 +144,7 @@ export function listLobby(db, viewerId, { cursor = 0, limit = 20, now = Date.now
 
 function selfProfile(db, userId) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -123,7 +156,9 @@ function selfProfile(db, userId) {
     nickname: user.nickname || "我",
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
+    signature: user.signature == null ? "" : String(user.signature),
     title: title.name,
+    iconPath: title.iconPath,
     inPlacement: title.inPlacement,
     rating: rating?.rating ?? PVP_RATING_INITIAL,
     wins,

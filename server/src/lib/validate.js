@@ -39,3 +39,15 @@ export function validateAvatarId(v) {
   if (!Number.isInteger(n) || n < 1 || n > 12) return null;
   return n;
 }
+
+/** Optional profile bio. Empty string clears. Max 40 code points. */
+export function normalizeSignature(raw) {
+  if (raw == null) return null;
+  if (typeof raw !== "string") return null;
+  let s = raw;
+  try { s = s.normalize("NFC"); } catch {}
+  s = s.replace(/^[\s\u3000]+|[\s\u3000]+$/g, "");
+  if (/[\u0000-\u001F\u007F]/.test(s)) return null;
+  if (unicodeLen(s) > 40) return null;
+  return s;
+}

@@ -43,9 +43,19 @@ function publicBar(bar, label, base, scale) {
 function faceOf(faces, userId, fallbackName) {
   const face = faces?.[userId] || {};
   return {
+    userId: face.userId ?? userId ?? null,
     nickname: face.nickname || fallbackName,
     avatarId: face.avatarId || 1,
     avatarUrl: face.avatarUrl || null,
+    signature: face.signature == null ? "" : String(face.signature),
+    title: face.title || null,
+    titleName: face.titleName || null,
+    iconPath: face.iconPath || null,
+    inPlacement: !!face.inPlacement,
+    wins: Number(face.wins) || 0,
+    losses: Number(face.losses) || 0,
+    draws: Number(face.draws) || 0,
+    recent: Array.isArray(face.recent) ? face.recent : [],
   };
 }
 
@@ -113,9 +123,13 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
       winReward: Number(economy.winReward) || 0,
     },
     me: {
+      userId: mineFace.userId,
       nickname: mineFace.nickname,
       avatarId: mineFace.avatarId,
       avatarUrl: mineFace.avatarUrl,
+      signature: mineFace.signature,
+      title: mineFace.title,
+      iconPath: mineFace.iconPath,
       lockedToday: myLock != null,
       lockedAction: myLock,
       mtmPpm: mineNav.ok ? mineNav.visibleMtmPpm : null,
@@ -125,9 +139,19 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
       canHold: open && legal.canHold,
     },
     opponent: {
+      userId: oppFace.userId || opponent.user_id,
       nickname: oppFace.nickname,
       avatarId: oppFace.avatarId,
       avatarUrl: oppFace.avatarUrl,
+      signature: oppFace.signature,
+      title: oppFace.title,
+      titleName: oppFace.titleName,
+      iconPath: oppFace.iconPath,
+      inPlacement: oppFace.inPlacement,
+      wins: oppFace.wins,
+      losses: oppFace.losses,
+      draws: oppFace.draws,
+      recent: oppFace.recent,
       lockedToday: pendingLocks[opponent.user_id] != null,
       mtmPpm: theirNav.ok ? theirNav.visibleMtmPpm : null,
     },

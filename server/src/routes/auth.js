@@ -4,7 +4,7 @@ import {
   hashPassword, verifyPassword,
 } from "../lib/crypto.js";
 import {
-  normalizeUsername, validatePassword, normalizeNickname, validateAvatarId,
+  normalizeUsername, validatePassword, normalizeNickname, validateAvatarId, normalizeSignature,
 } from "../lib/validate.js";
 import {
   findUserByUsername, insertUser, publicUser, updatePassword, softDeleteUser, findUserById, updateUserProfile,
@@ -143,6 +143,11 @@ router.patch("/me", requireUser, (req, res) => {
   }
   if (req.body?.leaderboardOptIn != null) {
     patch.leaderboardOptIn = !!req.body.leaderboardOptIn;
+  }
+  if (req.body?.signature != null) {
+    const sig = normalizeSignature(req.body.signature);
+    if (sig == null) return fail(res, 400, "INVALID_SIGNATURE", "个性签名最多 40 字");
+    patch.signature = sig;
   }
   const updated = updateUserProfile(req.user.id, patch);
   return ok(res, { user: publicUser(updated) });

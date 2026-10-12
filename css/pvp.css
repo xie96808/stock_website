@@ -1575,3 +1575,44 @@
     height: min(520px, 58dvh);
   }
 }
+
+/* Rank group hand-drawn icons */
+.pvp-rank-title{
+  display:inline-flex;align-items:center;gap:6px;vertical-align:middle
+}
+.pvp-rank-icon{
+  width:22px;height:22px;object-fit:contain;flex-shrink:0;
+  border-radius:4px;background:transparent
+}
+.pvp-person-rank{display:flex;margin-top:2px;font-size:13px;opacity:.9}
+.pvp-dossier-rank .pvp-rank-title{font-size:inherit}
+.pvp-settings-rank .pvp-rank-title{font-size:14px}
+.pvp-result-rank-title{margin:0 0 6px;font-size:14px}
+
+/* Opponent profile card (tap avatar in room) */
+.pvp-opp-card-modal{
+  position:fixed;inset:0;z-index:170;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:rgba(20,16,12,.45)
+}
+.pvp-opp-card-modal[hidden]{display:none!important}
+.pvp-opp-card-dialog{
+  position:relative;width:min(340px,100%);background:var(--paper,#f7f1e6);color:var(--ink,#222);
+  border:2px solid #2a2a2a;border-radius:16px;padding:22px 18px 18px;box-shadow:6px 6px 0 rgba(0,0,0,.18);
+  text-align:center
+}
+.pvp-opp-card-close{
+  position:absolute;right:10px;top:8px;border:none;background:transparent;font-size:22px;cursor:pointer;color:inherit
+}
+.pvp-opp-card-avatar{
+  width:72px;height:72px;border-radius:50%;border:1.5px solid #666;object-fit:cover;background:#111;display:block;margin:0 auto 10px
+}
+.pvp-opp-card-dialog h3{margin:0 0 6px;font-size:1.15rem}
+.pvp-opp-card-title{margin:0 0 8px;display:flex;justify-content:center}
+.pvp-opp-card-record,.pvp-opp-card-recent{margin:0 0 6px;font-size:13px}
+.pvp-opp-card-signature{
+  margin:10px 0 0;padding:10px 12px;border:1.5px dashed #666;border-radius:10px;
+  font-size:13px;line-height:1.45;text-align:left;background:#fffdf8
+}
+.pvp-opp-card-signature.is-empty{opacity:.65;font-style:italic}
+.pvp-seat-face--tappable{cursor:pointer;touch-action:manipulation}
+.pvp-seat-face--tappable:focus-visible{outline:2px solid #2a2a2a;outline-offset:3px;border-radius:50%}

@@ -2,7 +2,7 @@ import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../aut
 import { coinIconHtml } from "../jiu-coin.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
-import { fillDossier } from "./profile-battle.js";
+import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 
 let showing = false;
@@ -380,8 +380,7 @@ function renderList(entries, state) {
     const body = document.createElement("div");
     const name = document.createElement("strong");
     name.textContent = entry.nickname || "对手";
-    const title = document.createElement("span");
-    title.textContent = entry.title || "";
+    const title = rankTitleWithIcon(entry.title || "", { className: "pvp-rank-title pvp-person-rank" });
     const recent = document.createElement("span");
     recent.className = "pvp-recent";
     const marks = (entry.recent || []).map(outcomeGlyph).join("");
