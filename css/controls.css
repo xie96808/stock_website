@@ -660,7 +660,7 @@ body.ctl-scroll-lock {
   appearance: none;
   -webkit-appearance: none;
   border-style: solid !important; border-color: transparent !important; border-width: 10px !important;
-  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch;
+  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ctl-ink);
@@ -674,17 +674,17 @@ body.ctl-scroll-lock {
 .auth-form input[type=password]:focus,
 .auth-form input:not([type]):focus,
 .ctl-input:focus {
-  border-image-source: url("../assets/controls/ctl-input-shell-focus.png");
+  border-image-source: url("../assets/controls/ctl-input-shell-focus.png") !important;
 }
 .auth-form input:user-invalid,
 .ctl-input[aria-invalid="true"] {
-  border-image-source: url("../assets/controls/ctl-input-shell-error.png");
+  border-image-source: url("../assets/controls/ctl-input-shell-error.png") !important;
 }
 .feedback-dialog textarea,
 .ctl-textarea {
   appearance: none;
   border-style: solid !important; border-color: transparent !important; border-width: 14px !important;
-  border-image: url("../assets/controls/ctl-textarea-shell-default.png") 18 fill / 14px stretch;
+  border-image: url("../assets/controls/ctl-textarea-shell-default.png") 18 fill / 14px stretch !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ctl-ink);
@@ -694,9 +694,9 @@ body.ctl-scroll-lock {
   caret-color: var(--ctl-buy);
 }
 .feedback-dialog textarea:focus,
-.ctl-textarea:focus { border-image-source: url("../assets/controls/ctl-textarea-shell-focus.png"); }
+.ctl-textarea:focus { border-image-source: url("../assets/controls/ctl-textarea-shell-focus.png") !important; }
 .feedback-dialog textarea:user-invalid,
-.ctl-textarea[aria-invalid="true"] { border-image-source: url("../assets/controls/ctl-textarea-shell-error.png"); }
+.ctl-textarea[aria-invalid="true"] { border-image-source: url("../assets/controls/ctl-textarea-shell-error.png") !important; }
 [data-theme="dark"] .auth-form input,
 [data-theme="dark"] .feedback-dialog textarea { color: #2c2824; }
 
@@ -723,8 +723,7 @@ body.ctl-scroll-lock {
   background-image: url("../assets/controls/ctl-close-x-press.png") !important;
   transform: translate(1px, 1px);
 }
-/* P2 TODO (follow-up PR): ctl-checkbox/radio/switch + ctl-modal-paper 9-slice + avatar-frame are packed but not yet wired;
-   remaining native inputs: auth checkbox, fill-mode radios, hindsight/report/rewind fields. */
+/* P2 wiring: see round-2 section at end of file. Native date picker popups (hindsight) remain OS-drawn by browser. */
 
 /* Long label (回到大厅（计时继续）) — keep within 160px shell */
 #pvpLeaveLobby { width: min(220px, 100%); letter-spacing: 0.04em; font-size: 0.88rem; }
@@ -781,3 +780,328 @@ body.ctl-scroll-lock {
 #holdBtn.ctl.is-fast-forwarding { box-shadow: none !important; filter: brightness(0.92) saturate(1.2); background-image: url("../assets/controls/ctl-hold-press.webp"); }
 .pvp-dialog .ctl:focus-visible,
 .ctl:focus-visible { outline: 2px dashed var(--ctl-ink); outline-offset: 3px; border-radius: 10px; }
+
+/* =====================================================================
+   Round 2 (打回修复): bottom sheets, castbar fill pane, secondary game CTAs,
+   P2 checkbox/radio/switch, modal-paper, avatar-frame, more input shells.
+   ===================================================================== */
+
+/* ----- Bottom sheets (§6.4.2: enter 240–280 / exit 200–240) ----- */
+.ctl-sheet,
+#fillModeModal,
+#rewindConfirmModal,
+#dailyChallengeConfirmModal {
+  align-items: flex-end !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+.ctl-sheet { position: fixed; inset: 0; display: flex; background: var(--ctl-dim); z-index: 146; }
+.ctl-sheet[hidden] { display: none !important; }
+#fillModeModal,
+#rewindConfirmModal,
+#dailyChallengeConfirmModal { z-index: 146 !important; background: transparent; }
+#fillModeModal .fill-mode-backdrop,
+#rewindConfirmModal .rewind-backdrop { background: var(--ctl-dim) !important; backdrop-filter: none !important; }
+#dailyChallengeConfirmModal { background: var(--ctl-dim) !important; }
+
+.ctl-sheet-panel,
+#fillModeModal .fill-mode-dialog,
+#rewindConfirmModal .rewind-dialog,
+#dailyChallengeConfirmModal .jiu-coin-dialog {
+  width: min(520px, 100%) !important;
+  max-height: 88vh;
+  overflow: auto;
+  margin: 0 auto;
+  padding: 1.1rem 1.2rem calc(1rem + env(safe-area-inset-bottom)) !important;
+  transform-origin: 50% 100%;
+}
+/* Sheets animate on the panel whenever shown (also covers legacy direct hidden=false). */
+#fillModeModal:not([hidden]) .fill-mode-dialog,
+#rewindConfirmModal:not([hidden]) .rewind-dialog,
+#dailyChallengeConfirmModal:not([hidden]) .jiu-coin-dialog,
+.ctl-sheet:not([hidden]) .ctl-sheet-panel {
+  animation: ctl-sheet-in 260ms var(--ctl-ease-pop) both !important;
+}
+#fillModeModal:not([hidden]) .fill-mode-backdrop,
+#rewindConfirmModal:not([hidden]) .rewind-backdrop,
+#dailyChallengeConfirmModal:not([hidden]),
+.ctl-sheet:not([hidden]) { animation: ctl-dim-in 200ms ease both; }
+
+#fillModeModal.is-leaving .fill-mode-dialog,
+#rewindConfirmModal.is-leaving .rewind-dialog,
+#dailyChallengeConfirmModal.is-leaving .jiu-coin-dialog,
+.ctl-sheet.is-leaving .ctl-sheet-panel {
+  animation: ctl-sheet-out 220ms ease-in both !important;
+}
+#fillModeModal.is-leaving .fill-mode-backdrop,
+#rewindConfirmModal.is-leaving .rewind-backdrop,
+#dailyChallengeConfirmModal.is-leaving,
+.ctl-sheet.is-leaving { animation: ctl-dim-out 220ms ease-in both !important; pointer-events: none; }
+
+@keyframes ctl-sheet-in {
+  0% { opacity: 0; transform: translateY(100%) rotate(-1.5deg); }
+  35% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) rotate(0); }
+}
+@keyframes ctl-sheet-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(100%); }
+}
+
+/* Crisis: highest layer (below toast), backdrop does not dismiss (JS). */
+.ctl-crisis { z-index: var(--ctl-z-crisis) !important; }
+.ctl-crisis .ctl-sheet-panel h2 { font-family: var(--kaiti); font-size: 1.2rem; margin: 0 0 0.5rem; color: var(--ctl-buy); }
+.ctl-crisis .ctl-sheet-panel p { margin: 0 0 0.9rem; line-height: 1.6; }
+.ctl-sheet-actions { display: flex; gap: 0.6rem; justify-content: center; flex-wrap: wrap; }
+
+/* ----- Modal paper (9-slice) on every dialog/sheet panel ----- */
+.ctl-paper,
+.auth-dialog,
+.feedback-dialog,
+.announcements-dialog,
+.pvp-dialog-card,
+.pvp-opp-card-dialog,
+.fill-mode-dialog,
+.rewind-dialog,
+.jiu-coin-dialog {
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 16px !important;
+  border-image: url("../assets/controls/ctl-modal-paper.png") 48 fill / 16px stretch !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: drop-shadow(4px 4px 0 rgba(58, 53, 48, 0.85));
+}
+/* Paper is kraft in both themes → force ink tokens inside panels (no light-on-light). */
+[data-theme="dark"] .ctl-paper,
+[data-theme="dark"] .auth-dialog,
+[data-theme="dark"] .feedback-dialog,
+[data-theme="dark"] .announcements-dialog,
+[data-theme="dark"] .pvp-dialog-card,
+[data-theme="dark"] .pvp-opp-card-dialog,
+[data-theme="dark"] .fill-mode-dialog,
+[data-theme="dark"] .rewind-dialog,
+[data-theme="dark"] .jiu-coin-dialog {
+  --ink: #2c2824; --ink-soft: #5a5248; --mute: #7a7064; --line: #3a3530;
+  --card: #f7f0e2; --paper: #f3ead8; --paper-2: #efe4cc; --chip-bg: #efe4c8;
+  --text-primary: #2c2824; --text-secondary: #5a5248; --text-muted: #7a7064;
+  --ctl-ink: #3a3530; --ctl-kraft: #f3ead8;
+  color: #2c2824 !important;
+}
+
+/* ----- Fill-mode loading → castbar art ----- */
+#fillModeLoadingPane .fill-load-shell {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0.4rem 0 0.2rem !important;
+}
+#fillLoadBar.ctl-castbar {
+  width: 100%;
+  max-width: 320px;
+  height: 18px;
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  margin: 0.4rem auto;
+}
+#fillLoadBar #fillLoadFill.ctl-castbar-fill {
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  background-image: url("../assets/controls/ctl-castbar-fill.webp") !important;
+  background-size: 320px 100% !important;
+  background-repeat: no-repeat !important;
+}
+.fill-load-label, .fill-load-pct { font-family: var(--kaiti); }
+
+/* ----- Secondary game CTAs: 快进 / 结束 / 反悔 (hand-drawn shells) ----- */
+.action-btn.ctl.ff,
+.action-btn.ctl.rewind,
+.action-btn.ctl.finish {
+  width: 100%;
+  max-width: none;
+  height: 46px;
+  min-height: 46px;
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  background-color: transparent !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+}
+.action-btn.ctl.ff,
+.action-btn.ctl.rewind { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; color: var(--ctl-ink) !important; }
+.action-btn.ctl.ff:active:not(:disabled),
+.action-btn.ctl.ff[data-state="press"],
+.action-btn.ctl.rewind:active:not(:disabled),
+.action-btn.ctl.rewind[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
+.action-btn.ctl.finish { background-image: url("../assets/controls/ctl-primary-default.webp") !important; color: var(--ctl-ink) !important; }
+.action-btn.ctl.finish:active:not(:disabled),
+.action-btn.ctl.finish[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
+.action-btn.ctl.finish:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
+#fastForwardBtn.ctl.is-fast-forwarding { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; color: var(--ctl-buy) !important; }
+[data-theme="dark"] .action-btn.ctl.rewind,
+[data-theme="dark"] .action-btn.ctl.ff,
+[data-theme="dark"] .action-btn.ctl.finish { color: #3a3530 !important; }
+.fill-mode-btn.ctl, .rewind-btn-primary.ctl, .rewind-btn-secondary.ctl, .jiu-coin-primary.ctl, .jiu-coin-secondary.ctl {
+  border: none !important; border-radius: 0 !important; box-shadow: none !important;
+  background-color: transparent !important; padding: 0 0.6rem !important;
+}
+.fill-mode-btn.ctl-primary, .rewind-btn-primary.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp") !important; }
+.fill-mode-btn.ctl-primary:active, .rewind-btn-primary.ctl-primary:active, .jiu-coin-primary.ctl-primary:active { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
+.rewind-btn-primary.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
+.fill-mode-btn.ctl-secondary, .rewind-btn-secondary.ctl-secondary, .jiu-coin-secondary.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; }
+.fill-mode-btn.ctl-secondary:active, .rewind-btn-secondary.ctl-secondary:active, .jiu-coin-secondary.ctl-secondary:active { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
+.fill-mode-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp") !important; color: #a83232 !important; }
+.fill-mode-btn.ctl-danger:active { background-image: url("../assets/controls/ctl-danger-press.webp") !important; }
+
+/* ----- P2: checkbox / radio ----- */
+#indicatorPanel input[type="checkbox"],
+.indicator-panel input[type="checkbox"],
+.auth-check input[type="checkbox"],
+.ctl-checkbox,
+.fill-mode-option input[type="radio"],
+.ctl-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  margin: 0 6px 0 0;
+  border: none;
+  border-radius: 0;
+  background: url("../assets/controls/ctl-checkbox-off.png") center / 100% 100% no-repeat;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: transform 70ms linear;
+}
+#indicatorPanel input[type="checkbox"]:checked,
+.indicator-panel input[type="checkbox"]:checked,
+.auth-check input[type="checkbox"]:checked,
+.ctl-checkbox:checked { background-image: url("../assets/controls/ctl-checkbox-on.png"); }
+.fill-mode-option input[type="radio"],
+.ctl-radio { background-image: url("../assets/controls/ctl-radio-off.png"); }
+.fill-mode-option input[type="radio"]:checked,
+.ctl-radio:checked { background-image: url("../assets/controls/ctl-radio-on.png"); }
+.ctl-checkbox:active, .ctl-radio:active,
+.fill-mode-option input[type="radio"]:active,
+#indicatorPanel input[type="checkbox"]:active,
+.indicator-panel input[type="checkbox"]:active,
+.auth-check input[type="checkbox"]:active { transform: translate(1px, 1px); }
+.fill-mode-option input[type="radio"]:focus-visible,
+.ctl-checkbox:focus-visible, .ctl-radio:focus-visible,
+#indicatorPanel input[type="checkbox"]:focus-visible,
+.indicator-panel input[type="checkbox"]:focus-visible,
+.auth-check input[type="checkbox"]:focus-visible { outline: 2px dashed var(--ctl-ink); outline-offset: 2px; }
+
+/* ----- P2: 纸/墨 switch ----- */
+.theme-toggle .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  font-family: var(--kaiti);
+  color: var(--ink) !important;
+}
+.theme-toggle .pill::before {
+  content: "";
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  background: center / 100% 100% no-repeat;
+  transition: transform 70ms linear;
+}
+.theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-off.png"); }
+.theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-off.png"); }
+html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-on.png"); }
+[data-theme="dark"] .theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-on.png"); }
+.theme-toggle .pill:active::before { transform: translate(1px, 1px); }
+
+/* ----- P2: avatar frames ----- */
+.pvp-seat-avatar,
+.pvp-opp-card-avatar,
+.pvp-dossier img,
+.auth-avatar {
+  border: none !important;
+  padding: 3px;
+  background: url("../assets/controls/ctl-avatar-frame-48.png") center / 100% 100% no-repeat !important;
+  border-radius: 50%;
+  object-fit: cover;
+  box-sizing: border-box;
+}
+.pvp-invite-dialog .pvp-seat-avatar,
+.pvp-opp-card-avatar,
+.avatar-preview {
+  padding: 4px;
+  border: none !important;
+  background: url("../assets/controls/ctl-avatar-frame-72.png") center / 100% 100% no-repeat !important;
+}
+
+/* ----- P2: more input shells (举报 / 悔棋局 / select) ----- */
+.hindsight-input,
+.hindsight-date-input,
+#pvpReportReason {
+  appearance: none;
+  -webkit-appearance: none;
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 10px !important;
+  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: #2c2824 !important;
+  caret-color: var(--ctl-buy);
+  outline: none;
+}
+.hindsight-input:focus,
+.hindsight-date-input:focus,
+#pvpReportReason:focus { border-image-source: url("../assets/controls/ctl-input-shell-focus.png") !important; }
+.hindsight-input[aria-invalid="true"],
+.hindsight-input.is-error { border-image-source: url("../assets/controls/ctl-input-shell-error.png") !important; }
+#pvpReportDetail.ctl-textarea { width: 100%; min-height: 96px; }
+
+/* ----- Reduced motion for sheets: ≤120ms fade only ----- */
+@media (prefers-reduced-motion: reduce) {
+  #fillModeModal:not([hidden]) .fill-mode-dialog,
+  #rewindConfirmModal:not([hidden]) .rewind-dialog,
+  #dailyChallengeConfirmModal:not([hidden]) .jiu-coin-dialog,
+  .ctl-sheet:not([hidden]) .ctl-sheet-panel { animation: ctl-fade-short 120ms ease both !important; }
+  #fillModeModal.is-leaving .fill-mode-dialog,
+  #rewindConfirmModal.is-leaving .rewind-dialog,
+  #dailyChallengeConfirmModal.is-leaving .jiu-coin-dialog,
+  .ctl-sheet.is-leaving .ctl-sheet-panel,
+  #fillModeModal.is-leaving .fill-mode-backdrop,
+  #rewindConfirmModal.is-leaving .rewind-backdrop,
+  #dailyChallengeConfirmModal.is-leaving,
+  .ctl-sheet.is-leaving { animation: ctl-fade-short-out 100ms ease both !important; }
+  #fillModeModal:not([hidden]) .fill-mode-backdrop,
+  #rewindConfirmModal:not([hidden]) .rewind-backdrop,
+  #dailyChallengeConfirmModal:not([hidden]),
+  .ctl-sheet:not([hidden]) { animation: ctl-fade-short 120ms ease both !important; }
+}
+
+/* Fix: loading hosts must still respect [hidden] */
+.ctl-loading-host[hidden],
+#fillModeLoadingPane[hidden],
+#pvpLobbyLoading[hidden] { display: none !important; }
+
+/* Focus = hand-drawn wavy underline on the label (no rectangular ring on top of the shell) */
+.ctl:focus-visible,
+.pvp-dialog .ctl:focus-visible { outline: none !important; }
+.ctl:focus-visible .ctl-label,
+.ctl:focus-visible:not(:has(.ctl-label)) {
+  text-decoration: underline wavy var(--ctl-buy) 1.5px;
+  text-underline-offset: 5px;
+}
+
+.fill-mode-actions, .rewind-actions, .jiu-coin-modal-actions {
+  display: flex !important; flex-wrap: wrap; gap: 0.6rem; justify-content: center;
+}
+.fill-mode-actions .ctl, .rewind-actions .ctl, .jiu-coin-modal-actions .ctl { width: min(170px, 46%) !important; flex: 0 1 auto; }
+.action-btn.ctl.rewind { width: 100% !important; }
