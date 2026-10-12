@@ -54,3 +54,55 @@ export function shuffleArray(arr) {
     }
     return a;
 }
+
+/** EMA series for closes; seeds with SMA of the first `period` closes. */
+export function calculateEMA(data, period) {
+    const result = new Array(data.length).fill(null);
+    if (!data.length || period < 1) return result;
+    const k = 2 / (period + 1);
+    let sum = 0;
+    const seed = Math.min(period, data.length);
+    for (let i = 0; i < seed; i++) sum += data[i].close;
+    let prev = roundHalfUp(sum / seed, 4);
+    result[seed - 1] = prev;
+    for (let i = seed; i < data.length; i++) {
+        prev = roundHalfUp(data[i].close * k + prev * (1 - k), 4);
+        result[i] = prev;
+    }
+    return result;
+}
+
+/**
+ * Classic MACD(12,26,9): DIF / DEA / histogram (2×(DIF−DEA)).
+ * Null until EMAs have enough bars.
+ */
+export function calculateMACD(data, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
+    const emaShort = calculateEMA(data, shortPeriod);
+    const emaLong = calculateEMA(data, longPeriod);
+    const dif = data.map((_, i) => {
+        if (emaShort[i] == null || emaLong[i] == null) return null;
+        return roundHalfUp(emaShort[i] - emaLong[i], 4);
+    });
+    const dea = new Array(data.length).fill(null);
+    const hist = new Array(data.length).fill(null);
+    const k = 2 / (signalPeriod + 1);
+    let seeded = false;
+    let prev = 0;
+    let window = [];
+    for (let i = 0; i < dif.length; i++) {
+        if (dif[i] == null) continue;
+        if (!seeded) {
+            window.push(dif[i]);
+            if (window.length < signalPeriod) continue;
+            prev = roundHalfUp(window.reduce((a, b) => a + b, 0) / signalPeriod, 4);
+            seeded = true;
+            dea[i] = prev;
+        } else {
+            prev = roundHalfUp(dif[i] * k + prev * (1 - k), 4);
+            dea[i] = prev;
+        }
+        hist[i] = roundHalfUp(2 * (dif[i] - dea[i]), 4);
+    }
+    return { dif, dea, hist };
+}
+

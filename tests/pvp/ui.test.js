@@ -106,10 +106,11 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.dataZoom[0].start, 0);
   assert.equal(opt.dataZoom[0].end, 100);
   assert.equal(opt.dataZoom[0].maxSpan, 100);
-  assert.equal(opt.xAxis[1].axisLabel.formatter("h1"), "");
-  assert.equal(opt.xAxis[1].axisLabel.formatter("h15"), "");
-  assert.equal(opt.xAxis[1].axisLabel.formatter("d1"), "1");
-  assert.equal(opt.xAxis[1].axisLabel.formatter("d12"), "12");
+  const bottomAxis = opt.xAxis[opt.xAxis.length - 1];
+  assert.equal(bottomAxis.axisLabel.formatter("h1"), "");
+  assert.equal(bottomAxis.axisLabel.formatter("h15"), "");
+  assert.equal(bottomAxis.axisLabel.formatter("d1"), "1");
+  assert.equal(bottomAxis.axisLabel.formatter("d12"), "12");
   const many = Array.from({ length: 60 }, (_, i) => ({
     label: i < 30 ? `h${i + 1}` : `d${i - 29}`, open: 1, close: 1, low: 1, high: 1, volume: 1,
   }));
@@ -149,7 +150,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpRoomScreen"/);
   assert.match(html, /id="pvpResultScreen"/);
   assert.match(html, /id="pvpHistoryScreen"/);
-  assert.match(html, /现在没有可约战的对手。去玩幽灵对局，或稍后再来。/);
+  assert.match(html, /现在没有可约战的对手。也可以去玩幽灵对局，或稍后再来。/);
   assert.match(html, /打开应用就能被约到/);
   assert.match(html, /id="pvpReadyMarkMe"/);
   assert.match(html, /id="pvpReadyMarkOpp"/);
@@ -161,6 +162,10 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpShareBtn"/);
   assert.match(html, /id="pvpLobbyLoading"/);
   assert.match(html, /id="pvpHold">观望</);
+  assert.match(html, /id="pvpTrade"/);
+  assert.doesNotMatch(html, /id="pvpBuy"/);
+  assert.doesNotMatch(html, /id="pvpSell"/);
+  assert.match(html, /id="pvpReadyClockNum">15</);
   assert.match(html, /id="pvpWinMeAvatar"/);
   assert.match(html, /id="pvpWinOppAvatar"/);
   assert.match(html, /id="pvpWinIdentity"/);
@@ -244,6 +249,12 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(lobby, /早知道当初不炒了/);
   const play = html.split('id="pvpPlayPanel"')[1].split('id="pvpLeaveDialog"')[0];
   assert.doesNotMatch(play, /锁定/);
+  assert.match(resultJs, /formatCoin/);
+  assert.match(lobby, /pvp-recent-mark/);
+  assert.match(lobby, /is-win/);
+  assert.match(css, /pvp-recent-mark/);
+  assert.match(room, /pvpTrade/);
+  assert.match(room, /dataset\.action/);
 });
 
 test("pvp y-axis names relative price so it is not read as a real quote", () => {
@@ -254,3 +265,32 @@ test("pvp y-axis names relative price so it is not read as a real quote", () => 
   const opt = buildKlineOption({ mode: "pvp", bars, historyLength: 1, resetDataZoom: true });
   assert.match(String(opt.yAxis[0].name || ""), /相对价/);
 });
+
+test("pvp chart includes MA legend and MACD panel", () => {
+  const bars = Array.from({ length: 40 }, (_, i) => ({
+    label: i < 20 ? `h${i + 1}` : `d${i - 19}`,
+    open: 10 + i * 0.1,
+    close: 10.2 + i * 0.12,
+    low: 9.8 + i * 0.1,
+    high: 10.5 + i * 0.12,
+    volume: 1 + i,
+  }));
+  const opt = buildKlineOption({ mode: "pvp", bars, historyLength: 20, resetDataZoom: true });
+  assert.equal(opt.grid.length, 3);
+  assert.equal(opt.xAxis.length, 3);
+  assert.equal(opt.yAxis.length, 3);
+  const names = opt.series.map((s) => s.name);
+  assert.ok(names.includes("MACD"));
+  assert.ok(names.includes("DIF"));
+  assert.ok(names.includes("DEA"));
+  assert.ok(names.includes("5日线"));
+  assert.deepEqual(opt.dataZoom[0].xAxisIndex, [0, 1, 2]);
+  const tip = opt.tooltip.formatter([
+    { seriesName: "K线", dataIndex: 35, data: [] },
+    { seriesName: "5日线", dataIndex: 35, data: 12.5 },
+    { seriesName: "DIF", dataIndex: 35, data: 0.12 },
+  ]);
+  assert.match(tip, /5日线/);
+  assert.match(tip, /DIF/);
+});
+
