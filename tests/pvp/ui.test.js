@@ -161,10 +161,12 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpWinDialog"/);
   assert.match(html, /id="pvpShareBtn"/);
   assert.match(html, /id="pvpLobbyLoading"/);
-  assert.match(html, /id="pvpHold">观望</);
-  assert.match(html, /id="pvpTrade"/);
-  assert.doesNotMatch(html, /id="pvpBuy"/);
-  assert.doesNotMatch(html, /id="pvpSell"/);
+  assert.match(html, /id="pvpHold"[^>]*>观望</);
+  assert.match(html, /id="pvpBuy"/);
+  assert.match(html, /id="pvpSell"/);
+  assert.match(html, /id="pvpTradeSegment"/);
+  assert.match(html, /id="pvpBattleTop"/);
+  assert.doesNotMatch(html, /id="pvpTrade"/);
   assert.match(html, /id="pvpReadyClockNum">15</);
   assert.match(html, /id="pvpWinMeAvatar"/);
   assert.match(html, /id="pvpWinOppAvatar"/);
@@ -210,7 +212,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(resultHtml, /这是段位分的变化/);
   assert.match(resultHtml, /id="pvpReportPanel" hidden/);
   assert.doesNotMatch(resultHtml.split('id="pvpReadyPanel"')[0], /还未准备/);
-  assert.doesNotMatch(resultHtml, /id="pvpBuy"/);
+  assert.match(html, /id="pvpResultRatingRange"/);
   const profile = readFileSync(new URL("js/pvp/profile-battle.js", root), "utf8");
   const resultJs = readFileSync(new URL("js/pvp/result.js", root), "utf8");
   assert.doesNotMatch(profile, /累计收益/);
@@ -253,8 +255,11 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(lobby, /pvp-recent-mark/);
   assert.match(lobby, /is-win/);
   assert.match(css, /pvp-recent-mark/);
-  assert.match(room, /pvpTrade/);
-  assert.match(room, /dataset\.action/);
+  assert.match(room, /pvpBuy/);
+  assert.match(room, /pvpSell/);
+  assert.match(room, /pvp-trade-segment|paintTopClocks/);
+  assert.match(resultJs, /marketMissing|paintResultBody/);
+  assert.match(resultJs, /pvpResultRatingRange/);
 });
 
 test("pvp y-axis names relative price so it is not read as a real quote", () => {

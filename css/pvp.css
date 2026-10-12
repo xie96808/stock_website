@@ -1178,15 +1178,7 @@
 }
 
 
-/* Keep clock + trade buttons reachable while scrolling the chart. */
-#pvpPlayPanel .pvp-clock,
-#pvpPlayPanel .pvp-trade-actions {
-  position: sticky;
-  z-index: 2;
-  background: var(--paper);
-}
-#pvpPlayPanel .pvp-clock { top: 0; }
-#pvpPlayPanel .pvp-trade-actions { bottom: 0; padding-bottom: 0.35rem; }
+/* Top bar + trade segment stay reachable while scrolling the chart. */
 
 /* Desktop: hide the sketch column when nobody is available. */
 @media (min-width: 721px) {
@@ -1236,10 +1228,30 @@
   background: rgba(138, 115, 80, 0.12);
 }
 
-/* Compact in-match header: smaller seats, taller chart, two trade buttons. */
-#pvpRoomScreen .pvp-seat-row {
-  gap: 0.4rem;
-  margin: 0 0 0.4rem;
+/* In-match top: [my avatar] [countdown] [opponent avatar]. */
+.pvp-battle-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0 0 0.45rem;
+}
+
+.pvp-battle-top .pvp-seat {
+  min-width: 0;
+}
+
+.pvp-battle-top .pvp-seat-opp {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.pvp-battle-top .pvp-seat-opp .pvp-seat-meta {
+  order: -1;
+}
+
+.pvp-seat-meta {
+  min-width: 0;
 }
 
 #pvpRoomScreen .pvp-seat-avatar {
@@ -1248,12 +1260,89 @@
 }
 
 #pvpRoomScreen .pvp-seat strong {
-  font-size: 0.92rem;
-  letter-spacing: 0.04em;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  max-width: 5.5rem;
 }
 
 #pvpRoomScreen .pvp-seat-role {
-  font-size: 0.64rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+}
+
+.pvp-battle-clock {
+  display: flex;
+  justify-content: center;
+  min-width: 4.8rem;
+}
+
+.pvp-battle-clock .pvp-clock {
+  margin: 0;
+  padding: 0.2rem 0.55rem 0.35rem;
+  min-width: 4.6rem;
+}
+
+.pvp-battle-clock .pvp-clock-num {
+  font-size: clamp(1.7rem, 7vw, 2.4rem);
+}
+
+.pvp-battle-clock .pvp-clock-kicker,
+.pvp-battle-clock .pvp-clock-unit {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+}
+
+/* One cream segmented buy | hold | sell control. */
+.pvp-trade-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  margin: 0.35rem 0 0.35rem;
+  border: var(--border-ink);
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 2px 3px 0 var(--line);
+  overflow: hidden;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.pvp-trade-segment .pvp-seg {
+  min-height: 48px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 1.02rem;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.pvp-trade-segment .pvp-seg + .pvp-seg {
+  border-left: 1px solid var(--line);
+}
+
+.pvp-trade-segment .pvp-btn-buy:not(:disabled) {
+  color: var(--gain-color);
+}
+
+.pvp-trade-segment .pvp-btn-sell:not(:disabled) {
+  color: var(--loss-color);
+}
+
+.pvp-trade-segment .pvp-seg:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.pvp-trade-segment .pvp-seg:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+  z-index: 1;
 }
 
 #pvpPlayPanel .pvp-score-row {
@@ -1274,17 +1363,13 @@
   margin: 0.25rem 0 0.45rem;
 }
 
-#pvpPlayPanel .pvp-trade-actions {
-  gap: 0.55rem;
-  margin: 0.35rem 0 0.25rem;
-}
-
-#pvpPlayPanel .pvp-trade-actions .pvp-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  font-size: 1.12rem;
-  letter-spacing: 0.18em;
-  min-height: 50px;
+/* Sticky countdown stays in the top bar. */
+#pvpBattleTop {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--paper);
+  padding-bottom: 0.15rem;
 }
 
 @media (max-width: 420px) {

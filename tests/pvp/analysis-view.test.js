@@ -43,3 +43,16 @@ test("completed battle analysis includes the solo wave writeup and says it does 
 test("a missing market does not invent an analysis", () => {
   assert.equal(buildPvpKlineAnalysis({ market: null }), null);
 });
+
+test("analysis stays null only when game bars are missing", () => {
+  assert.equal(buildPvpKlineAnalysis({ market: { historyLength: 30, history: bars(30, 0.01), bars: [] } }), null);
+  assert.equal(buildPvpKlineAnalysis({ market: { historyLength: 0, history: [], bars: null } }), null);
+  const game = bars(60, 0.05);
+  const built = buildPvpKlineAnalysis({
+    terminal: { type: "completed" },
+    me: { returnPpm: 10000 },
+    market: { historyLength: 30, history: game.slice(0, 30), bars: game.slice(30) },
+  });
+  assert.ok(built);
+  assert.match(built.html, /波段分析/);
+});

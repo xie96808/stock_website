@@ -492,23 +492,35 @@
                     <button type="button" class="pvp-back" id="pvpRoomLeave">离开</button>
                     <h2 id="pvpRoomHeadline">对战</h2>
                 </div>
-                <div class="pvp-seat-row">
-                    <div class="pvp-seat">
+                <div class="pvp-battle-top" id="pvpBattleTop">
+                    <div class="pvp-seat pvp-seat-me">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkMe" hidden></span>
                         </div>
-                        <div>
+                        <div class="pvp-seat-meta">
                             <span class="pvp-seat-role">我</span>
                             <strong id="pvpSeatMeName">我</strong>
                         </div>
                     </div>
-                    <div class="pvp-seat">
+                    <div class="pvp-battle-clock">
+                        <div class="pvp-clock" id="pvpReadyClock" hidden>
+                            <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
+                            <strong class="pvp-clock-num" id="pvpReadyClockNum">15</strong>
+                            <span class="pvp-clock-unit">秒</span>
+                        </div>
+                        <div class="pvp-clock" id="pvpClock" hidden>
+                            <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
+                            <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
+                            <span class="pvp-clock-unit">秒</span>
+                        </div>
+                    </div>
+                    <div class="pvp-seat pvp-seat-opp">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkOpp" hidden></span>
                         </div>
-                        <div>
+                        <div class="pvp-seat-meta">
                             <span class="pvp-seat-role">对手</span>
                             <strong id="pvpSeatOppName">对手</strong>
                         </div>
@@ -516,22 +528,12 @@
                 </div>
                 <div id="pvpReadyPanel" hidden>
                     <p id="pvpReadyCopy">双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>，平局退回 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
-                    <div class="pvp-clock" id="pvpReadyClock">
-                        <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
-                        <strong class="pvp-clock-num" id="pvpReadyClockNum">15</strong>
-                        <span class="pvp-clock-unit">秒</span>
-                    </div>
                     <div class="pvp-actions">
                         <button type="button" class="pvp-btn pvp-btn-primary" id="pvpReadyBtn">准备</button>
                         <button type="button" class="pvp-btn" id="pvpCancelReadyBtn">取消准备</button>
                     </div>
                 </div>
                 <div id="pvpPlayPanel" hidden>
-                    <div class="pvp-clock" id="pvpClock">
-                        <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
-                        <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
-                        <span class="pvp-clock-unit">秒</span>
-                    </div>
                     <div class="pvp-score-row">
                         <div class="pvp-score">
                             <span class="pvp-score-label">我的收益</span>
@@ -542,9 +544,10 @@
                             <strong class="pvp-score-value" id="pvpOppNav">—</strong>
                         </div>
                     </div>
-                    <div class="pvp-actions pvp-trade-actions">
-                        <button type="button" class="pvp-btn pvp-btn-hold" id="pvpHold">观望</button>
-                        <button type="button" class="pvp-btn pvp-btn-buy" id="pvpTrade" data-action="buy">买入</button>
+                    <div class="pvp-trade-segment" id="pvpTradeSegment" role="group" aria-label="买卖操作">
+                        <button type="button" class="pvp-seg pvp-btn-buy" id="pvpBuy" data-action="buy">买入</button>
+                        <button type="button" class="pvp-seg pvp-btn-hold" id="pvpHold" data-action="hold">观望</button>
+                        <button type="button" class="pvp-seg pvp-btn-sell" id="pvpSell" data-action="sell">卖出</button>
                     </div>
                     <p id="pvpActionError" role="status"></p>
                     <div id="pvpChart" class="pvp-chart"></div>
@@ -603,6 +606,7 @@
                 <div class="pvp-explain" id="pvpResultRatingBox" hidden>
                     <p class="pvp-explain-label">段位分</p>
                     <strong class="pvp-explain-num" id="pvpResultRating"></strong>
+                    <p class="pvp-explain-note" id="pvpResultRatingRange" hidden></p>
                     <div id="pvpResultRankProgress"></div>
                 </div>
                 <div class="pvp-explain" id="pvpResultHoldBox" hidden>

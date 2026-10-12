@@ -284,28 +284,16 @@ function paintActions() {
     || pendingNetwork
     || isSubmitting()
     || view.me?.lockedToday;
-  const trade = document.getElementById("pvpTrade");
+  const buy = document.getElementById("pvpBuy");
+  const sell = document.getElementById("pvpSell");
   const hold = document.getElementById("pvpHold");
-  // Two-button UX: 观望/持有 + contextual 买入|卖出 (mutually exclusive by position).
+  // One segmented control: 买入 | 观望/持有 | 卖出.
   if (hold) {
     hold.disabled = closed || !view?.me?.canHold;
     hold.textContent = view?.me?.holding ? "持有" : "观望";
   }
-  if (trade) {
-    const sellOk = !!view?.me?.canSell;
-    const buyOk = !!view?.me?.canBuy;
-    if (sellOk || (view?.me?.holding && !buyOk)) {
-      trade.textContent = "卖出";
-      trade.className = "pvp-btn pvp-btn-sell";
-      trade.dataset.action = "sell";
-      trade.disabled = closed || !sellOk;
-    } else {
-      trade.textContent = "买入";
-      trade.className = "pvp-btn pvp-btn-buy";
-      trade.dataset.action = "buy";
-      trade.disabled = closed || !buyOk;
-    }
-  }
+  if (buy) buy.disabled = closed || !view?.me?.canBuy;
+  if (sell) sell.disabled = closed || !view?.me?.canSell;
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
   const locked = postedLock || pendingNetwork || submitting || !!view?.me?.lockedToday;
@@ -360,6 +348,13 @@ async function paintChart() {
   }
 }
 
+function paintTopClocks(status) {
+  const readyClock = document.getElementById("pvpReadyClock");
+  const playClock = document.getElementById("pvpClock");
+  if (readyClock) readyClock.hidden = status !== "waiting_ready";
+  if (playClock) playClock.hidden = status !== "playing";
+}
+
 function render() {
   const ready = document.getElementById("pvpReadyPanel");
   const play = document.getElementById("pvpPlayPanel");
@@ -367,6 +362,7 @@ function render() {
   if (view?.status === "waiting_ready") {
     if (ready) ready.hidden = false;
     if (play) play.hidden = true;
+    paintTopClocks("waiting_ready");
     setText("pvpRoomHeadline", "准备");
     setHtml("pvpReadyCopy", readyCopyFrom(view.economy));
     paintReadyMark("pvpReadyMarkMe", !!view.me?.ready, true);
@@ -379,10 +375,13 @@ function render() {
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
+    paintTopClocks("playing");
     setText("pvpRoomHeadline", roundCaption(view));
     paintReturn("pvpMeNav", view.me?.mtmPpm);
     paintReturn("pvpOppNav", view.opponent?.mtmPpm);
     paintChart().catch(() => {});
+  } else {
+    paintTopClocks("");
   }
   paintClock();
   paintActions();
@@ -521,10 +520,8 @@ function wireRoom() {
   document.getElementById("pvpReadyBtn")?.addEventListener("click", () => { postReady().catch(() => {}); });
   document.getElementById("pvpCancelReadyBtn")?.addEventListener("click", () => { postCancelReady().catch(() => {}); });
   document.getElementById("pvpHold")?.addEventListener("click", () => { postAction("hold").catch(() => {}); });
-  document.getElementById("pvpTrade")?.addEventListener("click", () => {
-    const action = document.getElementById("pvpTrade")?.dataset.action || "buy";
-    postAction(action).catch(() => {});
-  });
+  document.getElementById("pvpBuy")?.addEventListener("click", () => { postAction("buy").catch(() => {}); });
+  document.getElementById("pvpSell")?.addEventListener("click", () => { postAction("sell").catch(() => {}); });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && matchId) refresh().catch(() => {});
   });
