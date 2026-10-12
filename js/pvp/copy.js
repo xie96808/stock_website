@@ -161,3 +161,25 @@ export function marksFromView(view) {
   }
   return marks;
 }
+
+const SHARE_SITE = "早知道当初不炒了";
+const SHARE_TITLE = `来【${SHARE_SITE}】模拟盘对战`;
+const SHARE_TEXT = "我在模拟盘对战里等你，点开就能进房间。";
+
+/** Path-based invite URL (not hash) so WeChat/iMessage can fetch OG and show a link card. */
+export function buildBattleInviteUrl(code, origin = "") {
+  const normalized = String(code || "").trim().toLowerCase();
+  if (!/^[a-z2-9]{8}$/.test(normalized)) return "";
+  const base = String(origin || "").replace(/\/$/, "") || "https://stockgame.xieyw.top";
+  return `${base}/invite.html?c=${encodeURIComponent(normalized)}`;
+}
+
+export function buildBattleSharePayload(code, origin = "") {
+  const url = buildBattleInviteUrl(code, origin);
+  return {
+    title: SHARE_TITLE,
+    text: SHARE_TEXT,
+    url,
+    clipboard: url ? `${SHARE_TEXT}\n${url}` : "",
+  };
+}

@@ -1,7 +1,7 @@
 import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../auth.js";
 import { coinIconHtml } from "../jiu-coin.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
-import { escapeHtml, formatRemain, remainingMs } from "./copy.js";
+import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier } from "./profile-battle.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 
@@ -24,8 +24,6 @@ function setText(id, value) {
   if (node) node.textContent = value == null ? "" : String(value);
 }
 
-const SHARE_BLURB = "我正在【早知道当初不炒了】的模拟盘对战里大杀四方，等你来战！";
-
 async function copyText(text) {
   try {
     if (navigator.clipboard?.writeText) {
@@ -45,6 +43,33 @@ async function copyText(text) {
     area.remove();
     return ok;
   } catch {
+    return false;
+  }
+}
+
+function nativeAppShare(payload) {
+  try {
+    const bridge = typeof window !== "undefined" ? window.StockGameApp : null;
+    if (bridge && typeof bridge.share === "function") {
+      bridge.share(payload.title || "", payload.text || "", payload.url || "");
+      return true;
+    }
+  } catch { /* ignore */ }
+  return false;
+}
+
+async function systemShare(payload) {
+  if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
+  try {
+    await navigator.share({
+      title: payload.title,
+      text: payload.text,
+      url: payload.url,
+    });
+    return true;
+  } catch (err) {
+    // User cancelled the sheet — do not fall through to clipboard spam.
+    if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) return "cancelled";
     return false;
   }
 }
@@ -211,10 +236,27 @@ async function shareBattle() {
   if (button) button.disabled = true;
   try {
     const { data } = await pvpFetch("/pvp/shares", { method: "POST", body: {} });
-    const url = `${location.origin}${location.pathname}${location.search}#/pvp/join/${data.code}`;
-    const copied = await copyText(`${SHARE_BLURB}\n${url}`);
+    const payload = buildBattleSharePayload(data.code, location.origin);
+    if (!payload.url) {
+      setError("没能生成分享链接");
+      return;
+    }
+    if (note) note.textContent = payload.url;
+
+    if (nativeAppShare(payload)) {
+      showToast("已打开系统分享，可选微信发给朋友", "success");
+      return;
+    }
+    const shared = await systemShare(payload);
+    if (shared === true) {
+      showToast("已打开分享，发给朋友就能进房间", "success");
+      return;
+    }
+    if (shared === "cancelled") return;
+
+    const copied = await copyText(payload.clipboard);
     showToast(
-      copied ? "已复制到剪贴板，发给朋友就能进房间" : "没能复制，请再点一次分享",
+      copied ? "已复制邀请链接，粘贴到微信会显示卡片" : "没能复制，请长按下方链接",
       copied ? "success" : "error",
     );
   } catch (err) {
