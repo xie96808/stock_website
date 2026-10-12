@@ -3,6 +3,7 @@ import { disposeQuizCharts, startQuiz } from './quiz.js';
 import { QUIZ_PATTERNS } from './patterns.js';
 import { gameState } from './state.js';
 import { ensureStocksLoaded } from './pack-store.js';
+import { showStampToast } from './controls.js';
 import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
 import {
   refreshQuizRewardsFlag,
@@ -105,7 +106,7 @@ export function enterTrainingZone() {
         .then(function () { startQuiz(); })
         .catch(function (err) {
             console.error(err);
-            window.alert('股票数据加载失败，请刷新后重试');
+            showStampToast('股票数据加载失败，请刷新后重试', 'error');
         });
 }
 

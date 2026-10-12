@@ -1,5 +1,6 @@
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { parseRouteHash } from "../screen-router.js";
+import { openCtlOverlay, closeCtlOverlay, setCtlState } from "../controls.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, pvpSocketHealthy, whenAuthReady } from "./transport.js";
 
 const GIFT_MS = 1700;
@@ -42,7 +43,7 @@ function dialog() {
 
 function hideInvite() {
   const node = dialog();
-  if (node) node.hidden = true;
+  if (node && !node.hidden) closeCtlOverlay(node);
   showingId = "";
 }
 
@@ -126,7 +127,7 @@ function showInvite(card) {
   if (copy) copy.textContent = `${card.nickname || "对手"} 邀请你对战`;
   const note = document.getElementById("pvpInviteNote");
   if (note) note.textContent = "";
-  node.hidden = false;
+  if (node.hidden) openCtlOverlay(node, { focusSelector: "#pvpInviteAccept" });
 }
 
 function refreshInvite() {
@@ -170,6 +171,8 @@ async function respond(accept) {
   if (!id || busy) return;
   busy = true;
   const note = document.getElementById("pvpInviteNote");
+  const busyBtn = document.getElementById(accept ? "pvpInviteAccept" : "pvpInviteDecline");
+  if (accept) setCtlState(busyBtn, "loading", { syncImg: false });
   try {
     const { data } = await pvpFetch(`/pvp/challenges/${encodeURIComponent(id)}/respond`, {
       method: "POST",

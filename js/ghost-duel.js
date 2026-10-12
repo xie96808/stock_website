@@ -3,6 +3,7 @@
  * Flag: features.ghostDuel (GHOST_DUEL_ENABLED). Default off → entry hidden.
  */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
+import { openCtlSheet, closeCtlSheet, ctlConfirm } from './controls.js';
 import { abandonActiveCloudGame, loadCloudGameDraft } from './game-sync.js';
 import { mustAwaitPackBeforeEnter } from './game-window-seed.js';
 import {
@@ -77,16 +78,14 @@ function showFillLoadingOnly() {
   if (loading) loading.hidden = false;
   if (title) title.textContent = '正在开局';
   modal.classList.add('is-loading');
-  modal.hidden = false;
-  modal.setAttribute('aria-hidden', 'false');
+  openCtlSheet(modal);
   setFillProgress(6, '准备幽灵对局…');
 }
 
 function closeFillModal() {
   const modal = fillModalEl();
   if (!modal) return;
-  modal.hidden = true;
-  modal.setAttribute('aria-hidden', 'true');
+  closeCtlSheet(modal);
   modal.classList.remove('is-loading');
   const choose = document.getElementById('fillModeChoosePane');
   const loading = document.getElementById('fillModeLoadingPane');
@@ -162,7 +161,7 @@ async function runFreshGhostStart({ ghostGameId, random = false } = {}) {
   if (!chosen) chosen = list[0] || preview.ghost;
   const cost = Number(preview.cost) || 20;
   const verb = random ? '随机挑战' : '挑战';
-  const ok = window.confirm(
+  const ok = await ctlConfirm(
     `${verb}幽灵「${chosen?.nickname || '昨日选手'}」\n` +
       `将重玩昨日（${preview.sourceDate || '昨日'}）同题，幽灵操作按日回放。\n` +
       `消耗 ${cost} 韭币（不占用今日挑战机会）。\n\n确定开始？`
@@ -209,14 +208,14 @@ async function handleActiveConflict(activeGame, startOpts) {
     ghost: '幽灵对局',
   };
   const kind = kindMap[activeGame?.gameKind] || '云端对局';
-  const okContinue = window.confirm(
+  const okContinue = await ctlConfirm(
     `已有进行中的云端对局（${kind}）。\n\n确定：继续原局\n取消：可再选是否放弃原局后挑战幽灵`
   );
   if (okContinue) {
     await startCloudFromMeta(activeGame);
     return;
   }
-  const okAbandon = window.confirm(
+  const okAbandon = await ctlConfirm(
     '要放弃当前云端对局并挑战幽灵吗？放弃不退韭币。'
   );
   if (!okAbandon) return;

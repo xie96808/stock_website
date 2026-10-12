@@ -91,8 +91,8 @@ function ensureModals() {
           每天 0 点（北京时间）刷新一次；本次额度随机，领取后立即到账。
         </p>
         <div class="jiu-coin-modal-actions">
-          <button type="button" class="jiu-coin-secondary" id="jiuCoinDailyCancel">取消</button>
-          <button type="button" class="jiu-coin-primary" id="jiuCoinDailyConfirm">领取</button>
+          <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="jiuCoinDailyCancel" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">取消</span></button>
+          <button type="button" class="jiu-coin-primary ctl ctl-primary" id="jiuCoinDailyConfirm" data-ctl-kind="primary" data-state="default"><span class="ctl-label">领取</span></button>
         </div>
       </div>
     </div>`)
@@ -107,7 +107,7 @@ function ensureModals() {
           恭喜你，获得奖励！
         </p>
         <div class="jiu-coin-modal-actions">
-          <button type="button" class="jiu-coin-primary" id="jiuCoinSuccessOk">好的</button>
+          <button type="button" class="jiu-coin-primary ctl ctl-primary" id="jiuCoinSuccessOk" data-ctl-kind="primary" data-state="default"><span class="ctl-label">好的</span></button>
         </div>
       </div>
     </div>`)
@@ -117,7 +117,7 @@ function ensureModals() {
     const modal = document.getElementById(modalId);
     if (!modal) return;
     const hide = () => {
-      modal.hidden = true;
+      window.__stockControls?.closeCtlOverlay(modal) ?? (modal.hidden = true);
     };
     for (const id of btnIds) {
       const b = document.getElementById(id);
@@ -138,7 +138,7 @@ function ensureModals() {
 function openDailyConfirmModal() {
   ensureModals();
   const modal = document.getElementById("jiuCoinDailyModal");
-  if (modal) modal.hidden = false;
+  if (modal) window.__stockControls ? window.__stockControls.openCtlOverlay(modal) : (modal.hidden = false);
 }
 
 function closeDailyConfirmModal() {
@@ -156,7 +156,7 @@ function openSuccessModal(amount) {
     body.innerHTML = `恭喜你，获得 <strong class="jiu-coin-amt jiu-coin-success-amt"><span class="jiu-price-num">${shown}</span>${coinIconHtml({ size: 16 })}</strong>！快去模拟盘大展身手吧！`;
   }
   const modal = document.getElementById("jiuCoinSuccessModal");
-  if (modal) modal.hidden = false;
+  if (modal) window.__stockControls ? window.__stockControls.openCtlOverlay(modal) : (modal.hidden = false);
 }
 
 
@@ -267,7 +267,7 @@ async function onDailyClaimConfirm() {
   const confirmBtn = document.getElementById("jiuCoinDailyConfirm");
   if (confirmBtn) {
     confirmBtn.disabled = true;
-    confirmBtn.textContent = "领取中…";
+    (confirmBtn.querySelector(".ctl-label") || confirmBtn).textContent = "领取中…";
   }
   if (btn) {
     btn.disabled = true;
@@ -302,7 +302,7 @@ async function onDailyClaimConfirm() {
     claimBusy = false;
     if (confirmBtn) {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = "领取";
+      (confirmBtn.querySelector(".ctl-label") || confirmBtn).textContent = "领取";
     }
   }
 }

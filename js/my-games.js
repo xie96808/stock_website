@@ -44,7 +44,7 @@ export async function showMyGames() {
               <option value="same_close">当日收盘</option>
             </select>
           </label>
-          <button type="button" class="my-games-refresh" id="myGamesRefreshBtn">刷新</button>
+          <button type="button" class="my-games-refresh ctl ctl-secondary" id="myGamesRefreshBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">刷新</span></button>
         </div>
         <div class="my-games-list" id="myGamesList">加载中…</div>
       </div>`;

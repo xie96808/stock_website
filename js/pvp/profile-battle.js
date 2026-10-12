@@ -79,6 +79,32 @@ export function fillDossier(node, profile) {
     return;
   }
   node.hidden = false;
+  // Hand-drawn rank card shell (ctl-rank-card): rank icon sits in the left slot.
+  node.classList.add("ctl-rank-card");
+  const emblem = document.createElement("img");
+  emblem.className = "pvp-dossier-emblem";
+  emblem.alt = "";
+  emblem.setAttribute("aria-hidden", "true");
+  emblem.width = 72;
+  emblem.height = 72;
+  emblem.decoding = "async";
+  // Batch 2: HD rank art (144 / @2x 288) fills the 72×72 slot; legacy PNG is the fallback.
+  const legacyIcon = rankIconPathForTitle(profile.title || "散户一段");
+  const rankKey = (legacyIcon.match(/rank-([a-z]+)\.png/) || [])[1] || "";
+  emblem.dataset.rank = rankKey;
+  if (rankKey) {
+    const hd = legacyIcon.replace(/\.png$/, "-hd");
+    emblem.src = `${hd}.png`;
+    emblem.srcset = `${hd}.png 1x, ${hd}@2x.png 2x`;
+    emblem.onerror = () => {
+      emblem.onerror = () => { emblem.hidden = true; };
+      emblem.removeAttribute("srcset");
+      emblem.src = legacyIcon;
+    };
+  } else {
+    emblem.src = legacyIcon;
+    emblem.onerror = () => { emblem.hidden = true; };
+  }
   const img = document.createElement("img");
   img.className = "pvp-dossier-avatar";
   img.alt = "";
@@ -136,7 +162,7 @@ export function fillDossier(node, profile) {
       record.append(winRate);
     }
   }
-  node.append(avatarBtn, body, record);
+  node.append(emblem, avatarBtn, body, record);
 }
 
 export async function syncPvpProfile() {
@@ -239,8 +265,10 @@ function renderBlocks(data) {
     name.textContent = row.nickname || "对手";
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "pvp-btn";
-    button.textContent = "取消屏蔽";
+    button.className = "pvp-btn ctl ctl-secondary";
+    button.dataset.ctlKind = "secondary";
+    button.dataset.state = "default";
+    button.innerHTML = '<span class="ctl-label">取消屏蔽</span>';
     button.addEventListener("click", async () => {
       button.disabled = true;
       try {

@@ -4,6 +4,7 @@
  */
 
 import { formatShanghaiDateTime } from "./time.js";
+import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 const API = "/api/v1";
 const STORAGE_KEY = "stockgame_announcements_dismissed_day";
 
@@ -64,8 +65,8 @@ function ensureDom() {
           <div class="announcements-list" id="announcementsList"></div>
           <p class="announcements-empty" id="announcementsEmpty" hidden>暂无公告</p>
           <div class="announcements-actions">
-            <button type="button" class="announcements-secondary" id="announcementsDismissToday">今日关闭</button>
-            <button type="button" class="announcements-primary" id="announcementsClose">关闭公告</button>
+            <button type="button" class="announcements-secondary ctl ctl-secondary" id="announcementsDismissToday" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">今日关闭</span></button>
+            <button type="button" class="announcements-primary ctl ctl-primary" id="announcementsClose" data-ctl-kind="primary" data-state="default"><span class="ctl-label">关闭公告</span></button>
           </div>
         </div>
       </div>`)
@@ -135,17 +136,23 @@ async function fetchAnnouncements() {
   return loading;
 }
 
+// Bumped on every close so an in-flight async open (fetch) can't reopen after the user closed.
+let openSeq = 0;
+
 export function closeAnnouncementsModal() {
+  openSeq += 1;
   const modal = document.getElementById("announcementsModal");
-  if (modal) modal.hidden = true;
+  if (modal) closeCtlOverlay(modal);
 }
 
 export async function openAnnouncementsModal({ force = true } = {}) {
   ensureDom();
+  const seq = ++openSeq;
   const items = cachedItems ?? (await fetchAnnouncements());
+  if (seq !== openSeq) return items;
   renderList(items);
   const modal = document.getElementById("announcementsModal");
-  if (modal) modal.hidden = false;
+  if (modal && modal.hidden) openCtlOverlay(modal);
   return items;
 }
 
@@ -161,7 +168,39 @@ function wireEvents() {
   const modal = document.getElementById("announcementsModal");
   if (modal && !modal.dataset.wired) {
     modal.dataset.wired = "1";
+    // The dialog scales in (§6.4 enter anim). A press that starts on a button
+    // can release a few px off it while the box grows, so the browser fires the
+    // click on the common ancestor instead of the button → close was dropped.
+    // Remember which action button the pointer went down on and honour it.
+    const ACTIONS = "#announcementsClose, #announcementsCloseX, #announcementsDismissToday";
+    const actionAt = (x, y, pad) => {
+      for (const b of modal.querySelectorAll(ACTIONS)) {
+        const r = b.getBoundingClientRect();
+        if (x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad) return b;
+      }
+      return null;
+    };
+    let downAction = null;
+    modal.addEventListener(
+      "pointerdown",
+      (e) => {
+        downAction =
+          e.target?.closest?.(ACTIONS) ||
+          actionAt(e.clientX, e.clientY, 4) ||
+          (e.target === modal ? modal : null);
+      },
+      true
+    );
     modal.addEventListener("click", (e) => {
+      const hit = e.target?.closest?.(ACTIONS);
+      const pending = downAction || (e.detail ? actionAt(e.clientX, e.clientY, 4) : null);
+      downAction = null;
+      if (hit) return; // button's own handler runs
+      if (pending && pending !== modal) {
+        if (pending.id === "announcementsDismissToday") dismissToday();
+        closeAnnouncementsModal();
+        return;
+      }
       if (e.target === modal) closeAnnouncementsModal();
     });
     document.getElementById("announcementsCloseX")?.addEventListener("click", () => {
@@ -186,10 +225,11 @@ function wireEvents() {
 export async function initAnnouncements() {
   ensureDom();
   wireEvents();
+  const seq = ++openSeq;
   const items = await fetchAnnouncements();
   renderList(items);
-  if (items.length && !isDismissedToday()) {
+  if (seq === openSeq && items.length && !isDismissedToday()) {
     const modal = document.getElementById("announcementsModal");
-    if (modal) modal.hidden = false;
+    if (modal && modal.hidden) openCtlOverlay(modal);
   }
 }

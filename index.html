@@ -38,6 +38,9 @@
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
+    <link rel="stylesheet" href="css/controls.css">
+    <link rel="stylesheet" href="css/controls-p4.css">
+    <link rel="stylesheet" href="css/controls-p5.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -231,7 +234,7 @@
                             </span>
                             <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
                         </button>
-                        <button type="button" class="hub-board-link" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                        <button type="button" class="hub-board-link ctl ctl-secondary" id="dailyChallengeBoardBtn" data-ctl-kind="secondary" data-state="default" hidden onclick="onDailyChallengeBoardClick(event)"><span class="ctl-label">查看日榜</span></button>
                         <button type="button" class="lane classic-mode-lane" onclick="startClassicPractice()">
                             <span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span>
                             <span class="mark classic-mode-mark">练</span>
@@ -334,11 +337,11 @@
         <!-- Academy Screen -->
         <section class="academy-screen" id="academyScreen">
             <div class="academy-header">
+                <button type="button" class="academy-back" onclick="hideAcademy()">← 返回首页</button>
                 <div class="academy-heading">
                     <span class="academy-title">韭菜修炼基地</span>
                     <p class="academy-subtitle">答题可赚韭币 · 训练免费</p>
                 </div>
-                <button class="academy-back" onclick="hideAcademy()">← 返回首页</button>
             </div>
 
             <!-- Academy Landing -->
@@ -392,7 +395,7 @@
                 </div>
                 <div class="quiz-question-container" id="quizQuestionContainer"></div>
                 <div class="quiz-nav">
-                    <button class="quiz-nav-btn" id="quizNextBtn" onclick="quizNext()" disabled>下一题</button>
+                    <button class="quiz-nav-btn ctl ctl-primary" id="quizNextBtn" data-ctl-kind="primary" data-state="disabled" onclick="quizNext()" disabled><span class="ctl-label">下一题</span></button>
                 </div>
             </div>
 
@@ -414,7 +417,7 @@
                 </div>
                 <div class="quiz-question-container" id="dailyQuizQuestionContainer"></div>
                 <div class="quiz-nav">
-                    <button class="quiz-nav-btn" id="dailyQuizNextBtn" onclick="dailyQuizNext()" disabled>下一题</button>
+                    <button class="quiz-nav-btn ctl ctl-primary" id="dailyQuizNextBtn" data-ctl-kind="primary" data-state="disabled" onclick="dailyQuizNext()" disabled><span class="ctl-label">下一题</span></button>
                 </div>
             </div>
 
@@ -470,24 +473,24 @@
                     <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
                     <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
                 </ul>
-                <p id="pvpLobbyLoading" hidden>大厅加载中…</p>
+                <p id="pvpLobbyLoading" class="ctl-loading-host" hidden>大厅加载中…</p>
                 <div id="pvpLobbyGuest" hidden>
                     <p>登录后才能约战。游客只能查看规则和在线人数。</p>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpLobbyLogin" data-ctl-kind="primary" data-state="default"><span class="ctl-label">登录</span></button>
                 </div>
                 <div id="pvpLobbyMember" hidden>
                     <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
                     <p id="pvpLobbyBalance"></p>
-                    <button type="button" class="pvp-btn" id="pvpShareBtn" hidden>分享对战</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">分享对战</span></button>
                     <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpActiveMatch" hidden>回到对局</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpActiveMatch" data-ctl-kind="primary" data-state="default" hidden><span class="ctl-label">回到对局</span></button>
                     <h3 class="pvp-kicker">可约的人</h3>
                     <div id="pvpLobbyList"></div>
                     <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。也可以去玩幽灵对局，或稍后再来。</p>
-                    <button type="button" class="pvp-btn" id="pvpLobbyModes" hidden>去玩幽灵对局</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLobbyModes" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">去玩幽灵对局</span></button>
                 </div>
                 <p id="pvpLobbyError" role="status"></p>
             </div>
@@ -500,7 +503,7 @@
                     <h2 id="pvpRoomHeadline">对战</h2>
                 </div>
                 <div class="pvp-battle-top" id="pvpBattleTop">
-                    <div class="pvp-seat pvp-seat-me">
+                    <div class="pvp-seat pvp-seat-me ctl-seat-panel" id="pvpSeatMe" data-seat-state="default">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkMe" hidden></span>
@@ -512,18 +515,20 @@
                         </div>
                     </div>
                     <div class="pvp-battle-clock">
-                        <div class="pvp-clock" id="pvpReadyClock" hidden>
+                        <div class="pvp-clock ctl-timer-ring ctl-timer-ring--segmented" id="pvpReadyClock" hidden>
+                            <span class="ctl-timer-ring-fill" id="pvpReadyClockRing" aria-hidden="true"></span>
                             <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
                             <strong class="pvp-clock-num" id="pvpReadyClockNum">15</strong>
                             <span class="pvp-clock-unit">秒</span>
                         </div>
-                        <div class="pvp-clock" id="pvpClock" hidden>
+                        <div class="pvp-clock ctl-timer-ring" id="pvpClock" hidden>
+                            <span class="ctl-timer-ring-fill" id="pvpClockRing" aria-hidden="true"></span>
                             <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
                             <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
                             <span class="pvp-clock-unit">秒</span>
                         </div>
                     </div>
-                    <div class="pvp-seat pvp-seat-opp">
+                    <div class="pvp-seat pvp-seat-opp ctl-seat-panel" id="pvpSeatOpp" data-seat-state="default">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkOpp" hidden></span>
@@ -538,8 +543,8 @@
                 <div id="pvpReadyPanel" hidden>
                     <p id="pvpReadyCopy">双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>，平局退回 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
                     <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpReadyBtn">准备</button>
-                        <button type="button" class="pvp-btn" id="pvpCancelReadyBtn">取消准备</button>
+                        <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-ready" id="pvpReadyBtn" data-ctl="ready" data-ctl-kind="ready" data-state="default"><span class="ctl-label">准备</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-cancel-ready" id="pvpCancelReadyBtn" data-ctl="cancel-ready" data-ctl-kind="cancel-ready" data-state="default"><span class="ctl-label">取消准备</span></button>
                     </div>
                 </div>
                 <div id="pvpPlayPanel" hidden>
@@ -554,28 +559,28 @@
                         </div>
                     </div>
                     <div class="pvp-trade-bar" id="pvpTradeSegment" role="group" aria-label="买卖与消息">
-                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy" id="pvpTradePrimary" data-action="buy" aria-label="买入">
-                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/pvp/btn-buy.png" width="190" height="80" alt="" aria-hidden="true">
-                            <span class="pvp-sketch-label" id="pvpTradePrimaryLabel">买入</span>
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy ctl ctl-buy has-chrome-img" id="pvpTradePrimary" data-action="buy" data-ctl="buy" data-ctl-kind="buy" data-state="default" aria-label="买入">
+                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/controls/ctl-buy-default.png?v=20261013s" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label ctl-label" id="pvpTradePrimaryLabel">买入</span>
                         </button>
-                        <button type="button" class="pvp-sketch-ctl pvp-msg-open" id="pvpMsgOpen" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
-                            <img class="pvp-sketch-icon" src="assets/pvp/btn-message.png" width="80" height="80" alt="" aria-hidden="true">
+                        <button type="button" class="pvp-sketch-ctl pvp-msg-open ctl ctl-msg has-chrome-img" id="pvpMsgOpen" data-ctl="msg" data-ctl-kind="msg" data-state="default" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
+                            <img class="pvp-sketch-icon" src="assets/controls/ctl-msg-default.png?v=20261013s" width="80" height="80" alt="" aria-hidden="true">
                         </button>
-                        <button type="button" class="pvp-sketch-ctl pvp-trade-hold" id="pvpHold" data-action="hold" aria-label="保持">
-                            <img class="pvp-sketch-chrome" src="assets/pvp/btn-hold.png" width="190" height="80" alt="" aria-hidden="true">
-                            <span class="pvp-sketch-label">保持</span>
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-hold ctl ctl-hold has-chrome-img" id="pvpHold" data-action="hold" data-ctl="hold" data-ctl-kind="hold" data-state="default" aria-label="保持">
+                            <img class="pvp-sketch-chrome" src="assets/controls/ctl-hold-default.png?v=20261013s" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label ctl-label">保持</span>
                         </button>
                         <button type="button" id="pvpBuy" data-action="buy" hidden>买入</button>
                         <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
                         <button type="button" id="pvpTauntOpen" hidden aria-hidden="true">消息</button>
                     </div>
                     <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="listbox" aria-label="消息台词">
-                        <button type="button" class="pvp-msg-line" role="option">这你都买？进厂打螺丝吧</button>
-                        <button type="button" class="pvp-msg-line" role="option">这都卖？啥都拿不住玩什么股票！</button>
-                        <button type="button" class="pvp-msg-line" role="option">买买买</button>
-                        <button type="button" class="pvp-msg-line" role="option">割了割了</button>
-                        <button type="button" class="pvp-msg-line" role="option">给我加仓猛干！</button>
-                        <button type="button" class="pvp-msg-line" role="option">技术回调，慌个锤子</button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这你都买？进厂打螺丝吧</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这都卖？啥都拿不住玩什么股票！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
                     </div>
                     <div class="pvp-taunt-picker" id="pvpTauntPicker" hidden></div>
                     <p id="pvpActionError" role="status"></p>
@@ -589,9 +594,9 @@
                     <h3 id="pvpLeaveTitle">离开这局？</h3>
                     <p>回到大厅后，这局的计时仍会继续。认输会立刻结束。</p>
                     <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLeaveStay">留下</button>
-                        <button type="button" class="pvp-btn" id="pvpLeaveLobby">回到大厅（计时继续）</button>
-                        <button type="button" class="pvp-btn" id="pvpLeaveForfeit">认输</button>
+                        <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpLeaveStay" data-ctl="primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">留下</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLeaveLobby" data-ctl="secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">回到大厅（计时继续）</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-danger" id="pvpLeaveForfeit" data-ctl="danger" data-ctl-kind="danger" data-state="default"><span class="ctl-label">认输</span></button>
                     </div>
                 </div>
             </div>
@@ -655,7 +660,7 @@
                 <p id="pvpResultChartError" hidden>图表暂时打不开，结果仍然有效。</p>
                 <ol id="pvpResultCurve"></ol>
                 <ul id="pvpResultGaps"></ul>
-                <button type="button" class="pvp-report-toggle" id="pvpReportToggle" aria-expanded="false" aria-controls="pvpReportPanel">举报</button>
+                <button type="button" class="pvp-report-toggle ctl ctl-danger" id="pvpReportToggle" data-ctl-kind="danger" data-state="default" aria-expanded="false" aria-controls="pvpReportPanel"><span class="ctl-label">举报</span></button>
                 <div id="pvpReportPanel" hidden>
                     <form id="pvpReportForm">
                         <label>举报对手
@@ -666,11 +671,11 @@
                                 <option value="other">其他</option>
                             </select>
                         </label>
-                        <textarea id="pvpReportDetail" maxlength="500" placeholder="补充说明，可以留空"></textarea>
-                        <button type="submit" class="pvp-btn" id="pvpReportSubmit">提交举报</button>
+                        <textarea class="ctl-textarea" id="pvpReportDetail" maxlength="500" placeholder="补充说明，可以留空"></textarea>
+                        <button type="submit" class="pvp-btn ctl ctl-danger" id="pvpReportSubmit" data-ctl-kind="danger" data-state="default"><span class="ctl-label">提交举报</span></button>
                         <p id="pvpReportNote"></p>
                     </form>
-                    <button type="button" class="pvp-btn" id="pvpResultBlock" hidden>屏蔽对手</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpResultBlock" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">屏蔽对手</span></button>
                 </div>
                 <div class="pvp-gifts" id="pvpGifts" hidden>
                     <p class="pvp-kicker">送给对手</p>
@@ -683,8 +688,9 @@
                     <p id="pvpGiftNote"></p>
                 </div>
                 <div class="pvp-actions">
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
-                    <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpResultAgain" data-ctl-kind="primary" data-state="default" hidden><span class="ctl-label">再次约战</span></button>
+                    <button type="button" class="ctl ctl-share-save" id="pvpResultShareImage" data-ctl="share-save" data-ctl-kind="share-save" data-state="default" aria-label="保存分享图" title="保存分享图"></button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpResultHistory" data-ctl-kind="secondary" data-state="default" onclick="showPvpHistory()"><span class="ctl-label">对战档案</span></button>
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpWinDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpWinTitle">
@@ -708,7 +714,7 @@
                             <span class="pvp-settle-meta" id="pvpWinOppCoin"></span>
                         </div>
                     </div>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">知道了</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpWinOk" data-ctl-kind="primary" data-state="default"><span class="ctl-label">知道了</span></button>
                 </div>
             </div>
         </section>
@@ -735,9 +741,9 @@
                 <p id="pvpInviteCopy"></p>
                 <p id="pvpInviteNote"></p>
                 <div class="pvp-actions">
-                    <button type="button" class="pvp-btn" id="pvpInviteIgnore">忽略</button>
-                    <button type="button" class="pvp-btn" id="pvpInviteDecline">拒绝</button>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpInviteAccept">接受</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpInviteIgnore" data-ctl="secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">忽略</span></button>
+                    <button type="button" class="pvp-btn ctl ctl-danger" id="pvpInviteDecline" data-ctl="danger" data-ctl-kind="danger" data-state="default"><span class="ctl-label">拒绝</span></button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpInviteAccept" data-ctl="primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">接受</span></button>
                 </div>
             </div>
         </div>
@@ -862,12 +868,12 @@
 
                     <!-- 操作区 -->
                     <div class="action-zone">
-                        <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
-                        <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
-                        <button type="button" class="action-btn hold" id="holdBtn">观望</button>
-                        <button type="button" class="action-btn ff" id="fastForwardBtn" hidden aria-pressed="false">快进</button>
-                        <button class="action-btn hold" id="finishBtn" onclick="finishSettle()" hidden>结束并结算</button>
-                        <button type="button" class="action-btn rewind" id="rewindBtn" onclick="openRewindConfirm()" hidden aria-label="反悔">
+                        <button type="button" class="action-btn buy ctl ctl-buy" id="buyBtn" data-ctl="buy" data-ctl-kind="buy" data-state="default" onclick="handleAction('buy')"><span class="ctl-label">买入</span></button>
+                        <button type="button" class="action-btn sell ctl ctl-sell" id="sellBtn" data-ctl="sell" data-ctl-kind="sell" data-state="default" onclick="handleAction('sell')"><span class="ctl-label">卖出</span></button>
+                        <button type="button" class="action-btn hold ctl ctl-hold" id="holdBtn" data-ctl="hold" data-ctl-kind="hold" data-state="default"><span class="ctl-label">观望</span></button>
+                        <button type="button" class="action-btn ff ctl ctl-secondary" id="fastForwardBtn" data-ctl-kind="secondary" data-state="default" hidden aria-pressed="false">快进</button>
+                        <button type="button" class="action-btn finish ctl ctl-primary" id="finishBtn" data-ctl-kind="primary" data-state="default" onclick="finishSettle()" hidden><span class="ctl-label">结束并结算</span></button>
+                        <button type="button" class="action-btn rewind ctl ctl-secondary" id="rewindBtn" data-ctl-kind="secondary" data-state="default" onclick="openRewindConfirm()" hidden aria-label="反悔">
                             <span class="rewind-btn-icon" aria-hidden="true">↩</span>
                             <span class="rewind-btn-label">反悔</span>
                         </button>
@@ -888,7 +894,7 @@
                                 <div class="stage-subtitle" id="chartSubtitleInner">--</div>
                             </div>
                             <div class="stage-tools">
-                                <button class="indicator-toggle" id="indicatorsToggle" onclick="toggleIndicatorPanel()">指标 ▾</button>
+                                <button class="indicator-toggle ctl ctl-secondary" id="indicatorsToggle" data-ctl-kind="secondary" data-state="default" onclick="toggleIndicatorPanel()"><span class="ctl-label">指标 ▾</span></button>
                                 <div class="indicator-panel" id="indicatorPanel">
                                     <label><input type="checkbox" id="indicatorMA5" checked><span>5日线</span></label>
                                     <label><input type="checkbox" id="indicatorMA10" checked><span>10日线</span></label>
@@ -972,11 +978,11 @@
                         </div>
                     </div>
                     <div class="result-actions">
-                        <button class="play-again-btn" onclick="playAgain()">再来一局</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareImageBtn" onclick="saveResultShareImage()">📷 保存分享图</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareCopyBtn" onclick="copyResultShareText()">📋 复制分享文案</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultLeaderboardBtn" onclick="openResultLeaderboard()">查看排行榜</button>
-                        <button class="play-again-btn play-again-btn--ghost" onclick="resetGame()">返回首页</button>
+                        <button class="play-again-btn ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="playAgain()"><span class="ctl-label">再来一局</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareImageBtn" data-ctl-kind="secondary" data-state="default" onclick="saveResultShareImage()"><span class="ctl-label">📷 保存分享图</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="copyResultShareText()"><span class="ctl-label">📋 复制分享文案</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><span class="ctl-label">查看排行榜</span></button>
+                        <button class="play-again-btn play-again-btn--ghost ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="resetGame()"><span class="ctl-label">返回首页</span></button>
                     </div>
                     <p class="result-share-hint" id="resultShareHint" hidden></p>
                 </div>
@@ -1248,9 +1254,9 @@
 
                 <!-- 底部操作栏 -->
                 <div class="ar-actions">
-                    <button class="ar-btn" onclick="hindsightShare()">📷 生成分享图</button>
-                    <button class="ar-btn" id="hindsightCopyBtn" onclick="hindsightCopy()">📋 复制文案</button>
-                    <button class="ar-btn ar-btn-primary" onclick="hindsightReset()">↩ 再来一只</button>
+                    <button class="ar-btn ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="hindsightShare()"><span class="ctl-label">📷 生成分享图</span></button>
+                    <button class="ar-btn ctl ctl-secondary" id="hindsightCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="hindsightCopy()"><span class="ctl-label">📋 复制文案</span></button>
+                    <button class="ar-btn ar-btn-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="hindsightReset()"><span class="ctl-label">↩ 再来一只</span></button>
                 </div>
 
             </div>
@@ -1266,9 +1272,9 @@
             <div class="quiz-result-card daily-quiz-modal-card" id="dailyQuizResultCard"></div>
             <div class="quiz-result-details daily-quiz-modal-details" id="dailyQuizResultDetails" hidden></div>
             <div class="jiu-coin-modal-actions daily-quiz-modal-actions">
-                <button type="button" class="jiu-coin-secondary" id="dailyQuizResultReviewBtn">看解析</button>
-                <button type="button" class="jiu-coin-primary" onclick="closeDailyQuizResultModal()">回知识馆</button>
-                <button type="button" class="jiu-coin-secondary daily-quiz-soft-cta" onclick="goSimFromDailyQuizResult()">去模拟盘</button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="dailyQuizResultReviewBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">看解析</span></button>
+                <button type="button" class="jiu-coin-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="closeDailyQuizResultModal()"><span class="ctl-label">回知识馆</span></button>
+                <button type="button" class="jiu-coin-secondary daily-quiz-soft-cta ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="goSimFromDailyQuizResult()"><span class="ctl-label">去模拟盘</span></button>
             </div>
         </div>
     </div>
@@ -1289,9 +1295,9 @@
                 <p class="puzzle-settle-fail" id="puzzleSettleFail" hidden></p>
             </div>
             <div class="jiu-coin-modal-actions puzzle-settle-actions">
-                <button type="button" class="jiu-coin-secondary" onclick="returnToPuzzleListFromSettleModal()">返回残局列表</button>
-                <button type="button" class="jiu-coin-secondary" id="puzzleSettleWeeklyBtn" onclick="showPuzzleWeeklyBoard()">本周同题榜</button>
-                <button type="button" class="jiu-coin-primary" onclick="closePuzzleSettleModal()">继续复盘</button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="returnToPuzzleListFromSettleModal()"><span class="ctl-label">返回残局列表</span></button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="puzzleSettleWeeklyBtn" data-ctl-kind="secondary" data-state="default" onclick="showPuzzleWeeklyBoard()"><span class="ctl-label">本周同题榜</span></button>
+                <button type="button" class="jiu-coin-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="closePuzzleSettleModal()"><span class="ctl-label">继续复盘</span></button>
             </div>
         </div>
     </div>
@@ -1322,8 +1328,8 @@
                 </div>
                 <p class="fill-mode-dialog-note" id="playModeGuestNote">云端对局每次新建消耗 20<span data-jiu-coin-icon data-size="14"></span>；继续未完成对局不扣费。放弃不退款。</p>
                 <div class="fill-mode-actions">
-                    <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
-                    <button type="button" class="fill-mode-btn primary" id="fillModeConfirmBtn" onclick="confirmFillModeAndStart()">开始游戏</button>
+                    <button type="button" class="fill-mode-btn ghost ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="cancelFillModeModal()"><span class="ctl-label">取消</span></button>
+                    <button type="button" class="fill-mode-btn primary ctl ctl-primary" id="fillModeConfirmBtn" data-ctl-kind="primary" data-state="default" onclick="confirmFillModeAndStart()"><span class="ctl-label">开始游戏</span></button>
                 </div>
             </div>
 
@@ -1332,8 +1338,8 @@
                 <p class="fill-mode-conflict-detail" id="fillModeConflictDetail" aria-live="polite"></p>
                 <div class="fill-mode-actions fill-mode-conflict-actions">
                     <button type="button" class="fill-mode-btn ghost" onclick="cancelFillModeModal()">取消</button>
-                    <button type="button" class="fill-mode-btn ghost danger" id="fillModeRestartBtn" onclick="restartActiveCloudGame()">重新开始</button>
-                    <button type="button" class="fill-mode-btn primary" id="fillModeContinueBtn" onclick="continueActiveCloudGame()">继续游戏</button>
+                    <button type="button" class="fill-mode-btn ghost danger ctl ctl-danger" id="fillModeRestartBtn" data-ctl-kind="danger" data-state="default" onclick="restartActiveCloudGame()"><span class="ctl-label">重新开始</span></button>
+                    <button type="button" class="fill-mode-btn primary ctl ctl-primary" id="fillModeContinueBtn" data-ctl-kind="primary" data-state="default" onclick="continueActiveCloudGame()"><span class="ctl-label">继续游戏</span></button>
                 </div>
                 <p class="fill-mode-dialog-note">重新开始会放弃当前云端活动局并按你刚选的成交方式开新局；继续游戏载入同一云端题目，并恢复本机已保存的进度。</p>
             </div>
@@ -1344,8 +1350,8 @@
                         <span class="fill-load-label">开局准备</span>
                         <span class="fill-load-pct" id="fillLoadPct">0%</span>
                     </div>
-                    <div class="fill-load-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="fillLoadBar">
-                        <span id="fillLoadFill"></span>
+                    <div class="fill-load-bar ctl-castbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="fillLoadBar">
+                        <span id="fillLoadFill" class="ctl-castbar-fill"></span>
                     </div>
                     <p class="fill-load-tip" id="fillLoadTip" aria-live="polite">股票资源加载中…</p>
                 </div>
@@ -1376,6 +1382,7 @@
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
         import { initChromeOverflow } from './js/chrome-overflow.js';
+        import { initP4Controls } from './js/controls-p4.js';
         import { initAnnouncements } from './js/announcements.js';
         import { initFeedback } from './js/feedback.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
@@ -1484,6 +1491,7 @@
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
+        try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         applyApkDownloadEntry();
         applyAppUpdateEntry();

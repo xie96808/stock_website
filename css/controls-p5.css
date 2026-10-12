@@ -1,0 +1,223 @@
+/* ==========================================================================
+   P5 handcrafted skins — icon / chart / popover / bar / option / seal /
+   select / gift. Light theme only. Live CSS text (kaiti). press ≤120ms.
+   ========================================================================== */
+
+:root {
+  --p5-icon: image-set(url("../assets/controls/ctl-icon-btn-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-default@2x.webp?v=20261013s") 2x);
+  --p5-icon-press: image-set(url("../assets/controls/ctl-icon-btn-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-press@2x.webp?v=20261013s") 2x);
+  --p5-icon-disabled: image-set(url("../assets/controls/ctl-icon-btn-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-disabled@2x.webp?v=20261013s") 2x);
+  --p5-chart: image-set(url("../assets/controls/ctl-chart-frame.webp?v=20261013s") 1x, url("../assets/controls/ctl-chart-frame@2x.webp?v=20261013s") 2x);
+  --p5-popover: image-set(url("../assets/controls/ctl-popover.webp?v=20261013s") 1x, url("../assets/controls/ctl-popover@2x.webp?v=20261013s") 2x);
+  --p5-bar: image-set(url("../assets/controls/ctl-bar-strip.webp?v=20261013s") 1x, url("../assets/controls/ctl-bar-strip@2x.webp?v=20261013s") 2x);
+  --p5-opt: image-set(url("../assets/controls/ctl-option-row-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-default@2x.webp?v=20261013s") 2x);
+  --p5-opt-press: image-set(url("../assets/controls/ctl-option-row-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-press@2x.webp?v=20261013s") 2x);
+  --p5-opt-correct: image-set(url("../assets/controls/ctl-option-row-correct.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-correct@2x.webp?v=20261013s") 2x);
+  --p5-opt-wrong: image-set(url("../assets/controls/ctl-option-row-wrong.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-wrong@2x.webp?v=20261013s") 2x);
+  --p5-opt-disabled: image-set(url("../assets/controls/ctl-option-row-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-disabled@2x.webp?v=20261013s") 2x);
+  --p5-seal: image-set(url("../assets/controls/ctl-seal-ring.webp?v=20261013s") 1x, url("../assets/controls/ctl-seal-ring@2x.webp?v=20261013s") 2x);
+  --p5-select: image-set(url("../assets/controls/ctl-select-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-default@2x.webp?v=20261013s") 2x);
+  --p5-select-press: image-set(url("../assets/controls/ctl-select-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-press@2x.webp?v=20261013s") 2x);
+  --p5-select-focus: image-set(url("../assets/controls/ctl-select-focus.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-focus@2x.webp?v=20261013s") 2x);
+  --p5-select-disabled: image-set(url("../assets/controls/ctl-select-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-disabled@2x.webp?v=20261013s") 2x);
+  --p5-gift: image-set(url("../assets/controls/ctl-gift-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-default@2x.webp?v=20261013s") 2x);
+  --p5-gift-press: image-set(url("../assets/controls/ctl-gift-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-press@2x.webp?v=20261013s") 2x);
+  --p5-gift-sent: image-set(url("../assets/controls/ctl-gift-sent.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-sent@2x.webp?v=20261013s") 2x);
+  --p5-press-ms: 70ms;
+}
+
+/* ---------- Round icon buttons (dice 🎲) ---------- */
+html:not([data-theme="dark"]) .auth-dice {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  background-image: var(--p5-icon);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  box-shadow: none;
+  color: var(--ink, #2a2a2a);
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--p5-press-ms) ease-out, filter var(--p5-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) .auth-dice:active:not(:disabled) {
+  background-image: var(--p5-icon-press);
+  transform: translate(0.5px, 0.5px);
+}
+html:not([data-theme="dark"]) .auth-dice:disabled {
+  background-image: var(--p5-icon-disabled);
+  opacity: 0.85;
+}
+
+/* ---------- Chart frames (9-slice 24 → 14px) ---------- */
+html:not([data-theme="dark"]) :is(
+  .chart-container,
+  .chart-stage,
+  .pvp-chart,
+  #klineAnalysis.analysis-container
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p5-chart) 24 fill / 14px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Popovers (arrow top-center; top slice 24, sides 16) ---------- */
+html:not([data-theme="dark"]) :is(
+  .pvp-msg-picker,
+  .hindsight-suggestions,
+  .fill-mode-picker
+) {
+  border-style: solid;
+  border-color: transparent;
+  /* keep center column of the top edge (arrow) from stretching: use 24 top */
+  border-image: var(--p5-popover) 24 16 16 16 fill / 18px 12px 12px 12px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Bottom / header strips (3-slice caps 24) ---------- */
+html:not([data-theme="dark"]) :is(
+  .pvp-trade-bar,
+  .action-zone,
+  .hs-card-header
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p5-bar) 0 24 fill / 0 24px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Quiz option rows (9-slice 16; right 40 for ✓/×) ---------- */
+html:not([data-theme="dark"]) .quiz-option {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p5-opt) 16 40 16 16 fill / 12px 28px 12px 12px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  transition: transform var(--p5-press-ms) ease-out;
+  min-height: 52px;
+}
+html:not([data-theme="dark"]) .quiz-option:active:not(.correct):not(.wrong):not(.disabled) {
+  border-image-source: var(--p5-opt-press);
+  transform: translate(1px, 1px);
+}
+html:not([data-theme="dark"]) .quiz-option.correct {
+  border-image-source: var(--p5-opt-correct);
+  background: transparent;
+}
+html:not([data-theme="dark"]) .quiz-option.wrong {
+  border-image-source: var(--p5-opt-wrong);
+  background: transparent;
+}
+html:not([data-theme="dark"]) .quiz-option:disabled,
+html:not([data-theme="dark"]) .quiz-option.disabled {
+  border-image-source: var(--p5-opt-disabled);
+}
+
+/* ---------- Grade seal ring ---------- */
+html:not([data-theme="dark"]) .grade-medal__ring {
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: var(--p5-seal) center / contain no-repeat;
+  animation: none;
+}
+/* Keep grade letter colour semantics (gain red / loss green already on letter). */
+
+/* ---------- Native <select> shell (keep native semantics) ---------- */
+html:not([data-theme="dark"]) :is(.my-games-select, .sketch-select) {
+  appearance: none;
+  -webkit-appearance: none;
+  border-style: solid;
+  border-color: transparent;
+  /* right 40 keeps chevron; left/top/bottom 14 */
+  border-image: var(--p5-select) 14 40 14 14 fill / 10px 36px 10px 12px / 0 stretch;
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  color: var(--ink, #2a2a2a);
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  min-height: 44px;
+  padding: 8px 40px 8px 14px;
+  transition: transform var(--p5-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) :is(.my-games-select, .sketch-select):active:not(:disabled) {
+  border-image-source: var(--p5-select-press);
+}
+html:not([data-theme="dark"]) :is(.my-games-select, .sketch-select):focus,
+html:not([data-theme="dark"]) :is(.my-games-select, .sketch-select):focus-visible {
+  border-image-source: var(--p5-select-focus);
+  outline: none;
+}
+html:not([data-theme="dark"]) :is(.my-games-select, .sketch-select):disabled {
+  border-image-source: var(--p5-select-disabled);
+}
+
+/* ---------- PvP gift pills ---------- */
+html:not([data-theme="dark"]) .pvp-gift-send {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p5-gift) 12 24 12 34 fill / 8px 14px 8px 28px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  min-height: 36px;
+  height: auto;
+  padding: 4px 10px 4px 28px;
+  flex-direction: row;
+  gap: 4px;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  transition: transform var(--p5-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) .pvp-gift-send:active:not(:disabled):not(.is-sent) {
+  border-image-source: var(--p5-gift-press);
+  transform: translate(1px, 1px);
+}
+html:not([data-theme="dark"]) .pvp-gift-send.is-sent,
+html:not([data-theme="dark"]) .pvp-gift-send:disabled {
+  border-image-source: var(--p5-gift-sent);
+  opacity: 0.9;
+}
+html:not([data-theme="dark"]) .pvp-gift-send .pvp-gift-glyph {
+  font-size: 1rem;
+}
+html:not([data-theme="dark"]) .pvp-gift-row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+html:not([data-theme="dark"]) .pvp-gift-row .pvp-gift-send {
+  flex: 0 1 auto;
+  min-width: 88px;
+}
+
+/* Optional: PvP person / score cards → paper (consistent with P4 cards) */
+html:not([data-theme="dark"]) :is(
+  article.pvp-person,
+  .pvp-score,
+  #pvpResultRatingBox.pvp-explain
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-card, url("../assets/controls/ctl-card-paper-default.webp?v=20261013s")) 24 fill / 14px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.auth-dice, .quiz-option, .pvp-gift-send, .my-games-select, .sketch-select) {
+    transition: transform var(--p5-press-ms) linear !important;
+  }
+}

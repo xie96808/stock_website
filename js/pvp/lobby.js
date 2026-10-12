@@ -1,5 +1,6 @@
 import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../auth.js";
 import { coinIconHtml } from "../jiu-coin.js";
+import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
@@ -165,10 +166,11 @@ function dropChallengeKey(userId) {
   challengeKey.map?.delete(String(userId));
 }
 
-export async function sendChallenge(userId) {
+export async function sendChallenge(userId, button = null) {
   const id = Number(userId);
   if (!Number.isInteger(id) || id <= 0) return;
   setError("");
+  if (button) setCtlState(button, "loading", { syncImg: false });
   try {
     const res = await pvpFetch("/pvp/challenges", {
       method: "POST",
@@ -186,6 +188,10 @@ export async function sendChallenge(userId) {
   } catch (err) {
     if (err.status) dropChallengeKey(id);
     setError(err.message || "约战没能发出");
+    if (button && button.isConnected) {
+      setCtlState(button, "default", { clearDisabled: true, syncImg: false });
+      shakeError(button);
+    }
   }
 }
 
@@ -325,8 +331,10 @@ function renderInvites(state) {
     text.textContent = `已向 ${state.outbound.nickname || "对手"} 发出约战 · 剩余 ${formatRemain(left)}`;
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "pvp-btn";
-    button.textContent = "取消约战";
+    button.className = "pvp-btn ctl ctl-secondary";
+    button.dataset.ctlKind = "secondary";
+    button.dataset.state = "default";
+    button.innerHTML = '<span class="ctl-label">取消约战</span>';
     button.addEventListener("click", () => { cancelOutbound(state.outbound.challengeId).catch(() => {}); });
     row.append(faceImage(state.outbound), text, button);
     outbound.append(row);
@@ -341,14 +349,18 @@ function renderInvites(state) {
     text.append(who, document.createTextNode(" 邀请你对战"));
     const accept = document.createElement("button");
     accept.type = "button";
-    accept.className = "pvp-btn pvp-btn-primary";
-    accept.textContent = "接受";
+    accept.className = "pvp-btn pvp-btn-primary ctl ctl-primary";
+    accept.dataset.ctlKind = "primary";
+    accept.dataset.state = "default";
+    accept.innerHTML = '<span class="ctl-label">接受</span>';
     accept.disabled = !acceptingNew || respondInFlight;
     accept.addEventListener("click", () => { respond(card.challengeId, true).catch(() => {}); });
     const decline = document.createElement("button");
     decline.type = "button";
-    decline.className = "pvp-btn";
-    decline.textContent = "拒绝";
+    decline.className = "pvp-btn ctl ctl-danger";
+    decline.dataset.ctlKind = "danger";
+    decline.dataset.state = "default";
+    decline.innerHTML = '<span class="ctl-label">拒绝</span>';
     decline.disabled = respondInFlight;
     decline.addEventListener("click", () => { respond(card.challengeId, false).catch(() => {}); });
     row.append(faceImage(card), text, accept, decline);
@@ -388,7 +400,9 @@ function renderList(entries, state) {
     body.append(name, title, recent);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "pvp-btn pvp-btn-primary";
+    button.className = "pvp-btn pvp-btn-primary ctl ctl-challenge";
+    button.dataset.ctlKind = "challenge";
+    button.dataset.state = "default";
     if (entry.busy) {
       button.textContent = "对局中";
       button.disabled = true;
@@ -397,7 +411,7 @@ function renderList(entries, state) {
       button.disabled = true;
     } else {
       button.textContent = "约战";
-      button.addEventListener("click", () => { sendChallenge(entry.userId).catch(() => {}); });
+      button.addEventListener("click", () => { sendChallenge(entry.userId, button).catch(() => {}); });
     }
     item.append(img, body, button);
     list.append(item);
@@ -508,7 +522,10 @@ async function refresh() {
   if (!auth.ready) {
     if (guest) guest.hidden = true;
     if (member) member.hidden = true;
-    if (loading) loading.hidden = false;
+    if (loading) {
+      loading.hidden = false;
+      ensureCastbar(loading, { indeterminate: true, labelText: "大厅加载中…" })?.setIndeterminate(true);
+    }
     return;
   }
   if (loading) loading.hidden = true;

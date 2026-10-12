@@ -169,9 +169,9 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpTradePrimary"/);
   assert.match(html, /id="pvpMsgOpen"/);
   assert.match(html, /id="pvpMsgPicker"/);
-  assert.match(html, /assets\/pvp\/btn-buy\.png/);
-  assert.match(html, /assets\/pvp\/btn-message\.png/);
-  assert.match(html, /assets\/pvp\/btn-hold\.png/);
+  assert.match(html, /assets\/controls\/ctl-buy-default\.png/);
+  assert.match(html, /assets\/controls\/ctl-msg-default\.png/);
+  assert.match(html, /assets\/controls\/ctl-hold-default\.png/);
   assert.match(html, /这你都买？进厂打螺丝吧/);
   assert.match(html, /技术回调，慌个锤子/);
   assert.match(html, /id="pvpHold"/);
@@ -289,7 +289,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(room, /pvpTradePrimary/);
   assert.match(room, /postTaunt|match\.taunt/);
   assert.match(room, /pvp-trade-bar|paintTopClocks|pvpMsgOpen|pvpBottom|bottomMode/);
-  assert.match(room, /btn-sell\.png|btn-buy\.png/);
+  assert.match(room, /assets\/controls\/ctl-/);
   assert.match(resultJs, /marketMissing|paintResultBody/);
   assert.match(resultJs, /pvpResultRatingRange/);
   assert.match(resultJs, /对手收益/);

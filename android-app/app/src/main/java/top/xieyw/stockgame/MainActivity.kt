@@ -2,10 +2,15 @@ package top.xieyw.stockgame
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Base64
 import android.view.View
 import android.graphics.Color
 import android.webkit.CookieManager
@@ -21,10 +26,12 @@ import android.webkit.ValueCallback
 import android.widget.LinearLayout
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
+import java.io.File
 
 /**
  * Thin WebView shell that loads the live game at https://stockgame.xieyw.top.
@@ -273,9 +280,97 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        /**
+         * 保存分享图: base64 PNG → MediaStore Pictures/早知道当初不炒了/ (API 29+, no
+         * storage permission). Below API 29 it falls back to the system share sheet.
+         * Returns "saved" | "shared" | "error" synchronously so the web side can
+         * fall through to navigator.share / download on "error".
+         */
+        @JavascriptInterface
+        fun saveImage(base64: String?, fileName: String?): String {
+            val bytes = decodePng(base64) ?: return "error"
+            val name = safePngName(fileName)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                return if (shareBytes(bytes, name, null)) "shared" else "error"
+            }
+            return try {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, name)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$ALBUM_DIR")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val resolver = contentResolver
+                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return "error"
+                try {
+                    resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw IllegalStateException("no stream")
+                    values.clear()
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+                    "saved"
+                } catch (e: Exception) {
+                    resolver.delete(uri, null, null)
+                    "error"
+                }
+            } catch (_: Exception) {
+                "error"
+            }
+        }
+
+        /** Share a base64 PNG through the system chooser (cacheDir/share via FileProvider). */
+        @JavascriptInterface
+        fun shareImage(base64: String?, fileName: String?, title: String?): String {
+            val bytes = decodePng(base64) ?: return "error"
+            return if (shareBytes(bytes, safePngName(fileName), title)) "shared" else "error"
+        }
+    }
+
+    private fun decodePng(base64: String?): ByteArray? {
+        if (base64.isNullOrBlank() || base64.length > MAX_IMAGE_B64) return null
+        return try {
+            val raw = base64.substringAfter("base64,", base64)
+            Base64.decode(raw, Base64.DEFAULT).takeIf { it.size > 8 }
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+    }
+
+    private fun safePngName(fileName: String?): String {
+        val base = (fileName ?: "").replace(Regex("[^A-Za-z0-9._-]"), "_").take(80)
+        val stem = base.removeSuffix(".png").ifBlank { "zaozhidao-${System.currentTimeMillis()}" }
+        return "$stem.png"
+    }
+
+    private fun shareBytes(bytes: ByteArray, name: String, title: String?): Boolean {
+        return try {
+            val dir = File(cacheDir, "share").apply { mkdirs() }
+            dir.listFiles()?.forEach { if (it.name != name) it.delete() }
+            val file = File(dir, name)
+            file.writeBytes(bytes)
+            val uri = FileProvider.getUriForFile(this, "$packageName${AppUpdater.AUTHORITY_SUFFIX}", file)
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                try {
+                    startActivity(Intent.createChooser(send, title ?: "分享图片"))
+                } catch (_: ActivityNotFoundException) {
+                    // No share target.
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     companion object {
+        private const val ALBUM_DIR = "早知道当初不炒了"
+        private const val MAX_IMAGE_B64 = 24 * 1024 * 1024
         private val PAPER_LIGHT = Color.parseColor("#F3EAD8")
         private val PAPER_DARK = Color.parseColor("#1C1A16")
         private const val THEME_WATCH_JS = """

@@ -8,6 +8,7 @@ import {
   selectAuthChromeMode,
 } from "./auth-state.js";
 import { apiRequest, apiMultipartRequest } from "./auth-http.js";
+import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
 
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";
@@ -204,14 +205,7 @@ function ensureToastHost() {
 
 export function showToast(message, kind = "error") {
   ensureToastHost();
-  const host = document.getElementById("authToastHost");
-  const toast = el(`<div class="auth-toast auth-toast--${kind}" role="status">${message}</div>`);
-  host.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 280);
-  }, 2600);
+  showStampToast(message, kind === "success" || kind === "info" ? kind : "error");
 }
 
 /** Mark primary action buttons busy so clicks feel instant under network RTT. */
@@ -225,12 +219,18 @@ function setBusy(button, busy, busyLabel) {
     button.disabled = true;
     button.classList.add("is-busy");
     button.setAttribute("aria-busy", "true");
-    if (busyLabel) button.textContent = busyLabel;
+    if (button.classList.contains("ctl")) setCtlState(button, "loading", { syncImg: false });
+    const busyLbl = button.querySelector(".ctl-label");
+    if (busyLabel) { if (busyLbl) busyLbl.textContent = busyLabel; else button.textContent = busyLabel; }
   } else {
+    if (button.classList.contains("ctl")) setCtlState(button, "default", { clearDisabled: true, syncImg: false });
     button.disabled = false;
     button.classList.remove("is-busy");
     button.removeAttribute("aria-busy");
-    if (button.dataset.idleLabel != null) button.textContent = button.dataset.idleLabel;
+    if (button.dataset.idleLabel != null) {
+      const idleLbl = button.querySelector(".ctl-label");
+      if (idleLbl) idleLbl.textContent = button.dataset.idleLabel; else button.textContent = button.dataset.idleLabel;
+    }
   }
 }
 
@@ -280,7 +280,7 @@ function ensureAuthDom() {
         <form id="authLoginForm" class="auth-form">
           <label>用户名<input name="username" autocomplete="username" required></label>
           <label>密码<input name="password" type="password" autocomplete="current-password" required minlength="4"></label>
-          <button type="submit" class="auth-primary">登录</button>
+          <button type="submit" class="auth-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">登录</span></button>
         </form>
         <form id="authRegisterForm" class="auth-form" hidden>
           <label>用户名<input name="username" autocomplete="username" required></label>
@@ -302,7 +302,7 @@ function ensureAuthDom() {
             </div>
           </div>
           <label class="auth-check"><input type="checkbox" name="terms" required> 我已阅读并同意服务条款</label>
-          <button type="submit" class="auth-primary">注册</button>
+          <button type="submit" class="auth-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">注册</span></button>
         </form>
         <div id="authSettingsPanel" class="auth-form" hidden>
           <div class="avatar-picker">
@@ -323,10 +323,10 @@ function ensureAuthDom() {
           <label class="auth-nick-field">个性签名
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
-          <button type="button" class="auth-primary" id="settingsSave">保存资料</button>
-          <button type="button" class="auth-secondary" id="settingsFeedbackBtn">反馈</button>
+          <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
+          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
           <hr>
-          <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
+          <button type="button" class="auth-danger ctl ctl-danger" id="authLogoutBtn" data-ctl-kind="danger" data-state="default"><span class="ctl-label">退出登录</span></button>
         </div>
       </div>
     </div>`));
@@ -583,19 +583,14 @@ export function openAuthModal(tab = "login") {
   }
   showForms(tab);
   const modal = document.getElementById("authModal");
-  modal.hidden = false;
-  // Re-open / focus existing modal (top-right auth).
-  const focusable = modal.querySelector(
-    tab === "register" ? "#authRegisterForm input" : "#authLoginForm input"
-  );
-  if (focusable) {
-    try { focusable.focus(); } catch { /* ignore */ }
-  }
+  openCtlOverlay(modal, {
+    focusSelector: tab === "register" ? "#authRegisterForm input" : tab === "settings" ? "#authCloseBtn" : "#authLoginForm input",
+  });
 }
 
 export function closeAuthModal() {
   const m = document.getElementById("authModal");
-  if (m) m.hidden = true;
+  if (m) closeCtlOverlay(m);
 }
 
 function renderAuthChrome() {
@@ -818,6 +813,7 @@ async function onLogout() {
 }
 
 export async function initAuth() {
+  initControls();
   ensureAuthDom();
   // First paint: neither guest nor user until /me settles.
   renderAuthChrome();

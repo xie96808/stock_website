@@ -2,6 +2,7 @@
  * User feedback to developer — entry from settings modal 「反馈」.
  * Text required; 1–3 optional JPEG/PNG/WebP images (client-compressed).
  */
+import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 import { api, apiMultipart, showToast, getAuthState, openAuthModal, selectIsAuthenticated } from "./auth.js";
 
 const MAX_IMAGES = 3;
@@ -40,14 +41,14 @@ function ensureDom() {
           <textarea id="feedbackBody" rows="5" maxlength="4000" placeholder="请描述遇到的问题或想说的话…" required></textarea>
         </label>
         <div class="feedback-attach-row">
-          <button type="button" class="feedback-attach-btn" id="feedbackPickImages">添加图片</button>
+          <button type="button" class="feedback-attach-btn ctl ctl-secondary" id="feedbackPickImages" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">添加图片</span></button>
           <span class="feedback-attach-meta" id="feedbackAttachMeta">可选，最多 ${MAX_IMAGES} 张</span>
           <input type="file" id="feedbackImageFile" accept="image/jpeg,image/png,image/webp" multiple hidden>
         </div>
         <div class="feedback-previews" id="feedbackPreviews"></div>
         <div class="feedback-actions">
-          <button type="button" class="feedback-secondary" id="feedbackCancel">取消</button>
-          <button type="button" class="feedback-primary" id="feedbackSubmit">提交反馈</button>
+          <button type="button" class="feedback-secondary ctl ctl-secondary" id="feedbackCancel" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">取消</span></button>
+          <button type="button" class="feedback-primary ctl ctl-primary" id="feedbackSubmit" data-ctl-kind="primary" data-state="default"><span class="ctl-label">提交反馈</span></button>
         </div>
       </div>
     </div>`)
@@ -213,13 +214,12 @@ export function openFeedbackModal() {
   clearPreviews();
   // Sit above 资料设置 (auth z-index 150). Keep settings open underneath.
   const modal = document.getElementById("feedbackModal");
-  modal.hidden = false;
-  body?.focus();
+  openCtlOverlay(modal, { focusSelector: "#feedbackBody" });
 }
 
 export function closeFeedbackModal() {
   const modal = document.getElementById("feedbackModal");
-  if (modal) modal.hidden = true;
+  if (modal) closeCtlOverlay(modal);
   setError("");
   clearPreviews();
 }

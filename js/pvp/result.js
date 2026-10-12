@@ -517,8 +517,34 @@ function paintResultBody(view, { celebrate = false } = {}) {
         .catch(() => {});
     };
   }
+  wireShareImage();
   paintChart(view, bestPoints).catch(() => {});
   return bestPoints;
+}
+
+/** 保存分享图: icon-only ctl-share-save next to 再次约战. Reads the currently shown view. */
+function wireShareImage() {
+  const button = document.getElementById("pvpResultShareImage");
+  if (!button || button.dataset.wired === "1") return;
+  button.dataset.wired = "1";
+  button.addEventListener("click", async () => {
+    if (button.dataset.busy === "1" || !shown) return;
+    button.dataset.busy = "1";
+    const view = shown;
+    let setCtlState = null;
+    try {
+      ({ setCtlState } = await import("../controls.js"));
+      setCtlState(button, "loading", { syncImg: false });
+      const mod = await import("../share-image.js");
+      await mod.savePvpShareImage(view);
+    } catch (err) {
+      console.warn("pvp share image failed", err);
+    } finally {
+      button.dataset.busy = "0";
+      button.disabled = false;
+      if (setCtlState) setCtlState(button, "default", { syncImg: false, clearDisabled: true });
+    }
+  });
 }
 
 function marketMissing(view) {

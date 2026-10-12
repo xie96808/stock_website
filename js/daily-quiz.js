@@ -197,7 +197,7 @@ function renderDailyQuestion() {
   const nextBtn = document.getElementById('dailyQuizNextBtn');
   const canAdvance = locked || !!flow.pendingOptionId;
   nextBtn.disabled = !canAdvance || flow.submitting;
-  nextBtn.textContent = flow.index >= total - 1
+  (nextBtn.querySelector('.ctl-label') || nextBtn).textContent = flow.index >= total - 1
     ? (canAdvance ? '查看结果' : '请先作答')
     : '下一题';
 }
@@ -295,7 +295,7 @@ function ensureResultModalBound() {
         details.hidden = !reviewExpanded;
         if (reviewExpanded) details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
-      reviewBtn.textContent = reviewExpanded ? '收起解析' : '看解析';
+      (reviewBtn.querySelector('.ctl-label') || reviewBtn).textContent = reviewExpanded ? '收起解析' : '看解析';
     });
   }
 }
@@ -321,7 +321,7 @@ export async function showDailyQuizResults(attemptId, settledHint) {
   const detailsEl = document.getElementById('dailyQuizResultDetails');
   if (detailsEl) detailsEl.hidden = true;
   const reviewBtn = document.getElementById('dailyQuizResultReviewBtn');
-  if (reviewBtn) reviewBtn.textContent = '看解析';
+  if (reviewBtn) (reviewBtn.querySelector('.ctl-label') || reviewBtn).textContent = '看解析';
 
   let review = null;
   try {

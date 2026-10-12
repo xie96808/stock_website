@@ -16,6 +16,7 @@ import {
 } from './echarts-loader.js';
 import { getTheme, onThemeChange, THEME_DARK } from './theme.js';
 import { showToast } from './auth.js';
+import { showStampToast } from './controls.js';
 
 let hindsightChart = null;
 let selectedStock  = null;
@@ -639,7 +640,7 @@ export async function hindsightShare() {
         `若在 ${c.peakDate} 以最高价 ¥${c.peakPrice} 卖出，理论${verb} ¥${absAmt}。\n\n` +
         `${_hindsightShareFooter()}\n—— 治愈每一个错过大牛股的遗憾灵魂`;
     _copyText(text, null);
-    alert('已复制分享文案（当前环境无法生成图片）');
+    showStampToast('已复制分享文案（当前环境无法生成图片）', 'info');
 }
 
 export function hindsightCopy() {
@@ -661,10 +662,10 @@ function _copyText(text, btnId) {
         if (!btnId) return;
         const btn = document.getElementById(btnId);
         if (!btn) return;
-        const orig = btn.textContent;
-        btn.textContent = '✓ 已复制';
+        const orig = (btn.querySelector('.ctl-label') || btn).textContent;
+        (btn.querySelector('.ctl-label') || btn).textContent = '✓ 已复制';
         btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+        setTimeout(() => { (btn.querySelector('.ctl-label') || btn).textContent = orig; btn.classList.remove('copied'); }, 2000);
     };
     const fallbackCopy = () => {
         try {
