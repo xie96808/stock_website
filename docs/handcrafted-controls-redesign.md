@@ -1,6 +1,6 @@
 # 手绘控件全量重做：产品调研与开发规格
 
-> 版本：v1.1 · 2026-10-12（Asia/Shanghai）  
+> 版本：v1.2 · 2026-10-12（Asia/Shanghai）  
 > 状态：**仅文档 / 未实现 UI**。本文件指导绘图 Bot 出图与后续前端实施；**禁止**在本 PR 内改控件实现。  
 > 产品：`stockgame.xieyw.top`（股市模拟盘小游戏）· 仓库 `/workspace/stock_website`  
 > 依据：`index.html` + `css/*` + `js/auth.js` / `feedback.js` / `pvp/*` 实盘点；既有 `docs/pvp-battle-design.md`、纸墨 tokens（`css/base.css`）；News Bot 竞品素材（精炼并入 §3）；REA Bot 逆向摘要（并入 §3.7 / §4.1 / §6）；公开网页检索（真实链接，不编造评测）。
@@ -17,7 +17,7 @@
 | REA 优先逆向 | 坐庄风云(itch) → Drawably → Wired Elements → Papercuts → 252（补充）/ 最强富翁(若可) |
 | 跨站硬规则 | 见 §4.1「跨站 10 条」：120ms 内物理按下、loading 不换控件、虚实线语义、主循环唯一高亮等 |
 | 静态换皮预算 | 线上可换皮静态约 **4.2M**（images≈3.5M / css≈244–412K / assets/pvp≈280K）；**无 sprite**；重绘重点 `assets/pvp` + `images` 品牌 + avatars + `game`/`pvp` CSS |
-| 下一步 | 绘图 Bot 按附录 brief 出状态帧 → P0 全局 press（可无新图）→ 换 `assets/pvp` 切片 → P2 输入壳 |
+| 下一步 | 绘图 Bot 按附录 brief 出状态帧 → P0 全局 press（可无新图）→ 换 `assets/pvp` 切片 → P2 输入壳；子屏过渡见 **§6.4** |
 
 ---
 
@@ -407,7 +407,7 @@ disabled（任意时刻可进入，忽略指针）
 | 买卖/保持提交 | press 后进入 loading 砂轮；成功 success 闪；失败 error 抖 | load 至响应；flash 200；shake 320 | ease | 否（防双击）；超时可重试 |
 | 匹配/约战等待 | 行内或全屏 cast bar | 不确定循环 900/圈 | linear | 是（取消约战） |
 | 开局加载 | 模态读条 + 标签「开盘…」 | 真实进度或 1.2s 最小展示 | ease-in-out | 否（取消走取消按钮） |
-| 退出确认打开 | 纸片从顶 12px 滑入+淡入 | 180 | ease-out | 是（点遮罩=留下） |
+| 退出确认打开 | 纸片滑入+淡入（归并 **§6.4** 模态：220–280ms） | 220–280 | cubic-bezier(.2,.8,.2,1) | 是（点遮罩=留下） |
 | 消息气泡 | scale 0.85→1 + 上浮 | 200 | cubic-bezier(.2,.8,.2,1) | 是 |
 | Toast 盖章 | 下落盖印 | 200 in / 2200 hold / 180 out | ease | 是（点消失） |
 | 错误 | X 轴 ±4px 抖动 4 次 + 红墨闪 | 320 | ease-in-out | — |
@@ -416,7 +416,7 @@ disabled（任意时刻可进入，忽略指针）
 | 虚线→实线确认（Papercuts） | stroke-dash → solid + 印泥闪 | 180 | ease | — |
 | 沸腾 loading（Drawably） | 描边微扰动循环或 3 帧 sprite | 900/圈 | linear | reduced-motion 关 |
 | elevation 降档（Wired） | 硬阴影 3→1 + 下沉 2px | 70 | linear | 随 press |
-| 危机 sheet（252） | 自底上推 24px+遮罩 | 220 | cubic-bezier(.2,.8,.2,1) | 仅危机解除/主按钮 |
+| 危机 sheet（252） | 自底上推+遮罩（细则 **§6.4** sheet） | 240–280 | cubic-bezier(.2,.8,.2,1) | 仅危机解除/主按钮 |
 | 飘字事件（坐庄风云） | 自锚点上飘 36px 淡出 | 700 | ease-out | — |
 
 ### 6.3 减弱动效
@@ -426,6 +426,91 @@ disabled（任意时刻可进入，忽略指针）
   /* 保留 press 位移与状态色；停用 shake loop、烟花、boil、无限旋转 */
 }
 ```
+
+### 6.4 子屏 / 面板进出场（Silky Screen Transitions）
+
+> Bill 要求：点击控件打开子屏/子 UI 时，也要有魔兽世界式丝滑过渡。本节与 §5.0 Press、§6.2 映射表、§4.1-10 reduced-motion **同时生效**。  
+> 范围：**模态叠层**、**底 sheet / 抽屉**、**全视图切换**（若已在本控件体系内）。**本 PR 仍只改文档，不实现前端。**
+
+#### 6.4.1 适用面
+
+| 类型 | 本品实例（非穷尽） | 壳隐喻 |
+|---|---|---|
+| **模态叠层（Modal overlay）** | 设置、对手资料、反馈、签名/昵称编辑、公告、登录/注册、约战邀请、离开确认、举報、韭币/Quiz 结算弹层 | 便签/信封浮在半透墨上 |
+| **底 sheet / 抽屉** | 开局扣币确认、反悔确认、Fill mode、危机打断（断线/限额/资格）、消息列表（若做成上推条） | 纸卷自底掀起 |
+| **全视图切换** | 大厅 → 房间、房间 → 结算、结算 → 大厅；单人局进出 | 整页纸翻面/淡墨擦拭（轻量，勿剧场过重） |
+
+#### 6.4.2 时序与缓动（验收硬数）
+
+| 阶段 | 时长 | 缓动 | 说明 |
+|---|---|---|---|
+| **控件 press** | ≤120ms（目标 70ms down） | linear / ease-out | 必须先吃到输入（§4.1-2）；**不得**被面板动画吞掉 |
+| **press → 面板开始进场** | 0–80ms 衔接 | — | 推荐：**press 完成（或 pointerup）后再开面板**；若需更连：press 与面板重叠，但**总感知 ≤200–280ms**（按下到面板可读） |
+| **模态 Enter** | **220–280ms** | `cubic-bezier(.2,.8,.2,1)`（WoW 式出弹后稳） | fade + scale：`opacity 0→1`，`scale(0.94→1)`；可选轻微 `translateY(8→0)` |
+| **模态 Exit** | **180–220ms** | ease-in | 反向：`opacity 1→0`，`scale(1→0.96)`；勿拖泥带水 |
+| **Sheet Enter** | **240–280ms** | `cubic-bezier(.2,.8,.2,1)` | 自底 `translateY(100%→0)` + 淡入；顶缘可带 3–6° 掀纸感（Papercuts） |
+| **Sheet Exit** | **200–240ms** | ease-in | `translateY(0→100%)` + 淡出 |
+| **全视图 Enter** | **280–320ms** | ease-in-out | 旧视图 `opacity→0`（可微 `translateX(±12px)`），新视图对向滑入+淡入；**禁止**整页硬切 |
+| **全视图 Exit / 回退** | 同 Enter 或略短 240ms | ease-in-out | 方向与前进相反（大厅←房间） |
+| **遮罩 Dim** | 与面板同进同出，**160–220ms** | ease | 半透墨（非纯黑）；目标背景/非焦点 CTA `opacity → ~0.45`（坐庄风云侧栏压暗） |
+| **错开（stagger）** | 面板壳先 0ms，主 CTA/标题 +40–60ms | — | 壳先落定，内容轻跟；单层错开即可，忌长瀑布 |
+
+#### 6.4.3 进场 / 退场编排（Choreography）
+
+```
+pointerdown → press 视觉（≤120ms）
+    → pointerup / 确认触发
+    → [可选 0–80ms] 控件 release 或保持 press-暗态（若随后 loading）
+    → 遮罩 fade-in 与面板 enter 同步启动
+    → 面板可读（焦点落入关闭键或主 CTA；滚动锁 body）
+    → 关闭：面板 exit 与遮罩 fade-out 同步；结束后卸载 DOM / aria-hidden
+```
+
+- **Fade + Scale（默认模态）**：居中便签；`transform-origin: center`；硬阴影在 enter 末帧落到 default elevation（Wired 档位 3）。  
+- **Slide（Sheet）**：`transform` 只动 `translateY`；宽度满栏或 max 520px 居中纸卷；顶部圆角/毛边用 `ctl-modal-paper` 9-slice。  
+- **View swap**：只用 opacity + 小位移；**禁止** 3D flip 整页（WebView 掉帧）。结算卡可用既有 3–6° 掀入（§3.7 Papercuts），属卡面而非整路由。  
+- **打开源控件**：面板开着时源按钮可停在 hover/secondary，勿连续 replay press。  
+- **与 cast bar / loading 关系**：若点击后先请求再开面板，控件走 §6.0 loading；面板在数据就绪后 enter，仍遵守 200–280ms 总手感（可用骨架纸先 enter）。
+
+#### 6.4.4 遮罩、层级与手势
+
+| 项 | 规格 |
+|---|---|
+| **遮罩色** | 半透墨（如 `color-mix(in srgb, var(--ink) 45%, transparent)` 或等价）；纸/墨主题各测对比 |
+| **z-index 阶梯** | 基座 HUD `<` 普通模态（设置/反馈/资料/签名/公告）`<` 邀请/离开确认 `<` **危机 sheet**（§4.1-8）`<` Toast 墨印 |
+| **点击遮罩** | 默认可关（=取消/留下）；**危机 sheet / 强制确认**不可点遮罩关闭 |
+| **焦点** | enter 末 `focus` 关闭键或主 CTA；exit 后焦点回源控件 |
+| **滚动** | 面板打开锁背景 scroll；sheet 内独立滚 |
+| **多模态** | 同时只允许一层普通模态；危机可盖在其上；关闭顺序 LIFO |
+
+#### 6.4.5 `prefers-reduced-motion`
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  /* 子屏：取消 scale 弹与长距离 slide；改为 ≤120ms 透明度交叉淡入淡出 */
+  /* 保留遮罩 dim 与 press 位移；全视图禁止位移，仅淡入 */
+}
+```
+
+- reduced-motion 下：**总时长 ≤120ms** 交叉淡化；不要 280ms 弹性。  
+- 仍须有明确进场/退场（不可瞬切导致迷失），但去掉 boil、掀纸循环、视差。
+
+#### 6.4.6 与手绘控件 press 的防抖 / 防打架
+
+1. **串行优先**：`press 动画完成 → 再触发面板 enter`（实现简单，手感清晰）。  
+2. **并行上限**：若产品要「更连」，允许 press 与面板重叠，但 **pointerdown → 面板 opacity≥0.9 可读** 的体感预算 **≤200–280ms**。  
+3. **禁止**：面板 CSS 的 `transform` 继承到仍在播 press 的按钮上（含 `filter`/`scale` 祖先）；面板挂在 `body` 传送门层。  
+4. **禁止**：打开动画期间重复触发同一源按钮的 press 帧。  
+5. **退出确认等已有 180ms 纸片滑入**（§6.2）：归并到本小节模态规格，统一到 **220–280ms enter**，避免多套时长。
+
+#### 6.4.7 验收抽检（文档阶段清单，实施时打勾）
+
+- [ ] 设置 / 反馈 / 签名 / 对手资料 / 离开确认：进场 fade+scale 或等价丝滑；退场不硬切。  
+- [ ] 底 sheet（扣费/危机）：自底滑入 + dim；危机层级最高。  
+- [ ] 大厅↔房间↔结算：有交叉淡入或轻滑，无闪白。  
+- [ ] 从按下到面板可读 ≤280ms；press 本身 ≤120ms。  
+- [ ] `prefers-reduced-motion: reduce` 下仅短淡化，无 scale/长滑。  
+- [ ] 遮罩为半透墨；z-index 符合阶梯；焦点与滚动锁正确。
 
 ---
 
@@ -576,4 +661,5 @@ Auth/反馈：`authLoginBtn` `authModal` inputs `feedbackSubmit` `feedbackBody`
 |---|---|---|
 | 2026-10-12 | v1.0 | 首版：代码盘点 + News Bot 竞品精炼 + WoW 映射 + 绘图 brief；仅文档 PR |
 | 2026-10-12 | v1.1 | 并入 REA 逆向（坐庄风云/Drawably/Wired/Papercuts/252）；跨站 10 条硬规范；静态 ≈4.2M 换皮预算与无 sprite 现状写入 §7 |
+| 2026-10-12 | v1.2 | 新增 §6.4 子屏/面板进出场：模态·sheet·全视图时序/缓动/遮罩 z-index、与 press≤120ms 衔接（总感 ≤200–280ms）、reduced-motion；仅文档 |
 
