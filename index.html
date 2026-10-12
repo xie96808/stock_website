@@ -463,7 +463,8 @@
                     <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
                     <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
                 </ul>
-                <div id="pvpLobbyGuest">
+                <p id="pvpLobbyLoading" hidden>大厅加载中…</p>
+                <div id="pvpLobbyGuest" hidden>
                     <p>登录后才能约战。游客只能查看规则和在线人数。</p>
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
                 </div>
@@ -471,7 +472,7 @@
                     <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
                     <p id="pvpLobbyBalance"></p>
-                    <button type="button" class="pvp-btn" id="pvpShareBtn">分享对战</button>
+                    <button type="button" class="pvp-btn" id="pvpShareBtn" hidden>分享对战</button>
                     <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
@@ -515,7 +516,7 @@
                 </div>
                 <div id="pvpReadyPanel" hidden>
                     <p id="pvpReadyCopy">双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>，平局退回 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
-                    <div class="pvp-clock" id="pvpReadyClock" aria-live="polite">
+                    <div class="pvp-clock" id="pvpReadyClock">
                         <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
                         <strong class="pvp-clock-num" id="pvpReadyClockNum">30</strong>
                         <span class="pvp-clock-unit">秒</span>
@@ -526,7 +527,7 @@
                     </div>
                 </div>
                 <div id="pvpPlayPanel" hidden>
-                    <div class="pvp-clock" id="pvpClock" aria-live="polite">
+                    <div class="pvp-clock" id="pvpClock">
                         <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
                         <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
                         <span class="pvp-clock-unit">秒</span>
@@ -544,7 +545,7 @@
                     <div class="pvp-actions pvp-trade-actions">
                         <button type="button" class="pvp-btn pvp-btn-buy" id="pvpBuy">买入</button>
                         <button type="button" class="pvp-btn pvp-btn-sell" id="pvpSell">卖出</button>
-                        <button type="button" class="pvp-btn pvp-btn-hold" id="pvpHold">持有</button>
+                        <button type="button" class="pvp-btn pvp-btn-hold" id="pvpHold">观望</button>
                     </div>
                     <p id="pvpActionError" role="status"></p>
                     <div id="pvpChart" class="pvp-chart"></div>

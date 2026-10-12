@@ -503,6 +503,10 @@ export function buildKlineOption(vm) {
         yAxis: [
             {
                 type: 'value', scale: true, gridIndex: 0,
+                name: isPvp ? '相对价 (d1=100)' : undefined,
+                nameLocation: 'middle',
+                nameGap: 36,
+                nameTextStyle: isPvp ? { color: axisLabelColor, fontSize: 10, padding: [0, 0, 0, 0] } : undefined,
                 axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
                 splitLine: { lineStyle: { color: splitLineColor } },

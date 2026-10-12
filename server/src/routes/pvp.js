@@ -33,7 +33,7 @@ function objectBody(req, res) {
 }
 
 router.get("/pvp/lobby/summary", (req, res) => {
-  return ok(res, lobbySummary(openDb(), Date.now()));
+  return ok(res, lobbySummary(openDb(), Date.now(), req.user?.id ?? null));
 });
 
 router.get("/pvp/lobby", requireUser, (req, res) => {

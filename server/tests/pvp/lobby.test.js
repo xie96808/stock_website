@@ -82,6 +82,18 @@ test("lobby presence, decline, ready reveal, forfeit, and flag-off summary", asy
     const summary = await call(null, "/api/v1/pvp/lobby/summary");
     assert.equal(summary.json.data.availableCount >= 1, true);
     assert.equal(JSON.stringify(summary.json).includes("nickname"), false);
+    // Authenticated summary must not count the viewer as an opponent.
+    assert.equal((await call(sender.session, "/api/v1/pvp/lobby/presence", {
+      method: "POST",
+      body: { available: true },
+    })).status, 200);
+    const asGuest = await call(null, "/api/v1/pvp/lobby/summary");
+    const asSender = await call(sender.session, "/api/v1/pvp/lobby/summary");
+    assert.equal(asSender.json.data.availableCount, asGuest.json.data.availableCount - 1);
+    await call(sender.session, "/api/v1/pvp/lobby/presence", {
+      method: "POST",
+      body: { available: false },
+    });
 
     const listed = await call(sender.session, "/api/v1/pvp/lobby?limit=50");
     assert.equal(listed.status, 200);
@@ -243,3 +255,4 @@ test("lobby presence, decline, ready reveal, forfeit, and flag-off summary", asy
     closeDb();
   }
 });
+

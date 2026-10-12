@@ -22,6 +22,13 @@ let wss = null;
 let sweepTimer = null;
 let upgradeHandler = null;
 
+
+export function sweepPvpTickets(now = Date.now()) {
+  for (const [digest, row] of tickets) {
+    if (!row || row.expiresAt <= now) tickets.delete(digest);
+  }
+}
+
 export function issueWsTicket({ userId, sessionToken, now = Date.now() }) {
   const ticket = randomToken(32);
   const expiresAt = now + TICKET_TTL_MS;
@@ -96,6 +103,7 @@ export function openPvpSockets() {
 }
 
 export function revalidateSockets(now = Date.now()) {
+  sweepPvpTickets(now);
   for (const ws of [...sockets]) {
     if (!sessionStillValidByHash(ws.pvp?.sessionHash, now)) {
       ws.close(4001, "session closed");

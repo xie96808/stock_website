@@ -9,8 +9,10 @@ import { appendRankProgress } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
 let chart = null;
+let chartObserver = null;
 let paintToken = 0;
 let shown = null;
+let fireworksTimer = 0;
 
 function text(id, value) {
   const node = document.getElementById(id);
@@ -24,11 +26,17 @@ function html(id, value) {
 
 function destroyChart() {
   paintToken += 1;
+  if (chartObserver) {
+    chartObserver.disconnect();
+    chartObserver = null;
+  }
   if (chart) {
     chart.dispose();
     chart = null;
   }
   window.resizePvpChart = null;
+  window.clearTimeout(fireworksTimer);
+  fireworksTimer = 0;
 }
 
 /** Drop a result chart when the player leaves this screen. */
@@ -164,6 +172,13 @@ async function paintChart(view, bestPoints) {
     if (!chart) {
       chart = echarts.init(node);
       window.resizePvpChart = () => { if (chart) chart.resize(); };
+      if (typeof ResizeObserver === "function") {
+        chartObserver = new ResizeObserver(() => {
+          window.requestAnimationFrame(() => { if (chart) chart.resize(); });
+        });
+        chartObserver.observe(node);
+      }
+      window.setTimeout(() => { if (chart) chart.resize(); }, 50);
     }
     chart.setOption(buildKlineOption({
       mode: "pvp",
@@ -247,8 +262,18 @@ function showSettle(view, celebrate) {
   }
   const outcome = view?.me?.outcome || "";
   const fireworks = document.getElementById("pvpFireworks");
-  if (fireworks) fireworks.hidden = outcome !== "win";
-  if (outcome === "win") ensureSparks();
+  window.clearTimeout(fireworksTimer);
+  if (fireworks) {
+    fireworks.hidden = outcome !== "win";
+    fireworks.classList.remove("is-done");
+  }
+  if (outcome === "win") {
+    ensureSparks();
+    // Stop compositor work after a few bursts (CSS animation-iteration-count is finite).
+    fireworksTimer = window.setTimeout(() => {
+      fireworks?.classList.add("is-done");
+    }, 4000);
+  }
   text("pvpWinTitle", resultHeadline(view));
   paintIdentity("pvpWin", view);
   const auth = getAuthState().user;

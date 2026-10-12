@@ -193,3 +193,26 @@ test("a one-hour-old account can open a challenge, and a short classic history c
     "NOT_ELIGIBLE"
   );
 });
+
+test("expired pending challenges are swept and no longer block outbound", () => {
+  const a = user("exp-a");
+  const b = user("exp-b");
+  const c = user("exp-c");
+  const first = createChallenge(db, { fromUserId: a, toUserId: b, createKey: key("exp1"), now: NOW });
+  assert.equal(first.ok, true);
+  assert.equal(first.created, true);
+  // Still pending in DB past expiry — createChallenge must expire then allow a new one.
+  db.prepare(`UPDATE pvp_challenges SET expires_at = ? WHERE id = ?`).run(NOW - 1, first.challenge.id);
+  const ghost = createChallenge(db, { fromUserId: a, toUserId: b, createKey: key("exp-replay"), now: NOW + 1 });
+  assert.equal(ghost.alreadyPending, undefined);
+  assert.equal(ghost.created, true);
+  assert.notEqual(ghost.challenge.id, first.challenge.id);
+  assert.equal(
+    db.prepare(`SELECT status FROM pvp_challenges WHERE id = ?`).get(first.challenge.id).status,
+    "expired"
+  );
+  const other = createChallenge(db, { fromUserId: a, toUserId: c, createKey: key("exp-other"), now: NOW + 2 });
+  // outbound still pending (ghost) so this should be OUTBOUND_PENDING
+  assert.equal(other.code, "OUTBOUND_PENDING");
+});
+

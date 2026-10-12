@@ -159,6 +159,8 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /id="pvpReportToggle"/);
   assert.match(html, /id="pvpWinDialog"/);
   assert.match(html, /id="pvpShareBtn"/);
+  assert.match(html, /id="pvpLobbyLoading"/);
+  assert.match(html, /id="pvpHold">观望</);
   assert.match(html, /id="pvpWinMeAvatar"/);
   assert.match(html, /id="pvpWinOppAvatar"/);
   assert.match(html, /id="pvpWinIdentity"/);
@@ -242,4 +244,13 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(lobby, /早知道当初不炒了/);
   const play = html.split('id="pvpPlayPanel"')[1].split('id="pvpLeaveDialog"')[0];
   assert.doesNotMatch(play, /锁定/);
+});
+
+test("pvp y-axis names relative price so it is not read as a real quote", () => {
+  const bars = [
+    { label: "h1", open: 10, close: 11, low: 9, high: 12, volume: 1 },
+    { label: "d1", open: 11, close: 10, low: 9.5, high: 12.5, volume: 2 },
+  ];
+  const opt = buildKlineOption({ mode: "pvp", bars, historyLength: 1, resetDataZoom: true });
+  assert.match(String(opt.yAxis[0].name || ""), /相对价/);
 });

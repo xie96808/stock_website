@@ -33,3 +33,10 @@ export function listAvailableIds(now = Date.now()) {
   ids.sort((a, b) => a - b);
   return ids;
 }
+
+/** Drop stale presence rows so memory and lobby counts stay honest. */
+export function prunePresence(now = Date.now(), maxAgeMs = FRESH_MS) {
+  for (const [userId, row] of presence) {
+    if (!row || now - row.lastSeen > maxAgeMs) presence.delete(userId);
+  }
+}

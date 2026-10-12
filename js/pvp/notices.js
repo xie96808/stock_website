@@ -1,6 +1,6 @@
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { parseRouteHash } from "../screen-router.js";
-import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll } from "./transport.js";
+import { holdPvpSocket, pvpEnabled, pvpFetch, pvpSocketHealthy, whenAuthReady } from "./transport.js";
 
 const GIFT_MS = 1700;
 const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "💨", coffee: "☕" };
@@ -146,7 +146,7 @@ async function battleOn() {
 
 async function poll() {
   const auth = getAuthState();
-  if (!auth.user || document.visibilityState === "hidden") return;
+  if (!auth.ready || !auth.user || document.visibilityState === "hidden") return;
   if (!(await battleOn())) return;
   try {
     const { data } = await pvpFetch("/me/pvp/state");
@@ -155,6 +155,7 @@ async function poll() {
     refreshInvite();
     await maybeEnterReady(data);
   } catch { /* the next tick retries */ }
+  if (!wantsReactions()) return;
   try {
     const { data } = await pvpFetch(`/pvp/reactions?after=${afterGift}`);
     for (const event of data?.events || []) {
@@ -206,12 +207,26 @@ function wire() {
   document.getElementById("pvpInviteAccept")?.addEventListener("click", () => { respond(true).catch(() => {}); });
 }
 
+function onMatchOrResultScreen() {
+  const hash = String(parseRouteHash() || "");
+  return /^pvp\//.test(hash) && !hash.startsWith("pvp/join/");
+}
+
+function wantsReactions() {
+  return onMatchOrResultScreen();
+}
+
 /** Invite popup and incoming gifts, on every page while logged in. */
 export function startPvpNotices() {
   if (started || typeof document === "undefined") return;
   started = true;
   wire();
+  let debounceTimer = 0;
   const beat = () => poll().catch(() => {});
+  const debouncedBeat = () => {
+    window.clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(beat, 500);
+  };
   document.addEventListener("stockgame:auth-changed", () => {
     enabled = null;
     if (!getAuthState().user) {
@@ -229,11 +244,30 @@ export function startPvpNotices() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") beat();
   });
-  beat();
-  stopPoll = startPoll(beat, 1500);
-  releaseSocket = holdPvpSocket((msg) => {
-    if (msg?.t === "challenge.changed" || msg?.t === "lobby.changed" || msg?.t === "match.changed") beat();
-  });
+  whenAuthReady().then(() => {
+    beat();
+    // WS is the invalidation signal; poll slowly as a safety net (was 1.5s).
+    const basePoll = () => (pvpSocketHealthy() ? 12_000 : 4_000);
+    let timer = 0;
+    let stopped = false;
+    const tick = async () => {
+      if (stopped) return;
+      try { await beat(); } catch { /* ignore */ }
+      if (stopped) return;
+      timer = window.setTimeout(tick, basePoll() * (0.8 + Math.random() * 0.4));
+    };
+    timer = window.setTimeout(tick, basePoll());
+    stopPoll = () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      window.clearTimeout(debounceTimer);
+    };
+    releaseSocket = holdPvpSocket((msg) => {
+      if (msg?.t === "challenge.changed" || msg?.t === "lobby.changed" || msg?.t === "match.changed") {
+        debouncedBeat();
+      }
+    });
+  }).catch(() => {});
 }
 
 export function stopPvpNotices() {

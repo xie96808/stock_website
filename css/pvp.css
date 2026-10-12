@@ -324,7 +324,7 @@
 
 .pvp-chart {
   width: 100%;
-  height: 520px;
+  height: clamp(260px, 45vh, 520px);
   margin: 0.5rem 0 0.75rem;
   background: var(--card);
   border: var(--border-ink);
@@ -867,7 +867,12 @@
   height: 12px;
   border-radius: 50%;
   box-shadow: 0 0 8px currentColor;
-  animation: pvp-burst 1.25s ease-out infinite;
+  animation: pvp-burst 1.25s ease-out 3;
+}
+
+.pvp-fireworks.is-done i {
+  animation: none;
+  opacity: 0;
 }
 
 @keyframes pvp-burst {
@@ -1126,6 +1131,8 @@
 
 @media (max-width: 420px) {
   .pvp-screen {
+    /* Extra top room so fixed auth/chrome pills do not cover the lobby h1. */
+    padding-top: 5.6rem;
     padding-left: 0.7rem;
     padding-right: 0.7rem;
   }
@@ -1136,11 +1143,26 @@
   }
 
   .pvp-chart {
-    height: 440px;
+    height: min(440px, 50dvh);
   }
 
   .pvp-lobby-hero {
     grid-template-columns: 1fr;
+  }
+
+  .pvp-head .pvp-back,
+  .pvp-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (max-height: 420px) and (orientation: landscape) {
+  .pvp-chart {
+    height: min(220px, 42dvh);
+  }
+  .pvp-screen {
+    padding-top: 3.2rem;
   }
 }
 
@@ -1152,5 +1174,26 @@
 @media (max-width: 360px) {
   .pvp-settle-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* Keep clock + trade buttons reachable while scrolling the chart. */
+#pvpPlayPanel .pvp-clock,
+#pvpPlayPanel .pvp-trade-actions {
+  position: sticky;
+  z-index: 2;
+  background: var(--paper);
+}
+#pvpPlayPanel .pvp-clock { top: 0; }
+#pvpPlayPanel .pvp-trade-actions { bottom: 0; padding-bottom: 0.35rem; }
+
+/* Desktop: hide the sketch column when nobody is available. */
+@media (min-width: 721px) {
+  #pvpLobbyScreen.pvp-lobby-empty .pvp-lobby-hero {
+    grid-template-columns: 1fr;
+  }
+  #pvpLobbyScreen.pvp-lobby-empty .pvp-sketch {
+    display: none;
   }
 }

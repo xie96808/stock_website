@@ -253,17 +253,18 @@ test("S02 both players reaching AFK 5 void the match, and one side forfeits", ()
   }
 });
 
-test("a deadline missed by more than 5 seconds is a system void, even if both had locked", () => {
+test("a deadline missed by more than 45 seconds is a system void, even if both had locked", () => {
   const edge = startMatch("stall-edge");
   const deadline = NOW + 1_000;
   arm(edge.matchId, { deadlineAt: deadline });
-  const timed = resolveIfDue(db, { matchId: edge.matchId, now: deadline + 5_000 });
+  // Within the stall window the round still resolves normally.
+  const timed = resolveIfDue(db, { matchId: edge.matchId, now: deadline + 45_000 });
   assert.equal(timed.advanced, true);
   assert.equal(settlementOf(edge.matchId), undefined);
 
   const stalled = startMatch("stall");
   arm(stalled.matchId, { deadlineAt: deadline });
-  const late = resolveIfDue(db, { matchId: stalled.matchId, now: deadline + 5_001 });
+  const late = resolveIfDue(db, { matchId: stalled.matchId, now: deadline + 45_001 });
   assert.equal(late.reason, "system_stall");
   assert.equal(balanceOf(db, stalled.a), 500);
   assert.equal(balanceOf(db, stalled.b), 500);
@@ -278,7 +279,7 @@ test("a deadline missed by more than 5 seconds is a system void, even if both ha
   );
   insert.run(locked.matchId, locked.a, deadline - 1);
   insert.run(locked.matchId, locked.b, deadline - 1);
-  const ignored = resolveIfDue(db, { matchId: locked.matchId, now: deadline + 5_001 });
+  const ignored = resolveIfDue(db, { matchId: locked.matchId, now: deadline + 45_001 });
   assert.equal(ignored.reason, "system_stall");
   assert.equal(db.prepare(`SELECT actions_json FROM pvp_match_players WHERE match_id = ? AND user_id = ?`).get(locked.matchId, locked.a).actions_json, "[]");
   assert.equal(balanceOf(db, locked.a), 500);

@@ -10,13 +10,20 @@ import {
   roundCaption,
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
-import { actionKey, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
+import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 
 function stake(amount) {
   return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 14 })}</span>`;
 }
 
-const READY_COPY = `双方各付 ${stake(20)}。胜者到账 ${stake(35)}（净赚 ${stake(15)}），负者净减 ${stake(20)}，平局退回 ${stake(20)}。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。`;
+function readyCopyFrom(economy) {
+  const entry = Number(economy?.entryCost);
+  const win = Number(economy?.winReward);
+  const entryCost = Number.isFinite(entry) && entry > 0 ? entry : 20;
+  const winReward = Number.isFinite(win) && win > 0 ? win : 35;
+  const net = winReward - entryCost;
+  return `双方各付 ${stake(entryCost)}。胜者到账 ${stake(winReward)}（净赚 ${stake(net)}），负者净减 ${stake(entryCost)}，平局退回 ${stake(entryCost)}。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。`;
+}
 
 let matchId = null;
 let view = null;
@@ -24,13 +31,17 @@ let fetchedAt = 0;
 let chart = null;
 let chartKey = "";
 let chartZoomKey = "";
+let chartObserver = null;
 let stopPoll = null;
 let stopHeartbeat = null;
 let releaseSocket = null;
 let clockTimer = 0;
 let wired = false;
 let postedLock = false;
+let pendingNetwork = false;
+let readyInFlight = false;
 let nudgeKey = "";
+let lastClockAnnounce = "";
 
 function setText(id, value) {
   const node = document.getElementById(id);
@@ -118,6 +129,10 @@ function stopLoops() {
 function destroyChart() {
   chartKey = "";
   chartZoomKey = "";
+  if (chartObserver) {
+    chartObserver.disconnect();
+    chartObserver = null;
+  }
   if (chart) {
     chart.dispose();
     chart = null;
@@ -129,6 +144,9 @@ export function leavePvpRoom({ deferChart = false } = {}) {
   matchId = null;
   view = null;
   postedLock = false;
+  pendingNetwork = false;
+  readyInFlight = false;
+  clearActionKeys();
   stopLoops();
   closeLeave();
   if (deferChart) window.setTimeout(() => destroyChart(), 0);
@@ -190,15 +208,36 @@ async function showResult(next) {
   else if (id) await result.openPvpMatch(id);
 }
 
+function announceClock(id, seconds) {
+  const box = document.getElementById(id);
+  if (!box) return;
+  if (seconds === 10 || seconds === 5 || seconds === 0) {
+    const key = `${id}:${seconds}`;
+    if (lastClockAnnounce !== key) {
+      lastClockAnnounce = key;
+      box.setAttribute("aria-live", "polite");
+      box.setAttribute("aria-label", `剩余 ${seconds} 秒`);
+    }
+  } else {
+    box.removeAttribute("aria-live");
+  }
+}
+
 function paintClock() {
   if (!view || !matchId) return;
   if (view.status === "waiting_ready") {
     const left = remainingMs(view.readyDeadlineAt, view.serverNow, fetchedAt);
     const seconds = secondsLeft(left);
     paintClockFace("pvpReadyClock", seconds, "准备剩余", seconds != null && seconds <= 5);
+    announceClock("pvpReadyClock", seconds);
+    const readyBtn = document.getElementById("pvpReadyBtn");
+    if (readyBtn && left != null && left <= 0) readyBtn.disabled = true;
     if (left != null && left <= 0) {
+      // Keep re-fetching so ready_timeout settlement clears the room.
       if (nudgeKey !== "ready-due") {
         nudgeKey = "ready-due";
+        refresh().catch(() => {});
+      } else if ((Date.now() - fetchedAt) > 2000) {
         refresh().catch(() => {});
       }
     } else {
@@ -217,6 +256,7 @@ function paintClock() {
     waiting ? "下一手可操作" : "本手剩余",
     !waiting && seconds != null && seconds <= 5,
   );
+  announceClock("pvpClock", seconds);
   if (opensIn != null && opensIn > 0) {
     nudgeKey = `wait:${view.revision}`;
   } else if (left != null && left <= 0) {
@@ -236,36 +276,61 @@ function paintClock() {
 function paintActions() {
   const playing = view?.status === "playing";
   const opensIn = playing ? remainingMs(view.opensAt, view.serverNow, fetchedAt) : null;
-  const closed = !playing || (opensIn != null && opensIn > 0) || postedLock || isSubmitting() || view.me?.lockedToday;
+  const left = playing ? remainingMs(view.deadlineAt, view.serverNow, fetchedAt) : null;
+  const closed = !playing
+    || (opensIn != null && opensIn > 0)
+    || (left != null && left <= 0)
+    || postedLock
+    || pendingNetwork
+    || isSubmitting()
+    || view.me?.lockedToday;
   const buy = document.getElementById("pvpBuy");
   const sell = document.getElementById("pvpSell");
   const hold = document.getElementById("pvpHold");
   if (buy) buy.disabled = closed || !view?.me?.canBuy;
   if (sell) sell.disabled = closed || !view?.me?.canSell;
-  if (hold) hold.disabled = closed || !view?.me?.canHold;
+  if (hold) {
+    hold.disabled = closed || !view?.me?.canHold;
+    hold.textContent = view?.me?.holding ? "持有" : "观望";
+  }
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
-  const locked = postedLock || submitting || !!view?.me?.lockedToday;
+  const locked = postedLock || pendingNetwork || submitting || !!view?.me?.lockedToday;
   const oppLocked = !!view?.opponent?.lockedToday;
   paintReadyMark("pvpReadyMarkMe", locked, locked, "已行动");
   paintReadyMark("pvpReadyMarkOpp", oppLocked, oppLocked, "已行动");
+}
+
+function bindChartResize(node) {
+  window.resizePvpChart = () => { if (chart) chart.resize(); };
+  if (chartObserver) chartObserver.disconnect();
+  if (typeof ResizeObserver === "function") {
+    chartObserver = new ResizeObserver(() => {
+      window.requestAnimationFrame(() => { if (chart) chart.resize(); });
+    });
+    chartObserver.observe(node);
+  } else {
+    chartObserver = null;
+  }
+  window.setTimeout(() => { if (chart) chart.resize(); }, 50);
 }
 
 async function paintChart() {
   const node = document.getElementById("pvpChart");
   const market = view?.market;
   if (!node || !market) return;
-  const key = `${view.matchId}:${view.revision}:${market.revealedDay}:${view.resolvedRounds}`;
+  // Key on revealed day + resolved actions — not revision (opponent lock bumps revision).
+  const key = `${view.matchId}:${market.revealedDay}:${view.resolvedRounds}:${(view.resolvedActions || []).length}`;
   if (key === chartKey && chart) return;
   const bars = [...(market.history || []), ...(market.bars || [])];
   if (!bars.length) return;
-  const zoomKey = `${bars.length}:${market.historyLength || 0}`;
-  const resetDataZoom = zoomKey !== chartZoomKey;
+  const firstPaint = !chart || chartZoomKey === "" || !String(chartZoomKey).startsWith(`${view.matchId}:`);
+  const resetDataZoom = firstPaint;
   try {
     const echarts = await ensureEcharts();
     if (!chart) {
       chart = echarts.init(node);
-      window.resizePvpChart = () => { if (chart) chart.resize(); };
+      bindChartResize(node);
     }
     chart.setOption(buildKlineOption({
       mode: "pvp",
@@ -275,7 +340,7 @@ async function paintChart() {
       showDataZoomSlider: false,
       resetDataZoom,
     }), { replaceMerge: ["series"] });
-    chartZoomKey = zoomKey;
+    chartZoomKey = `${view.matchId}:${bars.length}`;
     chartKey = key;
   } catch {
     node.textContent = "图表暂时打不开，决策按钮仍然可用。";
@@ -290,13 +355,14 @@ function render() {
     if (ready) ready.hidden = false;
     if (play) play.hidden = true;
     setText("pvpRoomHeadline", "准备");
-    setHtml("pvpReadyCopy", READY_COPY);
+    setHtml("pvpReadyCopy", readyCopyFrom(view.economy));
     paintReadyMark("pvpReadyMarkMe", !!view.me?.ready, true);
     paintReadyMark("pvpReadyMarkOpp", !!view.opponent?.ready, true);
     const readyBtn = document.getElementById("pvpReadyBtn");
     const cancelBtn = document.getElementById("pvpCancelReadyBtn");
-    if (readyBtn) readyBtn.disabled = !!view.me?.ready;
-    if (cancelBtn) cancelBtn.disabled = false;
+    const readyLeft = remainingMs(view.readyDeadlineAt, view.serverNow, fetchedAt);
+    if (readyBtn) readyBtn.disabled = !!view.me?.ready || readyInFlight || (readyLeft != null && readyLeft <= 0);
+    if (cancelBtn) cancelBtn.disabled = readyInFlight;
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
@@ -318,6 +384,8 @@ async function refresh() {
   fetchedAt = Date.now();
   const prevResolved = view?.resolvedRounds;
   if (data.me?.lockedToday || data.resolvedRounds !== prevResolved) postedLock = false;
+  if (data.me?.lockedToday) pendingNetwork = false;
+  if (data.resolvedRounds !== prevResolved) pendingNetwork = false;
   view = data;
   if (data.status === "settled" || data.status === "aborted") {
     await showResult(data);
@@ -327,12 +395,13 @@ async function refresh() {
 }
 
 async function postAction(action) {
-  if (!view || view.status !== "playing" || isSubmitting()) return;
+  if (!view || view.status !== "playing" || isSubmitting() || pendingNetwork) return;
   setSubmitting(true);
   postedLock = false;
   setText("pvpActionError", "");
   paintActions();
   let confirmed = false;
+  let networkDoubt = false;
   try {
     await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/actions`, {
       method: "POST",
@@ -341,10 +410,11 @@ async function postAction(action) {
     });
     confirmed = true;
   } catch (err) {
-    if (err.code === "ALREADY_LOCKED") {
+    if (err.code === "ALREADY_LOCKED" || err.code === "IDEMPOTENCY_CONFLICT") {
       confirmed = true;
-      setText("pvpActionError", "这手已经在另一台设备提交了");
+      setText("pvpActionError", "本手已提交");
     } else if (!err.status) {
+      networkDoubt = true;
       setText("pvpActionError", "网络中断，正在核对是否已经提交");
     } else {
       setText("pvpActionError", err.message || "这步没能提交");
@@ -353,9 +423,14 @@ async function postAction(action) {
     setSubmitting(false);
   }
   if (confirmed) postedLock = true;
+  if (networkDoubt) pendingNetwork = true;
   paintActions();
   try {
     await refresh();
+    if (view?.me?.lockedToday) {
+      pendingNetwork = false;
+      if (view.me.lockedAction) setText("pvpActionError", `本手已提交：${view.me.lockedAction}`);
+    }
   } catch (err) {
     setText("pvpActionError", err.message || "正在核对局面");
   }
@@ -379,22 +454,32 @@ async function postForfeit() {
 }
 
 async function postReady() {
-  if (!matchId) return;
+  if (!matchId || readyInFlight) return;
+  readyInFlight = true;
+  render();
   try {
     await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/ready`, { method: "POST", body: {} });
     await refresh();
   } catch (err) {
     setText("pvpActionError", err.message || "准备没能提交");
+  } finally {
+    readyInFlight = false;
+    if (matchId) render();
   }
 }
 
 async function postCancelReady() {
-  if (!matchId) return;
+  if (!matchId || readyInFlight) return;
+  readyInFlight = true;
+  render();
   try {
     await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/cancel-ready`, { method: "POST", body: {} });
     await refresh();
   } catch (err) {
     setText("pvpActionError", err.message || "取消准备没能提交");
+  } finally {
+    readyInFlight = false;
+    if (matchId) render();
   }
 }
 

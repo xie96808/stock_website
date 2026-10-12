@@ -76,20 +76,40 @@ export function startPoll(fn, baseMs) {
 const listeners = new Set();
 let socketStop = null;
 let releaseTimer = 0;
+let socketHealthy = false;
+
+export function pvpSocketHealthy() {
+  return socketHealthy;
+}
 
 function startSocket() {
   let ws = null;
   let stopped = false;
   let retry = 1000;
   let ping = 0;
+  let reconnectTimer = 0;
   const connect = async () => {
     if (stopped) return;
     try {
+      await whenAuthReady();
+      if (stopped) return;
+      const auth = getAuthState();
+      if (!auth.user || !auth.csrfToken) {
+        schedule();
+        return;
+      }
       const { data } = await pvpFetch("/pvp/ws-ticket", { method: "POST", body: {} });
+      if (stopped) return;
       const proto = location.protocol === "https:" ? "wss:" : "ws:";
-      ws = new WebSocket(`${proto}//${location.host}${data.wsPath}?ticket=${encodeURIComponent(data.ticket)}`);
+      const next = new WebSocket(`${proto}//${location.host}${data.wsPath}?ticket=${encodeURIComponent(data.ticket)}`);
+      if (stopped) {
+        try { next.close(); } catch { /* ignore */ }
+        return;
+      }
+      ws = next;
       ws.onopen = () => {
         retry = 1000;
+        socketHealthy = true;
         ws.send(JSON.stringify({ t: "hello" }));
       };
       ws.onmessage = (ev) => {
@@ -98,17 +118,27 @@ function startSocket() {
         if (!msg) return;
         for (const fn of listeners) fn(msg);
       };
-      ws.onclose = () => schedule();
+      ws.onclose = (ev) => {
+        socketHealthy = false;
+        // 4001 session closed / 1008 unsupported — do not loop forever
+        if (ev && (ev.code === 4001 || ev.code === 1008)) {
+          stopped = true;
+          return;
+        }
+        schedule();
+      };
       ws.onerror = () => {};
     } catch {
+      socketHealthy = false;
       schedule();
     }
   };
   const schedule = () => {
     if (stopped) return;
+    window.clearTimeout(reconnectTimer);
     const wait = retry * (0.8 + Math.random() * 0.4);
     retry = Math.min(15_000, retry * 2);
-    window.setTimeout(connect, wait);
+    reconnectTimer = window.setTimeout(connect, wait);
   };
   connect();
   ping = window.setInterval(() => {
@@ -116,7 +146,9 @@ function startSocket() {
   }, 25_000);
   return () => {
     stopped = true;
+    socketHealthy = false;
     window.clearInterval(ping);
+    window.clearTimeout(reconnectTimer);
     try { ws && ws.close(); } catch { /* already closed */ }
   };
 }
@@ -142,4 +174,8 @@ export function actionKey(matchId, round) {
   const store = actionKey.map || (actionKey.map = new Map());
   if (!store.has(id)) store.set(id, `pvp-${crypto.randomUUID()}`);
   return store.get(id);
+}
+
+export function clearActionKeys() {
+  actionKey.map?.clear();
 }

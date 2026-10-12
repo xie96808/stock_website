@@ -11,7 +11,7 @@ import { finishMatchInTx } from "./settlement.js";
 import { withImmediate } from "./tx.js";
 import { pvpMatchView } from "./view.js";
 
-const STALL_MS = 5_000;
+const STALL_MS = 45_000;
 const AFK_LIMIT = 5;
 const HEARTBEAT_FRESH_MS = 45_000;
 const COMMAND_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -27,6 +27,12 @@ export function noteHeartbeat(userId, now) {
 
 export function clearHeartbeats() {
   heartbeats.clear();
+}
+
+export function pruneHeartbeats(now = Date.now(), maxAgeMs = HEARTBEAT_FRESH_MS) {
+  for (const [userId, at] of heartbeats) {
+    if (at == null || now - at > maxAgeMs) heartbeats.delete(userId);
+  }
 }
 
 /** Test seam: throw from inside a mutating transaction to simulate a crash before commit. */
