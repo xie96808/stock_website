@@ -117,10 +117,16 @@ export function leavePvpLobby() {
 }
 
 function outcomeGlyph(outcome) {
-  if (outcome === "win") return "胜";
-  if (outcome === "loss") return "负";
-  if (outcome === "draw") return "平";
-  return "·";
+  if (outcome === "win") {
+    return '<span class="pvp-recent-mark is-win" title="胜" aria-label="胜">✓</span>';
+  }
+  if (outcome === "loss") {
+    return '<span class="pvp-recent-mark is-loss" title="负" aria-label="负">✕</span>';
+  }
+  if (outcome === "draw") {
+    return '<span class="pvp-recent-mark is-draw" title="平" aria-label="平">–</span>';
+  }
+  return "";
 }
 
 function challengeKey(userId) {
@@ -335,8 +341,9 @@ function renderList(entries, state) {
     const title = document.createElement("span");
     title.textContent = entry.title || "";
     const recent = document.createElement("span");
+    recent.className = "pvp-recent";
     const marks = (entry.recent || []).map(outcomeGlyph).join("");
-    recent.textContent = marks ? `近况 ${marks}` : "暂无近况";
+    recent.innerHTML = marks ? `近况 ${marks}` : "暂无近况";
     body.append(name, title, recent);
     const button = document.createElement("button");
     button.type = "button";

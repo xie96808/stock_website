@@ -4,7 +4,7 @@ import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
 import { coinIconHtml } from "../jiu-coin.js";
-import { colorReturnHtml, escapeHtml, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
+import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
 import { appendRankProgress } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
@@ -429,10 +429,14 @@ export function showPvpResult(view, { celebrate = false } = {}) {
   paintReturn("pvpResultOpp", view?.opponent?.returnPpm);
   text("pvpResultOppMeta", `回撤 ${formatPpm(view?.opponent?.mddPpm)}`);
   paintSeats(view);
-  paintRating(view);
+  try { paintRating(view); } catch { /* rating chrome must not block chart/analysis */ }
   paintIdentity("pvpResult", view);
   paintReplay(view);
-  const bestPoints = paintAnalysis(view);
+  let bestPoints = null;
+  try { bestPoints = paintAnalysis(view); } catch {
+    const node = document.getElementById("pvpResultAnalysis");
+    if (node) node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
+  }
   wireWin();
   showSettle(view, celebrate);
   wireReport(view);

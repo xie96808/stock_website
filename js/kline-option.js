@@ -1,6 +1,7 @@
 // ========== Shared K-line ECharts option builder (game + result) ==========
 import {
     calculateMA,
+    calculateMACD,
     buildDayIndexLabels,
     MA_DAY_LABELS,
     MA_DAY_COLORS,
@@ -162,6 +163,7 @@ export function buildKlineOption(vm) {
     const ma10 = calculateMA(bars, 10);
     const ma20 = calculateMA(bars, 20);
     const ma30 = calculateMA(bars, 30);
+    const macd = isPvp ? calculateMACD(bars) : null;
 
     const markPoints = isPvp
         ? [...pvpMarkerPoints(bars, pvpMarks), ...pvpSignalMarks(bars, historyLength, bestPoints)]
@@ -317,9 +319,32 @@ export function buildKlineOption(vm) {
             : { color: params => volumeColors[params.dataIndex] }
     };
 
-    // Preserve prior series order: game = K + MAs + vol; result = K + vol + MAs.
+    const macdSeries = isPvp && macd ? [
+        {
+            name: 'MACD', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: macd.hist,
+            itemStyle: {
+                color: (params) => {
+                    const v = Number(params.data);
+                    if (!Number.isFinite(v) || v === 0) return '#8a7350';
+                    return v > 0 ? '#e05252' : '#3db86a';
+                },
+            },
+        },
+        {
+            name: 'DIF', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dif,
+            smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#42a5f5' },
+        },
+        {
+            name: 'DEA', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dea,
+            smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#f5c542' },
+        },
+    ] : [];
+
+    // Preserve prior series order: game = K + MAs + vol; result = K + vol + MAs; pvp adds MACD.
     const series = isResult
         ? [candleSeries, volumeSeries, ...maSeries]
+        : isPvp
+        ? [candleSeries, ...maSeries, volumeSeries, ...macdSeries]
         : [candleSeries, ...maSeries, volumeSeries];
 
     const legend = isResult
@@ -331,6 +356,26 @@ export function buildKlineOption(vm) {
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
+        }
+        : isPvp
+        ? {
+            data: [...MA_DAY_LABELS, 'DIF', 'DEA'],
+            selected: {
+                '5日线': true,
+                '10日线': true,
+                '20日线': true,
+                '30日线': true,
+                DIF: true,
+                DEA: true,
+                MACD: true,
+            },
+            selectedMode: true,
+            top: 2,
+            left: 8,
+            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 10 },
+            itemWidth: 14,
+            itemHeight: 2,
+            itemGap: 8
         }
         : {
             data: MA_DAY_LABELS.slice(),
@@ -357,10 +402,11 @@ export function buildKlineOption(vm) {
         : null;
     // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
     // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
+    const zoomAxes = isPvp ? [0, 1, 2] : [0, 1];
     const dataZoom = [
         {
             type: 'inside',
-            xAxisIndex: [0, 1],
+            xAxisIndex: zoomAxes,
             filterMode: 'none',
             zoomOnMouseWheel: true,
             moveOnMouseMove: true,
@@ -373,7 +419,7 @@ export function buildKlineOption(vm) {
     if (wantSlider) {
         dataZoom.push({
             type: 'slider',
-            xAxisIndex: [0, 1],
+            xAxisIndex: zoomAxes,
             filterMode: 'none',
             height: 18,
             bottom: 2,
@@ -407,12 +453,22 @@ export function buildKlineOption(vm) {
                     const isUp = kd.close >= kd.open;
                     const clr = isUp ? '#e05252' : '#3db86a';
                     const title = pvpTipTitle(kd.label);
-                    return `<div style="padding:4px 2px">
+                    let html = `<div style="padding:4px 2px">
                         ${title ? `<div style="margin-bottom:5px;color:#8b949e;font-size:11px">${title}</div>` : ""}
                         <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
                         <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
-                        <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>
-                    </div>`;
+                        <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>`;
+                    params.forEach((p) => {
+                        if (MA_DAY_COLORS[p.seriesName] && p.data != null) {
+                            html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${Number(p.data).toFixed(2)}</div>`;
+                        }
+                        if ((p.seriesName === 'DIF' || p.seriesName === 'DEA' || p.seriesName === 'MACD') && p.data != null) {
+                            const tone = p.seriesName === 'MACD' ? (Number(p.data) >= 0 ? '#e05252' : '#3db86a') : (p.seriesName === 'DIF' ? '#42a5f5' : '#f5c542');
+                            html += `<div style="color:${tone}">${p.seriesName}: ${Number(p.data).toFixed(3)}</div>`;
+                        }
+                    });
+                    html += '</div>';
+                    return html;
                 }
 
                 if (!isResult && syncHover && kd) {
@@ -475,8 +531,9 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp
             ? [
-                { left: 40, right: 8, top: 28, bottom: '30%' },
-                { left: 40, right: 8, top: '74%', bottom: 18 }
+                { left: 40, right: 8, top: 26, bottom: '42%' },
+                { left: 40, right: 8, top: '62%', bottom: '24%' },
+                { left: 40, right: 8, top: '80%', bottom: 16 }
             ]
             : isResult
             ? [
@@ -487,7 +544,26 @@ export function buildKlineOption(vm) {
                 { left: '8%', right: '2%', top: '8%', bottom: '34%' },
                 { left: '8%', right: '2%', top: '73%', bottom: '6%' }
             ],
-        xAxis: [
+        xAxis: isPvp
+            ? [
+                {
+                    type: 'category', data: dayLabels, gridIndex: 0,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
+                },
+                {
+                    type: 'category', data: dayLabels, gridIndex: 1,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
+                },
+                {
+                    type: 'category', data: dayLabels, gridIndex: 2,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: xAxisBottomLabel,
+                    splitLine: { show: false }
+                }
+            ]
+            : [
             {
                 type: 'category', data: dayLabels, gridIndex: 0,
                 axisLine: { lineStyle: { color: axisLineColor } },
@@ -500,20 +576,36 @@ export function buildKlineOption(vm) {
                 splitLine: { show: false }
             }
         ],
-        yAxis: [
+        yAxis: isPvp
+            ? [
+                {
+                    type: 'value', scale: true, gridIndex: 0,
+                    name: '相对价 (d1=100)',
+                    nameLocation: 'middle',
+                    nameGap: 36,
+                    nameTextStyle: { color: axisLabelColor, fontSize: 10 },
+                    axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: splitLineColor } },
+                    min: (value) => pvpAxisBound(value, 0.28, -1),
+                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                },
+                { type: 'value', scale: true, gridIndex: 1, show: false },
+                {
+                    type: 'value', scale: true, gridIndex: 2, show: false,
+                    splitLine: { show: false },
+                },
+            ]
+            : [
             {
                 type: 'value', scale: true, gridIndex: 0,
-                name: isPvp ? '相对价 (d1=100)' : undefined,
+                name: undefined,
                 nameLocation: 'middle',
                 nameGap: 36,
-                nameTextStyle: isPvp ? { color: axisLabelColor, fontSize: 10, padding: [0, 0, 0, 0] } : undefined,
+                nameTextStyle: undefined,
                 axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
                 splitLine: { lineStyle: { color: splitLineColor } },
-                ...(isPvp ? {
-                    min: (value) => pvpAxisBound(value, 0.28, -1),
-                    max: (value) => pvpAxisBound(value, 0.36, 1),
-                } : {}),
             },
             { type: 'value', scale: true, gridIndex: 1, show: false }
         ],

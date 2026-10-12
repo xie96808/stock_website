@@ -284,14 +284,27 @@ function paintActions() {
     || pendingNetwork
     || isSubmitting()
     || view.me?.lockedToday;
-  const buy = document.getElementById("pvpBuy");
-  const sell = document.getElementById("pvpSell");
+  const trade = document.getElementById("pvpTrade");
   const hold = document.getElementById("pvpHold");
-  if (buy) buy.disabled = closed || !view?.me?.canBuy;
-  if (sell) sell.disabled = closed || !view?.me?.canSell;
+  // Two-button UX: 观望/持有 + contextual 买入|卖出 (mutually exclusive by position).
   if (hold) {
     hold.disabled = closed || !view?.me?.canHold;
     hold.textContent = view?.me?.holding ? "持有" : "观望";
+  }
+  if (trade) {
+    const sellOk = !!view?.me?.canSell;
+    const buyOk = !!view?.me?.canBuy;
+    if (sellOk || (view?.me?.holding && !buyOk)) {
+      trade.textContent = "卖出";
+      trade.className = "pvp-btn pvp-btn-sell";
+      trade.dataset.action = "sell";
+      trade.disabled = closed || !sellOk;
+    } else {
+      trade.textContent = "买入";
+      trade.className = "pvp-btn pvp-btn-buy";
+      trade.dataset.action = "buy";
+      trade.disabled = closed || !buyOk;
+    }
   }
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
@@ -507,9 +520,11 @@ function wireRoom() {
   document.getElementById("pvpLeaveDialog")?.addEventListener("keydown", onLeaveKey);
   document.getElementById("pvpReadyBtn")?.addEventListener("click", () => { postReady().catch(() => {}); });
   document.getElementById("pvpCancelReadyBtn")?.addEventListener("click", () => { postCancelReady().catch(() => {}); });
-  document.getElementById("pvpBuy")?.addEventListener("click", () => { postAction("buy").catch(() => {}); });
-  document.getElementById("pvpSell")?.addEventListener("click", () => { postAction("sell").catch(() => {}); });
   document.getElementById("pvpHold")?.addEventListener("click", () => { postAction("hold").catch(() => {}); });
+  document.getElementById("pvpTrade")?.addEventListener("click", () => {
+    const action = document.getElementById("pvpTrade")?.dataset.action || "buy";
+    postAction(action).catch(() => {});
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && matchId) refresh().catch(() => {});
   });

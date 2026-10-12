@@ -1197,3 +1197,98 @@
     display: none;
   }
 }
+
+
+/* Lobby recent form: green check / red X instead of plain glyphs. */
+.pvp-recent {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.18rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.pvp-recent-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.pvp-recent-mark.is-win {
+  color: #1f7a45;
+  background: rgba(61, 184, 106, 0.18);
+}
+
+.pvp-recent-mark.is-loss {
+  color: #b32626;
+  background: rgba(224, 82, 82, 0.16);
+}
+
+.pvp-recent-mark.is-draw {
+  color: var(--ink-soft);
+  background: rgba(138, 115, 80, 0.12);
+}
+
+/* Compact in-match header: smaller seats, taller chart, two trade buttons. */
+#pvpRoomScreen .pvp-seat-row {
+  gap: 0.4rem;
+  margin: 0 0 0.4rem;
+}
+
+#pvpRoomScreen .pvp-seat-avatar {
+  width: 36px;
+  height: 36px;
+}
+
+#pvpRoomScreen .pvp-seat strong {
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+
+#pvpRoomScreen .pvp-seat-role {
+  font-size: 0.64rem;
+}
+
+#pvpPlayPanel .pvp-score-row {
+  gap: 0.4rem;
+  margin: 0 0 0.35rem;
+}
+
+#pvpPlayPanel .pvp-score {
+  padding: 0.35rem 0.55rem;
+}
+
+#pvpPlayPanel .pvp-score-value {
+  font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+}
+
+#pvpPlayPanel .pvp-chart {
+  height: clamp(320px, 58vh, 620px);
+  margin: 0.25rem 0 0.45rem;
+}
+
+#pvpPlayPanel .pvp-trade-actions {
+  gap: 0.55rem;
+  margin: 0.35rem 0 0.25rem;
+}
+
+#pvpPlayPanel .pvp-trade-actions .pvp-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 1.12rem;
+  letter-spacing: 0.18em;
+  min-height: 50px;
+}
+
+@media (max-width: 420px) {
+  #pvpPlayPanel .pvp-chart {
+    height: min(520px, 58dvh);
+  }
+}
