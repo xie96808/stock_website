@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
     <link rel="stylesheet" href="css/controls.css">
+    <link rel="stylesheet" href="css/controls-p4.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -1380,6 +1381,7 @@
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
         import { initChromeOverflow } from './js/chrome-overflow.js';
+        import { initP4Controls } from './js/controls-p4.js';
         import { initAnnouncements } from './js/announcements.js';
         import { initFeedback } from './js/feedback.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
@@ -1488,6 +1490,7 @@
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
+        try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         applyApkDownloadEntry();
         applyAppUpdateEntry();

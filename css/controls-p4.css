@@ -1,0 +1,279 @@
+/* ==========================================================================
+   P4 handcrafted skins — cards / stamp tags / back / chips / lanes / tabs
+   docs/handcrafted-controls-redesign.md · assets/controls MANIFEST ## P4
+   Light (paper) theme only: dark theme keeps its existing ink styling so
+   kraft art never sits under light text. Text stays live CSS (kaiti).
+   9-slice via border-image (fill) — drawn over the existing border box, so
+   layout/size is unchanged; only paint swaps.
+   ========================================================================== */
+
+:root {
+  --p4-card: image-set(url("../assets/controls/ctl-card-paper-default.webp") 1x, url("../assets/controls/ctl-card-paper-default@2x.webp") 2x);
+  --p4-card-em: image-set(url("../assets/controls/ctl-card-paper-emphasis.webp") 1x, url("../assets/controls/ctl-card-paper-emphasis@2x.webp") 2x);
+  --p4-card-sm: image-set(url("../assets/controls/ctl-card-paper-sm-default.webp") 1x, url("../assets/controls/ctl-card-paper-sm-default@2x.webp") 2x);
+  --p4-card-sm-em: image-set(url("../assets/controls/ctl-card-paper-sm-emphasis.webp") 1x, url("../assets/controls/ctl-card-paper-sm-emphasis@2x.webp") 2x);
+  --p4-tag-red: image-set(url("../assets/controls/ctl-stamp-tag-red.webp") 1x, url("../assets/controls/ctl-stamp-tag-red@2x.webp") 2x);
+  --p4-tag-green: image-set(url("../assets/controls/ctl-stamp-tag-green.webp") 1x, url("../assets/controls/ctl-stamp-tag-green@2x.webp") 2x);
+  --p4-tag-ink: image-set(url("../assets/controls/ctl-stamp-tag-ink.webp") 1x, url("../assets/controls/ctl-stamp-tag-ink@2x.webp") 2x);
+  --p4-tag-neutral: image-set(url("../assets/controls/ctl-stamp-tag-neutral.webp") 1x, url("../assets/controls/ctl-stamp-tag-neutral@2x.webp") 2x);
+  --p4-back: image-set(url("../assets/controls/ctl-back-default.webp") 1x, url("../assets/controls/ctl-back-default@2x.webp") 2x);
+  --p4-back-press: image-set(url("../assets/controls/ctl-back-press.webp") 1x, url("../assets/controls/ctl-back-press@2x.webp") 2x);
+  --p4-back-disabled: image-set(url("../assets/controls/ctl-back-disabled.webp") 1x, url("../assets/controls/ctl-back-disabled@2x.webp") 2x);
+  --p4-chip: image-set(url("../assets/controls/ctl-chip-btn-default.webp") 1x, url("../assets/controls/ctl-chip-btn-default@2x.webp") 2x);
+  --p4-chip-press: image-set(url("../assets/controls/ctl-chip-btn-press.webp") 1x, url("../assets/controls/ctl-chip-btn-press@2x.webp") 2x);
+  --p4-chip-active: image-set(url("../assets/controls/ctl-chip-btn-active.webp") 1x, url("../assets/controls/ctl-chip-btn-active@2x.webp") 2x);
+  --p4-lane: image-set(url("../assets/controls/ctl-lane-card-default.webp") 1x, url("../assets/controls/ctl-lane-card-default@2x.webp") 2x);
+  --p4-lane-press: image-set(url("../assets/controls/ctl-lane-card-press.webp") 1x, url("../assets/controls/ctl-lane-card-press@2x.webp") 2x);
+  --p4-lane-disabled: image-set(url("../assets/controls/ctl-lane-card-disabled.webp") 1x, url("../assets/controls/ctl-lane-card-disabled@2x.webp") 2x);
+  --p4-tab: image-set(url("../assets/controls/ctl-tab-default.webp") 1x, url("../assets/controls/ctl-tab-default@2x.webp") 2x);
+  --p4-tab-selected: image-set(url("../assets/controls/ctl-tab-selected.webp") 1x, url("../assets/controls/ctl-tab-selected@2x.webp") 2x);
+  --p4-tab-press: image-set(url("../assets/controls/ctl-tab-press.webp") 1x, url("../assets/controls/ctl-tab-press@2x.webp") 2x);
+  --p4-press-ms: 70ms;
+}
+
+/* ---------- Info cards / panels (large, 9-slice 24 → drawn 14px) ---------- */
+html:not([data-theme="dark"]) :is(
+  .start-screen .frame,
+  .apk-download-link,
+  .announcements-item,
+  .game-progress-shell,
+  .asset-board,
+  .ohlc-card,
+  .intel-card,
+  .bs-comment,
+  .best-point-card,
+  .stat-card,
+  .my-game-item,
+  .academy-zone-card,
+  .pattern-card,
+  .quiz-pattern-display,
+  .quiz-explanation,
+  .puzzle-play-tip,
+  .hindsight-form-panel,
+  .ar-card,
+  .ar-quote-card
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-card) 24 fill / 14px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+/* emphasis: my standing / best point / hero portfolio */
+html:not([data-theme="dark"]) :is(.mine-card, .asset-board.is-emphasis) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-card-em) 24 fill / 14px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Small stat / OHLC sub-cards (9-slice 12 → drawn 8px) ---------- */
+html:not([data-theme="dark"]) :is(
+  .metric-card:not(.primary),
+  .meta-card,
+  .ohlc-item,
+  .result-stat
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-card-sm) 12 fill / 8px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Stamp tags (9-slice 9 → drawn 7px) ---------- */
+html:not([data-theme="dark"]) :is(
+  .board-chip,
+  .game-mode-badge,
+  .game-progress-remain,
+  .bs-score-badge,
+  .trend-tag,
+  .point-badge,
+  .point-reason-tag,
+  .pattern-signal,
+  .quiz-question-type,
+  .jiu-coin-balance
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-tag-neutral) 9 fill / 7px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink, #2a2a2a);
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  min-height: 22px;
+  padding-left: max(8px, var(--p4-tag-pad, 8px));
+  padding-right: max(8px, var(--p4-tag-pad, 8px));
+}
+/* gain / bullish / buy → cinnabar (A-share red = up) */
+html:not([data-theme="dark"]) :is(
+  .board-chip.positive,
+  .trend-tag.up,
+  .point-badge.buy,
+  .pattern-signal.bullish,
+  .bs-score-badge.excellent,
+  .bs-score-badge.good
+) {
+  border-image-source: var(--p4-tag-red);
+  color: #fff8ee;
+}
+/* loss / bearish / sell → green */
+html:not([data-theme="dark"]) :is(
+  .board-chip.negative,
+  .trend-tag.down,
+  .point-badge.sell,
+  .pattern-signal.bearish,
+  .bs-score-badge.poor
+) {
+  border-image-source: var(--p4-tag-green);
+  color: #f4fff6;
+}
+/* mode / locked / type → ink */
+html:not([data-theme="dark"]) :is(
+  .game-mode-badge,
+  .board-chip.locked,
+  .quiz-question-type,
+  .game-progress-remain
+) {
+  border-image-source: var(--p4-tag-ink);
+  color: #f7f1e6;
+}
+
+/* ---------- Back buttons (112×36, arrow is in the art) ---------- */
+html:not([data-theme="dark"]) :is(
+  .hub-back,
+  .academy-back,
+  .zone-back-btn,
+  .puzzle-screen-back,
+  .leaderboard-back,
+  .my-games-back,
+  .hindsight-back,
+  .pvp-back
+) {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-back) 12 20 12 40 fill / 10px 14px 10px 32px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  min-height: 36px;
+  min-width: 96px;
+  padding-left: 34px;
+  padding-right: 14px;
+  color: var(--ink, #2a2a2a);
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  transition: transform var(--p4-press-ms) ease-out, filter var(--p4-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back):active:not(:disabled) {
+  border-image-source: var(--p4-back-press);
+  transform: translate(1px, 1px);
+}
+html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back):disabled {
+  border-image-source: var(--p4-back-disabled);
+  opacity: 0.8;
+}
+/* "←" glyph is redundant with the drawn arrow (js/controls-p4.js wraps it). */
+.p4-back-glyph { display: none; }
+
+/* ---------- Chip / pill buttons (72×32, 9-slice 11 → drawn 10px) ---------- */
+html:not([data-theme="dark"]) :is(
+  .chrome-overflow-btn,
+  .announcements-btn,
+  .auth-login-btn,
+  .jiu-coin-daily-btn,
+  .point-nav-badge
+) {
+  padding: 6px 12px 7px !important;
+  min-height: 34px;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-chip) 11 fill / 10px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  transition: transform var(--p4-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) :is(.chrome-overflow-btn,.announcements-btn,.auth-login-btn,.jiu-coin-daily-btn,.point-nav-badge):is(:active, [data-state="press"]):not(:disabled) {
+  border-image-source: var(--p4-chip-press);
+  transform: translate(1px, 1px);
+}
+html:not([data-theme="dark"]) :is(.chrome-overflow-btn[aria-expanded="true"], .jiu-coin-daily-btn:not(:disabled):not(.is-claimed), .point-nav-badge.active) {
+  border-image-source: var(--p4-chip-active);
+}
+/* point-nav: keep gain red / loss green labels */
+html:not([data-theme="dark"]) .point-nav-badge:hover { box-shadow: none; }
+
+/* ---------- Home / mode lane cards (343×120, 9-slice 24 → 16px) ---------- */
+html:not([data-theme="dark"]) .start-screen .lane {
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-lane) 24 fill / 16px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  transition: transform var(--p4-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) .start-screen .lane:hover { box-shadow: none; }
+html:not([data-theme="dark"]) .start-screen .lane:active:not(:disabled) {
+  border-image-source: var(--p4-lane-press);
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+html:not([data-theme="dark"]) .start-screen .lane:is(:disabled, [aria-disabled="true"], .is-locked) {
+  border-image-source: var(--p4-lane-disabled);
+}
+
+/* ---------- Tabs (96×32, selected = cinnabar underline) ---------- */
+html:not([data-theme="dark"]) :is(
+  .auth-tab,
+  .leaderboard-tab,
+  .leaderboard-metric-tab,
+  .leaderboard-assist-tab,
+  .academy-tab
+) {
+  padding: 6px 16px 9px !important;
+  min-height: 36px;
+  line-height: 1.2;
+  white-space: nowrap;
+  border-style: solid;
+  border-color: transparent;
+  border-image: var(--p4-tab) 11 fill / 10px / 0 stretch;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink, #2a2a2a);
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-weight: 700;
+  transition: transform var(--p4-press-ms) ease-out;
+}
+html:not([data-theme="dark"]) :is(.auth-tab,.leaderboard-tab,.leaderboard-metric-tab,.leaderboard-assist-tab,.academy-tab).active {
+  border-image-source: var(--p4-tab-selected);
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+}
+html:not([data-theme="dark"]) :is(.auth-tab,.leaderboard-tab,.leaderboard-metric-tab,.leaderboard-assist-tab,.academy-tab):active {
+  border-image-source: var(--p4-tab-press);
+  transform: translate(1px, 1px);
+}
+html:not([data-theme="dark"]) .leaderboard-metric-tabs { background: transparent; box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back,
+      .chrome-overflow-btn,.announcements-btn,.auth-login-btn,.jiu-coin-daily-btn,.point-nav-badge,
+      .start-screen .lane,.auth-tab,.leaderboard-tab,.leaderboard-metric-tab,.leaderboard-assist-tab,.academy-tab) {
+    transition: transform var(--p4-press-ms) linear !important;
+  }
+}
+
+/* top chrome is width-budgeted (chrome-overflow.js collapses the rest):
+   keep chips as narrow as the old pills so nothing wraps at 390. */
+html:not([data-theme="dark"]) .top-left-chrome :is(.announcements-btn, .auth-login-btn, .jiu-coin-daily-btn),
+html:not([data-theme="dark"]) #authChip :is(.announcements-btn, .auth-login-btn, .jiu-coin-daily-btn) {
+  padding: 6px 10px 7px !important;
+  letter-spacing: 0;
+}
