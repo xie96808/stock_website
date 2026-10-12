@@ -621,9 +621,10 @@
   letter-spacing: 0.16em;
 }
 
-.pvp-score[data-outcome="win"] { box-shadow: inset 4px 0 0 var(--gain-color); }
-.pvp-score[data-outcome="loss"] { box-shadow: inset 4px 0 0 var(--loss-color); }
-.pvp-score[data-outcome="draw"] { box-shadow: inset 4px 0 0 var(--ink-soft); }
+/* Settlement: no green/red vertical accent beside avatars. */
+.pvp-score[data-outcome="win"],
+.pvp-score[data-outcome="loss"],
+.pvp-score[data-outcome="draw"] { box-shadow: none; }
 
 .pvp-explain {
   margin: 0 0 0.75rem;
@@ -789,6 +790,31 @@
   border-radius: 14px;
   background: var(--paper-2);
   box-sizing: border-box;
+}
+
+.pvp-settle-side-flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.25rem 0.2rem;
+}
+
+.pvp-settle-side-flat img {
+  border: 0;
+  box-shadow: none;
+}
+
+.pvp-score-flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.35rem 0.15rem;
+  min-height: 0;
+}
+
+.pvp-score-flat .pvp-seat-avatar {
+  border: 0;
 }
 
 .pvp-settle-side img {
@@ -1292,57 +1318,229 @@
   letter-spacing: 0.1em;
 }
 
-/* One cream segmented buy | hold | sell control. */
-.pvp-trade-segment {
+/* Site-matching trade pills: 买入|卖出 · 消息(icon) · 保持 — kaiti labels, empty chrome texture */
+.pvp-trade-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.72fr) minmax(0, 1.05fr);
+  align-items: stretch;
+  gap: 0.35rem 0.45rem;
   margin: 0.35rem 0 0.35rem;
-  border: var(--border-ink);
-  border-radius: 18px;
-  background: var(--card);
-  box-shadow: 2px 3px 0 var(--line);
-  overflow: hidden;
   position: sticky;
   bottom: 0;
   z-index: 2;
+  background: var(--paper);
+  padding: 0.2rem 0 0.3rem;
 }
 
-.pvp-trade-segment .pvp-seg {
-  min-height: 48px;
+.pvp-sketch-ctl {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin: 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-  font-size: 1.02rem;
-  letter-spacing: 0.14em;
-  font-weight: 700;
+  padding: 0.55rem 0.9rem;
+  min-height: 48px;
+  border: 1.6px solid var(--line);
+  border-radius: 22px 16px 24px 18px;
+  background: #f7f0e2;
   color: var(--ink);
+  box-shadow: 2px 2px 0 var(--line);
   cursor: pointer;
+  overflow: hidden;
+  font-family: var(--kaiti);
+  line-height: 1.1;
 }
 
-.pvp-trade-segment .pvp-seg + .pvp-seg {
-  border-left: 1px solid var(--line);
+.pvp-sketch-ctl:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--line);
 }
 
-.pvp-trade-segment .pvp-btn-buy:not(:disabled) {
-  color: var(--gain-color);
+.pvp-sketch-ctl:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 1px 1px 0 var(--line);
 }
 
-.pvp-trade-segment .pvp-btn-sell:not(:disabled) {
-  color: var(--loss-color);
-}
-
-.pvp-trade-segment .pvp-seg:disabled {
-  opacity: 0.38;
+.pvp-sketch-ctl:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(0.2);
+  transform: none;
+  box-shadow: 2px 2px 0 var(--line);
 }
 
-.pvp-trade-segment .pvp-seg:focus-visible {
+.pvp-sketch-ctl:focus-visible {
   outline: 2px solid var(--ink);
-  outline-offset: -2px;
+  outline-offset: 3px;
+}
+
+.pvp-sketch-chrome {
+  position: absolute;
+  inset: -2px;
+  width: calc(100% + 4px);
+  height: calc(100% + 4px);
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.42;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  z-index: 0;
+}
+
+.pvp-sketch-label {
+  position: relative;
   z-index: 1;
+  font-family: var(--kaiti);
+  font-size: clamp(0.98rem, 3.6vw, 1.12rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: inherit;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pvp-trade-primary.is-buy {
+  color: var(--gain-color);
+  background: color-mix(in srgb, var(--gain-color) 14%, #f7f0e2);
+  border-color: color-mix(in srgb, var(--gain-color) 55%, var(--line));
+}
+
+.pvp-trade-primary.is-sell {
+  color: var(--loss-color);
+  background: color-mix(in srgb, var(--loss-color) 14%, #f7f0e2);
+  border-color: color-mix(in srgb, var(--loss-color) 55%, var(--line));
+}
+
+.pvp-trade-hold {
+  color: var(--ink);
+  background: #f7f0e2;
+}
+
+.pvp-msg-open {
+  padding: 0.35rem 0.55rem;
+  min-width: 0;
+  background: #f3ead8;
+}
+
+.pvp-sketch-icon {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: clamp(28px, 7.5vw, 36px);
+  height: auto;
+  max-height: 36px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.pvp-msg-picker {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  padding: 0.55rem;
+  border: 2px solid var(--ink);
+  border-radius: 14px 18px 12px 16px;
+  background: #f5efe0;
+  box-shadow: 3px 3px 0 var(--line);
+}
+
+.pvp-msg-picker[hidden],
+.pvp-taunt-picker[hidden] {
+  display: none !important;
+}
+
+.pvp-msg-line {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 40px;
+  padding: 0.4rem 0.75rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px 14px 999px 18px;
+  background: #fffdf6;
+  color: var(--ink);
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 1px 2px 0 var(--line);
+}
+
+.pvp-msg-line:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* Single-line message bubbles under seat avatars. */
+.pvp-taunt-bubble {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  transform: translateX(-50%);
+  z-index: 200;
+  max-width: min(16rem, 72vw);
+  padding: 0.28rem 0.65rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: #fffdf6;
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  box-shadow: 2px 2px 0 var(--line);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pvp-seat-opp .pvp-taunt-bubble {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.pvp-explain-with-art {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem 0.75rem;
+  align-items: center;
+}
+
+.pvp-explain-main {
+  min-width: 0;
+}
+
+.pvp-settle-art {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: #f5efe0;
+  flex: none;
+}
+
+@media (max-width: 420px) {
+  .pvp-settle-art {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.pvp-dossier-avatar-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50% 46% 50% 42%;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.pvp-dossier-avatar-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 #pvpPlayPanel .pvp-score-row {

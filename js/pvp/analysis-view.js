@@ -31,7 +31,7 @@ function signalCards(points) {
     </div>`;
   };
   let html = `<div class="analysis-title">当时信号</div>
-    <div class="analysis-text"><p>只用当日及以前的均线、量价、形态，不偷看后续行情。分数达到阈值后按强度选取，同类信号至少间隔 3 个交易日，最多各 3 个。黄钻是信号买，紫钻是信号卖。</p></div>`;
+    <div class="analysis-text"><p>只用当日及以前的均线、量价、形态，不偷看后续行情。分数达到阈值后按强度选取，同类信号至少间隔 3 个交易日，最多各 3 个。图上黄色「↑买」、紫色「↓卖」是当时信号标记。</p></div>`;
   if (!points.buys.length && !points.sells.length) {
     html += `<div class="analysis-text"><p>这段行情没有足够强的当时信号。</p></div>`;
   } else {

@@ -28,7 +28,10 @@ function pvpAxisBound(value, ratio, toward) {
     return Math.round(snapped * factor) / factor;
 }
 
-/** Player marks use shape, not red/green, so they stay distinct from up/down candles. */
+/**
+ * PvP marks: red「买」/ green「卖」text pills (A-share), not diamond/triangle.
+ * Valuation on d30 is day-30 MTM of leftover shares → label「期末估值」.
+ */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
     for (const mark of Array.isArray(marks) ? marks : []) {
@@ -37,37 +40,48 @@ function pvpMarkerPoints(bars, marks) {
         const mine = mark.side === 'me';
         const valuation = mark.kind === 'valuation';
         const sell = mark.kind === 'sell';
-        const label = valuation ? '估值' : mine
-            ? (sell ? '我卖' : '我买')
-            : (sell ? '对手卖' : '对手买');
-        const color = valuation ? '#f5c542' : mine ? PVP_ME_COLOR : PVP_OPP_COLOR;
+        const buy = mark.kind === 'buy';
+        let label;
+        let color;
+        let bg;
+        if (valuation) {
+            label = '期末估值';
+            color = '#8a6a20';
+            bg = 'rgba(245, 197, 66, 0.92)';
+        } else if (buy) {
+            label = mine ? '买' : '对手买';
+            color = '#fffaf3';
+            bg = mine ? '#e05252' : 'rgba(224, 82, 82, 0.78)';
+        } else {
+            label = mine ? '卖' : '对手卖';
+            color = '#f7fff4';
+            bg = mine ? '#3db86a' : 'rgba(61, 184, 106, 0.78)';
+        }
         const above = valuation || sell;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
-            symbol: valuation ? 'diamond' : mine ? 'circle' : 'triangle',
-            symbolSize: valuation ? 12 : 14,
+            symbol: 'roundRect',
+            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [44, 18],
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
-            symbolOffset: valuation ? [0, -20] : mine ? (above ? [0, -28] : [0, 30]) : (above ? [0, -46] : [0, 48]),
+            symbolOffset: valuation ? [0, -22] : mine ? (above ? [0, -26] : [0, 28]) : (above ? [0, -44] : [0, 46]),
             itemStyle: {
-                color,
-                borderColor: '#2c2824',
-                borderWidth: 1.5,
+                color: bg,
+                borderColor: valuation ? '#c9a227' : (buy ? '#e05252' : '#3db86a'),
+                borderWidth: 1,
             },
             label: {
-                show: !!valuation,
+                show: true,
                 formatter: '{c}',
-                color: '#2c2824',
+                color,
                 fontSize: 11,
                 fontWeight: 'bold',
-                backgroundColor: 'rgba(255, 252, 245, 0.94)',
-                borderColor: color,
-                borderWidth: 1,
-                borderRadius: 4,
-                padding: [1, 3],
-                distance: 2,
-                position: above ? 'top' : 'bottom',
+                backgroundColor: 'transparent',
+                borderWidth: 0,
+                padding: 0,
+                distance: 0,
+                position: 'inside',
             },
         });
     }
@@ -97,16 +111,27 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
             points.push({
                 name: buy ? "信号买" : "信号卖",
                 coord: [bar.label, buy ? bar.low : bar.high],
-                value: buy ? "信号买" : "信号卖",
-                symbol: "diamond",
-                symbolSize: 11,
-                symbolOffset: [0, buy ? 16 : -16],
+                value: buy ? "↑买" : "↓卖",
+                symbol: "roundRect",
+                symbolSize: [34, 16],
+                symbolOffset: [0, buy ? 18 : -18],
                 itemStyle: {
-                    color: buy ? "#f5c542" : "#a78bfa",
-                    borderColor: "#2c2824",
+                    color: buy ? "rgba(245, 197, 66, 0.92)" : "rgba(167, 139, 250, 0.92)",
+                    borderColor: buy ? "#c9a227" : "#7c6bc4",
                     borderWidth: 1,
                 },
-                label: { show: false },
+                label: {
+                    show: true,
+                    formatter: "{c}",
+                    color: "#2c2824",
+                    fontSize: 10,
+                    fontWeight: "bold",
+                    position: "inside",
+                    distance: 0,
+                    padding: 0,
+                    backgroundColor: "transparent",
+                    borderWidth: 0,
+                },
             });
         }
     };
@@ -146,11 +171,16 @@ export function buildKlineOption(vm) {
         syncHover = null,
         resetDataZoom = false,
         showDataZoomSlider,
+        showLegend,
+        pvpBottom = null, // 'volume' | 'macd' — battle two-pane indicator toggle
     } = vm;
 
     const isResult = mode === 'result';
     const isPvp = mode === 'pvp';
     const paperChart = isResult || isPvp;
+    const bottomMode = isPvp && (pvpBottom === 'macd' || pvpBottom === 'volume') ? pvpBottom : null;
+    const pvpTwoPane = !!bottomMode;
+    const legendOn = showLegend != null ? !!showLegend : true;
     const dayLabels = isPvp
         ? bars.map((bar, index) => (bar && bar.label) || String(index + 1))
         : buildDayIndexLabels(bars.length);
@@ -178,9 +208,9 @@ export function buildKlineOption(vm) {
 
     if (valuation) {
         markPoints.push({
-            name: '估值',
+            name: '期末估值',
             coord: [String(historyLength + valuation.day), valuation.price],
-            value: '估值',
+            value: '期末估值',
             symbol: 'diamond',
             symbolSize: 14,
             itemStyle: { color: '#f5c542' },
@@ -319,9 +349,10 @@ export function buildKlineOption(vm) {
             : { color: params => volumeColors[params.dataIndex] }
     };
 
+    const macdAxis = pvpTwoPane ? 1 : 2;
     const macdSeries = isPvp && macd ? [
         {
-            name: 'MACD', type: 'bar', xAxisIndex: 2, yAxisIndex: 2, data: macd.hist,
+            name: 'MACD', type: 'bar', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.hist,
             itemStyle: {
                 color: (params) => {
                     const v = Number(params.data);
@@ -331,24 +362,35 @@ export function buildKlineOption(vm) {
             },
         },
         {
-            name: 'DIF', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dif,
+            name: 'DIF', type: 'line', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.dif,
             smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#42a5f5' },
         },
         {
-            name: 'DEA', type: 'line', xAxisIndex: 2, yAxisIndex: 2, data: macd.dea,
+            name: 'DEA', type: 'line', xAxisIndex: macdAxis, yAxisIndex: macdAxis, data: macd.dea,
             smooth: true, symbol: 'none', lineStyle: { width: 1.2, color: '#f5c542' },
         },
     ] : [];
 
     // Preserve prior series order: game = K + MAs + vol; result = K + vol + MAs; pvp adds MACD.
-    const series = isResult
-        ? [candleSeries, volumeSeries, ...maSeries]
-        : isPvp
-        ? [candleSeries, ...maSeries, volumeSeries, ...macdSeries]
-        : [candleSeries, ...maSeries, volumeSeries];
+    // Battle with pvpBottom: two panes — candles + volume XOR MACD.
+    let series;
+    if (isResult) {
+        series = [candleSeries, volumeSeries, ...maSeries];
+    } else if (isPvp && pvpTwoPane) {
+        series = bottomMode === 'macd'
+            ? [candleSeries, ...maSeries, ...macdSeries]
+            : [candleSeries, ...maSeries, volumeSeries];
+    } else if (isPvp) {
+        series = [candleSeries, ...maSeries, volumeSeries, ...macdSeries];
+    } else {
+        series = [candleSeries, ...maSeries, volumeSeries];
+    }
 
-    const legend = isResult
-        ? {
+    let legend;
+    if (!legendOn || (isPvp && showLegend === false)) {
+        legend = { show: false };
+    } else if (isResult) {
+        legend = {
             data: ['5日线', '10日线', '20日线', '30日线'],
             top: 0,
             left: 10,
@@ -356,9 +398,9 @@ export function buildKlineOption(vm) {
             itemWidth: 18,
             itemHeight: 2,
             itemGap: 12
-        }
-        : isPvp
-        ? {
+        };
+    } else if (isPvp) {
+        legend = {
             data: [...MA_DAY_LABELS, 'DIF', 'DEA'],
             selected: {
                 '5日线': true,
@@ -376,8 +418,9 @@ export function buildKlineOption(vm) {
             itemWidth: 14,
             itemHeight: 2,
             itemGap: 8
-        }
-        : {
+        };
+    } else {
+        legend = {
             data: MA_DAY_LABELS.slice(),
             selected: maSelected || {
                 '5日线': true,
@@ -393,6 +436,7 @@ export function buildKlineOption(vm) {
             itemHeight: 2,
             itemGap: 12
         };
+    }
 
     const wantSlider = showDataZoomSlider != null ? !!showDataZoomSlider : isResult;
     const dataZoomWindow = resetDataZoom ? { start: 0, end: 100 } : {};
@@ -402,7 +446,7 @@ export function buildKlineOption(vm) {
         : null;
     // inside: pinch + horizontal slide on touch; wheel zoom on desktop.
     // Chart host: leave touch-action default so ECharts/ZR can handle pinch; hold/FF buttons keep touch-action:none separately.
-    const zoomAxes = isPvp ? [0, 1, 2] : [0, 1];
+    const zoomAxes = isPvp ? (pvpTwoPane ? [0, 1] : [0, 1, 2]) : [0, 1];
     const dataZoom = [
         {
             type: 'inside',
@@ -529,7 +573,12 @@ export function buildKlineOption(vm) {
             }
         },
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        grid: isPvp
+        grid: isPvp && pvpTwoPane
+            ? [
+                { left: 40, right: 8, top: 12, bottom: '34%' },
+                { left: 40, right: 8, top: '72%', bottom: 16 }
+            ]
+            : isPvp
             ? [
                 { left: 40, right: 8, top: 26, bottom: '42%' },
                 { left: 40, right: 8, top: '62%', bottom: '24%' },
@@ -544,7 +593,21 @@ export function buildKlineOption(vm) {
                 { left: '8%', right: '2%', top: '8%', bottom: '34%' },
                 { left: '8%', right: '2%', top: '73%', bottom: '6%' }
             ],
-        xAxis: isPvp
+        xAxis: isPvp && pvpTwoPane
+            ? [
+                {
+                    type: 'category', data: dayLabels, gridIndex: 0,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: { show: false }, axisTick: { show: false }, splitLine: { show: false }
+                },
+                {
+                    type: 'category', data: dayLabels, gridIndex: 1,
+                    axisLine: { lineStyle: { color: axisLineColor } },
+                    axisLabel: xAxisBottomLabel,
+                    splitLine: { show: false }
+                }
+            ]
+            : isPvp
             ? [
                 {
                     type: 'category', data: dayLabels, gridIndex: 0,
@@ -576,7 +639,23 @@ export function buildKlineOption(vm) {
                 splitLine: { show: false }
             }
         ],
-        yAxis: isPvp
+        yAxis: isPvp && pvpTwoPane
+            ? [
+                {
+                    type: 'value', scale: true, gridIndex: 0,
+                    name: '相对价 (d1=100)',
+                    nameLocation: 'middle',
+                    nameGap: 36,
+                    nameTextStyle: { color: axisLabelColor, fontSize: 10 },
+                    axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
+                    axisLine: { show: false },
+                    splitLine: { lineStyle: { color: splitLineColor } },
+                    min: (value) => pvpAxisBound(value, 0.28, -1),
+                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                },
+                { type: 'value', scale: true, gridIndex: 1, show: false, splitLine: { show: false } },
+            ]
+            : isPvp
             ? [
                 {
                     type: 'value', scale: true, gridIndex: 0,

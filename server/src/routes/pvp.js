@@ -9,9 +9,10 @@ import { listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } fro
 import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
 import { listIncoming, sendReaction } from "../lib/pvp/reactions.js";
+import { sendTaunt } from "../lib/pvp/taunts.js";
 import { isChallengeableTarget } from "../lib/pvp/botUsers.js";
 import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
-import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
+import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged, noteMatchTaunt } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
 
 const router = Router();
@@ -304,6 +305,25 @@ router.delete("/pvp/blocks/:userId", requireUser, (req, res) => {
   if (!Number.isInteger(blockedId)) return fail(res, 400, "BAD_PAYLOAD", "用户无效");
   unblockPlayer(openDb(), req.user.id, blockedId);
   return ok(res, null, 204);
+});
+
+
+router.post("/pvp/matches/:id/taunts", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "text");
+  if (extra.length || typeof body.text !== "string") return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:taunt:u:${req.user.id}`, 12, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "消息发太快了");
+  const result = sendTaunt(openDb(), {
+    matchId: req.params.id,
+    fromUserId: req.user.id,
+    text: body.text,
+    now: Date.now(),
+  });
+  if (!result?.ok) return sendDeny(res, result);
+  noteMatchTaunt(req.params.id, result.event);
+  return ok(res, result.event, 201);
 });
 
 router.post("/pvp/matches/:id/reactions", requireUser, (req, res) => {

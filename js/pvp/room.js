@@ -42,6 +42,8 @@ let pendingNetwork = false;
 let readyInFlight = false;
 let nudgeKey = "";
 let lastClockAnnounce = "";
+let bottomMode = "volume"; // volume | macd for this match
+let chartClickBound = false;
 
 function setText(id, value) {
   const node = document.getElementById(id);
@@ -129,6 +131,7 @@ function stopLoops() {
 function destroyChart() {
   chartKey = "";
   chartZoomKey = "";
+  chartClickBound = false;
   if (chartObserver) {
     chartObserver.disconnect();
     chartObserver = null;
@@ -149,6 +152,9 @@ export function leavePvpRoom({ deferChart = false } = {}) {
   clearActionKeys();
   stopLoops();
   closeLeave();
+  closeMsgPicker();
+  showTauntBubble("me", "");
+  showTauntBubble("opp", "");
   if (deferChart) window.setTimeout(() => destroyChart(), 0);
   else destroyChart();
 }
@@ -284,16 +290,41 @@ function paintActions() {
     || pendingNetwork
     || isSubmitting()
     || view.me?.lockedToday;
-  const buy = document.getElementById("pvpBuy");
-  const sell = document.getElementById("pvpSell");
+  // Left: flat → 买入 (red); holding → 卖出 (green). Right: 保持 (hold).
+  const primary = document.getElementById("pvpTradePrimary");
   const hold = document.getElementById("pvpHold");
-  // One segmented control: 买入 | 观望/持有 | 卖出.
-  if (hold) {
-    hold.disabled = closed || !view?.me?.canHold;
-    hold.textContent = view?.me?.holding ? "持有" : "观望";
+  const holding = !!view?.me?.holding;
+  const wantSell = holding && !!view?.me?.canSell;
+  const wantBuy = !holding && !!view?.me?.canBuy;
+  const primaryImg = document.getElementById("pvpTradePrimaryImg");
+  const primaryLabel = document.getElementById("pvpTradePrimaryLabel");
+  if (primary) {
+    primary.hidden = !playing;
+    if (wantSell) {
+      primary.dataset.action = "sell";
+      primary.setAttribute("aria-label", "卖出");
+      primary.classList.remove("is-buy");
+      primary.classList.add("is-sell");
+      if (primaryImg) primaryImg.src = "assets/pvp/btn-sell.png";
+      if (primaryLabel) primaryLabel.textContent = "卖出";
+      primary.disabled = closed || !view?.me?.canSell;
+    } else {
+      primary.dataset.action = "buy";
+      primary.setAttribute("aria-label", "买入");
+      primary.classList.remove("is-sell");
+      primary.classList.add("is-buy");
+      if (primaryImg) primaryImg.src = "assets/pvp/btn-buy.png";
+      if (primaryLabel) primaryLabel.textContent = "买入";
+      primary.disabled = closed || !wantBuy;
+    }
   }
-  if (buy) buy.disabled = closed || !view?.me?.canBuy;
-  if (sell) sell.disabled = closed || !view?.me?.canSell;
+  if (hold) {
+    hold.hidden = !playing;
+    hold.disabled = closed || !view?.me?.canHold;
+    hold.setAttribute("aria-label", "保持");
+  }
+  const msgOpen = document.getElementById("pvpMsgOpen");
+  if (msgOpen) msgOpen.disabled = !playing;
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
   const locked = postedLock || pendingNetwork || submitting || !!view?.me?.lockedToday;
@@ -316,12 +347,31 @@ function bindChartResize(node) {
   window.setTimeout(() => { if (chart) chart.resize(); }, 50);
 }
 
+function bindBottomToggle(chartInstance) {
+  if (chartClickBound || !chartInstance) return;
+  chartClickBound = true;
+  chartInstance.getZr().on("click", (event) => {
+    if (!chart || view?.status !== "playing") return;
+    let inBottom = false;
+    try {
+      const pt = chart.convertFromPixel({ gridIndex: 1 }, [event.offsetX, event.offsetY]);
+      inBottom = Array.isArray(pt) && Number.isFinite(pt[0]) && Number.isFinite(pt[1]);
+    } catch {
+      inBottom = false;
+    }
+    if (!inBottom) return;
+    bottomMode = bottomMode === "volume" ? "macd" : "volume";
+    chartKey = ""; // force repaint with new bottom pane
+    paintChart().catch(() => {});
+  });
+}
+
 async function paintChart() {
   const node = document.getElementById("pvpChart");
   const market = view?.market;
   if (!node || !market) return;
-  // Key on revealed day + resolved actions — not revision (opponent lock bumps revision).
-  const key = `${view.matchId}:${market.revealedDay}:${view.resolvedRounds}:${(view.resolvedActions || []).length}`;
+  // Key on revealed day + resolved actions + bottom indicator mode.
+  const key = `${view.matchId}:${market.revealedDay}:${view.resolvedRounds}:${(view.resolvedActions || []).length}:${bottomMode}`;
   if (key === chartKey && chart) return;
   const bars = [...(market.history || []), ...(market.bars || [])];
   if (!bars.length) return;
@@ -332,6 +382,7 @@ async function paintChart() {
     if (!chart) {
       chart = echarts.init(node);
       bindChartResize(node);
+      bindBottomToggle(chart);
     }
     chart.setOption(buildKlineOption({
       mode: "pvp",
@@ -340,7 +391,9 @@ async function paintChart() {
       pvpMarks: marksFromView(view),
       showDataZoomSlider: false,
       resetDataZoom,
-    }), { replaceMerge: ["series"] });
+      showLegend: false,
+      pvpBottom: bottomMode,
+    }), { replaceMerge: ["series", "legend", "grid", "xAxis", "yAxis"] });
     chartZoomKey = `${view.matchId}:${bars.length}`;
     chartKey = key;
   } catch {
@@ -496,9 +549,63 @@ async function postCancelReady() {
 }
 
 function onSocket(msg) {
-  if (!matchId || !msg || msg.t !== "match.changed" || msg.matchId !== matchId) return;
+  if (!matchId || !msg || msg.matchId !== matchId) return;
+  if (msg.t === "match.taunt") {
+    onTauntEvent(msg);
+    return;
+  }
+  if (msg.t !== "match.changed") return;
   if (!noteRevision(matchId, msg.revision)) return;
   refresh().catch(() => {});
+}
+
+
+const TAUNT_MS = 3200;
+let tauntHideTimers = { me: 0, opp: 0 };
+
+function closeMsgPicker() {
+  const picker = document.getElementById("pvpMsgPicker");
+  const open = document.getElementById("pvpMsgOpen");
+  if (picker) picker.hidden = true;
+  if (open) open.setAttribute("aria-expanded", "false");
+}
+
+function showTauntBubble(side, text) {
+  const id = side === "me" ? "pvpTauntBubbleMe" : "pvpTauntBubbleOpp";
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = text || "";
+  node.hidden = !text;
+  window.clearTimeout(tauntHideTimers[side]);
+  if (text) {
+    tauntHideTimers[side] = window.setTimeout(() => {
+      node.hidden = true;
+      node.textContent = "";
+    }, TAUNT_MS);
+  }
+}
+
+function onTauntEvent(msg) {
+  if (!matchId || !msg || msg.t !== "match.taunt" || msg.matchId !== matchId) return;
+  const event = msg.event;
+  if (!event?.text) return;
+  const auth = getAuthState().user;
+  const mine = auth && Number(event.fromUserId) === Number(auth.id);
+  showTauntBubble(mine ? "me" : "opp", event.text);
+}
+
+async function postTaunt(text) {
+  if (!matchId || !text || view?.status !== "playing") return;
+  closeMsgPicker();
+  showTauntBubble("me", text);
+  try {
+    await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/taunts`, {
+      method: "POST",
+      body: { text },
+    });
+  } catch (err) {
+    setText("pvpActionError", err.message || "消息没能发送");
+  }
 }
 
 function wireRoom() {
@@ -522,6 +629,23 @@ function wireRoom() {
   document.getElementById("pvpHold")?.addEventListener("click", () => { postAction("hold").catch(() => {}); });
   document.getElementById("pvpBuy")?.addEventListener("click", () => { postAction("buy").catch(() => {}); });
   document.getElementById("pvpSell")?.addEventListener("click", () => { postAction("sell").catch(() => {}); });
+  document.getElementById("pvpTradePrimary")?.addEventListener("click", () => {
+    const action = document.getElementById("pvpTradePrimary")?.dataset?.action;
+    if (action === "buy" || action === "sell") postAction(action).catch(() => {});
+  });
+  document.getElementById("pvpMsgOpen")?.addEventListener("click", () => {
+    const picker = document.getElementById("pvpMsgPicker");
+    const open = document.getElementById("pvpMsgOpen");
+    if (!picker) return;
+    const next = picker.hidden;
+    picker.hidden = !next;
+    open?.setAttribute("aria-expanded", next ? "true" : "false");
+  });
+  document.getElementById("pvpMsgPicker")?.addEventListener("click", (event) => {
+    const btn = event.target?.closest?.(".pvp-msg-line");
+    if (!btn) return;
+    postTaunt(btn.textContent || "").catch(() => {});
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && matchId) refresh().catch(() => {});
   });
@@ -536,6 +660,7 @@ export async function showPvpRoom(id, seed) {
     destroyChart();
     postedLock = false;
     nudgeKey = "";
+    bottomMode = "volume";
   }
   matchId = id;
   setText("pvpActionError", "");

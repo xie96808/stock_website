@@ -497,6 +497,7 @@
                         <div class="pvp-seat-face">
                             <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkMe" hidden></span>
+                            <div class="pvp-taunt-bubble" id="pvpTauntBubbleMe" hidden role="status"></div>
                         </div>
                         <div class="pvp-seat-meta">
                             <span class="pvp-seat-role">我</span>
@@ -519,6 +520,7 @@
                         <div class="pvp-seat-face">
                             <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkOpp" hidden></span>
+                            <div class="pvp-taunt-bubble" id="pvpTauntBubbleOpp" hidden role="status"></div>
                         </div>
                         <div class="pvp-seat-meta">
                             <span class="pvp-seat-role">对手</span>
@@ -544,15 +546,35 @@
                             <strong class="pvp-score-value" id="pvpOppNav">—</strong>
                         </div>
                     </div>
-                    <div class="pvp-trade-segment" id="pvpTradeSegment" role="group" aria-label="买卖操作">
-                        <button type="button" class="pvp-seg pvp-btn-buy" id="pvpBuy" data-action="buy">买入</button>
-                        <button type="button" class="pvp-seg pvp-btn-hold" id="pvpHold" data-action="hold">观望</button>
-                        <button type="button" class="pvp-seg pvp-btn-sell" id="pvpSell" data-action="sell">卖出</button>
+                    <div class="pvp-trade-bar" id="pvpTradeSegment" role="group" aria-label="买卖与消息">
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy" id="pvpTradePrimary" data-action="buy" aria-label="买入">
+                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/pvp/btn-buy.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label" id="pvpTradePrimaryLabel">买入</span>
+                        </button>
+                        <button type="button" class="pvp-sketch-ctl pvp-msg-open" id="pvpMsgOpen" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
+                            <img class="pvp-sketch-icon" src="assets/pvp/btn-message.png" width="80" height="80" alt="" aria-hidden="true">
+                        </button>
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-hold" id="pvpHold" data-action="hold" aria-label="保持">
+                            <img class="pvp-sketch-chrome" src="assets/pvp/btn-hold.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label">保持</span>
+                        </button>
+                        <button type="button" id="pvpBuy" data-action="buy" hidden>买入</button>
+                        <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
+                        <button type="button" id="pvpTauntOpen" hidden aria-hidden="true">消息</button>
                     </div>
+                    <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="listbox" aria-label="消息台词">
+                        <button type="button" class="pvp-msg-line" role="option">这你都买？进厂打螺丝吧</button>
+                        <button type="button" class="pvp-msg-line" role="option">这都卖？啥都拿不住玩什么股票！</button>
+                        <button type="button" class="pvp-msg-line" role="option">买买买</button>
+                        <button type="button" class="pvp-msg-line" role="option">割了割了</button>
+                        <button type="button" class="pvp-msg-line" role="option">给我加仓猛干！</button>
+                        <button type="button" class="pvp-msg-line" role="option">技术回调，慌个锤子</button>
+                    </div>
+                    <div class="pvp-taunt-picker" id="pvpTauntPicker" hidden></div>
                     <p id="pvpActionError" role="status"></p>
                     <div id="pvpChart" class="pvp-chart"></div>
-                    <p class="pvp-mark-legend"><span class="is-me">● 我的买卖</span><span class="is-opp">▲ 对手买卖</span></p>
-                    <p class="pvp-chart-pan">滚轮或双指缩放，左右拖动查看。</p>
+                    <p class="pvp-mark-legend"><span class="is-me">红「买」/绿「卖」· 我</span><span class="is-opp">半透明 · 对手</span></p>
+                    <p class="pvp-chart-pan">滚轮或双指缩放，左右拖动查看。点下方量/指标区可切换成交量与 MACD。</p>
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpLeaveDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpLeaveTitle">
@@ -578,7 +600,7 @@
                 <p class="pvp-stock-period" id="pvpResultPeriod" hidden></p>
                 <p id="pvpResultReason"></p>
                 <div class="pvp-score-row">
-                    <div class="pvp-score" id="pvpResultMeCard">
+                    <div class="pvp-score pvp-score-flat" id="pvpResultMeCard">
                         <div class="pvp-seat">
                             <img id="pvpResultMeAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <div>
@@ -590,7 +612,7 @@
                         <strong class="pvp-score-value" id="pvpResultMe">—</strong>
                         <span class="pvp-score-meta" id="pvpResultMeMeta"></span>
                     </div>
-                    <div class="pvp-score" id="pvpResultOppCard">
+                    <div class="pvp-score pvp-score-flat" id="pvpResultOppCard">
                         <div class="pvp-seat">
                             <img id="pvpResultOppAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <div>
@@ -603,16 +625,22 @@
                         <span class="pvp-score-meta" id="pvpResultOppMeta"></span>
                     </div>
                 </div>
-                <div class="pvp-explain" id="pvpResultRatingBox" hidden>
-                    <p class="pvp-explain-label">段位分</p>
-                    <strong class="pvp-explain-num" id="pvpResultRating"></strong>
-                    <p class="pvp-explain-note" id="pvpResultRatingRange" hidden></p>
-                    <div id="pvpResultRankProgress"></div>
+                <div class="pvp-explain pvp-explain-with-art" id="pvpResultRatingBox" hidden>
+                    <div class="pvp-explain-main">
+                        <p class="pvp-explain-label">段位分</p>
+                        <strong class="pvp-explain-num" id="pvpResultRating"></strong>
+                        <p class="pvp-explain-note" id="pvpResultRatingRange" hidden></p>
+                        <div id="pvpResultRankProgress"></div>
+                    </div>
+                    <img class="pvp-settle-art" id="pvpResultRatingArt" src="assets/pvp/settle-rank-badge.png" width="96" height="96" alt="段位分插画">
                 </div>
-                <div class="pvp-explain" id="pvpResultHoldBox" hidden>
-                    <p class="pvp-explain-label">买入持有</p>
-                    <strong class="pvp-explain-num" id="pvpResultReplay"></strong>
-                    <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。</p>
+                <div class="pvp-explain pvp-explain-with-art" id="pvpResultHoldBox" hidden>
+                    <div class="pvp-explain-main">
+                        <p class="pvp-explain-label">买入持有</p>
+                        <strong class="pvp-explain-num" id="pvpResultReplay"></strong>
+                        <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。</p>
+                    </div>
+                    <img class="pvp-settle-art" id="pvpResultHoldArt" src="assets/pvp/settle-buy-hold.png" width="96" height="96" alt="买入持有插画">
                 </div>
                 <div id="pvpResultAnalysis" class="analysis-container"></div>
                 <div id="pvpResultChart" class="pvp-chart" hidden></div>
@@ -660,13 +688,13 @@
                     <p class="pvp-stock-name" id="pvpWinIdentity" hidden></p>
                     <p class="pvp-stock-period" id="pvpWinPeriod" hidden></p>
                     <div class="pvp-settle-grid">
-                        <div class="pvp-settle-side">
+                        <div class="pvp-settle-side pvp-settle-side-flat">
                             <img id="pvpWinMeAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <strong id="pvpWinMeName">我</strong>
                             <span class="pvp-settle-return" id="pvpWinMeReturn">—</span>
                             <span class="pvp-settle-meta" id="pvpWinMeCoin"></span>
                         </div>
-                        <div class="pvp-settle-side">
+                        <div class="pvp-settle-side pvp-settle-side-flat">
                             <img id="pvpWinOppAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <strong id="pvpWinOppName">对手</strong>
                             <span class="pvp-settle-return" id="pvpWinOppReturn">—</span>

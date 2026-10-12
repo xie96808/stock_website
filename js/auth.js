@@ -293,9 +293,9 @@ function ensureAuthDom() {
             <button type="button" class="auth-dice" id="registerNickDice" title="随机昵称">🎲</button>
           </div>
           <div class="avatar-picker">
-            <button type="button" class="avatar-preview-btn" id="registerAvatarPick" title="点击上传头像" aria-label="点击上传头像">
+            <label class="avatar-preview-btn" id="registerAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="registerAvatarFile">
               <img class="avatar-preview" id="registerAvatarImg" alt="头像预览">
-            </button>
+            </label>
             <input type="file" id="registerAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
             <div class="avatar-actions">
               <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
@@ -306,9 +306,9 @@ function ensureAuthDom() {
         </form>
         <div id="authSettingsPanel" class="auth-form" hidden>
           <div class="avatar-picker">
-            <button type="button" class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像">
+            <label class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="settingsAvatarFile">
               <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
-            </button>
+            </label>
             <input type="file" id="settingsAvatarFile" accept="image/jpeg,image/png,image/webp" hidden>
             <div class="avatar-actions">
               <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
@@ -369,12 +369,7 @@ function ensureAuthDom() {
     const input = document.getElementById("settingsNickname");
     input.value = randomNickname(input.value);
   };
-  document.getElementById("registerAvatarPick").onclick = () => {
-    document.getElementById("registerAvatarFile").click();
-  };
-  document.getElementById("settingsAvatarPick").onclick = () => {
-    document.getElementById("settingsAvatarFile").click();
-  };
+  // Labels use `for=` so mobile browsers keep the user gesture for the file picker.
   document.getElementById("registerAvatarFile").onchange = onRegisterFile;
   document.getElementById("settingsAvatarFile").onchange = onSettingsFile;
   document.getElementById("authLogoutBtn").onclick = onLogout;

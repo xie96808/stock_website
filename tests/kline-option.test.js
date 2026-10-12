@@ -70,7 +70,7 @@ test('buildKlineOption result markPoint includes trades + best points + valuatio
   assert.ok(mp.some((p) => p.value === '买'));
   assert.ok(mp.some((p) => p.name === 'B1'));
   assert.ok(mp.some((p) => p.name === 'S1'));
-  assert.ok(mp.some((p) => p.value === '估值'));
+  assert.ok(mp.some((p) => p.value === '期末估值'));
 });
 
 test('buildKlineOption includes inside dataZoom for touch pinch/slide', () => {
