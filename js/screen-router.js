@@ -191,9 +191,17 @@ export function activateScreen(route) {
   if (!id) return null;
   const el = document.getElementById(id);
   if (!el) return null;
+  const wasActive = el.classList.contains("active");
   el.classList.add("active");
   if (INLINE_DISPLAY_ROUTES.has(route)) {
     el.style.display = "block";
+  }
+  // §6.4 view swap: crossfade + light slide on PvP lobby↔room↔settlement (no hard cut).
+  if (!wasActive && el.classList.contains("pvp-screen")) {
+    el.classList.remove("ctl-view-in");
+    void el.offsetWidth;
+    el.classList.add("ctl-view-in");
+    window.setTimeout(() => el.classList.remove("ctl-view-in"), 320);
   }
   return el;
 }

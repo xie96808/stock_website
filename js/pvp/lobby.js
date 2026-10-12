@@ -1,5 +1,6 @@
 import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../auth.js";
 import { coinIconHtml } from "../jiu-coin.js";
+import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
@@ -165,10 +166,11 @@ function dropChallengeKey(userId) {
   challengeKey.map?.delete(String(userId));
 }
 
-export async function sendChallenge(userId) {
+export async function sendChallenge(userId, button = null) {
   const id = Number(userId);
   if (!Number.isInteger(id) || id <= 0) return;
   setError("");
+  if (button) setCtlState(button, "loading", { syncImg: false });
   try {
     const res = await pvpFetch("/pvp/challenges", {
       method: "POST",
@@ -186,6 +188,10 @@ export async function sendChallenge(userId) {
   } catch (err) {
     if (err.status) dropChallengeKey(id);
     setError(err.message || "约战没能发出");
+    if (button && button.isConnected) {
+      setCtlState(button, "default", { clearDisabled: true, syncImg: false });
+      shakeError(button);
+    }
   }
 }
 
@@ -388,7 +394,9 @@ function renderList(entries, state) {
     body.append(name, title, recent);
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "pvp-btn pvp-btn-primary";
+    button.className = "pvp-btn pvp-btn-primary ctl ctl-challenge";
+    button.dataset.ctlKind = "challenge";
+    button.dataset.state = "default";
     if (entry.busy) {
       button.textContent = "对局中";
       button.disabled = true;
@@ -397,7 +405,7 @@ function renderList(entries, state) {
       button.disabled = true;
     } else {
       button.textContent = "约战";
-      button.addEventListener("click", () => { sendChallenge(entry.userId).catch(() => {}); });
+      button.addEventListener("click", () => { sendChallenge(entry.userId, button).catch(() => {}); });
     }
     item.append(img, body, button);
     list.append(item);
@@ -508,7 +516,10 @@ async function refresh() {
   if (!auth.ready) {
     if (guest) guest.hidden = true;
     if (member) member.hidden = true;
-    if (loading) loading.hidden = false;
+    if (loading) {
+      loading.hidden = false;
+      ensureCastbar(loading, { indeterminate: true, labelText: "大厅加载中…" })?.setIndeterminate(true);
+    }
     return;
   }
   if (loading) loading.hidden = true;

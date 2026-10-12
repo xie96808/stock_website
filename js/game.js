@@ -43,6 +43,7 @@ import {
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
+import { shakeError } from './controls.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
 import {
@@ -513,6 +514,7 @@ export async function handleAction(action) {
             return;
         }
         showToast(guard.errorZh, 'error');
+        shakeError(document.getElementById(action === 'buy' ? 'buyBtn' : action === 'sell' ? 'sellBtn' : 'holdBtn'));
         return;
     }
 

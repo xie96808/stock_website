@@ -10,6 +10,8 @@ import {
   roundCaption,
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
+import { setCtlState, shakeError, openCtlOverlay, closeCtlOverlay, syncTradeCtl } from "../controls.js";
+
 import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 import { rankTitleWithIcon } from "./profile-battle.js";
 
@@ -118,7 +120,7 @@ function ensureOppCardDom() {
 
 function closeOppCard() {
   const m = document.getElementById("pvpOppCardModal");
-  if (m) m.hidden = true;
+  if (m) closeCtlOverlay(m);
 }
 
 function openOppCard(face) {
@@ -155,7 +157,7 @@ function openOppCard(face) {
     signature.textContent = sig ? sig : "这个人很懒，还没有个性签名";
     signature.classList.toggle("is-empty", !sig);
   }
-  modal.hidden = false;
+  openCtlOverlay(modal, { focusSelector: "#pvpOppCardClose" });
 }
 
 function wireOppAvatarClick() {
@@ -274,8 +276,7 @@ function leaveButtons() {
 
 function closeLeave() {
   const node = dialog();
-  if (node) node.hidden = true;
-  document.getElementById("pvpRoomLeave")?.focus();
+  if (node && !node.hidden) closeCtlOverlay(node);
 }
 
 function openLeave() {
@@ -283,8 +284,7 @@ function openLeave() {
   if (!node) return;
   const forfeit = document.getElementById("pvpLeaveForfeit");
   if (forfeit) forfeit.hidden = view?.status !== "playing";
-  node.hidden = false;
-  leaveButtons()[0]?.focus();
+  openCtlOverlay(node, { focusSelector: "#pvpLeaveStay" });
 }
 
 function onLeaveKey(event) {
@@ -408,7 +408,7 @@ function paintActions() {
       primary.setAttribute("aria-label", "卖出");
       primary.classList.remove("is-buy");
       primary.classList.add("is-sell");
-      if (primaryImg) primaryImg.src = "assets/pvp/btn-sell.png";
+
       if (primaryLabel) primaryLabel.textContent = "卖出";
       primary.disabled = closed || !view?.me?.canSell;
     } else {
@@ -416,7 +416,7 @@ function paintActions() {
       primary.setAttribute("aria-label", "买入");
       primary.classList.remove("is-sell");
       primary.classList.add("is-buy");
-      if (primaryImg) primaryImg.src = "assets/pvp/btn-buy.png";
+
       if (primaryLabel) primaryLabel.textContent = "买入";
       primary.disabled = closed || !wantBuy;
     }
@@ -428,6 +428,12 @@ function paintActions() {
   }
   const msgOpen = document.getElementById("pvpMsgOpen");
   if (msgOpen) msgOpen.disabled = !playing;
+  // ctl skins: locked = this round submitted (solid), disabled = not allowed now.
+  const roundLocked = postedLock || pendingNetwork || isSubmitting() || !!view?.me?.lockedToday;
+  if (primary && playing) syncTradeCtl(primary, { kind: wantSell ? "sell" : "buy", disabled: primary.disabled, locked: roundLocked && primary.disabled });
+  if (primaryImg && primary) primaryImg.src = `assets/controls/ctl-${wantSell ? "sell" : "buy"}-${primary.dataset.state === "locked" ? "locked" : primary.disabled ? "disabled" : "default"}.png`;
+  if (hold && playing) syncTradeCtl(hold, { kind: "hold", disabled: hold.disabled, locked: roundLocked && hold.disabled });
+  if (msgOpen) syncTradeCtl(msgOpen, { kind: "msg", disabled: msgOpen.disabled });
   if (view?.status !== "playing") return;
   const submitting = isSubmitting();
   const locked = postedLock || pendingNetwork || submitting || !!view?.me?.lockedToday;
@@ -528,6 +534,12 @@ function render() {
     const readyLeft = remainingMs(view.readyDeadlineAt, view.serverNow, fetchedAt);
     if (readyBtn) readyBtn.disabled = !!view.me?.ready || readyInFlight || (readyLeft != null && readyLeft <= 0);
     if (cancelBtn) cancelBtn.disabled = readyInFlight;
+    if (readyBtn) {
+      if (readyInFlight) setCtlState(readyBtn, "loading", { syncImg: false });
+      else if (view.me?.ready) setCtlState(readyBtn, "success", { syncImg: false });
+      else setCtlState(readyBtn, readyBtn.disabled ? "disabled" : "default", { syncImg: false, forceDisabled: false });
+    }
+    if (cancelBtn) cancelBtn.hidden = !view.me?.ready;
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
@@ -586,6 +598,7 @@ async function postAction(action) {
       setText("pvpActionError", "网络中断，正在核对是否已经提交");
     } else {
       setText("pvpActionError", err.message || "这步没能提交");
+      shakeError(document.getElementById(action === "hold" ? "pvpHold" : "pvpTradePrimary"));
     }
   } finally {
     setSubmitting(false);
@@ -630,6 +643,7 @@ async function postReady() {
     await refresh();
   } catch (err) {
     setText("pvpActionError", err.message || "准备没能提交");
+    shakeError(document.getElementById("pvpReadyBtn"));
   } finally {
     readyInFlight = false;
     if (matchId) render();

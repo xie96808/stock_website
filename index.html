@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
+    <link rel="stylesheet" href="css/controls.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -470,7 +471,7 @@
                     <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
                     <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
                 </ul>
-                <p id="pvpLobbyLoading" hidden>大厅加载中…</p>
+                <p id="pvpLobbyLoading" class="ctl-loading-host" hidden>大厅加载中…</p>
                 <div id="pvpLobbyGuest" hidden>
                     <p>登录后才能约战。游客只能查看规则和在线人数。</p>
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
@@ -538,8 +539,8 @@
                 <div id="pvpReadyPanel" hidden>
                     <p id="pvpReadyCopy">双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>，平局退回 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
                     <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpReadyBtn">准备</button>
-                        <button type="button" class="pvp-btn" id="pvpCancelReadyBtn">取消准备</button>
+                        <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-ready" id="pvpReadyBtn" data-ctl="ready" data-ctl-kind="ready" data-state="default"><span class="ctl-label">准备</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-cancel-ready" id="pvpCancelReadyBtn" data-ctl="cancel-ready" data-ctl-kind="cancel-ready" data-state="default"><span class="ctl-label">取消准备</span></button>
                     </div>
                 </div>
                 <div id="pvpPlayPanel" hidden>
@@ -554,16 +555,16 @@
                         </div>
                     </div>
                     <div class="pvp-trade-bar" id="pvpTradeSegment" role="group" aria-label="买卖与消息">
-                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy" id="pvpTradePrimary" data-action="buy" aria-label="买入">
-                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/pvp/btn-buy.png" width="190" height="80" alt="" aria-hidden="true">
-                            <span class="pvp-sketch-label" id="pvpTradePrimaryLabel">买入</span>
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy ctl ctl-buy has-chrome-img" id="pvpTradePrimary" data-action="buy" data-ctl="buy" data-ctl-kind="buy" data-state="default" aria-label="买入">
+                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/controls/ctl-buy-default.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label ctl-label" id="pvpTradePrimaryLabel">买入</span>
                         </button>
-                        <button type="button" class="pvp-sketch-ctl pvp-msg-open" id="pvpMsgOpen" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
-                            <img class="pvp-sketch-icon" src="assets/pvp/btn-message.png" width="80" height="80" alt="" aria-hidden="true">
+                        <button type="button" class="pvp-sketch-ctl pvp-msg-open ctl ctl-msg has-chrome-img" id="pvpMsgOpen" data-ctl="msg" data-ctl-kind="msg" data-state="default" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
+                            <img class="pvp-sketch-icon" src="assets/controls/ctl-msg-default.png" width="80" height="80" alt="" aria-hidden="true">
                         </button>
-                        <button type="button" class="pvp-sketch-ctl pvp-trade-hold" id="pvpHold" data-action="hold" aria-label="保持">
-                            <img class="pvp-sketch-chrome" src="assets/pvp/btn-hold.png" width="190" height="80" alt="" aria-hidden="true">
-                            <span class="pvp-sketch-label">保持</span>
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-hold ctl ctl-hold has-chrome-img" id="pvpHold" data-action="hold" data-ctl="hold" data-ctl-kind="hold" data-state="default" aria-label="保持">
+                            <img class="pvp-sketch-chrome" src="assets/controls/ctl-hold-default.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label ctl-label">保持</span>
                         </button>
                         <button type="button" id="pvpBuy" data-action="buy" hidden>买入</button>
                         <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
@@ -589,9 +590,9 @@
                     <h3 id="pvpLeaveTitle">离开这局？</h3>
                     <p>回到大厅后，这局的计时仍会继续。认输会立刻结束。</p>
                     <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLeaveStay">留下</button>
-                        <button type="button" class="pvp-btn" id="pvpLeaveLobby">回到大厅（计时继续）</button>
-                        <button type="button" class="pvp-btn" id="pvpLeaveForfeit">认输</button>
+                        <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpLeaveStay" data-ctl="primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">留下</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLeaveLobby" data-ctl="secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">回到大厅（计时继续）</span></button>
+                        <button type="button" class="pvp-btn ctl ctl-danger" id="pvpLeaveForfeit" data-ctl="danger" data-ctl-kind="danger" data-state="default"><span class="ctl-label">认输</span></button>
                     </div>
                 </div>
             </div>
@@ -735,9 +736,9 @@
                 <p id="pvpInviteCopy"></p>
                 <p id="pvpInviteNote"></p>
                 <div class="pvp-actions">
-                    <button type="button" class="pvp-btn" id="pvpInviteIgnore">忽略</button>
-                    <button type="button" class="pvp-btn" id="pvpInviteDecline">拒绝</button>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpInviteAccept">接受</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpInviteIgnore" data-ctl="secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">忽略</span></button>
+                    <button type="button" class="pvp-btn ctl ctl-danger" id="pvpInviteDecline" data-ctl="danger" data-ctl-kind="danger" data-state="default"><span class="ctl-label">拒绝</span></button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpInviteAccept" data-ctl="primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">接受</span></button>
                 </div>
             </div>
         </div>
@@ -862,9 +863,9 @@
 
                     <!-- 操作区 -->
                     <div class="action-zone">
-                        <button class="action-btn buy" id="buyBtn" onclick="handleAction('buy')">买入</button>
-                        <button class="action-btn sell" id="sellBtn" onclick="handleAction('sell')">卖出</button>
-                        <button type="button" class="action-btn hold" id="holdBtn">观望</button>
+                        <button type="button" class="action-btn buy ctl ctl-buy" id="buyBtn" data-ctl="buy" data-ctl-kind="buy" data-state="default" onclick="handleAction('buy')"><span class="ctl-label">买入</span></button>
+                        <button type="button" class="action-btn sell ctl ctl-sell" id="sellBtn" data-ctl="sell" data-ctl-kind="sell" data-state="default" onclick="handleAction('sell')"><span class="ctl-label">卖出</span></button>
+                        <button type="button" class="action-btn hold ctl ctl-hold" id="holdBtn" data-ctl="hold" data-ctl-kind="hold" data-state="default"><span class="ctl-label">观望</span></button>
                         <button type="button" class="action-btn ff" id="fastForwardBtn" hidden aria-pressed="false">快进</button>
                         <button class="action-btn hold" id="finishBtn" onclick="finishSettle()" hidden>结束并结算</button>
                         <button type="button" class="action-btn rewind" id="rewindBtn" onclick="openRewindConfirm()" hidden aria-label="反悔">

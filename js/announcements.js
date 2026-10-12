@@ -4,6 +4,7 @@
  */
 
 import { formatShanghaiDateTime } from "./time.js";
+import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 const API = "/api/v1";
 const STORAGE_KEY = "stockgame_announcements_dismissed_day";
 
@@ -137,7 +138,7 @@ async function fetchAnnouncements() {
 
 export function closeAnnouncementsModal() {
   const modal = document.getElementById("announcementsModal");
-  if (modal) modal.hidden = true;
+  if (modal) closeCtlOverlay(modal);
 }
 
 export async function openAnnouncementsModal({ force = true } = {}) {
@@ -145,7 +146,7 @@ export async function openAnnouncementsModal({ force = true } = {}) {
   const items = cachedItems ?? (await fetchAnnouncements());
   renderList(items);
   const modal = document.getElementById("announcementsModal");
-  if (modal) modal.hidden = false;
+  if (modal && modal.hidden) openCtlOverlay(modal);
   return items;
 }
 
@@ -190,6 +191,6 @@ export async function initAnnouncements() {
   renderList(items);
   if (items.length && !isDismissedToday()) {
     const modal = document.getElementById("announcementsModal");
-    if (modal) modal.hidden = false;
+    if (modal && modal.hidden) openCtlOverlay(modal);
   }
 }

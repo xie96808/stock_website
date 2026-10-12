@@ -2,6 +2,7 @@
  * User feedback to developer — entry from settings modal 「反馈」.
  * Text required; 1–3 optional JPEG/PNG/WebP images (client-compressed).
  */
+import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 import { api, apiMultipart, showToast, getAuthState, openAuthModal, selectIsAuthenticated } from "./auth.js";
 
 const MAX_IMAGES = 3;
@@ -213,13 +214,12 @@ export function openFeedbackModal() {
   clearPreviews();
   // Sit above 资料设置 (auth z-index 150). Keep settings open underneath.
   const modal = document.getElementById("feedbackModal");
-  modal.hidden = false;
-  body?.focus();
+  openCtlOverlay(modal, { focusSelector: "#feedbackBody" });
 }
 
 export function closeFeedbackModal() {
   const modal = document.getElementById("feedbackModal");
-  if (modal) modal.hidden = true;
+  if (modal) closeCtlOverlay(modal);
   setError("");
   clearPreviews();
 }
