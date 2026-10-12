@@ -14,6 +14,7 @@
 //   4. Rewrite HTML entry points (index.html not renamed; stays bustable)
 //
 // Skips remote/data/blob URLs. Does not double-hash already-fingerprinted names.
+// Images under assets/ stay unhashed (stable paths for JS string assignment).
 // Local dev without packaging keeps unhashed sources.
 //
 // Usage: node deploy/fingerprint-assets.mjs <release-dir>
@@ -265,6 +266,9 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
     if (ASSET_EXT_RE.test(ext)) {
       textAssets.set(file, readFileSync(file, "utf8"));
     } else if (fingerprintImages && IMAGE_EXT_RE.test(ext)) {
+      // Keep assets/ URLs stable (JS assigns paths by string, e.g. pvp btn-buy/sell).
+      const relImg = relative(rootResolved, file).split(sep).join("/");
+      if (relImg === "assets" || relImg.startsWith("assets/")) continue;
       imageAssets.add(file);
     }
   }
