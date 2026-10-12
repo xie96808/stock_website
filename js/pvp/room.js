@@ -297,6 +297,7 @@ function paintActions() {
   const wantSell = holding && !!view?.me?.canSell;
   const wantBuy = !holding && !!view?.me?.canBuy;
   const primaryImg = document.getElementById("pvpTradePrimaryImg");
+  const primaryLabel = document.getElementById("pvpTradePrimaryLabel");
   if (primary) {
     primary.hidden = !playing;
     if (wantSell) {
@@ -305,6 +306,7 @@ function paintActions() {
       primary.classList.remove("is-buy");
       primary.classList.add("is-sell");
       if (primaryImg) primaryImg.src = "assets/pvp/btn-sell.png";
+      if (primaryLabel) primaryLabel.textContent = "卖出";
       primary.disabled = closed || !view?.me?.canSell;
     } else {
       primary.dataset.action = "buy";
@@ -312,6 +314,7 @@ function paintActions() {
       primary.classList.remove("is-sell");
       primary.classList.add("is-buy");
       if (primaryImg) primaryImg.src = "assets/pvp/btn-buy.png";
+      if (primaryLabel) primaryLabel.textContent = "买入";
       primary.disabled = closed || !wantBuy;
     }
   }

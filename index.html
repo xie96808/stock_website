@@ -547,14 +547,16 @@
                         </div>
                     </div>
                     <div class="pvp-trade-bar" id="pvpTradeSegment" role="group" aria-label="买卖与消息">
-                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary" id="pvpTradePrimary" data-action="buy" aria-label="买入">
-                            <img class="pvp-sketch-face" id="pvpTradePrimaryImg" src="assets/pvp/btn-buy.png" width="209" height="88" alt="">
+                        <button type="button" class="pvp-sketch-ctl pvp-trade-primary is-buy" id="pvpTradePrimary" data-action="buy" aria-label="买入">
+                            <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/pvp/btn-buy.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label" id="pvpTradePrimaryLabel">买入</span>
                         </button>
                         <button type="button" class="pvp-sketch-ctl pvp-msg-open" id="pvpMsgOpen" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
-                            <img class="pvp-sketch-face" src="assets/pvp/btn-message.png" width="148" height="88" alt="">
+                            <img class="pvp-sketch-icon" src="assets/pvp/btn-message.png" width="80" height="80" alt="" aria-hidden="true">
                         </button>
                         <button type="button" class="pvp-sketch-ctl pvp-trade-hold" id="pvpHold" data-action="hold" aria-label="保持">
-                            <img class="pvp-sketch-face" src="assets/pvp/btn-hold.png" width="198" height="88" alt="">
+                            <img class="pvp-sketch-chrome" src="assets/pvp/btn-hold.png" width="190" height="80" alt="" aria-hidden="true">
+                            <span class="pvp-sketch-label">保持</span>
                         </button>
                         <button type="button" id="pvpBuy" data-action="buy" hidden>买入</button>
                         <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
