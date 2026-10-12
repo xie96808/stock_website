@@ -3,18 +3,24 @@ package top.xieyw.stockgame
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.util.TypedValue
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import org.json.JSONObject
@@ -136,7 +142,10 @@ class AppUpdater(private val activity: AppCompatActivity) {
                     .apply()
             }
         }
-        dialog = b.show().also { it.setCanceledOnTouchOutside(!forced) }
+        dialog = b.show().also {
+            it.setCanceledOnTouchOutside(!forced)
+            styleUpdateDialog(it)
+        }
     }
 
     private fun startDownload(m: UpdateManifest, forced: Boolean) {
@@ -145,7 +154,13 @@ class AppUpdater(private val activity: AppCompatActivity) {
         cancelDownload = false
         val pad = (20 * activity.resources.displayMetrics.density).toInt()
         val label = TextView(activity).apply { text = activity.getString(R.string.update_downloading) }
-        val bar = LinearProgressIndicator(activity).apply { isIndeterminate = true; max = 100 }
+        val bar = LinearProgressIndicator(activity).apply {
+            isIndeterminate = true
+            max = 100
+            setIndicatorColor(PROGRESS_INDICATOR)
+            trackColor = PROGRESS_TRACK
+            trackThickness = (8 * activity.resources.displayMetrics.density).toInt()
+        }
         val box = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad / 2, pad, 0)
@@ -158,7 +173,10 @@ class AppUpdater(private val activity: AppCompatActivity) {
             .setCancelable(false)
         if (!forced) b.setNegativeButton(R.string.update_cancel) { _, _ -> cancelDownload = true }
         dialog?.dismiss()
-        dialog = b.show().also { it.setCanceledOnTouchOutside(false) }
+        dialog = b.show().also {
+            it.setCanceledOnTouchOutside(false)
+            styleUpdateDialog(it)
+        }
 
         io.execute {
             val result = runCatching {
@@ -225,6 +243,7 @@ class AppUpdater(private val activity: AppCompatActivity) {
                     if (!forced) setNegativeButton(R.string.update_later) { _, _ -> pendingInstall = null }
                 }
                 .show()
+                .also { styleUpdateDialog(it) }
             return
         }
         pendingInstall = null
@@ -332,6 +351,32 @@ class AppUpdater(private val activity: AppCompatActivity) {
         if (!destroyed) Toast.makeText(activity, msg, Toast.LENGTH_SHORT).show()
     }
 
+    /** Dialog colorPrimary is the pale status bar, so tint these buttons in place. */
+    private fun styleUpdateDialog(shown: AlertDialog) {
+        val radius = 10f * activity.resources.displayMetrics.density
+        styleUpdateButton(shown.getButton(AlertDialog.BUTTON_POSITIVE), BUTTON_FILL, Color.WHITE, radius)
+        styleUpdateButton(shown.getButton(AlertDialog.BUTTON_NEGATIVE), BUTTON_LATER, BUTTON_LATER_TEXT, radius)
+    }
+
+    private fun styleUpdateButton(button: Button?, fill: Int, text: Int, radius: Float) {
+        if (button == null) return
+        button.setTextColor(text)
+        button.isAllCaps = false
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        button.minHeight = (48 * activity.resources.displayMetrics.density).toInt()
+        if (button is MaterialButton) {
+            button.backgroundTintList = ColorStateList.valueOf(fill)
+            button.cornerRadius = radius.toInt()
+            button.insetTop = 0
+            button.insetBottom = 0
+        } else {
+            button.background = GradientDrawable().apply {
+                setColor(fill)
+                cornerRadius = radius
+            }
+        }
+    }
+
     private class CancelledException : IOException("cancelled")
     private class ChecksumException : IOException("sha256 mismatch")
 
@@ -345,6 +390,11 @@ class AppUpdater(private val activity: AppCompatActivity) {
         private const val KEY_LAST_CHECK = "last_check_ms"
         private const val KEY_SKIP_CODE = "skipped_version_code"
         private const val KEY_SKIP_AT = "skipped_at_ms"
+        private val BUTTON_FILL = Color.parseColor("#C45C3A")
+        private val BUTTON_LATER = Color.parseColor("#2C2824")
+        private val BUTTON_LATER_TEXT = Color.parseColor("#F6E7C1")
+        private val PROGRESS_INDICATOR = Color.parseColor("#8A5A32")
+        private val PROGRESS_TRACK = Color.parseColor("#C4B49A")
     }
 }
 

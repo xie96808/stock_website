@@ -57,14 +57,33 @@
   letter-spacing: 0.04em;
 }
 
-#pvpResultIdentity.pvp-stock-name {
-  margin: 0 0 0.65rem;
+.pvp-stock-name {
+  margin: 0 0 0.2rem;
   font-family: var(--kaiti);
   font-size: clamp(1.45rem, 5vw, 2rem);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--ink);
   line-height: 1.3;
+}
+
+.pvp-stock-period {
+  margin: 0 0 0.75rem;
+  font-family: var(--mono);
+  font-size: clamp(0.95rem, 3.4vw, 1.08rem);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.pvp-settle-card .pvp-stock-name {
+  font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+  overflow-wrap: anywhere;
+}
+
+.pvp-settle-card .pvp-stock-period {
+  margin: 0 0 0.7rem;
+  font-size: clamp(0.88rem, 3.2vw, 1rem);
 }
 
 .pvp-clock {
@@ -533,20 +552,25 @@
 }
 
 .pvp-seat-face {
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.28rem;
+  justify-content: center;
   flex: none;
 }
 
 .pvp-ready-mark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 1;
   width: 18px;
   height: 18px;
   border-radius: 50%;
   border: 1.5px solid var(--line);
-  background: transparent;
+  background: var(--paper);
   box-sizing: border-box;
+  pointer-events: none;
 }
 
 .pvp-ready-mark[data-ready="1"] {
@@ -867,6 +891,10 @@
   animation: pvp-rise 0.42s ease;
 }
 
+.pvp-screen.pvp-instant.active .pvp-wrap {
+  animation: none;
+}
+
 #pvpReadyPanel:not([hidden]),
 #pvpPlayPanel:not([hidden]) {
   animation: pvp-rise 0.38s ease;
@@ -933,6 +961,46 @@
   margin: 0.4rem 0 0.8rem;
 }
 
+.pvp-gift-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.pvp-gift-row .pvp-gift-send {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0.28rem 0.1rem 0.32rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.08rem;
+  font-family: var(--sans);
+  font-size: clamp(0.68rem, 2.8vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+}
+
+.pvp-gift-glyph {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.pvp-gift-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pvp-gift-send.is-sent .pvp-gift-glyph {
+  animation: pvp-send-pop 0.42s ease;
+}
+
 .pvp-gift-stage {
   position: fixed;
   inset: 0;
@@ -944,63 +1012,91 @@
 .pvp-gift {
   position: absolute;
   left: 50%;
-  top: 38%;
-  width: min(16rem, 80vw);
+  top: 32%;
+  width: min(22rem, 92vw);
   text-align: center;
-  animation: pvp-gift-life 2.6s ease forwards;
-}
-
-.pvp-gift p {
-  margin: 0.35rem 0 0;
-  font-family: var(--kaiti);
-  font-size: 1.35rem;
-  letter-spacing: 0.12em;
-  color: var(--ink);
+  transform: translateX(-50%);
+  animation: pvp-gift-hold 1.7s ease forwards;
 }
 
 .pvp-gift-emoji {
+  display: inline-block;
   margin: 0;
-  font-size: 4.2rem;
+  font-size: 4.8rem;
   line-height: 1;
+  filter: drop-shadow(0 10px 14px rgba(44, 36, 28, 0.28));
 }
 
-.pvp-gift-send {
-  font-size: 1.55rem;
-  letter-spacing: 0;
-  min-height: 48px;
+.pvp-gift-caption {
+  display: inline-block;
+  margin: 0.55rem auto 0;
+  padding: 0.42rem 0.95rem;
+  border-radius: 999px;
+  background: #2c241c;
+  color: #f6e7c1;
+  font-family: var(--sans);
+  font-size: clamp(1.2rem, 4.8vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  box-shadow: 0 10px 28px rgba(44, 36, 28, 0.35);
+  animation: pvp-caption-in 1.7s ease forwards;
 }
 
-.pvp-gift-flower { animation: pvp-gift-bloom 2.6s ease forwards; }
-.pvp-gift-tomato { top: 8%; animation: pvp-gift-drop 2.6s ease forwards; }
-.pvp-gift-pipe .pvp-smoke { animation: pvp-smoke 2.6s ease-out forwards; }
+.pvp-gift-flower .pvp-gift-emoji { animation: pvp-prop-flower 1.7s ease forwards; }
+.pvp-gift-tomato .pvp-gift-emoji { animation: pvp-prop-tomato 1.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
+.pvp-gift-pipe .pvp-gift-emoji { animation: pvp-prop-pipe 1.7s ease forwards; }
+.pvp-gift-coffee .pvp-gift-emoji { animation: pvp-prop-coffee 1.7s ease forwards; }
 
-@keyframes pvp-gift-life {
-  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.7); }
-  14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  75% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -68%) scale(1.04); }
+@keyframes pvp-send-pop {
+  0% { transform: scale(1); }
+  45% { transform: translateY(-12px) scale(1.4); }
+  100% { transform: none; }
 }
 
-@keyframes pvp-gift-bloom {
-  0% { opacity: 0; transform: translate(-50%, -20%) scale(0.4) rotate(-8deg); }
-  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(0deg); }
-  75% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, -70%) scale(1.12); }
+@keyframes pvp-gift-hold {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  78% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
-@keyframes pvp-gift-drop {
-  0% { opacity: 0; transform: translate(-50%, -10vh) scale(0.8); }
-  28% { opacity: 1; transform: translate(-50%, 28vh) scale(1); }
-  40% { transform: translate(-50%, 30vh) scale(1.15, 0.8); }
-  52% { transform: translate(-50%, 28vh) scale(1); }
-  80% { opacity: 1; }
-  100% { opacity: 0; transform: translate(-50%, 24vh) scale(1.05); }
+@keyframes pvp-caption-in {
+  0% { opacity: 0; transform: translateY(10px) scale(0.86); }
+  16% { opacity: 1; transform: none; }
+  100% { opacity: 1; }
 }
 
-@keyframes pvp-smoke {
-  from { opacity: 0; transform: translateY(6px); }
-  30% { opacity: 0.8; }
-  to { opacity: 0; transform: translateY(-16px); }
+@keyframes pvp-prop-flower {
+  0% { opacity: 0; transform: translate(-70px, 64px) scale(0.25) rotate(-20deg); }
+  22% { opacity: 1; }
+  46% { transform: translate(8px, -12px) scale(1.22) rotate(10deg); }
+  64% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { transform: translate(0, -14px) scale(1.06); }
+}
+
+@keyframes pvp-prop-tomato {
+  0% { opacity: 0; transform: translate(-150px, -36px) rotate(-28deg) scale(0.55); }
+  34% { opacity: 1; transform: translate(10px, 8px) rotate(14deg) scale(1.22, 0.68); }
+  48% { transform: translate(0, 0) rotate(0deg) scale(0.9, 1.16); }
+  62% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(8px, 12px) scale(0.98); }
+}
+
+@keyframes pvp-prop-pipe {
+  0% { opacity: 0; transform: translate(130px, 18px) scale(0.35); }
+  24% { opacity: 1; }
+  48% { transform: translate(-10px, -22px) scale(1.28); }
+  70% { transform: translate(0, -30px) scale(1.05); }
+  100% { transform: translate(16px, -52px) scale(1.18); }
+}
+
+@keyframes pvp-prop-coffee {
+  0% { opacity: 0; transform: translateY(88px) rotate(-18deg) scale(0.65); }
+  32% { opacity: 1; transform: translateY(-8px) rotate(8deg) scale(1.1); }
+  48% { transform: translateY(5px) rotate(-4deg) scale(0.96); }
+  64% { transform: translateY(0) rotate(0deg) scale(1); }
+  100% { transform: translateY(-8px) scale(1.05); }
 }
 
 .pvp-analysis-note {
@@ -1017,8 +1113,14 @@
   #pvpPlayPanel,
   .pvp-ready-mark,
   .pvp-gift,
-  .pvp-gift-pipe .pvp-smoke {
+  .pvp-gift-emoji,
+  .pvp-gift-caption,
+  .pvp-gift-send.is-sent .pvp-gift-glyph {
     animation: none;
+  }
+  .pvp-gift,
+  .pvp-gift-caption {
+    opacity: 1;
   }
 }
 

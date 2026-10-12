@@ -136,6 +136,8 @@ test("a completed match reveals identity and all 30 bars; a forfeit does not", (
     nicknames: { 2: "对手甲" },
   });
   assert.equal(done.identity.stockCode, "600000");
+  assert.equal(done.identity.periodStart, "2024-01-01");
+  assert.equal(done.identity.periodEnd, "2024-01-30");
   assert.equal(done.market.bars.length, 30);
   assert.equal(done.round, null);
 
@@ -151,6 +153,7 @@ test("a completed match reveals identity and all 30 bars; a forfeit does not", (
     nicknames: { 2: "对手甲" },
   });
   assert.equal(stopped.identity, undefined);
+  assert.equal(JSON.stringify(stopped).includes("2024-01-01"), false);
   assert.equal(stopped.market.bars.length, 2);
   assert.equal(stopped.me.mtmPpm, 100000);
   assert.equal(JSON.stringify(stopped).includes("600000"), false);

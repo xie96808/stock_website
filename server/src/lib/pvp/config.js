@@ -5,7 +5,7 @@ export const PVP_VERSION = "pvp-v1";
 export const ECONOMY_VERSION = "pvp-eco-v1";
 export { PVP_RATING_VERSION };
 
-export const READY_MS = 10_000;
+export const READY_MS = 30_000;
 export const CHALLENGE_MS = 20_000;
 export const SHARE_MS = 10 * 60 * 1000;
 export const REVEAL_GAP_MS = 1_000;

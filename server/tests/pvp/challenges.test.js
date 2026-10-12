@@ -18,6 +18,7 @@ const {
   pairKey,
 } = await import("../../src/lib/pvp/challenges.js");
 const { blockUser } = await import("../../src/lib/pvp/eligibility.js");
+const { READY_MS } = await import("../../src/lib/pvp/config.js");
 
 config.pvpBattleEnabled = true;
 
@@ -114,7 +115,7 @@ test("C03 ready timeout, cancel, and a poor second player leave both balances un
   const b = user("c03b");
   const created = createChallenge(db, { fromUserId: a, toUserId: b, createKey: key("time"), now: NOW });
   const accepted = acceptChallenge(db, { challengeId: created.challenge.id, userId: b, now: NOW });
-  expireDueReady(db, NOW + 10_000);
+  expireDueReady(db, NOW + READY_MS);
   const expired = db.prepare(`SELECT status, terminal_reason FROM pvp_matches WHERE id = ?`).get(accepted.matchId);
   assert.equal(expired.status, "aborted");
   assert.equal(expired.terminal_reason, "ready_timeout");

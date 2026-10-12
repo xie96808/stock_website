@@ -458,9 +458,9 @@
                 </div>
                 <p id="pvpLobbyClosed" hidden></p>
                 <ul class="pvp-rules">
-                    <li>双方各付 20 韭币。</li>
-                    <li>胜者到账 35（净赚 15），负者净减 20。</li>
-                    <li>平局各退 20。</li>
+                    <li>双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
+                    <li>胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
+                    <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
                     <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
                 </ul>
                 <div id="pvpLobbyGuest">
@@ -514,10 +514,10 @@
                     </div>
                 </div>
                 <div id="pvpReadyPanel" hidden>
-                    <p id="pvpReadyCopy">双方各付 20 韭币。胜者到账 35（净赚 15），负者净减 20，平局退回 20。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
+                    <p id="pvpReadyCopy">双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>，平局退回 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</p>
                     <div class="pvp-clock" id="pvpReadyClock" aria-live="polite">
                         <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
-                        <strong class="pvp-clock-num" id="pvpReadyClockNum">10</strong>
+                        <strong class="pvp-clock-num" id="pvpReadyClockNum">30</strong>
                         <span class="pvp-clock-unit">秒</span>
                     </div>
                     <div class="pvp-actions">
@@ -530,10 +530,6 @@
                         <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
                         <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
                         <span class="pvp-clock-unit">秒</span>
-                    </div>
-                    <div class="pvp-status-row">
-                        <div class="pvp-status" id="pvpSelfLock" data-state="open">我 · 尚未锁定</div>
-                        <div class="pvp-status" id="pvpOppLock" data-state="open">对手 · 未锁定</div>
                     </div>
                     <div class="pvp-score-row">
                         <div class="pvp-score">
@@ -572,10 +568,11 @@
         <section class="pvp-screen" id="pvpResultScreen">
             <div class="pvp-wrap">
                 <div class="pvp-head">
-                    <button type="button" class="pvp-back" id="pvpResultBack" onclick="showPvpLobby()">← 返回大厅</button>
+                    <button type="button" class="pvp-back" id="pvpResultBack" onclick="showPvpLobby({ instant: true })">← 返回大厅</button>
                     <h2 id="pvpResultHeadline">对战结果</h2>
                 </div>
                 <p class="pvp-stock-name" id="pvpResultIdentity" hidden></p>
+                <p class="pvp-stock-period" id="pvpResultPeriod" hidden></p>
                 <p id="pvpResultReason"></p>
                 <div class="pvp-score-row">
                     <div class="pvp-score" id="pvpResultMeCard">
@@ -638,10 +635,11 @@
                 </div>
                 <div class="pvp-gifts" id="pvpGifts" hidden>
                     <p class="pvp-kicker">送给对手</p>
-                    <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower" aria-label="鲜花">🌸</button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato" aria-label="臭番茄">🍅</button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe" aria-label="烟斗">🚬</button>
+                    <div class="pvp-gift-row">
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower" aria-label="花花"><span class="pvp-gift-glyph" aria-hidden="true">🌸</span><span class="pvp-gift-name">花花</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato" aria-label="番茄"><span class="pvp-gift-glyph" aria-hidden="true">🍅</span><span class="pvp-gift-name">番茄</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe" aria-label="电子烟斗"><span class="pvp-gift-glyph" aria-hidden="true">💨</span><span class="pvp-gift-name">电子烟斗</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="coffee" aria-label="咖啡"><span class="pvp-gift-glyph" aria-hidden="true">☕</span><span class="pvp-gift-name">咖啡</span></button>
                     </div>
                     <p id="pvpGiftNote"></p>
                 </div>
@@ -655,20 +653,20 @@
                     <div class="pvp-fireworks" id="pvpFireworks" hidden aria-hidden="true"></div>
                     <p class="pvp-kicker">这局</p>
                     <h3 id="pvpWinTitle">对战结果</h3>
+                    <p class="pvp-stock-name" id="pvpWinIdentity" hidden></p>
+                    <p class="pvp-stock-period" id="pvpWinPeriod" hidden></p>
                     <div class="pvp-settle-grid">
                         <div class="pvp-settle-side">
                             <img id="pvpWinMeAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <strong id="pvpWinMeName">我</strong>
                             <span class="pvp-settle-return" id="pvpWinMeReturn">—</span>
                             <span class="pvp-settle-meta" id="pvpWinMeCoin"></span>
-                            <span class="pvp-settle-meta" id="pvpWinMeMdd"></span>
                         </div>
                         <div class="pvp-settle-side">
                             <img id="pvpWinOppAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
                             <strong id="pvpWinOppName">对手</strong>
                             <span class="pvp-settle-return" id="pvpWinOppReturn">—</span>
                             <span class="pvp-settle-meta" id="pvpWinOppCoin"></span>
-                            <span class="pvp-settle-meta" id="pvpWinOppMdd"></span>
                         </div>
                     </div>
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">知道了</button>
@@ -679,7 +677,7 @@
         <section class="pvp-screen" id="pvpHistoryScreen">
             <div class="pvp-wrap">
                 <div class="pvp-head">
-                    <button type="button" class="pvp-back" id="pvpHistoryBack" onclick="showPvpLobby()">← 返回</button>
+                    <button type="button" class="pvp-back" id="pvpHistoryBack" onclick="showPvpLobby({ instant: true })">← 返回</button>
                     <h2>对战档案</h2>
                 </div>
                 <p>战绩只对你自己可见。</p>
@@ -1326,6 +1324,9 @@
             registerHashRoute,
             initAppHashRouting,
             parseRouteHash,
+            prepareScreen,
+            activateScreen,
+            setRouteHash,
         } from './js/screen-router.js';
         import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
         import { closePuzzleSettleModal, returnToPuzzleListFromSettleModal } from './js/puzzle-settle-modal.js';
@@ -1466,8 +1467,15 @@
         registerHashRoute(Route.PVP_HISTORY, () => {
             import('./js/pvp/profile-battle.js').then((mod) => mod.showPvpHistory()).catch(() => {});
         });
-        window.showPvpLobby = function () {
-            import('./js/pvp/lobby.js').then((mod) => mod.showPvpLobby()).catch(() => {});
+        window.showPvpLobby = function (opts) {
+            const instant = !!(opts && opts.instant);
+            if (instant) {
+                document.getElementById('pvpLobbyScreen')?.classList.add('pvp-instant');
+                prepareScreen(Route.PVP_LOBBY);
+                activateScreen(Route.PVP_LOBBY);
+                setRouteHash(Route.PVP_LOBBY);
+            }
+            import('./js/pvp/lobby.js').then((mod) => mod.showPvpLobby({ instant })).catch(() => {});
         };
         window.showPvpHistory = function () {
             import('./js/pvp/profile-battle.js').then((mod) => mod.showPvpHistory()).catch(() => {});

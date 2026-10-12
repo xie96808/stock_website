@@ -40,6 +40,14 @@ export function colorReturnHtml(html) {
   );
 }
 
+/** Calendar span of a finished match. Empty until the server reveals it. */
+export function formatWindow(identity) {
+  const start = identity?.periodStart;
+  const end = identity?.periodEnd;
+  if (!start || !end) return "";
+  return `${start} 至 ${end}`;
+}
+
 export function formatCoin(delta) {
   if (delta == null || !Number.isFinite(Number(delta))) return "—";
   const value = Number(delta);

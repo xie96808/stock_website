@@ -1,6 +1,6 @@
 import { publicNickname } from "./names.js";
 
-export const REACTION_KINDS = Object.freeze(["flower", "tomato", "pipe"]);
+export const REACTION_KINDS = Object.freeze(["flower", "tomato", "pipe", "coffee"]);
 const KIND_SET = new Set(REACTION_KINDS);
 const MIN_GAP_MS = 1200;
 const MATCH_CAP = 12;
