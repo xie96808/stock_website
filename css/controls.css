@@ -1105,3 +1105,9 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 }
 .fill-mode-actions .ctl, .rewind-actions .ctl, .jiu-coin-modal-actions .ctl { width: min(170px, 46%) !important; flex: 0 1 auto; }
 .action-btn.ctl.rewind { width: 100% !important; }
+
+/* Regression guard: .ctl sets display, so [hidden] must win (finish/ff/rewind/cancel-ready/block/etc.) */
+.ctl[hidden],
+.action-btn[hidden],
+.pvp-btn[hidden],
+.pvp-sketch-ctl[hidden] { display: none !important; }

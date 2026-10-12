@@ -543,6 +543,8 @@ function render() {
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
+    const staleReady = document.getElementById("pvpReadyBtn");
+    if (staleReady && !readyInFlight && staleReady.dataset.state === "loading") setCtlState(staleReady, "default", { syncImg: false, forceDisabled: false });
     paintTopClocks("playing");
     setText("pvpRoomHeadline", roundCaption(view));
     paintReturn("pvpMeNav", view.me?.mtmPpm);
