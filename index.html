@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="css/leaderboard.css">
     <link rel="stylesheet" href="css/controls.css">
     <link rel="stylesheet" href="css/controls-p4.css">
+    <link rel="stylesheet" href="css/controls-p5.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -336,11 +337,11 @@
         <!-- Academy Screen -->
         <section class="academy-screen" id="academyScreen">
             <div class="academy-header">
+                <button type="button" class="academy-back" onclick="hideAcademy()">← 返回首页</button>
                 <div class="academy-heading">
                     <span class="academy-title">韭菜修炼基地</span>
                     <p class="academy-subtitle">答题可赚韭币 · 训练免费</p>
                 </div>
-                <button class="academy-back" onclick="hideAcademy()">← 返回首页</button>
             </div>
 
             <!-- Academy Landing -->

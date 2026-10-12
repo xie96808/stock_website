@@ -277,3 +277,15 @@ html:not([data-theme="dark"]) #authChip :is(.announcements-btn, .auth-login-btn,
   padding: 6px 10px 7px !important;
   letter-spacing: 0;
 }
+
+/* Desktop: allow a touch more air in the fixed auth chip row (Batch 4). */
+@media (min-width: 900px) {
+  html:not([data-theme="dark"]) .auth-chip :is(.announcements-btn, .auth-login-btn, .jiu-coin-daily-btn),
+  html:not([data-theme="dark"]) #authChip :is(.announcements-btn, .auth-login-btn, .jiu-coin-daily-btn) {
+    padding: 7px 14px 8px !important;
+    letter-spacing: 0.04em;
+  }
+  html:not([data-theme="dark"]) .auth-chip {
+    gap: 10px;
+  }
+}

@@ -31,10 +31,13 @@
 .academy-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     margin-bottom: 20px;
     gap: 12px;
-    padding-right: 118px;
+    /* Clear the fixed top chrome (theme/zoom left + auth/jiu right) so
+       .academy-back is never covered at 1280. Back stays on the left. */
+    padding-top: 52px;
+    padding-right: min(28vw, 320px);
 }
 .academy-heading {
     display: flex;
