@@ -1,6 +1,5 @@
 import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
 import {
-  MIN_ACCOUNT_AGE_MS,
   MIN_CLASSIC_GAMES,
   currentEconomy,
 } from "./config.js";
@@ -23,11 +22,6 @@ function denial(code, message, status) {
   return { ok: false, code, message, status };
 }
 
-
-function accountTooYoung(user, now) {
-  const created = sqliteUtcMs(user.created_at);
-  return !Number.isFinite(created) || now - created < MIN_ACCOUNT_AGE_MS;
-}
 export function classicSettledCount(db, userId) {
   const row = db
     .prepare(
@@ -64,9 +58,6 @@ export function assessSelf(db, userId, now, economy = currentEconomy(now)) {
   if (!user || user.status !== "active") {
     return denial("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
   }
-  if (accountTooYoung(user, now)) {
-    return denial("NOT_ELIGIBLE", "注册满 24 小时后才能参加对战", 403);
-  }
   if (classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
     return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);
   }
@@ -86,9 +77,6 @@ export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(
     const user = db.prepare(`SELECT id, status, created_at FROM users WHERE id = ?`).get(userId);
     if (!user || user.status !== "active") {
       return denial("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
-    }
-    if (accountTooYoung(user, now)) {
-      return denial("NOT_ELIGIBLE", "注册满 24 小时后才能参加对战", 403);
     }
     if (classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
       return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);

@@ -180,23 +180,17 @@ test("a block and a full room reject a new match without charging", () => {
   }
 });
 
-test("accounts under 24h and short classic history cannot open a challenge", () => {
+test("a one-hour-old account can open a challenge, and a short classic history cannot", () => {
   const veteran = user("vet");
-  const young = user("young-hour", { createdAt: new Date(NOW - 60 * 60 * 1000).toISOString() });
+  const young = user("young", { createdAt: new Date(NOW - 60 * 60 * 1000).toISOString() });
   const short = user("short", { classics: 2 });
-  const youngDenied = createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW });
-  assert.equal(youngDenied.ok, false);
-  assert.equal(youngDenied.code, "NOT_ELIGIBLE");
-  assert.match(youngDenied.message, /24/);
+  assert.equal(
+    createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW }).ok,
+    true
+  );
   assert.equal(
     createChallenge(db, { fromUserId: short, toUserId: veteran, createKey: key("short"), now: NOW }).code,
     "NOT_ELIGIBLE"
-  );
-  // Just past 24h is eligible (when classics and balance are fine).
-  const okAge = user("day-old", { createdAt: new Date(NOW - 24 * 60 * 60 * 1000 - 1).toISOString() });
-  assert.equal(
-    createChallenge(db, { fromUserId: okAge, toUserId: veteran, createKey: key("day"), now: NOW }).ok,
-    true
   );
 });
 

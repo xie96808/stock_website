@@ -9,7 +9,6 @@ export const READY_MS = 30_000;
 export const CHALLENGE_MS = 20_000;
 export const SHARE_MS = 10 * 60 * 1000;
 export const REVEAL_GAP_MS = 1_000;
-export const MIN_ACCOUNT_AGE_MS = 24 * 60 * 60 * 1000;
 export const MIN_CLASSIC_GAMES = 3;
 export const PAIR_WINDOW_MS = 24 * 60 * 60 * 1000;
 
