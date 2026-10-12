@@ -43,7 +43,7 @@ import {
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
-import { shakeError } from './controls.js';
+import { shakeError, openCtlSheet, closeCtlSheet } from './controls.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
 import {
@@ -620,18 +620,12 @@ export async function openRewindConfirm() {
     const confirmBtn = document.getElementById('rewindConfirmBtn');
     if (confirmBtn) confirmBtn.disabled = !canAfford;
     const modal = document.getElementById('rewindConfirmModal');
-    if (modal) {
-        modal.hidden = false;
-        modal.setAttribute('aria-hidden', 'false');
-    }
+    if (modal) openCtlSheet(modal, { focusSelector: '#rewindCancelBtn' });
 }
 
 function closeRewindConfirm() {
     const modal = document.getElementById('rewindConfirmModal');
-    if (modal) {
-        modal.hidden = true;
-        modal.setAttribute('aria-hidden', 'true');
-    }
+    if (modal && !modal.hidden) closeCtlSheet(modal);
 }
 
 function ensureRewindModal() {
@@ -647,8 +641,8 @@ function ensureRewindModal() {
         <h2 id="rewindConfirmTitle">确认反悔</h2>
         <div id="rewindConfirmBody" class="rewind-body"></div>
         <div class="rewind-actions">
-          <button type="button" class="rewind-btn-secondary" id="rewindCancelBtn">取消</button>
-          <button type="button" class="rewind-btn-primary" id="rewindConfirmBtn">确认反悔</button>
+          <button type="button" class="rewind-btn-secondary ctl ctl-secondary" id="rewindCancelBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">取消</span></button>
+          <button type="button" class="rewind-btn-primary ctl ctl-primary" id="rewindConfirmBtn" data-ctl-kind="primary" data-state="default"><span class="ctl-label">确认反悔</span></button>
         </div>
       </div>`;
     document.body.appendChild(wrap);

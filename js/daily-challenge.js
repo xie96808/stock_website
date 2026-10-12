@@ -1,5 +1,6 @@
 /** F01 每日同题挑战 — hub card + confirm + start/resume/leaderboard */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
+import { openCtlSheet, closeCtlSheet } from './controls.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 import {
   abandonActiveCloudGame,
@@ -187,8 +188,8 @@ function ensureConfirmModal() {
       <p class="jiu-coin-modal-body" id="dailyChallengeConfirmBody"></p>
       <p class="daily-challenge-confirm-cost" id="dailyChallengeConfirmCost"></p>
       <div class="jiu-coin-modal-actions">
-        <button type="button" class="jiu-coin-secondary" id="dailyChallengeConfirmCancel">取消</button>
-        <button type="button" class="jiu-coin-primary" id="dailyChallengeConfirmOk">开始游戏</button>
+        <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="dailyChallengeConfirmCancel" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">取消</span></button>
+        <button type="button" class="jiu-coin-primary ctl ctl-primary" id="dailyChallengeConfirmOk" data-ctl-kind="primary" data-state="default"><span class="ctl-label">开始游戏</span></button>
       </div>
     </div>`;
   document.body.appendChild(wrap);
@@ -204,7 +205,7 @@ function ensureConfirmModal() {
 
 function resolveConfirm(ok) {
   const modal = document.getElementById('dailyChallengeConfirmModal');
-  if (modal) modal.hidden = true;
+  if (modal && !modal.hidden) closeCtlSheet(modal);
   if (!confirmResolver) return;
   const r = confirmResolver;
   confirmResolver = null;
@@ -229,8 +230,7 @@ function askFreshStartConfirm(cost) {
   return new Promise((resolve) => {
     confirmResolver = resolve;
     if (modal) {
-      modal.hidden = false;
-      document.getElementById('dailyChallengeConfirmOk')?.focus();
+      openCtlSheet(modal, { focusSelector: '#dailyChallengeConfirmOk' });
     } else {
       resolve(false);
     }
@@ -265,16 +265,14 @@ function showFillLoadingOnly() {
   if (loading) loading.hidden = false;
   if (title) title.textContent = '正在开局';
   modal.classList.add('is-loading');
-  modal.hidden = false;
-  modal.setAttribute('aria-hidden', 'false');
+  openCtlSheet(modal);
   setFillProgress(6, '准备今日挑战…');
 }
 
 function closeFillModal() {
   const modal = fillModalEl();
   if (!modal) return;
-  modal.hidden = true;
-  modal.setAttribute('aria-hidden', 'true');
+  closeCtlSheet(modal);
   modal.classList.remove('is-loading');
   const choose = document.getElementById('fillModeChoosePane');
   const loading = document.getElementById('fillModeLoadingPane');

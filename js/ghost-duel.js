@@ -3,6 +3,7 @@
  * Flag: features.ghostDuel (GHOST_DUEL_ENABLED). Default off → entry hidden.
  */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
+import { openCtlSheet, closeCtlSheet } from './controls.js';
 import { abandonActiveCloudGame, loadCloudGameDraft } from './game-sync.js';
 import { mustAwaitPackBeforeEnter } from './game-window-seed.js';
 import {
@@ -77,16 +78,14 @@ function showFillLoadingOnly() {
   if (loading) loading.hidden = false;
   if (title) title.textContent = '正在开局';
   modal.classList.add('is-loading');
-  modal.hidden = false;
-  modal.setAttribute('aria-hidden', 'false');
+  openCtlSheet(modal);
   setFillProgress(6, '准备幽灵对局…');
 }
 
 function closeFillModal() {
   const modal = fillModalEl();
   if (!modal) return;
-  modal.hidden = true;
-  modal.setAttribute('aria-hidden', 'true');
+  closeCtlSheet(modal);
   modal.classList.remove('is-loading');
   const choose = document.getElementById('fillModeChoosePane');
   const loading = document.getElementById('fillModeLoadingPane');

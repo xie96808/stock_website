@@ -1,7 +1,7 @@
 /**
  * Handcrafted controls helpers — docs/handcrafted-controls-redesign.md v1.2
  * P0: setCtlState, shakeError, showStampToast, castbar, overlay open/close.
- * P2 TODO: input shells / checkbox / modal-paper when 绘图bot delivers.
+ * Also: bottom sheets (openCtlSheet/closeCtlSheet) + crisis sheet (showCrisisSheet). P2 visuals are CSS-only.
  */
 
 const CTL_STATES = new Set([
@@ -209,8 +209,9 @@ function preferReducedMotion() {
 function enterMs() {
   return preferReducedMotion() ? 120 : 250;
 }
-function exitMs() {
-  return preferReducedMotion() ? 100 : 200;
+function exitMs(overlay) {
+  if (preferReducedMotion()) return 100;
+  return overlay && overlay.classList.contains("ctl-sheet") ? 220 : 200;
 }
 
 function lockScroll() {
@@ -229,9 +230,17 @@ function unlockScroll() {
  */
 export function openCtlOverlay(overlay, opts = {}) {
   if (!overlay) return;
+  if (!overlay.hidden && overlay.classList.contains("is-open") && !overlay.classList.contains("is-leaving")) return;
+  if (overlay._ctlCloseTimer) {
+    window.clearTimeout(overlay._ctlCloseTimer);
+    overlay._ctlCloseTimer = null;
+    overlay._ctlCloseResolve?.();
+  }
   overlay.classList.remove("is-leaving");
   overlayFocusPrev.set(overlay, document.activeElement);
   overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+  if (opts.sheet) overlay.classList.add("ctl-sheet");
   // force reflow before is-open so enter anim plays
   void overlay.offsetWidth;
   overlay.classList.add("is-open");
@@ -255,10 +264,13 @@ export function closeCtlOverlay(overlay, opts = {}) {
   if (overlay.classList.contains("is-leaving")) return Promise.resolve();
   overlay.classList.add("is-leaving");
   overlay.classList.remove("is-open");
-  const ms = opts.ms ?? exitMs();
+  const ms = opts.ms ?? exitMs(overlay);
   return new Promise((resolve) => {
-    window.setTimeout(() => {
+    overlay._ctlCloseResolve = resolve;
+    overlay._ctlCloseTimer = window.setTimeout(() => {
+      overlay._ctlCloseTimer = null;
       overlay.hidden = true;
+      overlay.setAttribute("aria-hidden", "true");
       overlay.classList.remove("is-leaving");
       unlockScroll();
       const prev = overlayFocusPrev.get(overlay);
@@ -338,6 +350,63 @@ export function setChallengeLoading(btn, loading) {
   }
 }
 
+/* ----- Bottom sheets (§6.4: enter 260ms / exit 220ms; crisis = top, no backdrop dismiss) ----- */
+export function openCtlSheet(overlay, opts = {}) {
+  openCtlOverlay(overlay, { ...opts, sheet: true });
+}
+export function closeCtlSheet(overlay, opts = {}) {
+  return closeCtlOverlay(overlay, opts);
+}
+
+/**
+ * Crisis sheet (断线/限额/资格): highest z-index, backdrop click does NOT close.
+ * actions: [{ label, kind: "primary"|"secondary"|"danger", onClick }]
+ */
+export function showCrisisSheet({ title = "", body = "", actions = [] } = {}) {
+  let root = document.getElementById("ctlCrisisSheet");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "ctlCrisisSheet";
+    root.className = "ctl-overlay ctl-sheet ctl-crisis";
+    root.hidden = true;
+    root.innerHTML = `<div class="ctl-panel ctl-sheet-panel ctl-paper" role="alertdialog" aria-modal="true" aria-labelledby="ctlCrisisTitle" aria-describedby="ctlCrisisBody">
+        <h2 id="ctlCrisisTitle"></h2><p id="ctlCrisisBody"></p><div class="ctl-sheet-actions" id="ctlCrisisActions"></div></div>`;
+    // Backdrop click intentionally ignored (强制确认).
+    root.addEventListener("click", (e) => {
+      if (e.target === root) shakeError(root.querySelector(".ctl-panel"));
+    });
+    document.body.appendChild(root);
+  }
+  root.querySelector("#ctlCrisisTitle").textContent = title;
+  root.querySelector("#ctlCrisisBody").textContent = body;
+  const box = root.querySelector("#ctlCrisisActions");
+  box.textContent = "";
+  for (const a of actions) {
+    const b = document.createElement("button");
+    b.type = "button";
+    const kind = a.kind || "primary";
+    b.className = `ctl ctl-${kind}`;
+    b.dataset.ctlKind = kind;
+    b.dataset.state = "default";
+    const s = document.createElement("span");
+    s.className = "ctl-label";
+    s.textContent = a.label || "好";
+    b.appendChild(s);
+    b.addEventListener("click", () => {
+      if (a.close !== false) hideCrisisSheet();
+      a.onClick?.();
+    });
+    box.appendChild(b);
+  }
+  if (root.hidden) openCtlSheet(root, { focusSelector: "#ctlCrisisActions button" });
+  return root;
+}
+export function hideCrisisSheet() {
+  const root = document.getElementById("ctlCrisisSheet");
+  if (root && !root.hidden) return closeCtlSheet(root);
+  return Promise.resolve();
+}
+
 let controlsInited = false;
 
 export function initControls() {
@@ -351,6 +420,15 @@ export function initControls() {
       document.body.classList.remove("ctl-scroll-lock");
     }
   }).observe(document.body, { attributes: true, attributeFilter: ["hidden"], subtree: true });
+  // 断线危机层：离线时弹出强制 sheet，恢复后自动收起。
+  window.addEventListener("offline", () => {
+    showCrisisSheet({
+      title: "网络断开了",
+      body: "正在等待网络恢复。恢复后会自动继续，对局计时以服务器为准。",
+      actions: [{ label: "我知道了", kind: "secondary" }],
+    });
+  });
+  window.addEventListener("online", () => { hideCrisisSheet(); showStampToast("网络已恢复", "success"); });
   // Enhance lobby loading + fill loading with castbar when shown
   const lobbyLoading = document.getElementById("pvpLobbyLoading");
   if (lobbyLoading) {
@@ -384,6 +462,10 @@ if (typeof window !== "undefined") {
     openCtlOverlay,
     closeCtlOverlay,
     syncTradeCtl,
+    openCtlSheet,
+    closeCtlSheet,
+    showCrisisSheet,
+    hideCrisisSheet,
     setChallengeLoading,
     ctlAsset,
     initControls,

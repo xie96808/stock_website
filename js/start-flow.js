@@ -3,7 +3,8 @@
  * attachDeferredStart still sets window.startGame as the modal wrapper (playAgain depends on it).
  */
 
-import { getAuthState, openAuthModal, refreshMe } from './auth.js';
+import { getAuthState, openAuthModal, refreshMe, showToast } from './auth.js';
+import { openCtlSheet, closeCtlSheet, shakeError, ensureCastbar } from './controls.js';
 import {
   createCloudGame,
   fetchActiveCloudGame,
@@ -155,19 +156,14 @@ export function attachDeferredStart(startGame, gameState) {
     if (!modal) return;
     showChooseView();
     syncCreateCostNote();
-    modal.hidden = false;
-    modal.setAttribute('aria-hidden', 'false');
+    openCtlSheet(modal, { focusSelector: 'input[name="fillMode"]:checked' });
     prefetchStocksPack(gameState);
-    const first = modal.querySelector('input[name="fillMode"]:checked');
-    if (first) first.focus();
   }
 
   function closeModal() {
     const modal = modalEl();
     if (!modal) return;
-    modal.hidden = true;
-    modal.setAttribute('aria-hidden', 'true');
-    showChooseView();
+    closeCtlSheet(modal).then(() => { if (modal.hidden) showChooseView(); });
   }
 
   function delay(ms) {
@@ -400,7 +396,8 @@ export function attachDeferredStart(startGame, gameState) {
         console.error(err);
         showChooseView();
         const msg = (err && err.message) ? err.message : '股票数据加载失败，请刷新后重试';
-        window.alert(msg);
+        showToast(msg, 'error');
+        shakeError(document.getElementById('fillModeConfirmBtn'));
       })
       .finally(function () {
         locked = false;
