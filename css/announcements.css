@@ -195,3 +195,10 @@
   background: var(--wash, #c4a07a);
   color: var(--wash-ink, #3a3228);
 }
+
+/* Exit anim (≈200ms): keep the leaving overlay hit-testable so a fast
+   double-tap on 关闭公告 is absorbed instead of falling through to the
+   chrome underneath (e.g. 登录). Handlers no-op while .is-leaving. */
+.announcements-modal.is-leaving {
+  pointer-events: auto !important;
+}
