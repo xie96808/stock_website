@@ -79,6 +79,18 @@ export function fillDossier(node, profile) {
     return;
   }
   node.hidden = false;
+  // Hand-drawn rank card shell (ctl-rank-card): rank icon sits in the left slot.
+  node.classList.add("ctl-rank-card");
+  const emblem = document.createElement("img");
+  emblem.className = "pvp-dossier-emblem";
+  emblem.alt = "";
+  emblem.setAttribute("aria-hidden", "true");
+  emblem.width = 60;
+  emblem.height = 60;
+  emblem.decoding = "async";
+  emblem.src = rankIconPathForTitle(profile.title || "散户一段");
+  emblem.dataset.rank = (emblem.src.match(/rank-([a-z]+)\.png/) || [])[1] || "";
+  emblem.onerror = () => { emblem.hidden = true; };
   const img = document.createElement("img");
   img.className = "pvp-dossier-avatar";
   img.alt = "";
@@ -136,7 +148,7 @@ export function fillDossier(node, profile) {
       record.append(winRate);
     }
   }
-  node.append(avatarBtn, body, record);
+  node.append(emblem, avatarBtn, body, record);
 }
 
 export async function syncPvpProfile() {

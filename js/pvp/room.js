@@ -70,13 +70,63 @@ function secondsLeft(ms) {
   return Math.max(0, Math.ceil(ms / 1000));
 }
 
-function paintClockFace(id, seconds, kicker, urgent) {
+function paintClockFace(id, seconds, kicker, urgent, fraction) {
   const box = document.getElementById(id);
   const num = document.getElementById(`${id}Num`);
   const kickerNode = document.getElementById(`${id}Kicker`);
   if (kickerNode) kickerNode.textContent = kicker;
   if (num) num.textContent = seconds == null ? "—" : String(seconds);
-  if (box) box.classList.toggle("is-urgent", urgent === true);
+  if (box) {
+    box.classList.toggle("is-urgent", urgent === true);
+    // ctl-timer-ring: conic mask on the fill layer (remaining share, 0–100%).
+    const f = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 1;
+    box.style.setProperty("--ctl-timer-p", `${(f * 100).toFixed(2)}%`);
+  }
+}
+
+const READY_WINDOW_MS = 15_000;
+let readyRingKey = "";
+let readyRingTotal = READY_WINDOW_MS;
+
+function readyFraction(left) {
+  if (left == null) return 1;
+  const key = `${matchId}:${view?.readyDeadlineAt}`;
+  if (key !== readyRingKey) {
+    readyRingKey = key;
+    readyRingTotal = Math.max(READY_WINDOW_MS, left);
+  }
+  return readyRingTotal > 0 ? left / readyRingTotal : 1;
+}
+
+function roundFraction(left) {
+  const opens = Number(view?.opensAt);
+  const due = Number(view?.deadlineAt);
+  const total = due - opens;
+  if (left == null || !Number.isFinite(total) || total <= 0) return 1;
+  return left / total;
+}
+
+/** Seat panel state: active = locked this hand (or ready), leading = ahead on return. */
+function paintSeatStates() {
+  const me = document.getElementById("pvpSeatMe");
+  const opp = document.getElementById("pvpSeatOpp");
+  if (!me || !opp) return;
+  let meState = "default";
+  let oppState = "default";
+  if (view?.status === "waiting_ready") {
+    if (view.me?.ready) meState = "active";
+    if (view.opponent?.ready) oppState = "active";
+  } else if (view?.status === "playing") {
+    const a = view.me?.mtmPpm;
+    const b = view.opponent?.mtmPpm;
+    const both = a != null && b != null && Number.isFinite(Number(a)) && Number.isFinite(Number(b));
+    if (both && Number(a) > Number(b)) meState = "leading";
+    if (both && Number(b) > Number(a)) oppState = "leading";
+    if (view.me?.lockedToday) meState = "active";
+    if (view.opponent?.lockedToday) oppState = "active";
+  }
+  me.dataset.seatState = meState;
+  opp.dataset.seatState = oppState;
 }
 
 
@@ -337,7 +387,7 @@ function paintClock() {
   if (view.status === "waiting_ready") {
     const left = remainingMs(view.readyDeadlineAt, view.serverNow, fetchedAt);
     const seconds = secondsLeft(left);
-    paintClockFace("pvpReadyClock", seconds, "准备剩余", seconds != null && seconds <= 5);
+    paintClockFace("pvpReadyClock", seconds, "准备剩余", seconds != null && seconds <= 5, readyFraction(left));
     announceClock("pvpReadyClock", seconds);
     const readyBtn = document.getElementById("pvpReadyBtn");
     if (readyBtn && left != null && left <= 0) readyBtn.disabled = true;
@@ -364,6 +414,7 @@ function paintClock() {
     seconds,
     waiting ? "下一手可操作" : "本手剩余",
     !waiting && seconds != null && seconds <= 5,
+    waiting ? 1 : roundFraction(left),
   );
   announceClock("pvpClock", seconds);
   if (opensIn != null && opensIn > 0) {
@@ -521,6 +572,7 @@ function render() {
   const ready = document.getElementById("pvpReadyPanel");
   const play = document.getElementById("pvpPlayPanel");
   paintSeats();
+  paintSeatStates();
   if (view?.status === "waiting_ready") {
     if (ready) ready.hidden = false;
     if (play) play.hidden = true;

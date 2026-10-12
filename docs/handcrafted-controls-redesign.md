@@ -663,3 +663,15 @@ Auth/反馈：`authLoginBtn` `authModal` inputs `feedbackSubmit` `feedbackBody`
 | 2026-10-12 | v1.1 | 并入 REA 逆向（坐庄风云/Drawably/Wired/Papercuts/252）；跨站 10 条硬规范；静态 ≈4.2M 换皮预算与无 sprite 现状写入 §7 |
 | 2026-10-12 | v1.2 | 新增 §6.4 子屏/面板进出场：模态·sheet·全视图时序/缓动/遮罩 z-index、与 press≤120ms 衔接（总感 ≤200–280ms）、reduced-motion；仅文档 |
 
+
+## P3 · Batch 1 落地记录（2026-10-12）
+
+| 控件 | 位置 | 实现 |
+|---|---|---|
+| `ctl-rank-card` | 大厅 `#pvpLobbyMe` / 对战档案 `#pvpStats`（`fillDossier`） | 9-slice `24/24/24/104` border-image；段位图标叠在 Ø72 槽（按每张图标的实际画面做居中+等大）；进度条填充落在手绘凹槽里；头像（更换头像）移到右上角 44px 点击区 |
+| `ctl-seat-panel-{self,opponent}-{default,active,leading}` | 对局顶栏 `#pvpSeatMe/#pvpSeatOpp` | 9-slice（头像侧 56px、另一侧 36px）；头像放在 Ø32 透明孔；`data-seat-state`：准备阶段已准备 / 对局中本手已出手 = active，收益领先 = leading |
+| `ctl-timer-ring-*` | `#pvpReadyClock`（分段环）/ `#pvpClock` | track + 用 `conic-gradient` 遮罩的 fill（`--ctl-timer-p` = 剩余比例，`@property` 250ms 线性过渡）；≤5 秒换朱砂 urgent 环并轻微脉动；减弱动效下不做过渡和脉动 |
+| `ctl-share-save-*` | PvP 结算页「再次约战」旁 `#pvpResultShareImage` | 只有图标，`aria-label="保存分享图"`；press/loading/disabled 各有一帧；调用 `js/share-image.js` |
+
+`js/share-image.js`：用本地 `js/vendor/html2canvas.esm.js` 把 1080×1440 的战报卡渲染成 PNG（内容：行情区间/对局日期、结果、双方头像/昵称/收益、段位分变化+段位、收益曲线静态图、股票、大厅链接+二维码 `js/vendor/qrcode.js`、slogan）。交付顺序：`StockGameApp.saveImage(base64, fileName)` → `navigator.share({files})` → `<a download>`；出错就弹印章 toast。
+Android（`MainActivity.kt`）：`saveImage` 在 API 29 及以上写入 MediaStore `Pictures/早知道当初不炒了/`，API 29 以下改走系统分享；`shareImage(base64, fileName, title)` 通过 FileProvider 放到 `cache/share`。这次只改代码，不发版。

@@ -501,7 +501,7 @@
                     <h2 id="pvpRoomHeadline">对战</h2>
                 </div>
                 <div class="pvp-battle-top" id="pvpBattleTop">
-                    <div class="pvp-seat pvp-seat-me">
+                    <div class="pvp-seat pvp-seat-me ctl-seat-panel" id="pvpSeatMe" data-seat-state="default">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatMeAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkMe" hidden></span>
@@ -513,18 +513,20 @@
                         </div>
                     </div>
                     <div class="pvp-battle-clock">
-                        <div class="pvp-clock" id="pvpReadyClock" hidden>
+                        <div class="pvp-clock ctl-timer-ring ctl-timer-ring--segmented" id="pvpReadyClock" hidden>
+                            <span class="ctl-timer-ring-fill" id="pvpReadyClockRing" aria-hidden="true"></span>
                             <span class="pvp-clock-kicker" id="pvpReadyClockKicker">准备剩余</span>
                             <strong class="pvp-clock-num" id="pvpReadyClockNum">15</strong>
                             <span class="pvp-clock-unit">秒</span>
                         </div>
-                        <div class="pvp-clock" id="pvpClock" hidden>
+                        <div class="pvp-clock ctl-timer-ring" id="pvpClock" hidden>
+                            <span class="ctl-timer-ring-fill" id="pvpClockRing" aria-hidden="true"></span>
                             <span class="pvp-clock-kicker" id="pvpClockKicker">本手剩余</span>
                             <strong class="pvp-clock-num" id="pvpClockNum">30</strong>
                             <span class="pvp-clock-unit">秒</span>
                         </div>
                     </div>
-                    <div class="pvp-seat pvp-seat-opp">
+                    <div class="pvp-seat pvp-seat-opp ctl-seat-panel" id="pvpSeatOpp" data-seat-state="default">
                         <div class="pvp-seat-face">
                             <img id="pvpSeatOppAvatar" class="pvp-seat-avatar" alt="" width="36" height="36">
                             <span class="pvp-ready-mark" id="pvpReadyMarkOpp" hidden></span>
@@ -685,6 +687,7 @@
                 </div>
                 <div class="pvp-actions">
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
+                    <button type="button" class="ctl ctl-share-save" id="pvpResultShareImage" data-ctl="share-save" data-ctl-kind="share-save" data-state="default" aria-label="保存分享图" title="保存分享图"></button>
                     <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
                 </div>
             </div>

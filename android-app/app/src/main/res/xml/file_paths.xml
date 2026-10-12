@@ -2,4 +2,6 @@
 <paths>
     <!-- Downloaded update APKs only (cacheDir/updates). -->
     <cache-path name="updates" path="updates/" />
+    <!-- 保存分享图 fallback (API<29) / shareImage: transient PNGs (cacheDir/share). -->
+    <cache-path name="share" path="share/" />
 </paths>
