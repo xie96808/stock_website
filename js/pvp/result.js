@@ -1,10 +1,9 @@
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
-import { amountWithCoinHtml } from "../jiu-coin.js";
 import { buildKlineOption } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
-import { formatCoin, formatPpm, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
+import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
 import { appendRankProgress } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 
@@ -96,7 +95,7 @@ function paintReplay(view) {
   }
   const hold = replay.buyHoldPpm;
   if (holdBox) holdBox.hidden = hold == null;
-  text("pvpResultReplay", hold == null ? "" : formatPpm(hold));
+  paintReturn("pvpResultReplay", hold);
   const rows = [
     ["我", replay.me],
     [view.opponent?.nickname || "对手", replay.opponent],
@@ -106,7 +105,7 @@ function paintReplay(view) {
     const last = side.curve?.[side.curve.length - 1];
     const item = document.createElement("li");
     const valued = side.valued ? " · 已估值" : "";
-    item.textContent = `${name} ${formatPpm(last?.returnPpm)} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${formatPpm(side.curveMddPpm)}${valued}`;
+    item.innerHTML = `${escapeHtml(name)} ${colorReturnHtml(formatPpm(last?.returnPpm))} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${escapeHtml(formatPpm(side.curveMddPpm))}${escapeHtml(valued)}`;
     curve?.appendChild(item);
   }
   for (const row of replay.divergences || []) {
@@ -187,23 +186,59 @@ function ensureSparks() {
   }
 }
 
-function showWin(view) {
+function coinPhrase(delta) {
+  if (delta == null || !Number.isFinite(Number(delta))) return "韭币 —";
+  const value = Number(delta);
+  if (value > 0) return `获得 ${value} 韭币`;
+  if (value < 0) return `失去 ${Math.abs(value)} 韭币`;
+  return "韭币 0";
+}
+
+function paintSettleReturn(id, ppm) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = formatPpm(ppm);
+  node.classList.remove("pvp-up", "pvp-down", "pvp-flat");
+  const value = Number(ppm);
+  if (!Number.isFinite(value)) return;
+  node.classList.add(value > 0 ? "pvp-up" : value < 0 ? "pvp-down" : "pvp-flat");
+}
+
+function paintSettleSide(which, face, fallback) {
+  const img = document.getElementById(`pvpWin${which}Avatar`);
+  const name = document.getElementById(`pvpWin${which}Name`);
+  if (name) name.textContent = face?.nickname || fallback;
+  if (img) {
+    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    img.alt = "";
+  }
+  paintSettleReturn(`pvpWin${which}Return`, face?.returnPpm);
+  text(`pvpWin${which}Coin`, coinPhrase(face?.coinDelta));
+  text(`pvpWin${which}Mdd`, `回撤 ${formatPpm(face?.mddPpm)}`);
+}
+
+function showSettle(view, celebrate) {
   const dialog = document.getElementById("pvpWinDialog");
   if (!dialog) return;
-  if (view?.me?.outcome !== "win") {
+  if (!celebrate) {
     dialog.hidden = true;
     return;
   }
-  ensureSparks();
-  const coin = document.getElementById("pvpWinCoin");
-  const delta = Number(view?.me?.coinDelta);
-  if (coin) {
-    if (Number.isFinite(delta) && delta > 0) {
-      coin.innerHTML = `获得 ${amountWithCoinHtml(delta, { size: 28 })}`;
-    } else {
-      coin.textContent = "";
-    }
-  }
+  const outcome = view?.me?.outcome || "";
+  const fireworks = document.getElementById("pvpFireworks");
+  if (fireworks) fireworks.hidden = outcome !== "win";
+  if (outcome === "win") ensureSparks();
+  text("pvpWinTitle", resultHeadline(view));
+  const auth = getAuthState().user;
+  paintSettleSide("Me", {
+    nickname: view?.me?.nickname || auth?.nickname,
+    avatarId: view?.me?.avatarId || auth?.avatarId || 1,
+    avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
+    returnPpm: view?.me?.returnPpm,
+    coinDelta: view?.me?.coinDelta,
+    mddPpm: view?.me?.mddPpm,
+  }, "我");
+  paintSettleSide("Opp", view?.opponent, "对手");
   dialog.hidden = false;
   document.getElementById("pvpWinOk")?.focus();
 }
@@ -228,11 +263,6 @@ function paintRating(view) {
   }
   box.hidden = false;
   text("pvpResultRating", formatCoin(delta));
-  const title = view?.me?.ratingTitle ? `现在是${view.me.ratingTitle}。` : "";
-  text(
-    "pvpResultRatingNote",
-    `这是段位分的变化，不是这局操作打几分。${title}赢了加分，输了减分。胜负只看收益，收益一样再比回撤。`,
-  );
   const progress = document.getElementById("pvpResultRankProgress");
   if (progress) {
     progress.replaceChildren();
@@ -332,7 +362,7 @@ function wireBlock(view) {
   };
 }
 
-export function showPvpResult(view) {
+export function showPvpResult(view, { celebrate = false } = {}) {
   destroyChart();
   shown = view || null;
   prepareScreen(Route.PVP_RESULT);
@@ -354,7 +384,7 @@ export function showPvpResult(view) {
   paintReplay(view);
   const bestPoints = paintAnalysis(view);
   wireWin();
-  showWin(view);
+  showSettle(view, celebrate);
   wireReport(view);
   wireGifts(view);
   wireBlock(view);

@@ -136,6 +136,58 @@ async function enterMatch(matchId) {
   await room.showPvpRoom(matchId);
 }
 
+let joiningCode = "";
+
+export async function joinSharedBattle(code) {
+  const normalized = String(code || "").trim().toLowerCase();
+  if (!/^[a-z2-9]{8}$/.test(normalized)) return;
+  await whenAuthReady();
+  if (!getAuthState().user) {
+    try { sessionStorage.setItem("pvp-join-code", normalized); } catch { /* ignore */ }
+    openAuthModal("login");
+    return;
+  }
+  if (joiningCode === normalized) return;
+  joiningCode = normalized;
+  try { sessionStorage.removeItem("pvp-join-code"); } catch { /* ignore */ }
+  try {
+    const { data } = await pvpFetch(`/pvp/shares/${encodeURIComponent(normalized)}/join`, {
+      method: "POST",
+      body: {},
+    });
+    await enterMatch(data.matchId);
+  } catch (err) {
+    await showPvpLobby();
+    setError(err.message || "没能进入这场对战");
+  } finally {
+    joiningCode = "";
+  }
+}
+
+async function shareBattle() {
+  setError("");
+  const note = document.getElementById("pvpShareNote");
+  if (note) note.textContent = "";
+  try {
+    const { data } = await pvpFetch("/pvp/shares", { method: "POST", body: {} });
+    const url = `${location.origin}${location.pathname}${location.search}#/pvp/join/${data.code}`;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        copied = true;
+      }
+    } catch { copied = false; }
+    if (note) {
+      note.textContent = copied
+        ? "链接已复制，10 分钟内有效。对方点开后会直接进入准备。"
+        : `把链接发给朋友。对方点开后会直接进入准备。 ${url}`;
+    }
+  } catch (err) {
+    setError(err.message || "没能生成分享链接");
+  }
+}
+
 async function respond(challengeId, accept) {
   setError("");
   try {
@@ -392,6 +444,7 @@ function wireLobby() {
     const id = latestState?.activeMatchId;
     if (id) enterMatch(id).catch((err) => setError(err.message || ""));
   });
+  document.getElementById("pvpShareBtn")?.addEventListener("click", () => { shareBattle().catch(() => {}); });
   document.addEventListener("stockgame:auth-changed", () => {
     if (showing) refresh().catch(() => {});
   });

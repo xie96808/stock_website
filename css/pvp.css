@@ -146,11 +146,15 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
+  min-width: 0;
+  max-width: 100%;
   min-height: 5.2rem;
   padding: 0.7rem 0.8rem 0.75rem;
   border: var(--border-ink);
   border-radius: 16px;
   background: var(--card);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .pvp-score-label,
@@ -161,12 +165,15 @@
 }
 
 .pvp-score-value {
+  max-width: 100%;
   font-family: var(--mono);
-  font-size: clamp(2rem, 6.5vw, 3.1rem);
+  font-size: clamp(1.35rem, 6.5vw, 3.1rem);
   font-weight: 700;
   line-height: 1.05;
   color: var(--ink);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pvp-mark-legend {
@@ -619,6 +626,9 @@
   color: var(--ink);
 }
 
+.pvp-explain-num.pvp-up { color: var(--gain-color); }
+.pvp-explain-num.pvp-down { color: var(--loss-color); }
+
 .pvp-screen .pvp-explain-note {
   margin: 0.35rem 0 0;
   font-size: 0.82rem;
@@ -725,8 +735,72 @@
 
 .pvp-win-card {
   position: relative;
-  overflow: visible;
+  overflow: auto;
   text-align: center;
+}
+
+.pvp-dialog-card.pvp-settle-card {
+  width: min(420px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(560px, calc(100vh - 48px));
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+
+
+.pvp-settle-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0 0 0.75rem;
+}
+
+.pvp-settle-side {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0.45rem 0.35rem 0.55rem;
+  border: var(--border-ink);
+  border-radius: 14px;
+  background: var(--paper-2);
+  box-sizing: border-box;
+}
+
+.pvp-settle-side img {
+  width: 44px;
+  height: 44px;
+  max-width: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pvp-settle-side strong,
+.pvp-settle-return,
+.pvp-settle-meta {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pvp-settle-return {
+  margin-top: 0.2rem;
+  font-family: var(--mono);
+  font-size: clamp(0.95rem, 4vw, 1.25rem);
+  font-weight: 700;
+}
+
+.pvp-settle-meta {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.pvp-settle-card .pvp-btn {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .pvp-win-card > :not(.pvp-fireworks) {
@@ -735,10 +809,13 @@
 }
 
 .pvp-win-card h3 {
-  margin: 0.1rem 0 0.35rem;
+  margin: 0.1rem 0 0.5rem;
   font-family: var(--kaiti);
-  font-size: clamp(2.4rem, 8vw, 3.2rem);
-  letter-spacing: 0.22em;
+  font-size: clamp(1.05rem, 4.2vw, 1.4rem);
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .pvp-screen .pvp-win-coin {
@@ -881,10 +958,16 @@
   color: var(--ink);
 }
 
-.pvp-gift-art {
-  width: 96px;
-  height: 96px;
-  filter: drop-shadow(0 8px 0 rgba(44, 40, 36, 0.12));
+.pvp-gift-emoji {
+  margin: 0;
+  font-size: 4.2rem;
+  line-height: 1;
+}
+
+.pvp-gift-send {
+  font-size: 1.55rem;
+  letter-spacing: 0;
+  min-height: 48px;
 }
 
 .pvp-gift-flower { animation: pvp-gift-bloom 2.6s ease forwards; }
@@ -956,5 +1039,16 @@
 
   .pvp-lobby-hero {
     grid-template-columns: 1fr;
+  }
+}
+
+#pvpShareNote {
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+@media (max-width: 360px) {
+  .pvp-settle-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

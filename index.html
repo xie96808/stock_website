@@ -471,6 +471,8 @@
                     <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
                     <p id="pvpLobbyBalance"></p>
+                    <button type="button" class="pvp-btn" id="pvpShareBtn">分享对战</button>
+                    <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
                     <button type="button" class="pvp-btn pvp-btn-primary" id="pvpActiveMatch" hidden>回到对局</button>
@@ -604,13 +606,12 @@
                 <div class="pvp-explain" id="pvpResultRatingBox" hidden>
                     <p class="pvp-explain-label">段位分</p>
                     <strong class="pvp-explain-num" id="pvpResultRating"></strong>
-                    <p class="pvp-explain-note" id="pvpResultRatingNote"></p>
                     <div id="pvpResultRankProgress"></div>
                 </div>
                 <div class="pvp-explain" id="pvpResultHoldBox" hidden>
                     <p class="pvp-explain-label">买入持有</p>
                     <strong class="pvp-explain-num" id="pvpResultReplay"></strong>
-                    <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。用来对照你的操作，不决定胜负。</p>
+                    <p class="pvp-explain-note">如果第一天开盘就满仓，一路拿到结束、中途不买卖，这段行情就是上面这个收益。</p>
                 </div>
                 <div id="pvpResultAnalysis" class="analysis-container"></div>
                 <div id="pvpResultChart" class="pvp-chart" hidden></div>
@@ -638,9 +639,9 @@
                 <div class="pvp-gifts" id="pvpGifts" hidden>
                     <p class="pvp-kicker">送给对手</p>
                     <div class="pvp-actions">
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower">鲜花</button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato">臭番茄</button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe">烟斗</button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower" aria-label="鲜花">🌸</button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato" aria-label="臭番茄">🍅</button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe" aria-label="烟斗">🚬</button>
                     </div>
                     <p id="pvpGiftNote"></p>
                 </div>
@@ -650,12 +651,27 @@
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpWinDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpWinTitle">
-                <div class="pvp-dialog-card pvp-win-card">
-                    <div class="pvp-fireworks" id="pvpFireworks" aria-hidden="true"></div>
+                <div class="pvp-dialog-card pvp-win-card pvp-settle-card">
+                    <div class="pvp-fireworks" id="pvpFireworks" hidden aria-hidden="true"></div>
                     <p class="pvp-kicker">这局</p>
-                    <h3 id="pvpWinTitle">获胜</h3>
-                    <p class="pvp-win-coin" id="pvpWinCoin"></p>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">收下</button>
+                    <h3 id="pvpWinTitle">对战结果</h3>
+                    <div class="pvp-settle-grid">
+                        <div class="pvp-settle-side">
+                            <img id="pvpWinMeAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
+                            <strong id="pvpWinMeName">我</strong>
+                            <span class="pvp-settle-return" id="pvpWinMeReturn">—</span>
+                            <span class="pvp-settle-meta" id="pvpWinMeCoin"></span>
+                            <span class="pvp-settle-meta" id="pvpWinMeMdd"></span>
+                        </div>
+                        <div class="pvp-settle-side">
+                            <img id="pvpWinOppAvatar" class="pvp-seat-avatar" alt="" width="44" height="44">
+                            <strong id="pvpWinOppName">对手</strong>
+                            <span class="pvp-settle-return" id="pvpWinOppReturn">—</span>
+                            <span class="pvp-settle-meta" id="pvpWinOppCoin"></span>
+                            <span class="pvp-settle-meta" id="pvpWinOppMdd"></span>
+                        </div>
+                    </div>
+                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">知道了</button>
                 </div>
             </div>
         </section>
@@ -1463,7 +1479,13 @@
         });
         import('./js/pvp/notices.js').then((mod) => mod.startPvpNotices()).catch(() => {});
         function routePvpHash() {
-            const found = /^pvp\/([0-9a-f-]{36})$/i.exec(parseRouteHash());
+            const hash = parseRouteHash() || "";
+            const join = /^pvp\/join\/([a-z2-9]{8})$/i.exec(hash);
+            if (join) {
+                import('./js/pvp/lobby.js').then((mod) => mod.joinSharedBattle(join[1])).catch(() => {});
+                return;
+            }
+            const found = /^pvp\/([0-9a-f-]{36})$/i.exec(hash);
             if (!found) return;
             import('./js/pvp/lobby.js').then((mod) => mod.openPvpHash(found[1])).catch(() => {});
         }

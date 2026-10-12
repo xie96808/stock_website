@@ -1,6 +1,6 @@
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
-import { rankProgress } from "../../shared/pvpRating.js";
+import { rankPoints, rankProgress } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
 import { pvpEnabled, pvpFetch, whenAuthReady } from "./transport.js";
 
@@ -76,7 +76,7 @@ export function fillDossier(node, profile) {
   if (profile.rating != null && Number.isFinite(Number(profile.rating))) {
     const score = document.createElement("p");
     score.className = "pvp-dossier-score";
-    score.textContent = `段位分 ${profile.rating}`;
+    score.textContent = `段位分 ${rankPoints(profile.rating)}`;
     body.append(score);
     appendRankProgress(body, profile.rating);
   }

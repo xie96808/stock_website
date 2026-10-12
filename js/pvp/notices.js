@@ -1,9 +1,11 @@
 import { displayAvatarUrl, getAuthState } from "../auth.js";
+import { parseRouteHash } from "../screen-router.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll } from "./transport.js";
 
 const GIFT_MS = 2600;
-const GIFT_LABEL = { flower: "鲜花", tomato: "臭番茄", pipe: "烟斗" };
+const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "🚬" };
 const IGNORE_KEY = "pvp-ignored-invites";
+const JOIN_KEY = "pvp-join-code";
 
 let started = false;
 let enabled = null;
@@ -14,6 +16,8 @@ let inbound = [];
 let timeBase = { server: 0, local: 0 };
 let showingId = "";
 let busy = false;
+let pulledMatch = "";
+let pulling = false;
 const seenGifts = new Set();
 
 function loadIgnored() {
@@ -52,45 +56,50 @@ function giftStage() {
   return node;
 }
 
-function giftArt(kind) {
-  if (kind === "tomato") {
-    return `<svg class="pvp-gift-art" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M32 14c2-6 8-8 12-6-2 4-2 8 0 10 6 1 10 6 10 12 0 12-10 22-22 22S10 42 10 30c0-6 4-11 10-12 2-2 2-6 0-10 4-2 10 0 12 6z" fill="#c44536"/>
-      <path d="M30 16c2 4 6 6 10 5" fill="none" stroke="#3d6b3a" stroke-width="2"/>
-    </svg>`;
-  }
-  if (kind === "pipe") {
-    return `<svg class="pvp-gift-art" viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M14 40h24c8 0 12-6 12-12" fill="none" stroke="#8a7350" stroke-width="4" stroke-linecap="round"/>
-      <circle cx="18" cy="40" r="6" fill="#6b5344"/>
-      <circle class="pvp-smoke" cx="46" cy="20" r="4" fill="none" stroke="#8b949e" stroke-width="1.5"/>
-      <circle class="pvp-smoke" cx="52" cy="14" r="3" fill="none" stroke="#8b949e" stroke-width="1.5"/>
-    </svg>`;
-  }
-  return `<svg class="pvp-gift-art" viewBox="0 0 64 64" aria-hidden="true">
-    <circle cx="32" cy="34" r="8" fill="#f0c14a"/>
-    <circle cx="32" cy="18" r="7" fill="#e05252"/>
-    <circle cx="46" cy="28" r="7" fill="#e05252"/>
-    <circle cx="42" cy="44" r="7" fill="#e05252"/>
-    <circle cx="22" cy="44" r="7" fill="#e05252"/>
-    <circle cx="18" cy="28" r="7" fill="#e05252"/>
-  </svg>`;
-}
-
 function showGift(event) {
   if (!event || seenGifts.has(event.id)) return;
   seenGifts.add(event.id);
   const stage = giftStage();
   const node = document.createElement("div");
   node.className = `pvp-gift pvp-gift-${event.kind || "flower"}`;
-  const art = document.createElement("div");
-  art.innerHTML = giftArt(event.kind);
+  const emoji = GIFT_EMOJI[event.kind] || "🎁";
+  const art = document.createElement("p");
+  art.className = "pvp-gift-emoji";
+  art.textContent = emoji;
   const caption = document.createElement("p");
   const who = event.nickname || "对手";
-  caption.textContent = `${who} 送来${GIFT_LABEL[event.kind] || "一份反馈"}`;
+  caption.textContent = `${who} 送来 ${emoji}`;
   node.append(art, caption);
   stage.append(node);
   window.setTimeout(() => node.remove(), GIFT_MS);
+}
+
+async function maybeEnterReady(data) {
+  const id = data?.activeMatchId || "";
+  const status = data?.activeMatchStatus || "";
+  if (!id) {
+    pulledMatch = "";
+    return;
+  }
+  if (status !== "waiting_ready") return;
+  const hash = parseRouteHash() || "";
+  if (hash === `pvp/${id}`) {
+    pulledMatch = id;
+    return;
+  }
+  if (pulledMatch === id || pulling) return;
+  pulling = true;
+  pulledMatch = id;
+  try {
+    const lobby = await import("./lobby.js");
+    lobby.leavePvpLobby();
+    const room = await import("./room.js");
+    await room.showPvpRoom(id);
+  } catch {
+    pulledMatch = "";
+  } finally {
+    pulling = false;
+  }
 }
 
 function nowServer() {
@@ -141,6 +150,7 @@ async function poll() {
     inbound = data?.inbound || [];
     if (data?.serverNow) timeBase = { server: data.serverNow, local: Date.now() };
     refreshInvite();
+    await maybeEnterReady(data);
   } catch { /* the next tick retries */ }
   try {
     const { data } = await pvpFetch(`/pvp/reactions?after=${afterGift}`);
@@ -204,6 +214,12 @@ export function startPvpNotices() {
     if (!getAuthState().user) {
       inbound = [];
       hideInvite();
+    } else {
+      let code = "";
+      try { code = sessionStorage.getItem(JOIN_KEY) || ""; } catch { code = ""; }
+      if (code) {
+        import("./lobby.js").then((mod) => mod.joinSharedBattle(code)).catch(() => {});
+      }
     }
     beat();
   });
@@ -213,7 +229,7 @@ export function startPvpNotices() {
   beat();
   stopPoll = startPoll(beat, 1500);
   releaseSocket = holdPvpSocket((msg) => {
-    if (msg?.t === "challenge.changed" || msg?.t === "lobby.changed") beat();
+    if (msg?.t === "challenge.changed" || msg?.t === "lobby.changed" || msg?.t === "match.changed") beat();
   });
 }
 

@@ -141,6 +141,7 @@ export function pvpMatchView({ match, players, viewerId, serverNow, pendingLocks
     view.opponent.outcome = opponent.outcome || null;
     view.opponent.returnPpm = opponent.return_ppm ?? null;
     view.opponent.mddPpm = opponent.mdd_ppm ?? null;
+    view.opponent.coinDelta = opponent.coin_delta ?? null;
     view.opponent.userId = opponent.user_id;
   }
 

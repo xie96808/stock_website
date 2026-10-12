@@ -15,6 +15,31 @@ export function formatWinRate(winRate) {
   return `${(Number(winRate) * 100).toFixed(1)}%`;
 }
 
+export function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Color a yield percent. Positive is red, negative is green, zero stays plain.
+ * Amplitude, range position, and loss magnitude are left as written.
+ */
+export function colorReturnHtml(html) {
+  return String(html ?? "").replace(
+    /(振幅|位置|亏损)(\s*)([+-]?\d+(?:\.\d+)?)%|([+-]?\d+(?:\.\d+)?)%/g,
+    (full, skip, _gap, _skipped, num) => {
+      if (skip) return full;
+      const value = Number(num);
+      if (!Number.isFinite(value) || value === 0) return full;
+      const cls = value > 0 ? "pvp-up" : "pvp-down";
+      return `<span class="${cls}">${num}%</span>`;
+    },
+  );
+}
+
 export function formatCoin(delta) {
   if (delta == null || !Number.isFinite(Number(delta))) return "—";
   const value = Number(delta);

@@ -4,6 +4,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "../lib/config.js";
 import { clientIp, consumeRateLimit, rateLimitFail } from "../lib/rateLimit.js";
 import { acceptChallenge, cancelChallenge, cancelReady, createChallenge, declineChallenge, markReady } from "../lib/pvp/challenges.js";
+import { createShareLink, joinShareLink } from "../lib/pvp/shares.js";
 import { listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } from "../lib/pvp/lobby.js";
 import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
@@ -168,6 +169,41 @@ router.post("/pvp/heartbeat", requireUser, (req, res) => {
   noteHeartbeat(req.user.id, now);
   touchPresence(req.user.id, now);
   return ok(res, { ok: true });
+});
+
+router.post("/pvp/shares", requireUser, (req, res) => {
+  if (!config.pvpBattleEnabled) return fail(res, 403, "FEATURE_DISABLED", "对战未开放");
+  const body = objectBody(req, res);
+  if (!body) return;
+  if (Object.keys(body).length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:share:u:${req.user.id}`, 6, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "分享过于频繁");
+  const result = createShareLink(openDb(), { userId: req.user.id, now: Date.now() });
+  if (!result?.ok) return sendDeny(res, result);
+  return ok(res, {
+    code: result.code,
+    expiresAt: result.expiresAt,
+    replay: result.replay === true,
+  }, result.created ? 201 : 200);
+});
+
+router.post("/pvp/shares/:code/join", requireUser, (req, res) => {
+  if (!config.pvpBattleEnabled) return fail(res, 403, "FEATURE_DISABLED", "对战未开放");
+  const body = objectBody(req, res);
+  if (!body) return;
+  if (Object.keys(body).length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:sharejoin:u:${req.user.id}`, 6, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "进入房间过于频繁");
+  const result = joinShareLink(openDb(), { code: req.params.code, userId: req.user.id, now: Date.now() });
+  if (!result?.ok) return sendDeny(res, result);
+  if (result.challengeId) noteChallengeChanged(result.challengeId, result.userIds || []);
+  noteMatchChanged(result.matchId);
+  noteLobbyChanged();
+  return ok(res, {
+    matchId: result.matchId,
+    readyDeadlineAt: result.readyDeadlineAt || null,
+    replay: result.replay === true,
+  });
 });
 
 router.post("/pvp/challenges", requireUser, (req, res) => {

@@ -35,6 +35,8 @@ test("completed battle analysis includes the solo wave writeup and says it does 
   assert.match(built.html, /当时信号/);
   assert.match(built.html, /操作复盘/);
   assert.match(built.html, /不决定胜负/);
+  assert.match(built.html, /pvp-up/);
+  assert.doesNotMatch(built.html, /下面是这段行情|技术复盘/);
   assert.doesNotMatch(built.html, /h1|h30/);
 });
 

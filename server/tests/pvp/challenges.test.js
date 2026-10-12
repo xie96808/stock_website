@@ -179,13 +179,13 @@ test("a block and a full room reject a new match without charging", () => {
   }
 });
 
-test("a new account and a short classic history cannot open a challenge", () => {
+test("a one-hour-old account can open a challenge, and a short classic history cannot", () => {
   const veteran = user("vet");
   const young = user("young", { createdAt: new Date(NOW - 60 * 60 * 1000).toISOString() });
   const short = user("short", { classics: 2 });
   assert.equal(
-    createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW }).code,
-    "NOT_ELIGIBLE"
+    createChallenge(db, { fromUserId: young, toUserId: veteran, createKey: key("young"), now: NOW }).ok,
+    true
   );
   assert.equal(
     createChallenge(db, { fromUserId: short, toUserId: veteran, createKey: key("short"), now: NOW }).code,

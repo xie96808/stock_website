@@ -141,17 +141,22 @@ function acceptInTx(db, { challengeId, userId, now }) {
     ).run(now, challengeId);
     return deny("CHALLENGE_CLOSED", "约战已超时", 409);
   }
+  const gate = assessEntry(db, challenge.from_user_id, challenge.to_user_id, now);
+  if (!gate.ok) return gate;
+  return openReadyMatch(db, challenge, now);
+}
+
+/** Seat both players in waiting_ready. Caller is already inside a transaction. */
+export function openReadyMatch(db, challenge, now) {
+  if (activeCount(db) >= maxActiveMatches()) {
+    return deny("CAPACITY", "对战房间已满", 503);
+  }
   if (hasLock(db, challenge.from_user_id) || hasLock(db, challenge.to_user_id)) {
     const err = new Error("有一方正在对战");
     err.code = "TARGET_BUSY";
     err.status = 409;
     throw err;
   }
-  if (activeCount(db) >= maxActiveMatches()) {
-    return deny("CAPACITY", "对战房间已满", 503);
-  }
-  const gate = assessEntry(db, challenge.from_user_id, challenge.to_user_id, now);
-  if (!gate.ok) return gate;
 
   const matchId = crypto.randomUUID();
   const economy = currentEconomy(now);

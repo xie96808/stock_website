@@ -184,7 +184,7 @@ async function showResult(next) {
   const id = matchId;
   leavePvpRoom();
   const result = await import("./result.js");
-  if (next) result.showPvpResult(next);
+  if (next) result.showPvpResult(next, { celebrate: true });
   else if (id) await result.openPvpMatch(id);
 }
 
