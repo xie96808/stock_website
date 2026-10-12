@@ -1,9 +1,9 @@
 # 手绘控件全量重做：产品调研与开发规格
 
-> 版本：v1.0 · 2026-10-12（Asia/Shanghai）  
+> 版本：v1.1 · 2026-10-12（Asia/Shanghai）  
 > 状态：**仅文档 / 未实现 UI**。本文件指导绘图 Bot 出图与后续前端实施；**禁止**在本 PR 内改控件实现。  
 > 产品：`stockgame.xieyw.top`（股市模拟盘小游戏）· 仓库 `/workspace/stock_website`  
-> 依据：`index.html` + `css/*` + `js/auth.js` / `feedback.js` / `pvp/*` 实盘点；既有 `docs/pvp-battle-design.md`、纸墨 tokens（`css/base.css`）；News Bot 竞品素材（精炼并入 §3）；公开网页检索（真实链接，不编造评测）。
+> 依据：`index.html` + `css/*` + `js/auth.js` / `feedback.js` / `pvp/*` 实盘点；既有 `docs/pvp-battle-design.md`、纸墨 tokens（`css/base.css`）；News Bot 竞品素材（精炼并入 §3）；REA Bot 逆向摘要（并入 §3.7 / §4.1 / §6）；公开网页检索（真实链接，不编造评测）。
 
 ---
 
@@ -14,8 +14,10 @@
 | 病根 | 多数控件是「纸墨皮肤的原生 button/input」：系统字体区过大、缺统一 press→release、无读条/冷却/错误抖动仪式感；布局仍像表单/后台。PvP 底栏已有手绘切片雏形（`assets/pvp/btn-*.png`），但全局未成体系。 |
 | 方向 | **全控件手绘定制**（禁止默认 textbox/button 观感）+ **WoW 式点击反馈系统** + 楷体/硬阴影/不规则 hit 区。 |
 | Top 10 优先重绘 | ①买卖主按钮 ②观望/保持 ③消息气泡键 ④准备/取消准备 ⑤匹配/约战行按钮 ⑥离开/退出确认三键 ⑦登录主 CTA ⑧自定义输入框 ⑨加载/开局读条 ⑩Toast |
-| REA 优先逆向 | 坐庄风云(itch) → Drawably → Wired Elements → Papercuts Trading → 最强富翁(若可访问) |
-| 下一步 | 绘图 Bot 按附录 brief 出状态帧 → P0 全局 press 系统（无新美术也可先做位移/压暗）→ 再换切片 |
+| REA 优先逆向 | 坐庄风云(itch) → Drawably → Wired Elements → Papercuts → 252（补充）/ 最强富翁(若可) |
+| 跨站硬规则 | 见 §4.1「跨站 10 条」：120ms 内物理按下、loading 不换控件、虚实线语义、主循环唯一高亮等 |
+| 静态换皮预算 | 线上可换皮静态约 **4.2M**（images≈3.5M / css≈244–412K / assets/pvp≈280K）；**无 sprite**；重绘重点 `assets/pvp` + `images` 品牌 + avatars + `game`/`pvp` CSS |
+| 下一步 | 绘图 Bot 按附录 brief 出状态帧 → P0 全局 press（可无新图）→ 换 `assets/pvp` 切片 → P2 输入壳 |
 
 ---
 
@@ -160,9 +162,86 @@
 | 5 | **最强富翁** | 微信小游戏（需真机） | 小程序买卖键尺寸、结算弹窗、段位亮相 |
 | 备选 | 252、STONKS-9800、念念手帐、Duolingo（任意一课） | 见上表 | 反例（252 仿券商）与正例（立体键、手帐装饰） |
 
+### 3.7 REA Bot 逆向灵感（已跑标本，精炼）
+
+> 来源：REA Bot 对优先目标的实机/页面逆向。下列为**可迁移交互与视觉手法**，非玩法抄袭。
+
+#### 坐庄风云（itch HTML5）
+
+| 观察 | 迁移到本品 |
+|---|---|
+| **主按钮唯一高亮**：同一时刻只有一个主 CTA 拉满对比，其余降权 | 大厅「约战」、房间「准备」、局内当前可点的买/卖主键 — 同时只强调一个 |
+| **倍速胶囊**：小胶囊分段，描边清晰 | 快进/`fill` 相关用分段胶囊，不要做成原生 select |
+| **买卖大色块**：红绿大色域，拇指可达 | 强化 `#buyBtn/#sellBtn` 与 PvP primary 的色块面积（已有方向，补 press 态） |
+| **仓位快选**：1/4、半仓等快捷 | 单人若未来加仓位；PvP 全仓规则下可映射为「确认条上的费用/扣币摘要快选信息」而非半仓 |
+| **飘字事件**：成交/新闻向上飘 | 锁定成功、对手已锁定、礼物、Toast 盖章可共用飘字层 |
+| **侧栏压暗**：焦点在主操作时侧栏 dim | 打开消息列表/离开确认时，图表与非相关 CTA `opacity` 压到 ~0.45 |
+| **分段控件描边**：segmented control 外框手绘描边 | 纸/墨、成交方式、缩放预设 → 统一「手绘分段条」 |
+
+#### Drawably（https://www.drawably.dev/）
+
+| 观察 | 迁移到本品 |
+|---|---|
+| 抖动边框可重绘；每次 mount 可新笔触 | 量产用**预渲染多 seed 切片**轮换，避免 WebView 运行时重绘 |
+| hover 重画 +1px 描边 | hover：描边略加粗或换 `*-hover` 帧，不要只变背景 |
+| press 下沉 + 描边约 1.4× | 与 WoW press 叠加：位移 2px + 线宽视觉加粗 |
+| **沸腾（boil）loading** | loading 用笔触微沸或砂轮帧循环；**禁止换成另一个控件类型** |
+| success/error 换墨色 | 成功换青/朱印墨，失败红墨；不用系统 `alert()` |
+| `prefers-reduced-motion` | boil/抖动关掉，保留 press 位移 |
+
+#### Wired Elements（wiredjs.com）
+
+| 观察 | 迁移到本品 |
+|---|---|
+| 多线叠边、线条过冲 | 切片外轮廓允许双线/毛刺过冲 1–2px |
+| elevation 1–5，按下降低 | 映射硬阴影档位：default=3、hover=4、press=1、disabled=0 |
+| 草图 spinner | 加载用铅笔圈/砂漏素描，不用 CSS 系统环 |
+| 马克笔 Tab | auth 登录/注册 Tab 做成马克笔涂抹标签 |
+
+#### Papercuts Trading
+
+| 观察 | 迁移到本品 |
+|---|---|
+| 双线描边卡牌 | 模态壳、lane 卡、Toast 用双线墨边 |
+| **虚线=预览 / 实线=成交** | 提交中/未锁定：虚线框；服务器确认锁定/成交：实线戳记 |
+| 掀牌倾斜 | 结果结算卡、邀请函可 3–6° 掀入 |
+| **色=方向** | 买入/涨/成功偏朱；卖出/跌偏绿（A 股习惯，与现 tokens 一致）；消息中性墨 |
+
+#### 252 虚拟股票人生
+
+| 观察 | 迁移到本品 |
+|---|---|
+| 顶栏**回合时钟**极醒目 | 强化 `#pvpClock` / 准备钟：大楷体数字 + 手绘钟框（勿做成 iOS 计时器） |
+| **底 sheet 下单** + % 快选 + 费用展示 | 开局扣币确认、反悔确认、Fill mode → 统一底 sheet：摘要 + 主按钮 + 次要取消 |
+| **危机打断 sheet** | 断线、资格不足、认输确认、日限额 → 高优先级 sheet 压过普通弹窗 |
+
+### 3.8 跨站可迁移结论（一句话）
+
+游戏化股市 UI 的手感来自：**唯一高亮的主循环键 + 120ms 内物理按下 + 虚实线区分意图/成交 + 等待时控件不变形只换态 + 危机用专用 sheet**——与券商仿真（同花顺/252 的仿盘外壳）划清界限，只借其信息架构效率。
+
+
 ---
 
 ## 4. 设计原则
+
+### 4.1 跨站 10 条（硬规范，验收必测）
+
+> REA 跨标本归纳。违反任一条 = 仍算「假/AI 味」或机械感。
+
+| # | 规则 | 落地 |
+|---|---|---|
+| 1 | **草图壳与数据层分离** | 手绘 PNG/SVG 只负责外壳与状态帧；价格、倒计时、昵称、收益等由 DOM 文字层叠加（楷体/等宽），禁止把易变数字烤进位图 |
+| 2 | **120ms 内物理按下** | `pointerdown` 后 ≤120ms 出现 press 位移/压暗（目标 70ms）；不等网络返回 |
+| 3 | **loading 不换控件** | busy 时保留同一按钮尺寸与壳，只叠加读条/沸腾/砂轮；禁止换成 Progress 组件或变身另一形态 |
+| 4 | **成败换色，不系统 Alert** | success/error 用换墨、戳记、shake、Toast 墨印；禁用 `window.alert/confirm` |
+| 5 | **买卖色系写死** | 买/涨/阳性 = `--gain-color` 朱；卖/跌/阴性 = `--loss-color` 绿；中性操作（观望/消息）= 纸面墨；主题切换不得反转红绿语义 |
+| 6 | **主循环唯一高亮** | 任一界面同时只有一个「主循环 CTA」满高亮（约战 / 准备 / 当前可买或可卖主键）；其余 secondary |
+| 7 | **底 sheet + %/摘要快选** | 涉及扣费、反悔、成交方式、认输的确认，优先底向上 sheet：费用摘要 + 主确认 + 取消 |
+| 8 | **危机打断** | 断线、限额、资格、强制结算等用最高 z-index 危机 sheet，可打断普通弹窗与消息列表 |
+| 9 | **虚实线语义** | 虚线 = 意图中/预览/未确认；实线 = 已成交/已锁定/已保存 |
+| 10 | **`prefers-reduced-motion`** | 关闭 boil、无限旋转、掀牌循环、烟花；**保留** press 位移与状态换色（反馈不可删） |
+
+### 4.2 品牌与造型原则
 
 1. **纸质手绘**：所有可点击物看起来像印在牛皮纸/笔记纸上的印章或剪贴——有纸纹、毛边、轻微歪斜；禁止完美 8px 系统圆角矩形作为最终观感。  
 2. **楷体优先**：按钮标签、关键 CTA、座位名用 `--kaiti`；等宽仅用于价格/时间；禁止在主 CTA 上堆系统 Sans。  
@@ -288,7 +367,23 @@
 
 ---
 
-## 6. 交互动画规范（魔兽世界参考）
+## 6. 交互动画规范（魔兽世界参考 + REA 跨站规则）
+
+> 与 §4.1 同时生效：WoW 提供「技能键手感」隐喻；REA 提供「草图控件状态机」细则。
+
+### 6.0 全局状态机（所有可点控件）
+
+```
+default → hover → press ──► release → default
+                 └──────► loading → success → default
+                                 └→ error → default
+disabled（任意时刻可进入，忽略指针）
+```
+
+- **press 必须在 120ms 内**（§4.1-2），即使随后立即 loading。  
+- loading **不得更换控件类型**（§4.1-3）；用伪元素/子层 cast bar 或 boil 帧。  
+- success/error 用换墨或短闪，**禁止**系统 Alert（§4.1-4）。  
+- 意图未确认时外壳描边用**虚线**，服务器确认后改**实线**（§4.1-9）。
 
 ### 6.1 WoW 机制 → 可迁移语义
 
@@ -317,6 +412,12 @@
 | Toast 盖章 | 下落盖印 | 200 in / 2200 hold / 180 out | ease | 是（点消失） |
 | 错误 | X 轴 ±4px 抖动 4 次 + 红墨闪 | 320 | ease-in-out | — |
 | 成功准备勾 | pop scale | 320（已有可对齐） | ease | — |
+| 侧栏/背景压暗（坐庄风云） | 非焦点区 opacity→0.45 | 160 | ease | 随弹层开关 |
+| 虚线→实线确认（Papercuts） | stroke-dash → solid + 印泥闪 | 180 | ease | — |
+| 沸腾 loading（Drawably） | 描边微扰动循环或 3 帧 sprite | 900/圈 | linear | reduced-motion 关 |
+| elevation 降档（Wired） | 硬阴影 3→1 + 下沉 2px | 70 | linear | 随 press |
+| 危机 sheet（252） | 自底上推 24px+遮罩 | 220 | cubic-bezier(.2,.8,.2,1) | 仅危机解除/主按钮 |
+| 飘字事件（坐庄风云） | 自锚点上飘 36px 淡出 | 700 | ease-out | — |
 
 ### 6.3 减弱动效
 
@@ -330,15 +431,37 @@
 
 ## 7. 动画与资源管线
 
+### 7.1 线上可换皮静态盘点（约 4.2M 量级）
+
+| 目录 | 约体积 | 角色 | 重绘优先级 |
+|---|---|---|---|
+| `images/` | **≈3.5M** | 品牌图、吉祥物、favicon、**avatars** | 高：avatars 框可叠加手绘框；吉祥物/品牌随视觉升级 |
+| `css/` | **≈244–412K**（视打包/未压缩） | 纸墨 tokens、game/pvp/auth 布局 | 高：`game.css` / `pvp.css` / `auth.css` / `feedback.css` 接 press 系统 |
+| `assets/pvp/` | **≈280K** | 已有 `btn-buy/sell/hold/message.png`、结算贴图、段位图标 | **最高**：控件切片主战场 |
+| 其它 | 小 | — | — |
+
+**现状：无 sprite 表。** 控件多为单帧 PNG 或纯 CSS。本轮允许引入「每控件横拼 sprite」或「同名多状态文件」；不要上巨型全站 atlas（WebView 解码与缓存不友好）。
+
+### 7.2 技术选型
+
 | 议题 | 建议 |
 |---|---|
-| 格式 | 静态态：WebP（PNG 备份透明）；小图标可 SVG 手绘描边；**避免**运行时 Rough.js 全量 redraw（Android WebView 掉帧） |
-| Sprite | 同控件多状态横拼 sprite + `background-position`；或 `<img>` 切 src（状态少时更简单） |
-| 动画实现 | 优先 **CSS transform/opacity**（合成层）；复杂时间线用 **WAAPI**；Lottie 仅用于一次性仪式（开局、胜利），控制 JSON < 80KB |
-| 包体 | 单控件全状态合计目标 < 40KB WebP；首屏关键 CTA 预载；其余 lazy |
-| APK WebView | 已有壳加载线上站点——发静态即可，无强更 APK；避免过大 blur/filter；`will-change: transform` 慎用 |
-| 音效（可选 P3） | 点击短音 < 40ms；与 press 同帧；设总开关 |
-| 现有资产 | `assets/pvp/btn-*.png` 可作基线；`/workspace/pvp-qa/settle-art/trade-controls*` 为草案，定稿后替换并写 MANIFEST |
+| 格式 | 静态态：WebP（PNG 备份透明）；小图标可 SVG 手绘描边；**避免**运行时 Rough.js / Drawably 全量 redraw（Android WebView 掉帧）— REA 结论用于**预渲染** |
+| Sprite | 同控件多状态横拼 + `background-position`；或 `<img>` 切 src（状态 ≤4 时更简单） |
+| 壳与数据分离 | 切片不含动态数字（§4.1-1）；CSS 叠 `.ctl-label` |
+| 动画实现 | 优先 **CSS transform/opacity**；复杂时间线 **WAAPI**；Lottie 仅一次性仪式（开局/胜利），JSON < 80KB |
+| 包体预算 | 单控件全状态合计目标 < 40KB WebP；`assets/pvp` 控件包增量控制在 **+150KB** 内（可替换旧帧）；首屏 CTA 预载 |
+| APK WebView | 壳加载线上静态——发网页即可；避免重 blur/filter；慎用 `will-change` |
+| 音效（P4） | 点击 <40ms，与 press 同帧；总开关 |
+| 现有资产 | `assets/pvp/btn-*.png` 基线；`pvp-qa/settle-art/trade-controls*` 草案；定稿写 MANIFEST |
+
+### 7.3 换皮实施顺序（资源视角）
+
+1. **`assets/pvp` 交易/消息/准备切片**（局内手感立刻变）  
+2. **`css/game.css` + `css/pvp.css`** 接入全局 `.ctl` press / loading / 虚实线  
+3. **输入壳 + auth/feedback**（去原生白框）  
+4. **`images/avatars` 手绘框**与品牌图（不必阻塞 P0–P1）  
+5. 评估是否把高频态打成小 sprite；仍避免全站大图集  
 
 ---
 
@@ -360,12 +483,14 @@
 
 ### 9.1 通过标准
 
-- [ ] 录屏：连续点击买卖/准备/登录，**每次**可见 press→release（或进入 loading）。  
+- [ ] 录屏：连续点击买卖/准备/登录，**每次**可见 press→release（或进入 loading）；press ≤120ms。  
 - [ ] 主路径控件无 OS 默认 textbox/button 外观（DevTools 里可有原生节点，截图不可辨）。  
-- [ ] 非法操作必有 shake/红闪或等价错误态，而非静默 disable。  
-- [ ] >300ms 请求有 loading 态；成功有短时 success。  
-- [ ] `prefers-reduced-motion: reduce` 下无持续旋转/抖动循环。  
-- [ ] 楷体用于主 CTA；纸/墨主题下对比度可辨。  
+- [ ] 非法操作必有 shake/红闪或等价错误态，而非静默 disable；**无** `alert()`。  
+- [ ] >300ms 请求有 loading 态且**控件外形不换类型**；成功有短时 success 换墨。  
+- [ ] 未确认用虚线壳、已锁定/成交用实线（抽检买卖提交与准备）。  
+- [ ] 同一屏仅一个主循环 CTA 满高亮。  
+- [ ] `prefers-reduced-motion: reduce` 下无持续旋转/抖动/boil；press 位移仍在。  
+- [ ] 楷体用于主 CTA；买卖红绿色义不被主题反转。  
 - [ ] Android WebView：输入法、caret、点击热区无穿透。
 
 ### 9.2 反例（仍算「假 / AI 味」）
@@ -411,6 +536,29 @@
 
 **交付物清单**：PNG @2x + 同名 WebP；每组附 `MANIFEST.md`（帧名、锚点、安全边距 4px、是否含文字）。含文字版本需提供**无字空白框**以便 CSS 叠楷体（Android 字体回退）。
 
+### 10.1 绘图 Bot 开工清单（按优先级勾选）
+
+**P1 包（先做，阻塞手感）**
+
+- [ ] `ctl-buy` / `ctl-sell` / `ctl-hold`：default · press · disabled · locked（虚线意图 / 实线锁定可各一帧）  
+- [ ] `ctl-msg`：default · press · disabled  
+- [ ] `ctl-ready` / `ctl-cancel-ready`：default · press · success(ready)  
+- [ ] `ctl-challenge`（约战）：default · press · loading（沸腾或砂轮叠加说明）  
+- [ ] `ctl-danger` + `ctl-primary` + `ctl-secondary`（离开确认三键可复用）  
+- [ ] `ctl-castbar-track` + `fill`（匹配/开局）  
+- [ ] `ctl-toast-success/error/info`
+
+**P2 包**
+
+- [ ] `ctl-input-shell` / `ctl-textarea-shell`：default · focus · error  
+- [ ] `ctl-checkbox` / `ctl-radio` · `ctl-close-x`  
+- [ ] `ctl-modal-paper` 9-slice · `ctl-avatar-frame`  
+- [ ] 纸/墨 switch 印章
+
+**约束（REA）**
+
+- 切片**不要写死动态数字**；双线描边 OK；press 帧视觉上 elevation 更低、线可略粗；提供至少一套「虚线壳」用于未确认态。
+
 ---
 
 ## 11. 附录 B：控件 ID 速查（实施用）
@@ -427,4 +575,5 @@ Auth/反馈：`authLoginBtn` `authModal` inputs `feedbackSubmit` `feedbackBody`
 | 日期 | 版本 | 说明 |
 |---|---|---|
 | 2026-10-12 | v1.0 | 首版：代码盘点 + News Bot 竞品精炼 + WoW 映射 + 绘图 brief；仅文档 PR |
+| 2026-10-12 | v1.1 | 并入 REA 逆向（坐庄风云/Drawably/Wired/Papercuts/252）；跨站 10 条硬规范；静态 ≈4.2M 换皮预算与无 sprite 现状写入 §7 |
 
