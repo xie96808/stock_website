@@ -1,22 +1,22 @@
 # P1 Handcrafted Controls Manifest
 
 Style lock: ctl-buy v3 — kraft `#f3ead8`, ink `#3a3530`, buy cinnabar `#e05252`, sell green `#3db86a`.
-Hard offset shadow, ragged 毛边, tilt ≤2°. PNG@2x is master. No baked text (CSS 楷体 overlay).
+Hard offset shadow, ragged 毛边, tilt=0 (symmetric BR shadow; edge wobble kept). PNG@2x is master. No baked text (CSS 楷体 overlay).
 
 | file | size | states | anchor | safe margin | has_text | notes |
 |---|---|---|---|---|---|---|
-| `ctl-buy-default` | 190×80 | default | center | 4px | false | cinnabar buy shell; blank for 楷体 |
-| `ctl-buy-press` | 190×80 | press | center | 4px | false | cinnabar buy shell; blank for 楷体 |
-| `ctl-buy-disabled` | 190×80 | disabled | center | 4px | false | cinnabar buy shell; blank for 楷体 |
-| `ctl-buy-locked` | 190×80 | locked | center | 4px | false | cinnabar buy shell; blank for 楷体 |
-| `ctl-sell-default` | 190×80 | default | center | 4px | false | green sell shell; pale green wash |
-| `ctl-sell-press` | 190×80 | press | center | 4px | false | green sell shell; pale green wash |
-| `ctl-sell-disabled` | 190×80 | disabled | center | 4px | false | green sell shell; pale green wash |
-| `ctl-sell-locked` | 190×80 | locked | center | 4px | false | green sell shell; pale green wash |
-| `ctl-hold-default` | 190×80 | default | center | 4px | false | ink/brown hold shell; kraft fill |
-| `ctl-hold-press` | 190×80 | press | center | 4px | false | ink/brown hold shell; kraft fill |
-| `ctl-hold-disabled` | 190×80 | disabled | center | 4px | false | ink/brown hold shell; kraft fill |
-| `ctl-hold-locked` | 190×80 | locked | center | 4px | false | ink/brown hold shell; kraft fill |
+| `ctl-buy-default` | 190×80 | default | center | 4px | false | cinnabar buy shell; blank for 楷体; tilt=0 |
+| `ctl-buy-press` | 190×80 | press | center | 4px | false | cinnabar buy shell; blank for 楷体; tilt=0 |
+| `ctl-buy-disabled` | 190×80 | disabled | center | 4px | false | cinnabar buy shell; blank for 楷体; tilt=0 |
+| `ctl-buy-locked` | 190×80 | locked | center | 4px | false | cinnabar buy shell; blank for 楷体; tilt=0 |
+| `ctl-sell-default` | 190×80 | default | center | 4px | false | green sell shell; pale green wash; tilt=0 |
+| `ctl-sell-press` | 190×80 | press | center | 4px | false | green sell shell; pale green wash; tilt=0 |
+| `ctl-sell-disabled` | 190×80 | disabled | center | 4px | false | green sell shell; pale green wash; tilt=0 |
+| `ctl-sell-locked` | 190×80 | locked | center | 4px | false | green sell shell; pale green wash; tilt=0 |
+| `ctl-hold-default` | 190×80 | default | center | 4px | false | ink/brown hold shell; kraft fill; tilt=0 |
+| `ctl-hold-press` | 190×80 | press | center | 4px | false | ink/brown hold shell; kraft fill; tilt=0 |
+| `ctl-hold-disabled` | 190×80 | disabled | center | 4px | false | ink/brown hold shell; kraft fill; tilt=0 |
+| `ctl-hold-locked` | 190×80 | locked | center | 4px | false | ink/brown hold shell; kraft fill; tilt=0 |
 | `ctl-msg-default` | 80×80 | default | center | 4px | false | speech bubble; three dots OK; no 汉字 |
 | `ctl-msg-press` | 80×80 | press | center | 4px | false | speech bubble; three dots OK; no 汉字 |
 | `ctl-msg-disabled` | 80×80 | disabled | center | 4px | false | speech bubble; three dots OK; no 汉字 |
@@ -28,12 +28,12 @@ Hard offset shadow, ragged 毛边, tilt ≤2°. PNG@2x is master. No baked text 
 | `ctl-challenge-default` | 96×40 | default | center | 4px | false | small pill; loading=boil dots/arc, no text |
 | `ctl-challenge-press` | 96×40 | press | center | 4px | false | small pill; loading=boil dots/arc, no text |
 | `ctl-challenge-loading` | 96×40 | loading | center | 4px | false | small pill; loading=boil dots/arc, no text |
-| `ctl-primary-default` | 160×48 | default | center | 4px | false | main CTA ink/paper; loading mark |
-| `ctl-primary-press` | 160×48 | press | center | 4px | false | main CTA ink/paper; loading mark |
-| `ctl-primary-loading` | 160×48 | loading | center | 4px | false | main CTA ink/paper; loading mark |
-| `ctl-primary-disabled` | 160×48 | disabled | center | 4px | false | main CTA ink/paper; loading mark |
-| `ctl-secondary-default` | 160×48 | default | center | 4px | false | quiet ink outline |
-| `ctl-secondary-press` | 160×48 | press | center | 4px | false | quiet ink outline |
+| `ctl-primary-default` | 160×48 | default | center | 4px | false | main CTA ink/paper; loading mark; tilt=0 |
+| `ctl-primary-press` | 160×48 | press | center | 4px | false | main CTA ink/paper; loading mark; tilt=0 |
+| `ctl-primary-loading` | 160×48 | loading | center | 4px | false | main CTA ink/paper; loading mark; tilt=0 |
+| `ctl-primary-disabled` | 160×48 | disabled | center | 4px | false | main CTA ink/paper; loading mark; tilt=0 |
+| `ctl-secondary-default` | 160×48 | default | center | 4px | false | quiet ink outline; tilt=0 |
+| `ctl-secondary-press` | 160×48 | press | center | 4px | false | quiet ink outline; tilt=0 |
 | `ctl-danger-default` | 160×48 | default | center | 4px | false | danger cinnabar |
 | `ctl-danger-press` | 160×48 | press | center | 4px | false | danger cinnabar |
 | `ctl-castbar-track` | 240×16 | track | center | 4px | false | empty paper trough |
@@ -58,25 +58,25 @@ Generated by `_gen_p2.py` (imports helpers from `_gen_p1.py`).
 
 | file | size | states | anchor | safe margin | has_text | notes |
 |---|---|---|---|---|---|---|
-| `ctl-input-shell-default` | 280×48 | default | center | 4px | false | kraft field + ink border; empty center for typed text |
-| `ctl-input-shell-focus` | 280×48 | focus | center | 4px | false | stronger ink + cinnabar inner accent |
-| `ctl-input-shell-error` | 280×48 | error | center | 4px | false | cinnabar border; pale wash fill |
-| `ctl-textarea-shell-default` | 280×120 | default | center | 4px | false | tall kraft field; empty for multi-line text |
-| `ctl-textarea-shell-focus` | 280×120 | focus | center | 4px | false | stronger ink + cinnabar inner accent |
-| `ctl-textarea-shell-error` | 280×120 | error | center | 4px | false | cinnabar border; pale wash fill |
-| `ctl-checkbox-off` | 28×28 | off | center | 4px | false | empty chip |
-| `ctl-checkbox-on` | 28×28 | on | center | 4px | false | hand-drawn check (ink stroke), not system ✓ |
-| `ctl-radio-off` | 28×28 | off | center | 4px | false | empty ring |
-| `ctl-radio-on` | 28×28 | on | center | 4px | false | ink/cinnabar filled center dot |
-| `ctl-close-x-default` | 40×40 | default | center | 4px | false | ragged hand-drawn × |
-| `ctl-close-x-press` | 40×40 | press | center | 4px | false | thicker/sunk press |
-| `ctl-modal-paper` | 360×480 | — | center | 4px | false | kraft panel; 9-slice corners≈48px; double border; empty center; hard shadow |
-| `ctl-avatar-frame-48` | 48×48 | — | center | 4px | false | circular kraft/ink ring; transparent center for photo |
-| `ctl-avatar-frame-72` | 72×72 | — | center | 4px | false | circular kraft/ink ring; transparent center for photo |
-| `ctl-switch-paper-off` | 64×36 | off | center | 4px | false | paper track; knob left |
-| `ctl-switch-paper-on` | 64×36 | on | center | 4px | false | greenish wash track; knob right |
-| `ctl-switch-ink-off` | 64×36 | off | center | 4px | false | dark ink track; light knob left |
-| `ctl-switch-ink-on` | 64×36 | on | center | 4px | false | cinnabar-dark track; light knob right |
+| `ctl-input-shell-default` | 280×48 | default | center | 4px | false | kraft field + ink border; empty center for typed text; tilt=0 |
+| `ctl-input-shell-focus` | 280×48 | focus | center | 4px | false | stronger ink + cinnabar inner accent; tilt=0 |
+| `ctl-input-shell-error` | 280×48 | error | center | 4px | false | cinnabar border; pale wash fill; tilt=0 |
+| `ctl-textarea-shell-default` | 280×120 | default | center | 4px | false | tall kraft field; empty for multi-line text; tilt=0 |
+| `ctl-textarea-shell-focus` | 280×120 | focus | center | 4px | false | stronger ink + cinnabar inner accent; tilt=0 |
+| `ctl-textarea-shell-error` | 280×120 | error | center | 4px | false | cinnabar border; pale wash fill; tilt=0 |
+| `ctl-checkbox-off` | 28×28 | off | center | 4px | false | empty chip; tilt=0 |
+| `ctl-checkbox-on` | 28×28 | on | center | 4px | false | hand-drawn check (ink stroke), not system ✓; tilt=0 |
+| `ctl-radio-off` | 28×28 | off | center | 4px | false | empty ring; tilt=0 |
+| `ctl-radio-on` | 28×28 | on | center | 4px | false | ink/cinnabar filled center dot; tilt=0 |
+| `ctl-close-x-default` | 40×40 | default | center | 4px | false | ragged hand-drawn ×; tilt=0 |
+| `ctl-close-x-press` | 40×40 | press | center | 4px | false | thicker/sunk press; tilt=0 |
+| `ctl-modal-paper` | 360×480 | — | center | 4px | false | kraft panel; 9-slice corners≈48px; double border; empty center; hard shadow; tilt=0 |
+| `ctl-avatar-frame-48` | 48×48 | — | center | 4px | false | circular kraft/ink ring; transparent center for photo; tilt=0 |
+| `ctl-avatar-frame-72` | 72×72 | — | center | 4px | false | circular kraft/ink ring; transparent center for photo; tilt=0 |
+| `ctl-switch-paper-off` | 64×36 | off | center | 4px | false | paper track; knob left; tilt=0 |
+| `ctl-switch-paper-on` | 64×36 | on | center | 4px | false | greenish wash track; knob right; tilt=0 |
+| `ctl-switch-ink-off` | 64×36 | off | center | 4px | false | dark ink track; light knob left; tilt=0 |
+| `ctl-switch-ink-on` | 64×36 | on | center | 4px | false | cinnabar-dark track; light knob right; tilt=0 |
 
 ### P2 9-slice hints
 
@@ -91,3 +91,129 @@ Generated by `_gen_p2.py` (imports helpers from `_gen_p1.py`).
 - `.svg` (simplified companion)
 
 Contact sheet: `_samples/p2-sheet.png`.
+
+## P3 PvP Lobby / Match / Result Controls
+
+Style lock: same as P1/P2 (ctl-buy v3). No baked text or numbers. Generated by `_gen_p3.py`.
+Sizes from pr161-review screenshots (780px captures = 2× of 390 CSS px).
+
+| file | size | states | anchor | safe margin | has_text | notes |
+|---|---|---|---|---|---|---|
+| `ctl-rank-card` | 340×200 | shell | center | 4px | false | PRIMARY blank shell; icon slot ⌀72 centered (60,98); blank title/sub/progress-groove zones; 9-slice see below; tilt=0 |
+| `ctl-rank-card-preview-jiucai` | 340×200 | preview | center | 4px | false | shell + HD rank-icons/rank-jiucai-hd@2x.png downscaled into Ø72 slot; preview only, not for prod; tilt=0 |
+| `ctl-rank-card-preview-sanhu` | 340×200 | preview | center | 4px | false | shell + HD rank-icons/rank-sanhu-hd@2x.png downscaled into Ø72 slot; preview only, not for prod; tilt=0 |
+| `ctl-rank-card-preview-laoshou` | 340×200 | preview | center | 4px | false | shell + HD rank-icons/rank-laoshou-hd@2x.png downscaled into Ø72 slot; preview only, not for prod; tilt=0 |
+| `ctl-rank-card-preview-youzi` | 340×200 | preview | center | 4px | false | shell + HD rank-icons/rank-youzi-hd@2x.png downscaled into Ø72 slot; preview only, not for prod; tilt=0 |
+| `ctl-rank-card-preview-zhuangjia` | 340×200 | preview | center | 4px | false | shell + HD rank-icons/rank-zhuangjia-hd@2x.png downscaled into Ø72 slot; preview only, not for prod; tilt=0 |
+| `ctl-seat-panel-self-default` | 176×56 | default | left | 4px | false | kraft panel; transparent avatar hole ⌀32 on left (center x=29, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-seat-panel-self-active` | 176×56 | active | left | 4px | false | locked/highlight: heavier ink + cinnabar inner rule + wash; transparent avatar hole ⌀32 on left (center x=29, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-seat-panel-self-leading` | 176×56 | leading | left | 4px | false | cinnabar #e05252 wash (stronger than active) + cinnabar inner rule + small hand-drawn red flag on outer edge; transparent avatar hole ⌀32 on left (center x=29, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-seat-panel-opponent-default` | 176×56 | default | right | 4px | false | kraft panel; transparent avatar hole ⌀32 on right (center x=W-29-shadow, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-seat-panel-opponent-active` | 176×56 | active | right | 4px | false | locked/highlight: heavier ink + cinnabar inner rule + wash; transparent avatar hole ⌀32 on right (center x=W-29-shadow, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-seat-panel-opponent-leading` | 176×56 | leading | right | 4px | false | cinnabar #e05252 wash (stronger than active) + cinnabar inner rule + small hand-drawn red flag on outer edge; transparent avatar hole ⌀32 on right (center x=W-29-shadow, y≈26); blank name/profit guide lines; tilt=0 |
+| `ctl-timer-ring-track` | 72×72 | track | center | 4px | false | kraft band + hard shadow; transparent center ⌀~44 for digits; tilt=0 |
+| `ctl-timer-ring-fill` | 72×72 | fill | center | 4px | false | full ink band, no shadow; mask with conic-gradient for progress; tilt=0 |
+| `ctl-timer-ring-fill-segmented` | 72×72 | fill-segmented | center | 4px | false | ink band with 12 tick gaps; conic mask; tilt=0 |
+| `ctl-timer-ring-urgent` | 72×72 | urgent | center | 4px | false | cinnabar band for last seconds; conic mask; tilt=0 |
+| `ctl-share-save-default` | 56×48 | default | center | 4px | false | terracotta/cinnabar pill, icon-only; hand-drawn download-tray icon centered; no label zone; tilt=0 |
+| `ctl-share-save-press` | 56×48 | press | center | 4px | false | sunk: shadow 0.8px, nudged +2/+2.4, darker, thicker stroke; tilt=0 |
+| `ctl-share-save-loading` | 56×48 | loading | center | 4px | false | hand-drawn spinner arc in icon area (rotate via CSS or swap); tilt=0 |
+| `ctl-share-save-disabled` | 56×48 | disabled | center | 4px | false | light kraft fill, dashed border, faint hatch, faded icon; tilt=0 |
+
+### P3 9-slice / layout hints
+
+- `ctl-rank-card`: corner radius 16px → 9-slice **24px** top/right/bottom; **left inset 104px** (keeps icon slot ⌀72 at x=24–96 unstretched). Hard shadow 4px bottom-right sits inside the 24px band.
+- Rank icon slot: center (60,98) @1x, r=36. Use HD icons `/workspace/assets/pvp/rank-icons/rank-{jiucai,sanhu,laoshou,youzi,zhuangjia}-hd.png` (144², @2x 288², +.webp) sized 72×72 CSS (`srcset` 2x/4x); emblem fills ~84% of circle. Generated by `rank-icons/_gen_hd.py` (tight crop + EDSR super-res; originals kept untouched).
+- Seat-panel `leading` = cinnabar (#e05252) wash/rule/flag (NOT green); `active` = heavier ink + paler cinnabar rule.
+- Seat panels: avatar hole ⌀32 is transparent — put `<img>` under the panel (z-index) or inside a 32px circle at the hole. Opponent is geometric mirror (shadow still bottom-right).
+- Timer ring: center hole ⌀≈44 transparent; stack `fill`/`urgent` over `track`, mask with `conic-gradient(#000 var(--p), transparent 0)`; fill has no shadow so it aligns on track.
+- Share-save: icon-only 56×48 button, icon centered on the pill body (press shifts icon with body); add aria-label in markup.
+- Exports per variant: `.png`, `@2x.png`, `.webp`, `@2x.webp`, `.svg` (simplified outline). 1× made by premultiplied downscale; transparent RGB bled → no gray fringe.
+
+Contact sheet: `_samples/p3-sheet.png`.
+
+## P4 Cards / Stamps / Nav Chips
+
+Style lock: same as P1–P3 (ctl-buy v3). No baked text. Generated by `_gen_p4.py` (imports fringe-safe Pen/export from `_gen_p3.py`).
+
+| file | size | states | anchor | safe margin | has_text | notes |
+|---|---|---|---|---|---|---|
+| `ctl-card-paper-default` | 343×220 | default | center | 4px | false | kraft paper panel; blank interior; 9-slice 24px corners; variable-height friendly; tilt=0 |
+| `ctl-card-paper-emphasis` | 343×220 | emphasis | center | 4px | false | stronger ink + deeper shadow + thin cinnabar inner accent (P3 seat-active style, no green); blank interior; tilt=0 |
+| `ctl-card-paper-sm-default` | 280×160 | default | center | 4px | false | sm kraft paper panel; blank interior; 9-slice 12px corners; variable-height friendly; tilt=0 |
+| `ctl-card-paper-sm-emphasis` | 280×160 | emphasis | center | 4px | false | sm stronger ink + deeper shadow + thin cinnabar inner accent (P3 seat-active style, no green); blank interior; tilt=0 |
+| `ctl-stamp-tag-red` | 56×22 | red | center | 4px | false | cinnabar stamp wash; irregular seal; blank for CSS text; 9-slice ~8–10px; tilt=0 |
+| `ctl-stamp-tag-green` | 56×22 | green | center | 4px | false | sell-green stamp wash; irregular seal; blank for CSS; tilt=0 |
+| `ctl-stamp-tag-ink` | 56×22 | ink | center | 4px | false | dark ink stamp wash; irregular seal; blank for CSS; tilt=0 |
+| `ctl-stamp-tag-neutral` | 56×22 | neutral | center | 4px | false | kraft/light stamp shell; irregular seal; blank for CSS; tilt=0 |
+| `ctl-back-default` | 112×36 | default | center | 4px | false | kraft pill + hand-drawn ← arrow (left); blank right for CSS label; tilt=0 |
+| `ctl-back-press` | 112×36 | press | center | 4px | false | sunk: shadow ~0.7px, nudged, darker fill, thicker stroke; tilt=0 |
+| `ctl-back-disabled` | 112×36 | disabled | center | 4px | false | light fill, dashed border, faint hatch, faded arrow (locked-style); tilt=0 |
+| `ctl-chip-btn-default` | 72×32 | default | center | 4px | false | kraft chip; blank for CSS label; 9-slice ~10–12px; tilt=0 |
+| `ctl-chip-btn-press` | 72×32 | press | center | 4px | false | sunk press; darker kraft; tilt=0 |
+| `ctl-chip-btn-active` | 72×32 | active | center | 4px | false | pale cinnabar wash + heavier ink + cinnabar inner rule (seat-panel active); tilt=0 |
+| `ctl-lane-card-default` | 343×120 | default | center | 4px | false | large home entry card; blank interior; 9-slice 24px; tilt=0 |
+| `ctl-lane-card-press` | 343×120 | press | center | 4px | false | sunk: shadow ~0.9px, nudged +2/+2.4, darker; tilt=0 |
+| `ctl-lane-card-disabled` | 343×120 | disabled | center | 4px | false | locked-style: light fill, dashed border, faint hatch; tilt=0 |
+| `ctl-tab-default` | 96×32 | default | center | 4px | false | quiet kraft tab shell; blank for CSS label; tilt=0 |
+| `ctl-tab-selected` | 96×32 | selected | center | 4px | false | stronger ink fill + hand-drawn cinnabar underline bar; blank for CSS; tilt=0 |
+| `ctl-tab-press` | 96×32 | press | center | 4px | false | sunk press; blank for CSS; tilt=0 |
+
+### P4 9-slice / layout hints
+
+- `ctl-card-paper` (343×220 representative): corner radius 16px → 9-slice **24px** all sides; stretch vertically for variable-height info panels. Hard shadow ~4px BR sits inside the 24px band. `emphasis` = stronger ink + deeper shadow + thin cinnabar inner accent (no green).
+- `ctl-card-paper-sm` (280×160): 9-slice **12px** corners; same states as large.
+- `ctl-stamp-tag` (56×22): 9-slice **~8–10px**; four color shells (red/green/ink/neutral), not press states; blank for CSS stamp text.
+- `ctl-back` (112×36): hand-drawn ← arrow on left third; blank right for optional CSS label; disabled = dashed + hatch (locked-style).
+- `ctl-chip-btn` (72×32): 9-slice **~10–12px**; `active` matches seat-panel active (pale cinnabar wash).
+- `ctl-lane-card` (343×120): 9-slice **24px**; large home entry; blank interior for CSS.
+- `ctl-tab` (96×32): `selected` has hand-drawn cinnabar underline; blank for CSS label.
+- Exports per variant: `.png`, `@2x.png`, `.webp`, `@2x.webp`, `.svg`. 1× via premultiplied downscale; transparent RGB bled → no gray fringe. tilt=0 (symmetric BR shadow; edge wobble kept), ≥4px safe margin.
+
+Contact sheet: `_samples/p4-sheet.png`.
+
+## P5 Icon Btn / Chart / Popover / Bar / Options / Seal / Select / Gift
+
+Style lock: same as P1–P4 (ctl-buy v3). No baked text. Generated by `_gen_p5.py` (fringe-safe Pen/export from `_gen_p3.py`, `_shell_geom` from `_gen_p4.py`).
+
+| file | size | states | anchor | safe margin | has_text | notes |
+|---|---|---|---|---|---|---|
+| `ctl-icon-btn-default` | 36×36 | default | center | ~1px (override) | false | kraft circle ⌀≈33 on 36 canvas; blank centre (no guide ring) ⌀≈22 icon zone for CSS icon; 4px safe margin overridden by request (~1px edge); tilt=0 |
+| `ctl-icon-btn-press` | 36×36 | press | center | ~1px (override) | false | sunk: shadow 0.3px, nudged 0.3px, darker; tilt=0 |
+| `ctl-icon-btn-disabled` | 36×36 | disabled | center | ~1px (override) | false | light fill, dashed ring, faint hatch; tilt=0 |
+| `ctl-chart-frame` | 343×220 | single | center | 4px | false | kraft frame + lighter blank plotting well inset 10px; 9-slice 24px; tilt=0 |
+| `ctl-popover` | 240×120 | single | center | 4px | false | paper popover, pointer top-center (16×8, apex x=120); body starts y≈17; tilt=0 |
+| `ctl-bar-strip` | 390×64 | single | center | 4px | false | untilted base strip for bottom trade bar / progress track; 3-slice caps 24px; tilt=0 |
+| `ctl-option-row-default` | 343×52 | default | center | 4px | false | kraft answer row; blank for CSS label; tilt=0 |
+| `ctl-option-row-press` | 343×52 | press | center | 4px | false | sunk press; tilt=0 |
+| `ctl-option-row-correct` | 343×52 | correct | center | 4px | false | sell-green #3db86a wash + green stroke + hand-drawn check at right (x≈W-30); tilt=0 |
+| `ctl-option-row-wrong` | 343×52 | wrong | center | 4px | false | cinnabar wash + red stroke + hand-drawn × at right (x≈W-30); tilt=0 |
+| `ctl-option-row-disabled` | 343×52 | disabled | center | 4px | false | locked-style: light fill, dashed border, faint hatch; tilt=0 |
+| `ctl-seal-ring` | 64×64 | single | center | 4px | false | cinnabar seal/medal ring w/ bead dots; transparent center ⌀≈30 for content; tilt=0 |
+| `ctl-select-default` | 240×44 | default | center | 4px | false | kraft field + divider + hand-drawn ⌄ chevron at right; blank value zone; tilt=0; tilt=0 |
+| `ctl-select-press` | 240×44 | press | center | 4px | false | sunk press; tilt=0; tilt=0 |
+| `ctl-select-focus` | 240×44 | focus | center | 4px | false | heavier ink + cinnabar inner rule + cinnabar chevron; tilt=0; tilt=0 |
+| `ctl-select-disabled` | 240×44 | disabled | center | 4px | false | dashed + hatch, faded chevron; tilt=0; tilt=0 |
+| `ctl-select-menu` | 240×200 | single | center | 4px | false | dropdown paper; blank; 9-slice 16px; place under select (top gap ~4px); tilt=0; tilt=0 |
+| `ctl-gift-default` | 88×36 | default | center | 4px | false | pale cinnabar pill + hand-drawn gift icon left; blank right for CSS; tilt=0 |
+| `ctl-gift-press` | 88×36 | press | center | 4px | false | sunk press; tilt=0 |
+| `ctl-gift-sent` | 88×36 | sent | center | 4px | false | muted/faded shell + faded gift + small green check right; tilt=0 |
+
+### P5 slice / layout hints
+
+- `ctl-icon-btn` 36×36: fixed, no slicing. **Reduced margin (override)**: circle ⌀≈33, ~1px to canvas edge, shadow 1px/whiskers off. Blank icon zone ⌀≈22 centred at (17.6,17.6).
+- `ctl-chart-frame` 343×220: 9-slice **24px** all sides; plotting well = inset ~14px from outer edge.
+- `ctl-popover` 240×120: arrow top-center, 16w×8h, apex at x=120. 9-slice: **top 24px** (contains arrow; keep center column x=104–136 unstretched or use 3-part top), left/right/bottom **16px**. For other arrow positions, mirror/regenerate (`ARROW` x in `render_popover`).
+- `ctl-bar-strip` 390×64: untilted; horizontal 3-slice caps **24px** left/right (`border-image-slice: 0 24 fill`), or 9-slice 24/24/20/20.
+- `ctl-option-row` 343×52: 9-slice **16px**; right 40px holds check/× (use 16/40/16/16 for correct/wrong).
+- `ctl-seal-ring` 64×64: fixed; transparent center ⌀≈30.
+- `ctl-select` 240×44: 9-slice **14px** left/top/bottom, **right 40px** (keeps divider+chevron).
+- `ctl-select-menu` 240×200: 9-slice **16px**.
+- `ctl-gift` 88×36: fixed; or 9-slice left 34px (icon) / right 24px (check in sent) / 12px top/bottom.
+- Exports per variant: `.png`, `@2x.png`, `.webp`, `@2x.webp`, `.svg`. Premultiplied 1× + RGB bleed → no fringe.
+
+Contact sheet: `_samples/p5-sheet.png`.
+
+## Straighten pass (2026-10-13)
+
+All P1/P2/P4/P5 controls and P3 rank-card(+previews)/seat-panel/timer-ring/share-save are **tilt=0**: no whole-control rotation, symmetric BR hard shadow, edge 毛边/multipass wobble kept. Sizes and 9-slice unchanged. Press nudges reduced slightly so untilted shells stay inside the safe margin. Sheets: `_samples/straighten-sheet.png`, p1–p5 sheets.

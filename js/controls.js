@@ -15,7 +15,8 @@ const CTL_STATES = new Set([
   "error",
 ]);
 
-const ASSET = (name) => `assets/controls/${name}`;
+const ASSET_REV = "20261013s"; // bump when control art changes (cache-bust)
+const ASSET = (name) => `assets/controls/${name}?v=${ASSET_REV}`;
 
 /** Map ctl kind + state → asset path (webp preferred by CSS; PNG for <img>). */
 export function ctlAsset(kind, state = "default", ext = "png") {

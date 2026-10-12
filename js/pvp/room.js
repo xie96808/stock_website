@@ -482,7 +482,7 @@ function paintActions() {
   // ctl skins: locked = this round submitted (solid), disabled = not allowed now.
   const roundLocked = postedLock || pendingNetwork || isSubmitting() || !!view?.me?.lockedToday;
   if (primary && playing) syncTradeCtl(primary, { kind: wantSell ? "sell" : "buy", disabled: primary.disabled, locked: roundLocked && primary.disabled });
-  if (primaryImg && primary) primaryImg.src = `assets/controls/ctl-${wantSell ? "sell" : "buy"}-${primary.dataset.state === "locked" ? "locked" : primary.disabled ? "disabled" : "default"}.png`;
+  if (primaryImg && primary) primaryImg.src = `assets/controls/ctl-${wantSell ? "sell" : "buy"}-${primary.dataset.state === "locked" ? "locked" : primary.disabled ? "disabled" : "default"}.png?v=20261013s`;
   if (hold && playing) syncTradeCtl(hold, { kind: "hold", disabled: hold.disabled, locked: roundLocked && hold.disabled });
   if (msgOpen) syncTradeCtl(msgOpen, { kind: "msg", disabled: msgOpen.disabled });
   if (view?.status !== "playing") return;

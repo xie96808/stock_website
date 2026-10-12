@@ -141,26 +141,26 @@
   font-size: 1.02rem;
 }
 
-.ctl-buy { color: var(--ctl-buy); background-image: url("../assets/controls/ctl-buy-default.webp"); }
+.ctl-buy { color: var(--ctl-buy); background-image: url("../assets/controls/ctl-buy-default.webp?v=20261013s"); }
 .ctl-buy:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.ctl-buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp"); }
+.ctl-buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp?v=20261013s"); }
 .ctl-buy:disabled,
-.ctl-buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp"); }
-.ctl-buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp"); opacity: 0.85; filter: none; }
+.ctl-buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp?v=20261013s"); }
+.ctl-buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp?v=20261013s"); opacity: 0.85; filter: none; }
 
-.ctl-sell { color: var(--ctl-sell); background-image: url("../assets/controls/ctl-sell-default.webp"); }
+.ctl-sell { color: var(--ctl-sell); background-image: url("../assets/controls/ctl-sell-default.webp?v=20261013s"); }
 .ctl-sell:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.ctl-sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp"); }
+.ctl-sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp?v=20261013s"); }
 .ctl-sell:disabled,
-.ctl-sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp"); }
-.ctl-sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp"); opacity: 0.85; filter: none; }
+.ctl-sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp?v=20261013s"); }
+.ctl-sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp?v=20261013s"); opacity: 0.85; filter: none; }
 
-.ctl-hold { color: var(--ctl-ink); background-image: url("../assets/controls/ctl-hold-default.webp"); }
+.ctl-hold { color: var(--ctl-ink); background-image: url("../assets/controls/ctl-hold-default.webp?v=20261013s"); }
 .ctl-hold:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.ctl-hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.ctl-hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp?v=20261013s"); }
 .ctl-hold:disabled,
-.ctl-hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp"); }
-.ctl-hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp"); opacity: 0.85; filter: none; }
+.ctl-hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp?v=20261013s"); }
+.ctl-hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp?v=20261013s"); opacity: 0.85; filter: none; }
 
 /* Override legacy .action-btn color blocks when .ctl is present */
 .action-btn.ctl {
@@ -185,12 +185,12 @@
   height: 56px;
   min-height: 56px;
   min-width: 56px;
-  background-image: url("../assets/controls/ctl-msg-default.webp");
+  background-image: url("../assets/controls/ctl-msg-default.webp?v=20261013s");
 }
 .ctl-msg:active:not(:disabled),
-.ctl-msg[data-state="press"] { background-image: url("../assets/controls/ctl-msg-press.webp"); }
+.ctl-msg[data-state="press"] { background-image: url("../assets/controls/ctl-msg-press.webp?v=20261013s"); }
 .ctl-msg:disabled,
-.ctl-msg[data-state="disabled"] { background-image: url("../assets/controls/ctl-msg-disabled.webp"); }
+.ctl-msg[data-state="disabled"] { background-image: url("../assets/controls/ctl-msg-disabled.webp?v=20261013s"); }
 
 /* Ready / cancel-ready 140×56 */
 .ctl-ready,
@@ -201,17 +201,17 @@
   font-size: 1rem;
   color: var(--ctl-buy);
 }
-.ctl-ready { background-image: url("../assets/controls/ctl-ready-default.webp"); }
+.ctl-ready { background-image: url("../assets/controls/ctl-ready-default.webp?v=20261013s"); }
 .ctl-ready:active:not(:disabled),
-.ctl-ready[data-state="press"] { background-image: url("../assets/controls/ctl-ready-press.webp"); }
-.ctl-ready[data-state="success"] { background-image: url("../assets/controls/ctl-ready-success.webp"); }
+.ctl-ready[data-state="press"] { background-image: url("../assets/controls/ctl-ready-press.webp?v=20261013s"); }
+.ctl-ready[data-state="success"] { background-image: url("../assets/controls/ctl-ready-success.webp?v=20261013s"); }
 
 .ctl-cancel-ready {
   color: var(--ctl-ink);
-  background-image: url("../assets/controls/ctl-cancel-ready-default.webp");
+  background-image: url("../assets/controls/ctl-cancel-ready-default.webp?v=20261013s");
 }
 .ctl-cancel-ready:active:not(:disabled),
-.ctl-cancel-ready[data-state="press"] { background-image: url("../assets/controls/ctl-cancel-ready-press.webp"); }
+.ctl-cancel-ready[data-state="press"] { background-image: url("../assets/controls/ctl-cancel-ready-press.webp?v=20261013s"); }
 
 /* Challenge pill 96×40 */
 .ctl-challenge {
@@ -222,13 +222,13 @@
   font-size: 0.88rem;
   letter-spacing: 0.12em;
   color: var(--ctl-ink);
-  background-image: url("../assets/controls/ctl-challenge-default.webp");
+  background-image: url("../assets/controls/ctl-challenge-default.webp?v=20261013s");
 }
 .ctl-challenge:active:not(:disabled),
-.ctl-challenge[data-state="press"] { background-image: url("../assets/controls/ctl-challenge-press.webp"); }
+.ctl-challenge[data-state="press"] { background-image: url("../assets/controls/ctl-challenge-press.webp?v=20261013s"); }
 .ctl-challenge[data-state="loading"],
 .ctl-challenge.is-busy {
-  background-image: url("../assets/controls/ctl-challenge-loading.webp");
+  background-image: url("../assets/controls/ctl-challenge-loading.webp?v=20261013s");
   cursor: wait;
   opacity: 1;
   filter: none;
@@ -247,13 +247,13 @@
 
 .ctl-primary {
   color: var(--ctl-kraft);
-  background-image: url("../assets/controls/ctl-primary-default.webp");
+  background-image: url("../assets/controls/ctl-primary-default.webp?v=20261013s");
 }
 .ctl-primary:active:not(:disabled),
-.ctl-primary[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp"); }
+.ctl-primary[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp?v=20261013s"); }
 .ctl-primary[data-state="loading"],
 .ctl-primary.is-busy {
-  background-image: url("../assets/controls/ctl-primary-loading.webp");
+  background-image: url("../assets/controls/ctl-primary-loading.webp?v=20261013s");
   cursor: wait;
   opacity: 1;
   filter: none;
@@ -261,21 +261,21 @@
   min-width: 8.5em;
 }
 .ctl-primary:disabled,
-.ctl-primary[data-state="disabled"] { background-image: url("../assets/controls/ctl-primary-disabled.webp"); }
+.ctl-primary[data-state="disabled"] { background-image: url("../assets/controls/ctl-primary-disabled.webp?v=20261013s"); }
 
 .ctl-secondary {
   color: var(--ctl-ink);
-  background-image: url("../assets/controls/ctl-secondary-default.webp");
+  background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s");
 }
 .ctl-secondary:active:not(:disabled),
-.ctl-secondary[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp"); }
+.ctl-secondary[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s"); }
 
 .ctl-danger {
   color: var(--ctl-kraft);
-  background-image: url("../assets/controls/ctl-danger-default.webp");
+  background-image: url("../assets/controls/ctl-danger-default.webp?v=20261013s");
 }
 .ctl-danger:active:not(:disabled),
-.ctl-danger[data-state="press"] { background-image: url("../assets/controls/ctl-danger-press.webp"); }
+.ctl-danger[data-state="press"] { background-image: url("../assets/controls/ctl-danger-press.webp?v=20261013s"); }
 
 /* Loading boil dots (CSS; reduced-motion kills) */
 .ctl[data-state="loading"]::after,
@@ -346,17 +346,17 @@
 }
 .ctl-toast--success,
 .auth-toast--success.ctl-toast {
-  background-image: url("../assets/controls/ctl-toast-success.webp");
+  background-image: url("../assets/controls/ctl-toast-success.webp?v=20261013s");
   color: #1a3a22 !important;
 }
 .ctl-toast--error,
 .auth-toast--error.ctl-toast {
-  background-image: url("../assets/controls/ctl-toast-error.webp");
+  background-image: url("../assets/controls/ctl-toast-error.webp?v=20261013s");
   color: #5a1a14 !important;
 }
 .ctl-toast--info,
 .auth-toast--info.ctl-toast {
-  background-image: url("../assets/controls/ctl-toast-info.webp");
+  background-image: url("../assets/controls/ctl-toast-info.webp?v=20261013s");
 }
 
 /* ----- Castbar ----- */
@@ -365,7 +365,7 @@
   width: min(240px, 100%);
   height: 16px;
   margin: 0.55rem auto 0.25rem;
-  background-image: url("../assets/controls/ctl-castbar-track.webp");
+  background-image: url("../assets/controls/ctl-castbar-track.webp?v=20261013s");
   background-repeat: no-repeat;
   background-size: 100% 100%;
   overflow: hidden;
@@ -374,7 +374,7 @@
   display: block;
   height: 100%;
   width: 0%;
-  background-image: url("../assets/controls/ctl-castbar-fill.webp");
+  background-image: url("../assets/controls/ctl-castbar-fill.webp?v=20261013s");
   background-repeat: no-repeat;
   background-size: auto 100%;
   background-position: left center;
@@ -661,7 +661,7 @@ body.ctl-scroll-lock {
   appearance: none;
   -webkit-appearance: none;
   border-style: solid !important; border-color: transparent !important; border-width: 10px !important;
-  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch !important;
+  border-image: url("../assets/controls/ctl-input-shell-default.png?v=20261013s") 14 fill / 10px stretch !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ctl-ink);
@@ -675,17 +675,17 @@ body.ctl-scroll-lock {
 .auth-form input[type=password]:focus,
 .auth-form input:not([type]):focus,
 .ctl-input:focus {
-  border-image-source: url("../assets/controls/ctl-input-shell-focus.png") !important;
+  border-image-source: url("../assets/controls/ctl-input-shell-focus.png?v=20261013s") !important;
 }
 .auth-form input:user-invalid,
 .ctl-input[aria-invalid="true"] {
-  border-image-source: url("../assets/controls/ctl-input-shell-error.png") !important;
+  border-image-source: url("../assets/controls/ctl-input-shell-error.png?v=20261013s") !important;
 }
 .feedback-dialog textarea,
 .ctl-textarea {
   appearance: none;
   border-style: solid !important; border-color: transparent !important; border-width: 14px !important;
-  border-image: url("../assets/controls/ctl-textarea-shell-default.png") 18 fill / 14px stretch !important;
+  border-image: url("../assets/controls/ctl-textarea-shell-default.png?v=20261013s") 18 fill / 14px stretch !important;
   border-radius: 0 !important;
   background: transparent !important;
   color: var(--ctl-ink);
@@ -695,9 +695,9 @@ body.ctl-scroll-lock {
   caret-color: var(--ctl-buy);
 }
 .feedback-dialog textarea:focus,
-.ctl-textarea:focus { border-image-source: url("../assets/controls/ctl-textarea-shell-focus.png") !important; }
+.ctl-textarea:focus { border-image-source: url("../assets/controls/ctl-textarea-shell-focus.png?v=20261013s") !important; }
 .feedback-dialog textarea:user-invalid,
-.ctl-textarea[aria-invalid="true"] { border-image-source: url("../assets/controls/ctl-textarea-shell-error.png") !important; }
+.ctl-textarea[aria-invalid="true"] { border-image-source: url("../assets/controls/ctl-textarea-shell-error.png?v=20261013s") !important; }
 [data-theme="dark"] .auth-form input,
 [data-theme="dark"] .feedback-dialog textarea { color: #2c2824; }
 
@@ -711,7 +711,7 @@ body.ctl-scroll-lock {
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  background: url("../assets/controls/ctl-close-x-default.png") center / 100% 100% no-repeat !important;
+  background: url("../assets/controls/ctl-close-x-default.png?v=20261013s") center / 100% 100% no-repeat !important;
   color: transparent !important;
   font-size: 0 !important;
   cursor: pointer;
@@ -721,7 +721,7 @@ body.ctl-scroll-lock {
 .feedback-close-x:active,
 .announcements-close-x:active,
 .pvp-opp-card-close:active {
-  background-image: url("../assets/controls/ctl-close-x-press.png") !important;
+  background-image: url("../assets/controls/ctl-close-x-press.png?v=20261013s") !important;
   transform: translate(1px, 1px);
 }
 /* P2 wiring: see round-2 section at end of file. Native date picker popups (hindsight) remain OS-drawn by browser. */
@@ -760,25 +760,25 @@ body.ctl-scroll-lock {
 [data-theme="dark"] .ctl-challenge { color: #3a3530 !important; }
 
 /* Solo .action-btn.<kind> legacy shorthand beats .ctl-<kind>; re-assert shells at matching specificity */
-.action-btn.ctl.buy { background-image: url("../assets/controls/ctl-buy-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-buy) !important; }
+.action-btn.ctl.buy { background-image: url("../assets/controls/ctl-buy-default.webp?v=20261013s"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-buy) !important; }
 .action-btn.ctl.buy:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.action-btn.ctl.buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp"); }
+.action-btn.ctl.buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp?v=20261013s"); }
 .action-btn.ctl.buy:disabled,
-.action-btn.ctl.buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp"); }
-.action-btn.ctl.buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp"); }
-.action-btn.ctl.sell { background-image: url("../assets/controls/ctl-sell-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-sell) !important; }
+.action-btn.ctl.buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp?v=20261013s"); }
+.action-btn.ctl.buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp?v=20261013s"); }
+.action-btn.ctl.sell { background-image: url("../assets/controls/ctl-sell-default.webp?v=20261013s"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-sell) !important; }
 .action-btn.ctl.sell:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.action-btn.ctl.sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp"); }
+.action-btn.ctl.sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp?v=20261013s"); }
 .action-btn.ctl.sell:disabled,
-.action-btn.ctl.sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp"); }
-.action-btn.ctl.sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp"); }
-.action-btn.ctl.hold { background-image: url("../assets/controls/ctl-hold-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-ink) !important; }
+.action-btn.ctl.sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp?v=20261013s"); }
+.action-btn.ctl.sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp?v=20261013s"); }
+.action-btn.ctl.hold { background-image: url("../assets/controls/ctl-hold-default.webp?v=20261013s"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-ink) !important; }
 .action-btn.ctl.hold:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
-.action-btn.ctl.hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.action-btn.ctl.hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp?v=20261013s"); }
 .action-btn.ctl.hold:disabled,
-.action-btn.ctl.hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp"); }
-.action-btn.ctl.hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp"); }
-#holdBtn.ctl.is-fast-forwarding { box-shadow: none !important; filter: brightness(0.92) saturate(1.2); background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.action-btn.ctl.hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp?v=20261013s"); }
+.action-btn.ctl.hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp?v=20261013s"); }
+#holdBtn.ctl.is-fast-forwarding { box-shadow: none !important; filter: brightness(0.92) saturate(1.2); background-image: url("../assets/controls/ctl-hold-press.webp?v=20261013s"); }
 .pvp-dialog .ctl:focus-visible,
 .ctl:focus-visible { outline: 2px dashed var(--ctl-ink); outline-offset: 3px; border-radius: 10px; }
 
@@ -840,9 +840,9 @@ body.ctl-scroll-lock {
 .ctl-sheet.is-leaving { animation: ctl-dim-out 220ms ease-in both !important; pointer-events: none; }
 
 @keyframes ctl-sheet-in {
-  0% { opacity: 0; transform: translateY(100%) rotate(-1.5deg); }
+  0% { opacity: 0; transform: translateY(100%); }
   35% { opacity: 1; }
-  100% { opacity: 1; transform: translateY(0) rotate(0); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 @keyframes ctl-sheet-out {
   from { opacity: 1; transform: translateY(0); }
@@ -872,7 +872,7 @@ body.ctl-scroll-lock {
   border-style: solid !important;
   border-color: transparent !important;
   border-width: 16px !important;
-  border-image: url("../assets/controls/ctl-modal-paper.png") 48 fill / 16px stretch !important;
+  border-image: url("../assets/controls/ctl-modal-paper.png?v=20261013s") 48 fill / 16px stretch !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -915,7 +915,7 @@ body.ctl-scroll-lock {
 #fillLoadBar #fillLoadFill.ctl-castbar-fill {
   border-radius: 0 !important;
   background-color: transparent !important;
-  background-image: url("../assets/controls/ctl-castbar-fill.webp") !important;
+  background-image: url("../assets/controls/ctl-castbar-fill.webp?v=20261013s") !important;
   background-size: 320px 100% !important;
   background-repeat: no-repeat !important;
 }
@@ -936,16 +936,16 @@ body.ctl-scroll-lock {
   background-repeat: no-repeat !important;
 }
 .action-btn.ctl.ff,
-.action-btn.ctl.rewind { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; color: var(--ctl-ink) !important; }
+.action-btn.ctl.rewind { background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
 .action-btn.ctl.ff:active:not(:disabled),
 .action-btn.ctl.ff[data-state="press"],
 .action-btn.ctl.rewind:active:not(:disabled),
-.action-btn.ctl.rewind[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
-.action-btn.ctl.finish { background-image: url("../assets/controls/ctl-primary-default.webp") !important; color: var(--ctl-ink) !important; }
+.action-btn.ctl.rewind[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; }
+.action-btn.ctl.finish { background-image: url("../assets/controls/ctl-primary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
 .action-btn.ctl.finish:active:not(:disabled),
-.action-btn.ctl.finish[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
-.action-btn.ctl.finish:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
-#fastForwardBtn.ctl.is-fast-forwarding { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; color: var(--ctl-buy) !important; }
+.action-btn.ctl.finish[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp?v=20261013s") !important; }
+.action-btn.ctl.finish:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp?v=20261013s") !important; }
+#fastForwardBtn.ctl.is-fast-forwarding { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; color: var(--ctl-buy) !important; }
 [data-theme="dark"] .action-btn.ctl.rewind,
 [data-theme="dark"] .action-btn.ctl.ff,
 [data-theme="dark"] .action-btn.ctl.finish { color: #3a3530 !important; }
@@ -953,13 +953,13 @@ body.ctl-scroll-lock {
   border: none !important; border-radius: 0 !important; box-shadow: none !important;
   background-color: transparent !important; padding: 0 0.6rem !important;
 }
-.fill-mode-btn.ctl-primary, .rewind-btn-primary.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp") !important; }
-.fill-mode-btn.ctl-primary:active, .rewind-btn-primary.ctl-primary:active, .jiu-coin-primary.ctl-primary:active { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
-.rewind-btn-primary.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
-.fill-mode-btn.ctl-secondary, .rewind-btn-secondary.ctl-secondary, .jiu-coin-secondary.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; }
-.fill-mode-btn.ctl-secondary:active, .rewind-btn-secondary.ctl-secondary:active, .jiu-coin-secondary.ctl-secondary:active { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
-.fill-mode-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp") !important; color: #a83232 !important; }
-.fill-mode-btn.ctl-danger:active { background-image: url("../assets/controls/ctl-danger-press.webp") !important; }
+.fill-mode-btn.ctl-primary, .rewind-btn-primary.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp?v=20261013s") !important; }
+.fill-mode-btn.ctl-primary:active, .rewind-btn-primary.ctl-primary:active, .jiu-coin-primary.ctl-primary:active { background-image: url("../assets/controls/ctl-primary-press.webp?v=20261013s") !important; }
+.rewind-btn-primary.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp?v=20261013s") !important; }
+.fill-mode-btn.ctl-secondary, .rewind-btn-secondary.ctl-secondary, .jiu-coin-secondary.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s") !important; }
+.fill-mode-btn.ctl-secondary:active, .rewind-btn-secondary.ctl-secondary:active, .jiu-coin-secondary.ctl-secondary:active { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; }
+.fill-mode-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp?v=20261013s") !important; color: #a83232 !important; }
+.fill-mode-btn.ctl-danger:active { background-image: url("../assets/controls/ctl-danger-press.webp?v=20261013s") !important; }
 
 /* ----- P2: checkbox / radio ----- */
 #indicatorPanel input[type="checkbox"],
@@ -976,7 +976,7 @@ body.ctl-scroll-lock {
   margin: 0 6px 0 0;
   border: none;
   border-radius: 0;
-  background: url("../assets/controls/ctl-checkbox-off.png") center / 100% 100% no-repeat;
+  background: url("../assets/controls/ctl-checkbox-off.png?v=20261013s") center / 100% 100% no-repeat;
   cursor: pointer;
   vertical-align: middle;
   transition: transform 70ms linear;
@@ -984,11 +984,11 @@ body.ctl-scroll-lock {
 #indicatorPanel input[type="checkbox"]:checked,
 .indicator-panel input[type="checkbox"]:checked,
 .auth-check input[type="checkbox"]:checked,
-.ctl-checkbox:checked { background-image: url("../assets/controls/ctl-checkbox-on.png"); }
+.ctl-checkbox:checked { background-image: url("../assets/controls/ctl-checkbox-on.png?v=20261013s"); }
 .fill-mode-option input[type="radio"],
-.ctl-radio { background-image: url("../assets/controls/ctl-radio-off.png"); }
+.ctl-radio { background-image: url("../assets/controls/ctl-radio-off.png?v=20261013s"); }
 .fill-mode-option input[type="radio"]:checked,
-.ctl-radio:checked { background-image: url("../assets/controls/ctl-radio-on.png"); }
+.ctl-radio:checked { background-image: url("../assets/controls/ctl-radio-on.png?v=20261013s"); }
 .ctl-checkbox:active, .ctl-radio:active,
 .fill-mode-option input[type="radio"]:active,
 #indicatorPanel input[type="checkbox"]:active,
@@ -1021,10 +1021,10 @@ body.ctl-scroll-lock {
   background: center / 100% 100% no-repeat;
   transition: transform 70ms linear;
 }
-.theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-off.png"); }
-.theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-off.png"); }
-html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-on.png"); }
-[data-theme="dark"] .theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-on.png"); }
+.theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-off.png?v=20261013s"); }
+.theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-off.png?v=20261013s"); }
+html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { background-image: url("../assets/controls/ctl-switch-paper-on.png?v=20261013s"); }
+[data-theme="dark"] .theme-toggle .pill[data-mode="dark"]::before { background-image: url("../assets/controls/ctl-switch-ink-on.png?v=20261013s"); }
 .theme-toggle .pill:active::before { transform: translate(1px, 1px); }
 
 /* ----- P2: avatar frames ----- */
@@ -1034,7 +1034,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .auth-avatar {
   border: none !important;
   padding: 3px;
-  background: url("../assets/controls/ctl-avatar-frame-48.png") center / 100% 100% no-repeat !important;
+  background: url("../assets/controls/ctl-avatar-frame-48.png?v=20261013s") center / 100% 100% no-repeat !important;
   border-radius: 50%;
   object-fit: cover;
   box-sizing: border-box;
@@ -1044,7 +1044,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .avatar-preview {
   padding: 4px;
   border: none !important;
-  background: url("../assets/controls/ctl-avatar-frame-72.png") center / 100% 100% no-repeat !important;
+  background: url("../assets/controls/ctl-avatar-frame-72.png?v=20261013s") center / 100% 100% no-repeat !important;
 }
 
 /* ----- P2: more input shells (举报 / 悔棋局 / select) ----- */
@@ -1056,7 +1056,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   border-style: solid !important;
   border-color: transparent !important;
   border-width: 10px !important;
-  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch !important;
+  border-image: url("../assets/controls/ctl-input-shell-default.png?v=20261013s") 14 fill / 10px stretch !important;
   border-radius: 0 !important;
   background-color: transparent !important;
   box-shadow: none !important;
@@ -1066,9 +1066,9 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 }
 .hindsight-input:focus,
 .hindsight-date-input:focus,
-#pvpReportReason:focus { border-image-source: url("../assets/controls/ctl-input-shell-focus.png") !important; }
+#pvpReportReason:focus { border-image-source: url("../assets/controls/ctl-input-shell-focus.png?v=20261013s") !important; }
 .hindsight-input[aria-invalid="true"],
-.hindsight-input.is-error { border-image-source: url("../assets/controls/ctl-input-shell-error.png") !important; }
+.hindsight-input.is-error { border-image-source: url("../assets/controls/ctl-input-shell-error.png?v=20261013s") !important; }
 #pvpReportDetail.ctl-textarea { width: 100%; min-height: 96px; }
 
 /* ----- Reduced motion for sheets: ≤120ms fade only ----- */
@@ -1135,7 +1135,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   border-color: transparent;
   border-width: 24px 24px 24px 104px;
   border-radius: 0;
-  border-image: url("../assets/controls/ctl-rank-card@2x.webp") 48 48 48 208 fill / 24px 24px 24px 104px stretch;
+  border-image: url("../assets/controls/ctl-rank-card@2x.webp?v=20261013s") 48 48 48 208 fill / 24px 24px 24px 104px stretch;
   background: none;
   box-shadow: none;
   color: #2c2824;
@@ -1269,18 +1269,18 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   border-style: solid;
   border-color: transparent;
   border-width: 12px 36px 12px 56px;
-  border-image: url("../assets/controls/ctl-seat-panel-self-default@2x.webp") 24 72 24 112 fill / 12px 36px 12px 56px stretch;
+  border-image: url("../assets/controls/ctl-seat-panel-self-default@2x.webp?v=20261013s") 24 72 24 112 fill / 12px 36px 12px 56px stretch;
   color: #2c2824;
 }
 #pvpBattleTop .pvp-seat-opp.ctl-seat-panel {
   justify-self: end;
   border-width: 12px 56px 12px 36px;
-  border-image: url("../assets/controls/ctl-seat-panel-opponent-default@2x.webp") 24 112 24 72 fill / 12px 56px 12px 36px stretch;
+  border-image: url("../assets/controls/ctl-seat-panel-opponent-default@2x.webp?v=20261013s") 24 112 24 72 fill / 12px 56px 12px 36px stretch;
 }
-#pvpBattleTop .pvp-seat-me.ctl-seat-panel[data-seat-state="active"] { border-image-source: url("../assets/controls/ctl-seat-panel-self-active@2x.webp"); }
-#pvpBattleTop .pvp-seat-me.ctl-seat-panel[data-seat-state="leading"] { border-image-source: url("../assets/controls/ctl-seat-panel-self-leading@2x.webp"); }
-#pvpBattleTop .pvp-seat-opp.ctl-seat-panel[data-seat-state="active"] { border-image-source: url("../assets/controls/ctl-seat-panel-opponent-active@2x.webp"); }
-#pvpBattleTop .pvp-seat-opp.ctl-seat-panel[data-seat-state="leading"] { border-image-source: url("../assets/controls/ctl-seat-panel-opponent-leading@2x.webp"); }
+#pvpBattleTop .pvp-seat-me.ctl-seat-panel[data-seat-state="active"] { border-image-source: url("../assets/controls/ctl-seat-panel-self-active@2x.webp?v=20261013s"); }
+#pvpBattleTop .pvp-seat-me.ctl-seat-panel[data-seat-state="leading"] { border-image-source: url("../assets/controls/ctl-seat-panel-self-leading@2x.webp?v=20261013s"); }
+#pvpBattleTop .pvp-seat-opp.ctl-seat-panel[data-seat-state="active"] { border-image-source: url("../assets/controls/ctl-seat-panel-opponent-active@2x.webp?v=20261013s"); }
+#pvpBattleTop .pvp-seat-opp.ctl-seat-panel[data-seat-state="leading"] { border-image-source: url("../assets/controls/ctl-seat-panel-opponent-leading@2x.webp?v=20261013s"); }
 /* Avatar sits in the transparent Ø32 hole (self centre 29,26.6 · opponent 144.2,26.6 @1x). */
 #pvpBattleTop .ctl-seat-panel .pvp-seat-face {
   position: absolute;
@@ -1365,21 +1365,21 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   grid-column: 1;
   width: 72px;
   height: 72px;
-  background: url("../assets/controls/ctl-timer-ring-track@2x.webp") center / 72px 72px no-repeat;
+  background: url("../assets/controls/ctl-timer-ring-track@2x.webp?v=20261013s") center / 72px 72px no-repeat;
 }
 .ctl-timer-ring .ctl-timer-ring-fill {
   grid-row: 1;
   grid-column: 1;
   width: 72px;
   height: 72px;
-  background: url("../assets/controls/ctl-timer-ring-fill@2x.webp") center / 72px 72px no-repeat;
+  background: url("../assets/controls/ctl-timer-ring-fill@2x.webp?v=20261013s") center / 72px 72px no-repeat;
   -webkit-mask: conic-gradient(from 0deg at 48.33% 48.33%, #000 0 var(--ctl-timer-p), transparent var(--ctl-timer-p) 100%);
   mask: conic-gradient(from 0deg at 48.33% 48.33%, #000 0 var(--ctl-timer-p), transparent var(--ctl-timer-p) 100%);
   pointer-events: none;
 }
-.ctl-timer-ring--segmented .ctl-timer-ring-fill { background-image: url("../assets/controls/ctl-timer-ring-fill-segmented@2x.webp"); }
+.ctl-timer-ring--segmented .ctl-timer-ring-fill { background-image: url("../assets/controls/ctl-timer-ring-fill-segmented@2x.webp?v=20261013s"); }
 .pvp-clock.ctl-timer-ring.is-urgent .ctl-timer-ring-fill {
-  background-image: url("../assets/controls/ctl-timer-ring-urgent@2x.webp");
+  background-image: url("../assets/controls/ctl-timer-ring-urgent@2x.webp?v=20261013s");
   animation: ctl-timer-urgent 0.9s ease-in-out infinite;
 }
 .pvp-battle-clock .pvp-clock.ctl-timer-ring.is-urgent { border: none; box-shadow: none; }
@@ -1423,23 +1423,23 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   min-width: 56px;
   height: 48px;
   min-height: 48px;
-  background-image: url("../assets/controls/ctl-share-save-default.webp");
+  background-image: url("../assets/controls/ctl-share-save-default.webp?v=20261013s");
 }
 .ctl-share-save:active:not(:disabled),
-.ctl-share-save[data-state="press"] { background-image: url("../assets/controls/ctl-share-save-press.webp"); box-shadow: none; }
+.ctl-share-save[data-state="press"] { background-image: url("../assets/controls/ctl-share-save-press.webp?v=20261013s"); box-shadow: none; }
 .ctl-share-save:hover:not(:disabled) { box-shadow: none; }
 .ctl-share-save[data-state="loading"],
 .ctl-share-save.is-busy {
-  background-image: url("../assets/controls/ctl-share-save-loading.webp");
+  background-image: url("../assets/controls/ctl-share-save-loading.webp?v=20261013s");
   cursor: wait;
   opacity: 1;
   filter: none;
   animation: ctl-share-spin-wobble 0.9s linear infinite;
 }
-.ctl-share-save[data-state="disabled"]:not(.is-busy) { background-image: url("../assets/controls/ctl-share-save-disabled.webp"); }
+.ctl-share-save[data-state="disabled"]:not(.is-busy) { background-image: url("../assets/controls/ctl-share-save-disabled.webp?v=20261013s"); }
 @keyframes ctl-share-spin-wobble {
-  0%, 100% { transform: rotate(-3deg); }
-  50% { transform: rotate(3deg); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
 }
 #pvpResultScreen .pvp-actions { align-items: center; }
 
@@ -1471,19 +1471,19 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   font-family: var(--kaiti);
 }
 .play-again-btn.ctl-primary, .ar-btn.ctl-primary, .quiz-nav-btn.ctl-primary, .announcements-primary.ctl-primary,
-.feedback-primary.ctl-primary, .pvp-btn.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp") !important; color: var(--ctl-ink) !important; }
+.feedback-primary.ctl-primary, .pvp-btn.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
 .play-again-btn.ctl-primary:active:not(:disabled), .ar-btn.ctl-primary:active:not(:disabled), .quiz-nav-btn.ctl-primary:active:not(:disabled),
-.announcements-primary.ctl-primary:active, .feedback-primary.ctl-primary:active:not(:disabled), .pvp-btn.ctl-primary:active:not(:disabled) { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
-.quiz-nav-btn.ctl-primary:disabled, .feedback-primary.ctl-primary:disabled:not(.is-busy), .pvp-btn.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
-.feedback-primary.ctl-primary.is-busy { background-image: url("../assets/controls/ctl-primary-loading.webp") !important; }
+.announcements-primary.ctl-primary:active, .feedback-primary.ctl-primary:active:not(:disabled), .pvp-btn.ctl-primary:active:not(:disabled) { background-image: url("../assets/controls/ctl-primary-press.webp?v=20261013s") !important; }
+.quiz-nav-btn.ctl-primary:disabled, .feedback-primary.ctl-primary:disabled:not(.is-busy), .pvp-btn.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp?v=20261013s") !important; }
+.feedback-primary.ctl-primary.is-busy { background-image: url("../assets/controls/ctl-primary-loading.webp?v=20261013s") !important; }
 .play-again-btn.ctl-secondary, .ar-btn.ctl-secondary, .announcements-secondary.ctl-secondary, .auth-secondary.ctl-secondary,
 .feedback-secondary.ctl-secondary, .feedback-attach-btn.ctl-secondary, .my-games-refresh.ctl-secondary, .hub-board-link.ctl-secondary,
-.indicator-toggle.ctl-secondary, .pvp-msg-line.ctl-secondary, .pvp-btn.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; color: var(--ctl-ink) !important; }
+.indicator-toggle.ctl-secondary, .pvp-msg-line.ctl-secondary, .pvp-btn.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
 .play-again-btn.ctl-secondary:active, .ar-btn.ctl-secondary:active, .announcements-secondary.ctl-secondary:active, .auth-secondary.ctl-secondary:active,
 .feedback-secondary.ctl-secondary:active, .feedback-attach-btn.ctl-secondary:active, .my-games-refresh.ctl-secondary:active, .hub-board-link.ctl-secondary:active,
-.indicator-toggle.ctl-secondary:active, .pvp-msg-line.ctl-secondary:active, .pvp-btn.ctl-secondary:active:not(:disabled) { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
-.auth-danger.ctl-danger, .pvp-report-toggle.ctl-danger, .pvp-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp") !important; color: #a83232 !important; }
-.auth-danger.ctl-danger:active:not(:disabled), .pvp-report-toggle.ctl-danger:active, .pvp-btn.ctl-danger:active:not(:disabled) { background-image: url("../assets/controls/ctl-danger-press.webp") !important; }
+.indicator-toggle.ctl-secondary:active, .pvp-msg-line.ctl-secondary:active, .pvp-btn.ctl-secondary:active:not(:disabled) { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; }
+.auth-danger.ctl-danger, .pvp-report-toggle.ctl-danger, .pvp-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp?v=20261013s") !important; color: #a83232 !important; }
+.auth-danger.ctl-danger:active:not(:disabled), .pvp-report-toggle.ctl-danger:active, .pvp-btn.ctl-danger:active:not(:disabled) { background-image: url("../assets/controls/ctl-danger-press.webp?v=20261013s") !important; }
 .auth-danger.ctl-danger.is-busy { opacity: 0.72; }
 .ar-btn.copied.ctl { color: var(--loss-color) !important; }
 /* Sizes: comfortable 44–48px hit areas, width fits label at 390. */
@@ -1508,14 +1508,14 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 /* jiu-coin family × → ctl-close-x (all dialogs reusing .jiu-coin-close-x) */
 .jiu-coin-close-x {
   width: 40px !important; height: 40px !important; padding: 0 !important; border: none !important;
-  background: url("../assets/controls/ctl-close-x-default.png") center / 100% 100% no-repeat !important;
+  background: url("../assets/controls/ctl-close-x-default.png?v=20261013s") center / 100% 100% no-repeat !important;
   color: transparent !important; font-size: 0 !important; transition: transform 70ms linear; top: 4px; right: 4px;
 }
-.jiu-coin-close-x:active { background-image: url("../assets/controls/ctl-close-x-press.png") !important; transform: translate(1px, 1px); }
+.jiu-coin-close-x:active { background-image: url("../assets/controls/ctl-close-x-press.png?v=20261013s") !important; transform: translate(1px, 1px); }
 /* Lobby / invite row avatars → hand-drawn 48 frame */
 .pvp-avatar {
   width: 44px; height: 44px; padding: 3px; box-sizing: border-box; border: none !important;
-  background: url("../assets/controls/ctl-avatar-frame-48.png") center / 100% 100% no-repeat !important;
+  background: url("../assets/controls/ctl-avatar-frame-48.png?v=20261013s") center / 100% 100% no-repeat !important;
   border-radius: 50%; object-fit: cover;
 }
 @media (prefers-reduced-motion: reduce) {

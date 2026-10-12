@@ -4,25 +4,25 @@
    ========================================================================== */
 
 :root {
-  --p5-icon: image-set(url("../assets/controls/ctl-icon-btn-default.webp") 1x, url("../assets/controls/ctl-icon-btn-default@2x.webp") 2x);
-  --p5-icon-press: image-set(url("../assets/controls/ctl-icon-btn-press.webp") 1x, url("../assets/controls/ctl-icon-btn-press@2x.webp") 2x);
-  --p5-icon-disabled: image-set(url("../assets/controls/ctl-icon-btn-disabled.webp") 1x, url("../assets/controls/ctl-icon-btn-disabled@2x.webp") 2x);
-  --p5-chart: image-set(url("../assets/controls/ctl-chart-frame.webp") 1x, url("../assets/controls/ctl-chart-frame@2x.webp") 2x);
-  --p5-popover: image-set(url("../assets/controls/ctl-popover.webp") 1x, url("../assets/controls/ctl-popover@2x.webp") 2x);
-  --p5-bar: image-set(url("../assets/controls/ctl-bar-strip.webp") 1x, url("../assets/controls/ctl-bar-strip@2x.webp") 2x);
-  --p5-opt: image-set(url("../assets/controls/ctl-option-row-default.webp") 1x, url("../assets/controls/ctl-option-row-default@2x.webp") 2x);
-  --p5-opt-press: image-set(url("../assets/controls/ctl-option-row-press.webp") 1x, url("../assets/controls/ctl-option-row-press@2x.webp") 2x);
-  --p5-opt-correct: image-set(url("../assets/controls/ctl-option-row-correct.webp") 1x, url("../assets/controls/ctl-option-row-correct@2x.webp") 2x);
-  --p5-opt-wrong: image-set(url("../assets/controls/ctl-option-row-wrong.webp") 1x, url("../assets/controls/ctl-option-row-wrong@2x.webp") 2x);
-  --p5-opt-disabled: image-set(url("../assets/controls/ctl-option-row-disabled.webp") 1x, url("../assets/controls/ctl-option-row-disabled@2x.webp") 2x);
-  --p5-seal: image-set(url("../assets/controls/ctl-seal-ring.webp") 1x, url("../assets/controls/ctl-seal-ring@2x.webp") 2x);
-  --p5-select: image-set(url("../assets/controls/ctl-select-default.webp") 1x, url("../assets/controls/ctl-select-default@2x.webp") 2x);
-  --p5-select-press: image-set(url("../assets/controls/ctl-select-press.webp") 1x, url("../assets/controls/ctl-select-press@2x.webp") 2x);
-  --p5-select-focus: image-set(url("../assets/controls/ctl-select-focus.webp") 1x, url("../assets/controls/ctl-select-focus@2x.webp") 2x);
-  --p5-select-disabled: image-set(url("../assets/controls/ctl-select-disabled.webp") 1x, url("../assets/controls/ctl-select-disabled@2x.webp") 2x);
-  --p5-gift: image-set(url("../assets/controls/ctl-gift-default.webp") 1x, url("../assets/controls/ctl-gift-default@2x.webp") 2x);
-  --p5-gift-press: image-set(url("../assets/controls/ctl-gift-press.webp") 1x, url("../assets/controls/ctl-gift-press@2x.webp") 2x);
-  --p5-gift-sent: image-set(url("../assets/controls/ctl-gift-sent.webp") 1x, url("../assets/controls/ctl-gift-sent@2x.webp") 2x);
+  --p5-icon: image-set(url("../assets/controls/ctl-icon-btn-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-default@2x.webp?v=20261013s") 2x);
+  --p5-icon-press: image-set(url("../assets/controls/ctl-icon-btn-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-press@2x.webp?v=20261013s") 2x);
+  --p5-icon-disabled: image-set(url("../assets/controls/ctl-icon-btn-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-disabled@2x.webp?v=20261013s") 2x);
+  --p5-chart: image-set(url("../assets/controls/ctl-chart-frame.webp?v=20261013s") 1x, url("../assets/controls/ctl-chart-frame@2x.webp?v=20261013s") 2x);
+  --p5-popover: image-set(url("../assets/controls/ctl-popover.webp?v=20261013s") 1x, url("../assets/controls/ctl-popover@2x.webp?v=20261013s") 2x);
+  --p5-bar: image-set(url("../assets/controls/ctl-bar-strip.webp?v=20261013s") 1x, url("../assets/controls/ctl-bar-strip@2x.webp?v=20261013s") 2x);
+  --p5-opt: image-set(url("../assets/controls/ctl-option-row-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-default@2x.webp?v=20261013s") 2x);
+  --p5-opt-press: image-set(url("../assets/controls/ctl-option-row-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-press@2x.webp?v=20261013s") 2x);
+  --p5-opt-correct: image-set(url("../assets/controls/ctl-option-row-correct.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-correct@2x.webp?v=20261013s") 2x);
+  --p5-opt-wrong: image-set(url("../assets/controls/ctl-option-row-wrong.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-wrong@2x.webp?v=20261013s") 2x);
+  --p5-opt-disabled: image-set(url("../assets/controls/ctl-option-row-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-option-row-disabled@2x.webp?v=20261013s") 2x);
+  --p5-seal: image-set(url("../assets/controls/ctl-seal-ring.webp?v=20261013s") 1x, url("../assets/controls/ctl-seal-ring@2x.webp?v=20261013s") 2x);
+  --p5-select: image-set(url("../assets/controls/ctl-select-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-default@2x.webp?v=20261013s") 2x);
+  --p5-select-press: image-set(url("../assets/controls/ctl-select-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-press@2x.webp?v=20261013s") 2x);
+  --p5-select-focus: image-set(url("../assets/controls/ctl-select-focus.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-focus@2x.webp?v=20261013s") 2x);
+  --p5-select-disabled: image-set(url("../assets/controls/ctl-select-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-select-disabled@2x.webp?v=20261013s") 2x);
+  --p5-gift: image-set(url("../assets/controls/ctl-gift-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-default@2x.webp?v=20261013s") 2x);
+  --p5-gift-press: image-set(url("../assets/controls/ctl-gift-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-press@2x.webp?v=20261013s") 2x);
+  --p5-gift-sent: image-set(url("../assets/controls/ctl-gift-sent.webp?v=20261013s") 1x, url("../assets/controls/ctl-gift-sent@2x.webp?v=20261013s") 2x);
   --p5-press-ms: 70ms;
 }
 
@@ -211,7 +211,7 @@ html:not([data-theme="dark"]) :is(
 ) {
   border-style: solid;
   border-color: transparent;
-  border-image: var(--p4-card, url("../assets/controls/ctl-card-paper-default.webp")) 24 fill / 14px / 0 stretch;
+  border-image: var(--p4-card, url("../assets/controls/ctl-card-paper-default.webp?v=20261013s")) 24 fill / 14px / 0 stretch;
   background: transparent;
   box-shadow: none;
 }
