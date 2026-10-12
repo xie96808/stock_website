@@ -662,10 +662,10 @@ function _copyText(text, btnId) {
         if (!btnId) return;
         const btn = document.getElementById(btnId);
         if (!btn) return;
-        const orig = btn.textContent;
-        btn.textContent = '✓ 已复制';
+        const orig = (btn.querySelector('.ctl-label') || btn).textContent;
+        (btn.querySelector('.ctl-label') || btn).textContent = '✓ 已复制';
         btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+        setTimeout(() => { (btn.querySelector('.ctl-label') || btn).textContent = orig; btn.classList.remove('copied'); }, 2000);
     };
     const fallbackCopy = () => {
         try {

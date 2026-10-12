@@ -261,7 +261,7 @@ export function renderQuestion() {
     document.getElementById('quizProgressBar').style.width = ((idx + 1) / 10 * 100) + '%';
     document.getElementById('quizProgressText').textContent = (idx + 1) + ' / 10';
     document.getElementById('quizNextBtn').disabled = true;
-    document.getElementById('quizNextBtn').textContent = idx === 9 ? '查看成绩' : '下一题';
+    { const nb = document.getElementById('quizNextBtn'); (nb.querySelector('.ctl-label') || nb).textContent = idx === 9 ? '查看成绩' : '下一题'; }
     quizState.answered = false;
 
     if (q.type === 'practical') {

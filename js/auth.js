@@ -324,9 +324,9 @@ function ensureAuthDom() {
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
           <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
-          <button type="button" class="auth-secondary" id="settingsFeedbackBtn">反馈</button>
+          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
           <hr>
-          <button type="button" class="auth-danger" id="authLogoutBtn">退出登录</button>
+          <button type="button" class="auth-danger ctl ctl-danger" id="authLogoutBtn" data-ctl-kind="danger" data-state="default"><span class="ctl-label">退出登录</span></button>
         </div>
       </div>
     </div>`));

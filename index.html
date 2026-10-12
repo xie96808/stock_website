@@ -232,7 +232,7 @@
                             </span>
                             <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
                         </button>
-                        <button type="button" class="hub-board-link" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                        <button type="button" class="hub-board-link ctl ctl-secondary" id="dailyChallengeBoardBtn" data-ctl-kind="secondary" data-state="default" hidden onclick="onDailyChallengeBoardClick(event)"><span class="ctl-label">查看日榜</span></button>
                         <button type="button" class="lane classic-mode-lane" onclick="startClassicPractice()">
                             <span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span>
                             <span class="mark classic-mode-mark">练</span>
@@ -393,7 +393,7 @@
                 </div>
                 <div class="quiz-question-container" id="quizQuestionContainer"></div>
                 <div class="quiz-nav">
-                    <button class="quiz-nav-btn" id="quizNextBtn" onclick="quizNext()" disabled>下一题</button>
+                    <button class="quiz-nav-btn ctl ctl-primary" id="quizNextBtn" data-ctl-kind="primary" data-state="disabled" onclick="quizNext()" disabled><span class="ctl-label">下一题</span></button>
                 </div>
             </div>
 
@@ -415,7 +415,7 @@
                 </div>
                 <div class="quiz-question-container" id="dailyQuizQuestionContainer"></div>
                 <div class="quiz-nav">
-                    <button class="quiz-nav-btn" id="dailyQuizNextBtn" onclick="dailyQuizNext()" disabled>下一题</button>
+                    <button class="quiz-nav-btn ctl ctl-primary" id="dailyQuizNextBtn" data-ctl-kind="primary" data-state="disabled" onclick="dailyQuizNext()" disabled><span class="ctl-label">下一题</span></button>
                 </div>
             </div>
 
@@ -474,21 +474,21 @@
                 <p id="pvpLobbyLoading" class="ctl-loading-host" hidden>大厅加载中…</p>
                 <div id="pvpLobbyGuest" hidden>
                     <p>登录后才能约战。游客只能查看规则和在线人数。</p>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpLobbyLogin">登录</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpLobbyLogin" data-ctl-kind="primary" data-state="default"><span class="ctl-label">登录</span></button>
                 </div>
                 <div id="pvpLobbyMember" hidden>
                     <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
                     <p id="pvpLobbyBalance"></p>
-                    <button type="button" class="pvp-btn" id="pvpShareBtn" hidden>分享对战</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">分享对战</span></button>
                     <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpActiveMatch" hidden>回到对局</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpActiveMatch" data-ctl-kind="primary" data-state="default" hidden><span class="ctl-label">回到对局</span></button>
                     <h3 class="pvp-kicker">可约的人</h3>
                     <div id="pvpLobbyList"></div>
                     <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。也可以去玩幽灵对局，或稍后再来。</p>
-                    <button type="button" class="pvp-btn" id="pvpLobbyModes" hidden>去玩幽灵对局</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLobbyModes" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">去玩幽灵对局</span></button>
                 </div>
                 <p id="pvpLobbyError" role="status"></p>
             </div>
@@ -573,12 +573,12 @@
                         <button type="button" id="pvpTauntOpen" hidden aria-hidden="true">消息</button>
                     </div>
                     <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="listbox" aria-label="消息台词">
-                        <button type="button" class="pvp-msg-line" role="option">这你都买？进厂打螺丝吧</button>
-                        <button type="button" class="pvp-msg-line" role="option">这都卖？啥都拿不住玩什么股票！</button>
-                        <button type="button" class="pvp-msg-line" role="option">买买买</button>
-                        <button type="button" class="pvp-msg-line" role="option">割了割了</button>
-                        <button type="button" class="pvp-msg-line" role="option">给我加仓猛干！</button>
-                        <button type="button" class="pvp-msg-line" role="option">技术回调，慌个锤子</button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这你都买？进厂打螺丝吧</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这都卖？啥都拿不住玩什么股票！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
                     </div>
                     <div class="pvp-taunt-picker" id="pvpTauntPicker" hidden></div>
                     <p id="pvpActionError" role="status"></p>
@@ -658,7 +658,7 @@
                 <p id="pvpResultChartError" hidden>图表暂时打不开，结果仍然有效。</p>
                 <ol id="pvpResultCurve"></ol>
                 <ul id="pvpResultGaps"></ul>
-                <button type="button" class="pvp-report-toggle" id="pvpReportToggle" aria-expanded="false" aria-controls="pvpReportPanel">举报</button>
+                <button type="button" class="pvp-report-toggle ctl ctl-danger" id="pvpReportToggle" data-ctl-kind="danger" data-state="default" aria-expanded="false" aria-controls="pvpReportPanel"><span class="ctl-label">举报</span></button>
                 <div id="pvpReportPanel" hidden>
                     <form id="pvpReportForm">
                         <label>举报对手
@@ -686,9 +686,9 @@
                     <p id="pvpGiftNote"></p>
                 </div>
                 <div class="pvp-actions">
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpResultAgain" hidden>再次约战</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpResultAgain" data-ctl-kind="primary" data-state="default" hidden><span class="ctl-label">再次约战</span></button>
                     <button type="button" class="ctl ctl-share-save" id="pvpResultShareImage" data-ctl="share-save" data-ctl-kind="share-save" data-state="default" aria-label="保存分享图" title="保存分享图"></button>
-                    <button type="button" class="pvp-btn" id="pvpResultHistory" onclick="showPvpHistory()">对战档案</button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpResultHistory" data-ctl-kind="secondary" data-state="default" onclick="showPvpHistory()"><span class="ctl-label">对战档案</span></button>
                 </div>
             </div>
             <div class="pvp-dialog" id="pvpWinDialog" hidden role="dialog" aria-modal="true" aria-labelledby="pvpWinTitle">
@@ -712,7 +712,7 @@
                             <span class="pvp-settle-meta" id="pvpWinOppCoin"></span>
                         </div>
                     </div>
-                    <button type="button" class="pvp-btn pvp-btn-primary" id="pvpWinOk">知道了</button>
+                    <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpWinOk" data-ctl-kind="primary" data-state="default"><span class="ctl-label">知道了</span></button>
                 </div>
             </div>
         </section>
@@ -892,7 +892,7 @@
                                 <div class="stage-subtitle" id="chartSubtitleInner">--</div>
                             </div>
                             <div class="stage-tools">
-                                <button class="indicator-toggle" id="indicatorsToggle" onclick="toggleIndicatorPanel()">指标 ▾</button>
+                                <button class="indicator-toggle ctl ctl-secondary" id="indicatorsToggle" data-ctl-kind="secondary" data-state="default" onclick="toggleIndicatorPanel()"><span class="ctl-label">指标 ▾</span></button>
                                 <div class="indicator-panel" id="indicatorPanel">
                                     <label><input type="checkbox" id="indicatorMA5" checked><span>5日线</span></label>
                                     <label><input type="checkbox" id="indicatorMA10" checked><span>10日线</span></label>
@@ -976,11 +976,11 @@
                         </div>
                     </div>
                     <div class="result-actions">
-                        <button class="play-again-btn" onclick="playAgain()">再来一局</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareImageBtn" onclick="saveResultShareImage()">📷 保存分享图</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultShareCopyBtn" onclick="copyResultShareText()">📋 复制分享文案</button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost" id="resultLeaderboardBtn" onclick="openResultLeaderboard()">查看排行榜</button>
-                        <button class="play-again-btn play-again-btn--ghost" onclick="resetGame()">返回首页</button>
+                        <button class="play-again-btn ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="playAgain()"><span class="ctl-label">再来一局</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareImageBtn" data-ctl-kind="secondary" data-state="default" onclick="saveResultShareImage()"><span class="ctl-label">📷 保存分享图</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="copyResultShareText()"><span class="ctl-label">📋 复制分享文案</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><span class="ctl-label">查看排行榜</span></button>
+                        <button class="play-again-btn play-again-btn--ghost ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="resetGame()"><span class="ctl-label">返回首页</span></button>
                     </div>
                     <p class="result-share-hint" id="resultShareHint" hidden></p>
                 </div>
@@ -1252,9 +1252,9 @@
 
                 <!-- 底部操作栏 -->
                 <div class="ar-actions">
-                    <button class="ar-btn" onclick="hindsightShare()">📷 生成分享图</button>
-                    <button class="ar-btn" id="hindsightCopyBtn" onclick="hindsightCopy()">📋 复制文案</button>
-                    <button class="ar-btn ar-btn-primary" onclick="hindsightReset()">↩ 再来一只</button>
+                    <button class="ar-btn ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="hindsightShare()"><span class="ctl-label">📷 生成分享图</span></button>
+                    <button class="ar-btn ctl ctl-secondary" id="hindsightCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="hindsightCopy()"><span class="ctl-label">📋 复制文案</span></button>
+                    <button class="ar-btn ar-btn-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="hindsightReset()"><span class="ctl-label">↩ 再来一只</span></button>
                 </div>
 
             </div>
@@ -1270,9 +1270,9 @@
             <div class="quiz-result-card daily-quiz-modal-card" id="dailyQuizResultCard"></div>
             <div class="quiz-result-details daily-quiz-modal-details" id="dailyQuizResultDetails" hidden></div>
             <div class="jiu-coin-modal-actions daily-quiz-modal-actions">
-                <button type="button" class="jiu-coin-secondary" id="dailyQuizResultReviewBtn">看解析</button>
-                <button type="button" class="jiu-coin-primary" onclick="closeDailyQuizResultModal()">回知识馆</button>
-                <button type="button" class="jiu-coin-secondary daily-quiz-soft-cta" onclick="goSimFromDailyQuizResult()">去模拟盘</button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="dailyQuizResultReviewBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">看解析</span></button>
+                <button type="button" class="jiu-coin-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="closeDailyQuizResultModal()"><span class="ctl-label">回知识馆</span></button>
+                <button type="button" class="jiu-coin-secondary daily-quiz-soft-cta ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="goSimFromDailyQuizResult()"><span class="ctl-label">去模拟盘</span></button>
             </div>
         </div>
     </div>
@@ -1293,9 +1293,9 @@
                 <p class="puzzle-settle-fail" id="puzzleSettleFail" hidden></p>
             </div>
             <div class="jiu-coin-modal-actions puzzle-settle-actions">
-                <button type="button" class="jiu-coin-secondary" onclick="returnToPuzzleListFromSettleModal()">返回残局列表</button>
-                <button type="button" class="jiu-coin-secondary" id="puzzleSettleWeeklyBtn" onclick="showPuzzleWeeklyBoard()">本周同题榜</button>
-                <button type="button" class="jiu-coin-primary" onclick="closePuzzleSettleModal()">继续复盘</button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="returnToPuzzleListFromSettleModal()"><span class="ctl-label">返回残局列表</span></button>
+                <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="puzzleSettleWeeklyBtn" data-ctl-kind="secondary" data-state="default" onclick="showPuzzleWeeklyBoard()"><span class="ctl-label">本周同题榜</span></button>
+                <button type="button" class="jiu-coin-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="closePuzzleSettleModal()"><span class="ctl-label">继续复盘</span></button>
             </div>
         </div>
     </div>

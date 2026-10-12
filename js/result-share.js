@@ -118,7 +118,7 @@ function fallbackCopyText(text) {
 export async function copyResultShareText() {
     const text = buildResultShareCopyText();
     const btn = document.getElementById('resultShareCopyBtn');
-    const orig = btn ? btn.textContent : '';
+    const orig = btn ? (btn.querySelector('.ctl-label') || btn).textContent : '';
     if (btn) btn.disabled = true;
     try {
         const ok = await copyTextToClipboard(text);
@@ -134,7 +134,7 @@ export async function copyResultShareText() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            if (orig) btn.textContent = orig;
+            if (orig) (btn.querySelector('.ctl-label') || btn).textContent = orig;
         }
     }
 }
@@ -246,10 +246,10 @@ function populateResultShareSheet() {
 
 export async function saveResultShareImage() {
     const btn = document.getElementById('resultShareImageBtn');
-    const orig = btn ? btn.textContent : '';
+    const orig = btn ? (btn.querySelector('.ctl-label') || btn).textContent : '';
     if (btn) {
         btn.disabled = true;
-        btn.textContent = '生成中…';
+        (btn.querySelector('.ctl-label') || btn).textContent = '生成中…';
     }
     try {
         const ok = await loadHtml2canvas();
@@ -296,7 +296,7 @@ export async function saveResultShareImage() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.textContent = orig || '📷 保存分享图';
+            (btn.querySelector('.ctl-label') || btn).textContent = orig || '📷 保存分享图';
         }
     }
 }

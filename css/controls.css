@@ -1147,10 +1147,10 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .pvp-dossier.ctl-rank-card[hidden] { display: none; }
 .pvp-dossier.ctl-rank-card .pvp-dossier-emblem {
   position: absolute;
-  left: -74px;
-  top: 44px;
-  width: 60px;
-  height: 60px;
+  left: -80px;
+  top: 38px;
+  width: 72px;
+  height: 72px;
   padding: 0;
   object-fit: contain;
   background: none !important;
@@ -1159,12 +1159,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   pointer-events: none;
   user-select: none;
 }
-/* Per-icon art fit: art centred in slot, longest side ≈52px (source PNGs carry uneven padding). */
-.pvp-dossier.ctl-rank-card .pvp-dossier-emblem[data-rank="jiucai"] { width: 90px; height: 90px; left: -69.6px; top: 31.1px; clip-path: circle(33px at 25.6px 42.9px); }
-.pvp-dossier.ctl-rank-card .pvp-dossier-emblem[data-rank="laoshou"] { width: 77px; height: 77px; left: -78.4px; top: 36.2px; clip-path: circle(33px at 34.4px 37.8px); }
-.pvp-dossier.ctl-rank-card .pvp-dossier-emblem[data-rank="sanhu"] { width: 177px; height: 177px; left: -134.5px; top: -13.4px; clip-path: circle(33px at 90.5px 87.4px); }
-.pvp-dossier.ctl-rank-card .pvp-dossier-emblem[data-rank="youzi"] { width: 202px; height: 202px; left: -147.2px; top: -23.7px; clip-path: circle(33px at 103.2px 97.7px); }
-.pvp-dossier.ctl-rank-card .pvp-dossier-emblem[data-rank="zhuangjia"] { width: 196px; height: 196px; left: -140px; top: -21.6px; clip-path: circle(33px at 96px 95.6px); }
+/* Batch 2: HD rank icons are centred square art → plain 72×72 slot, no per-icon scale/offset hacks. */
 .pvp-dossier.ctl-rank-card .pvp-dossier-rank .pvp-rank-icon { display: none; }
 /* Avatar (更换头像) moves to the card's top-right; 44px hit area. */
 .pvp-dossier.ctl-rank-card .pvp-dossier-avatar-btn {
@@ -1453,4 +1448,76 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   .pvp-clock.ctl-timer-ring.is-urgent .ctl-timer-ring-fill,
   .ctl-share-save[data-state="loading"],
   .ctl-share-save.is-busy { animation: none; }
+}
+
+/* ===================================================================
+   P3 batch 2 — wire existing ctl-primary / secondary / danger shells onto
+   legacy buttons (result, hindsight, quiz, dialogs, PvP, announcements,
+   feedback, settings, my-games), ctl-close-x on jiu-coin ×, avatar-frame
+   on lobby avatars. No new art except red leading seat panels + HD ranks.
+   =================================================================== */
+.play-again-btn.ctl, .ar-btn.ctl, .quiz-nav-btn.ctl, .announcements-primary.ctl,
+.announcements-secondary.ctl, .auth-secondary.ctl, .auth-danger.ctl,
+.feedback-primary.ctl, .feedback-secondary.ctl, .feedback-attach-btn.ctl,
+.my-games-refresh.ctl, .hub-board-link.ctl, .indicator-toggle.ctl,
+.pvp-report-toggle.ctl, .pvp-msg-line.ctl, .pvp-btn.ctl-primary, .pvp-btn.ctl-secondary, .pvp-btn.ctl-danger {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  padding: 0 0.9rem !important;
+  font-family: var(--kaiti);
+}
+.play-again-btn.ctl-primary, .ar-btn.ctl-primary, .quiz-nav-btn.ctl-primary, .announcements-primary.ctl-primary,
+.feedback-primary.ctl-primary, .pvp-btn.ctl-primary, .jiu-coin-primary.ctl-primary { background-image: url("../assets/controls/ctl-primary-default.webp") !important; color: var(--ctl-ink) !important; }
+.play-again-btn.ctl-primary:active:not(:disabled), .ar-btn.ctl-primary:active:not(:disabled), .quiz-nav-btn.ctl-primary:active:not(:disabled),
+.announcements-primary.ctl-primary:active, .feedback-primary.ctl-primary:active:not(:disabled), .pvp-btn.ctl-primary:active:not(:disabled) { background-image: url("../assets/controls/ctl-primary-press.webp") !important; }
+.quiz-nav-btn.ctl-primary:disabled, .feedback-primary.ctl-primary:disabled:not(.is-busy), .pvp-btn.ctl-primary:disabled { background-image: url("../assets/controls/ctl-primary-disabled.webp") !important; }
+.feedback-primary.ctl-primary.is-busy { background-image: url("../assets/controls/ctl-primary-loading.webp") !important; }
+.play-again-btn.ctl-secondary, .ar-btn.ctl-secondary, .announcements-secondary.ctl-secondary, .auth-secondary.ctl-secondary,
+.feedback-secondary.ctl-secondary, .feedback-attach-btn.ctl-secondary, .my-games-refresh.ctl-secondary, .hub-board-link.ctl-secondary,
+.indicator-toggle.ctl-secondary, .pvp-msg-line.ctl-secondary, .pvp-btn.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp") !important; color: var(--ctl-ink) !important; }
+.play-again-btn.ctl-secondary:active, .ar-btn.ctl-secondary:active, .announcements-secondary.ctl-secondary:active, .auth-secondary.ctl-secondary:active,
+.feedback-secondary.ctl-secondary:active, .feedback-attach-btn.ctl-secondary:active, .my-games-refresh.ctl-secondary:active, .hub-board-link.ctl-secondary:active,
+.indicator-toggle.ctl-secondary:active, .pvp-msg-line.ctl-secondary:active, .pvp-btn.ctl-secondary:active:not(:disabled) { background-image: url("../assets/controls/ctl-secondary-press.webp") !important; }
+.auth-danger.ctl-danger, .pvp-report-toggle.ctl-danger, .pvp-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp") !important; color: #a83232 !important; }
+.auth-danger.ctl-danger:active:not(:disabled), .pvp-report-toggle.ctl-danger:active, .pvp-btn.ctl-danger:active:not(:disabled) { background-image: url("../assets/controls/ctl-danger-press.webp") !important; }
+.auth-danger.ctl-danger.is-busy { opacity: 0.72; }
+.ar-btn.copied.ctl { color: var(--loss-color) !important; }
+/* Sizes: comfortable 44–48px hit areas, width fits label at 390. */
+.play-again-btn.ctl { width: min(260px, 100%); height: 48px; margin-top: 12px; letter-spacing: 0.16em; }
+.ar-btn.ctl { min-width: 9.5em; height: 46px; letter-spacing: 0.08em; font-size: 0.88rem; }
+.quiz-nav-btn.ctl { width: 150px; height: 46px; }
+.announcements-primary.ctl, .announcements-secondary.ctl { width: 128px; height: 44px; min-height: 44px; letter-spacing: 0.1em; }
+.auth-secondary.ctl, .auth-danger.ctl { width: 100%; height: 46px; min-height: 46px; }
+.feedback-primary.ctl, .feedback-secondary.ctl { width: min(150px, 46%); height: 46px; }
+.feedback-attach-btn.ctl, .my-games-refresh.ctl { width: auto; min-width: 104px; height: 40px; min-height: 40px; font-size: 0.88rem; letter-spacing: 0.1em; }
+.hub-board-link.ctl { width: 112px; height: 40px; min-height: 40px; font-size: 0.86rem; letter-spacing: 0.1em; margin: 0 4px 6px 0 !important; }
+.indicator-toggle.ctl { width: auto; min-width: 84px; height: 36px; min-height: 36px; font-size: 0.8rem; letter-spacing: 0.08em; }
+.pvp-report-toggle.ctl { width: 96px; height: 40px; min-height: 40px; font-size: 0.86rem; }
+.pvp-msg-line.ctl { width: 100%; height: auto; min-height: 44px; justify-content: flex-start; padding: 0 1rem !important; font-size: 0.88rem; letter-spacing: 0.04em; font-weight: 600; }
+.pvp-msg-line.ctl .ctl-label { letter-spacing: 0.04em; text-align: left; }
+.pvp-btn.ctl-primary, .pvp-btn.ctl-secondary, .pvp-btn.ctl-danger { min-height: 44px; height: 44px; letter-spacing: 0.1em; }
+.pvp-invite .pvp-btn.ctl { width: auto; min-width: 76px; flex: 0 0 auto; }
+.pvp-block-item .pvp-btn.ctl { width: auto; min-width: 96px; }
+[data-theme="dark"] .play-again-btn.ctl, [data-theme="dark"] .ar-btn.ctl, [data-theme="dark"] .quiz-nav-btn.ctl,
+[data-theme="dark"] .hub-board-link.ctl, [data-theme="dark"] .indicator-toggle.ctl, [data-theme="dark"] .my-games-refresh.ctl,
+[data-theme="dark"] .pvp-msg-line.ctl, [data-theme="dark"] .pvp-btn.ctl-primary, [data-theme="dark"] .pvp-btn.ctl-secondary { color: #3a3530 !important; }
+/* jiu-coin family × → ctl-close-x (all dialogs reusing .jiu-coin-close-x) */
+.jiu-coin-close-x {
+  width: 40px !important; height: 40px !important; padding: 0 !important; border: none !important;
+  background: url("../assets/controls/ctl-close-x-default.png") center / 100% 100% no-repeat !important;
+  color: transparent !important; font-size: 0 !important; transition: transform 70ms linear; top: 4px; right: 4px;
+}
+.jiu-coin-close-x:active { background-image: url("../assets/controls/ctl-close-x-press.png") !important; transform: translate(1px, 1px); }
+/* Lobby / invite row avatars → hand-drawn 48 frame */
+.pvp-avatar {
+  width: 44px; height: 44px; padding: 3px; box-sizing: border-box; border: none !important;
+  background: url("../assets/controls/ctl-avatar-frame-48.png") center / 100% 100% no-repeat !important;
+  border-radius: 50%; object-fit: cover;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jiu-coin-close-x, .play-again-btn.ctl, .ar-btn.ctl { transition: none !important; }
 }

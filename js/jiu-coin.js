@@ -91,8 +91,8 @@ function ensureModals() {
           每天 0 点（北京时间）刷新一次；本次额度随机，领取后立即到账。
         </p>
         <div class="jiu-coin-modal-actions">
-          <button type="button" class="jiu-coin-secondary" id="jiuCoinDailyCancel">取消</button>
-          <button type="button" class="jiu-coin-primary" id="jiuCoinDailyConfirm">领取</button>
+          <button type="button" class="jiu-coin-secondary ctl ctl-secondary" id="jiuCoinDailyCancel" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">取消</span></button>
+          <button type="button" class="jiu-coin-primary ctl ctl-primary" id="jiuCoinDailyConfirm" data-ctl-kind="primary" data-state="default"><span class="ctl-label">领取</span></button>
         </div>
       </div>
     </div>`)
@@ -107,7 +107,7 @@ function ensureModals() {
           恭喜你，获得奖励！
         </p>
         <div class="jiu-coin-modal-actions">
-          <button type="button" class="jiu-coin-primary" id="jiuCoinSuccessOk">好的</button>
+          <button type="button" class="jiu-coin-primary ctl ctl-primary" id="jiuCoinSuccessOk" data-ctl-kind="primary" data-state="default"><span class="ctl-label">好的</span></button>
         </div>
       </div>
     </div>`)
@@ -267,7 +267,7 @@ async function onDailyClaimConfirm() {
   const confirmBtn = document.getElementById("jiuCoinDailyConfirm");
   if (confirmBtn) {
     confirmBtn.disabled = true;
-    confirmBtn.textContent = "领取中…";
+    (confirmBtn.querySelector(".ctl-label") || confirmBtn).textContent = "领取中…";
   }
   if (btn) {
     btn.disabled = true;
@@ -302,7 +302,7 @@ async function onDailyClaimConfirm() {
     claimBusy = false;
     if (confirmBtn) {
       confirmBtn.disabled = false;
-      confirmBtn.textContent = "领取";
+      (confirmBtn.querySelector(".ctl-label") || confirmBtn).textContent = "领取";
     }
   }
 }

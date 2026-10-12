@@ -65,8 +65,8 @@ function ensureDom() {
           <div class="announcements-list" id="announcementsList"></div>
           <p class="announcements-empty" id="announcementsEmpty" hidden>暂无公告</p>
           <div class="announcements-actions">
-            <button type="button" class="announcements-secondary" id="announcementsDismissToday">今日关闭</button>
-            <button type="button" class="announcements-primary" id="announcementsClose">关闭公告</button>
+            <button type="button" class="announcements-secondary ctl ctl-secondary" id="announcementsDismissToday" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">今日关闭</span></button>
+            <button type="button" class="announcements-primary ctl ctl-primary" id="announcementsClose" data-ctl-kind="primary" data-state="default"><span class="ctl-label">关闭公告</span></button>
           </div>
         </div>
       </div>`)
