@@ -3,6 +3,7 @@ import { config } from "./lib/config.js";
 import { createApp } from "./app.js";
 import { openDb } from "./db/connection.js";
 import { expireDueReady, expirePendingChallenges } from "./lib/pvp/challenges.js";
+import { tickBots } from "./lib/pvp/bots.js";
 import { pruneHeartbeats, scanDueMatches } from "./lib/pvp/match.js";
 import { prunePresence } from "./lib/pvp/presence.js";
 import { attachPvpRealtime, noteLobbyChanged, noteMatchChanged, sweepPvpTickets } from "./lib/pvp/realtime.js";
@@ -21,6 +22,10 @@ const scanTimer = setInterval(() => {
       if (row.matchId) noteMatchChanged(row.matchId);
     }
     if (expiredChallenges || readyRows.length) noteLobbyChanged();
+    const botRows = tickBots(db, now);
+    for (const row of botRows) {
+      if (row.matchId && row.ok) noteMatchChanged(row.matchId);
+    }
     const rows = scanDueMatches(db, now);
     for (const row of rows) {
       if (row.advanced || row.finished) noteMatchChanged(row.matchId);

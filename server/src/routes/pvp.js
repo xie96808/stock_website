@@ -9,6 +9,7 @@ import { listLobby, listMyMatches, lobbySummary, readMyStats, readPvpState } fro
 import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/reports.js";
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
 import { listIncoming, sendReaction } from "../lib/pvp/reactions.js";
+import { isChallengeableTarget } from "../lib/pvp/botUsers.js";
 import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
 import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
@@ -214,10 +215,11 @@ router.post("/pvp/challenges", requireUser, (req, res) => {
   if (extra.length) return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
   const perUser = consumeRateLimit(`pvp:challenge:u:${req.user.id}`, 6, 60_000);
   if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "约战过于频繁");
-  if (!isAvailable(body.toUserId, Date.now())) {
+  const db = openDb();
+  if (!isChallengeableTarget(db, body.toUserId, Date.now())) {
     return fail(res, 409, "OFFLINE", "对方现在不可约战");
   }
-  const result = createChallenge(openDb(), {
+  const result = createChallenge(db, {
     fromUserId: req.user.id,
     toUserId: body.toUserId,
     createKey: idempotencyKey(req),
@@ -225,12 +227,18 @@ router.post("/pvp/challenges", requireUser, (req, res) => {
   });
   if (!result?.ok) return sendDeny(res, result);
   noteChallengeChanged(result.challenge.id, [result.challenge.from_user_id, result.challenge.to_user_id]);
+  if (result.matchId) {
+    noteMatchChanged(result.matchId);
+    noteLobbyChanged();
+  }
   const created = result.created === true;
   return ok(res, {
     challengeId: result.challenge.id,
     expiresAt: result.challenge.expires_at,
     replay: result.replay === true,
     alreadyPending: result.alreadyPending === true,
+    matchId: result.matchId || null,
+    autoAccepted: result.autoAccepted === true,
   }, created ? 201 : 200);
 });
 

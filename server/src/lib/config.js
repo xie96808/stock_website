@@ -142,6 +142,18 @@ export const config = {
   pvpDaySeconds: envInt("PVP_DAY_SECONDS", 30),
   pvpMaxWs: envInt("PVP_MAX_WS", 200),
   /**
+   * PvP companion bots in the lobby. Default OFF.
+   * Requires PVP_BATTLE_ENABLED. Set PVP_BOTS_ENABLED=1 to show seeded bots.
+   */
+  pvpBotsEnabled:
+    process.env.PVP_BOTS_ENABLED === "1" || process.env.PVP_BOTS_ENABLED === "true",
+  /** Concurrent bot matches soft cap (humans preferred near room limit). */
+  pvpMaxBotMatches: envInt("PVP_MAX_BOT_MATCHES", 3),
+  /** Refuse new bot matches when active rooms >= maxActive - reserve. */
+  pvpHumanRoomReserve: envInt("PVP_HUMAN_ROOM_RESERVE", 2),
+  /** Default bot policy tier. */
+  pvpBotTier: (process.env.PVP_BOT_TIER || "normal").trim() || "normal",
+  /**
    * Phase 0 in-memory rate limits (single-process). Env knobs documented in deploy docs.
    */
   rateLimit: {

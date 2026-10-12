@@ -6,6 +6,7 @@ import { assessSelf, isBlocked } from "./eligibility.js";
 import { currentEconomy, maxActiveMatches } from "./config.js";
 import { readDrain } from "./drain.js";
 import { publicNickname } from "./names.js";
+import { idleBotCount, listIdleBotEntries } from "./botUsers.js";
 import { isAvailable, listAvailableIds } from "./presence.js";
 
 function avatarUrl(row) {
@@ -27,7 +28,8 @@ export function lobbySummary(db, now = Date.now(), viewerId = null) {
   if (draining) disabledReason = "对战已停止接受新局";
   else if (full) disabledReason = "对战房间已满";
   const viewer = viewerId == null ? null : Number(viewerId);
-  const availableCount = listAvailableIds(now).filter((id) => id !== viewer).length;
+  const humanCount = listAvailableIds(now).filter((id) => id !== viewer).length;
+  const availableCount = humanCount + idleBotCount(db, viewer);
   return {
     availableCount,
     acceptingNew,
@@ -92,6 +94,17 @@ export function listLobby(db, viewerId, { cursor = 0, limit = 20, now = Date.now
   for (const id of take) {
     const entry = entryFor(db, id, busy);
     if (entry) page.push(entry);
+  }
+  // Idle bots after humans. First page only so cursor pagination stays human-id based.
+  if (after === 0) {
+    const bots = listIdleBotEntries(db, viewerId, { now });
+    const seen = new Set(page.map((e) => e.userId));
+    for (const bot of bots) {
+      if (seen.has(bot.userId)) continue;
+      if (page.length >= size) break;
+      page.push(bot);
+      seen.add(bot.userId);
+    }
   }
   return { entries: page, nextCursor };
 }
