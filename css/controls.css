@@ -1,0 +1,783 @@
+/* ===== Handcrafted controls (P0/P1) — docs/handcrafted-controls-redesign.md v1.2 ===== */
+/* Style lock: kraft #f3ead8, ink #3a3530, buy #e05252, sell #3db86a; hard shadow; no soft blur elevation. */
+
+:root,
+[data-theme="light"] {
+  --ctl-kraft: #f3ead8;
+  --ctl-ink: #3a3530;
+  --ctl-buy: #e05252;
+  --ctl-sell: #3db86a;
+  --ctl-shadow: 3px 3px 0 var(--ctl-ink);
+  --ctl-shadow-press: 1px 1px 0 var(--ctl-ink);
+  --ctl-shadow-hover: 4px 4px 0 var(--ctl-ink);
+  --ctl-press-ms: 70ms;
+  --ctl-release-ms: 110ms;
+  --ctl-modal-enter-ms: 250ms;
+  --ctl-modal-exit-ms: 200ms;
+  --ctl-dim: color-mix(in srgb, var(--ctl-ink) 45%, transparent);
+  --ctl-ease-pop: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ctl-z-modal: 150;
+  --ctl-z-invite: 160;
+  --ctl-z-crisis: 170;
+  --ctl-z-toast: 180;
+}
+
+[data-theme="dark"] {
+  --ctl-kraft: #2a241c;
+  --ctl-ink: #c8bca8;
+  --ctl-shadow: 3px 3px 0 var(--ctl-ink);
+  --ctl-shadow-press: 1px 1px 0 var(--ctl-ink);
+  --ctl-shadow-hover: 4px 4px 0 var(--ctl-ink);
+  --ctl-dim: color-mix(in srgb, #0a0806 55%, transparent);
+}
+
+/* ----- Shared press atom (≤120ms) ----- */
+.action-btn,
+.pvp-btn,
+.ctl,
+.pvp-sketch-ctl {
+  transition:
+    transform var(--ctl-release-ms) ease-out,
+    box-shadow var(--ctl-release-ms) ease-out,
+    filter var(--ctl-release-ms) ease-out,
+    opacity 0.2s ease,
+    background-image 0s;
+  will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
+.pvp-btn:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
+.ctl:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
+.pvp-sketch-ctl:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]) {
+  transform: translate(-1px, -1px);
+  box-shadow: var(--ctl-shadow-hover);
+}
+
+.action-btn:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.pvp-btn:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.ctl:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.pvp-sketch-ctl:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.action-btn[data-state="press"],
+.pvp-btn[data-state="press"],
+.ctl[data-state="press"],
+.pvp-sketch-ctl[data-state="press"] {
+  transform: translate(2px, 2px);
+  box-shadow: var(--ctl-shadow-press);
+  filter: brightness(0.88);
+  transition-duration: var(--ctl-press-ms);
+  transition-timing-function: linear;
+}
+
+.action-btn:disabled,
+.pvp-btn:disabled,
+.ctl:disabled,
+.pvp-sketch-ctl:disabled,
+.ctl[data-state="disabled"],
+.ctl[data-state="locked"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none !important;
+  filter: grayscale(0.25);
+}
+
+/* ----- .ctl atomic chrome (CSS 楷体 overlay; blank asset shells) ----- */
+.ctl {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  color: var(--ctl-ink);
+  font-family: var(--kaiti);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  line-height: 1.1;
+  cursor: pointer;
+  overflow: visible;
+  box-shadow: none;
+  min-height: 48px;
+}
+
+.ctl-label {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--kaiti);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.ctl-chrome {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  z-index: 0;
+}
+
+/* Trade shells 190×80 */
+.ctl-buy,
+.ctl-sell,
+.ctl-hold {
+  width: 100%;
+  min-height: 56px;
+  height: 56px;
+  max-width: 220px;
+  font-size: 1.02rem;
+}
+
+.ctl-buy { color: var(--ctl-buy); background-image: url("../assets/controls/ctl-buy-default.webp"); }
+.ctl-buy:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.ctl-buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp"); }
+.ctl-buy:disabled,
+.ctl-buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp"); }
+.ctl-buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp"); opacity: 0.85; filter: none; }
+
+.ctl-sell { color: var(--ctl-sell); background-image: url("../assets/controls/ctl-sell-default.webp"); }
+.ctl-sell:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.ctl-sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp"); }
+.ctl-sell:disabled,
+.ctl-sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp"); }
+.ctl-sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp"); opacity: 0.85; filter: none; }
+
+.ctl-hold { color: var(--ctl-ink); background-image: url("../assets/controls/ctl-hold-default.webp"); }
+.ctl-hold:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.ctl-hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.ctl-hold:disabled,
+.ctl-hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp"); }
+.ctl-hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp"); opacity: 0.85; filter: none; }
+
+/* Override legacy .action-btn color blocks when .ctl is present */
+.action-btn.ctl {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+  padding: 0;
+  letter-spacing: 0.22em;
+}
+.action-btn.ctl::after { display: none; }
+.action-btn.ctl.buy,
+.action-btn.ctl.sell,
+.action-btn.ctl.hold {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* Msg 80×80 */
+.ctl-msg {
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  min-width: 56px;
+  background-image: url("../assets/controls/ctl-msg-default.webp");
+}
+.ctl-msg:active:not(:disabled),
+.ctl-msg[data-state="press"] { background-image: url("../assets/controls/ctl-msg-press.webp"); }
+.ctl-msg:disabled,
+.ctl-msg[data-state="disabled"] { background-image: url("../assets/controls/ctl-msg-disabled.webp"); }
+
+/* Ready / cancel-ready 140×56 */
+.ctl-ready,
+.ctl-cancel-ready {
+  width: min(160px, 46%);
+  min-height: 52px;
+  height: 52px;
+  font-size: 1rem;
+  color: var(--ctl-buy);
+}
+.ctl-ready { background-image: url("../assets/controls/ctl-ready-default.webp"); }
+.ctl-ready:active:not(:disabled),
+.ctl-ready[data-state="press"] { background-image: url("../assets/controls/ctl-ready-press.webp"); }
+.ctl-ready[data-state="success"] { background-image: url("../assets/controls/ctl-ready-success.webp"); }
+
+.ctl-cancel-ready {
+  color: var(--ctl-ink);
+  background-image: url("../assets/controls/ctl-cancel-ready-default.webp");
+}
+.ctl-cancel-ready:active:not(:disabled),
+.ctl-cancel-ready[data-state="press"] { background-image: url("../assets/controls/ctl-cancel-ready-press.webp"); }
+
+/* Challenge pill 96×40 */
+.ctl-challenge {
+  width: 96px;
+  min-width: 96px;
+  height: 40px;
+  min-height: 40px;
+  font-size: 0.88rem;
+  letter-spacing: 0.12em;
+  color: var(--ctl-ink);
+  background-image: url("../assets/controls/ctl-challenge-default.webp");
+}
+.ctl-challenge:active:not(:disabled),
+.ctl-challenge[data-state="press"] { background-image: url("../assets/controls/ctl-challenge-press.webp"); }
+.ctl-challenge[data-state="loading"],
+.ctl-challenge.is-busy {
+  background-image: url("../assets/controls/ctl-challenge-loading.webp");
+  cursor: wait;
+  opacity: 1;
+  filter: none;
+}
+
+/* Primary / secondary / danger 160×48 */
+.ctl-primary,
+.ctl-secondary,
+.ctl-danger {
+  width: min(180px, 100%);
+  min-height: 48px;
+  height: 48px;
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+}
+
+.ctl-primary {
+  color: var(--ctl-kraft);
+  background-image: url("../assets/controls/ctl-primary-default.webp");
+}
+.ctl-primary:active:not(:disabled),
+.ctl-primary[data-state="press"] { background-image: url("../assets/controls/ctl-primary-press.webp"); }
+.ctl-primary[data-state="loading"],
+.ctl-primary.is-busy {
+  background-image: url("../assets/controls/ctl-primary-loading.webp");
+  cursor: wait;
+  opacity: 1;
+  filter: none;
+  /* keep width when busy label changes */
+  min-width: 8.5em;
+}
+.ctl-primary:disabled,
+.ctl-primary[data-state="disabled"] { background-image: url("../assets/controls/ctl-primary-disabled.webp"); }
+
+.ctl-secondary {
+  color: var(--ctl-ink);
+  background-image: url("../assets/controls/ctl-secondary-default.webp");
+}
+.ctl-secondary:active:not(:disabled),
+.ctl-secondary[data-state="press"] { background-image: url("../assets/controls/ctl-secondary-press.webp"); }
+
+.ctl-danger {
+  color: var(--ctl-kraft);
+  background-image: url("../assets/controls/ctl-danger-default.webp");
+}
+.ctl-danger:active:not(:disabled),
+.ctl-danger[data-state="press"] { background-image: url("../assets/controls/ctl-danger-press.webp"); }
+
+/* Loading boil dots (CSS; reduced-motion kills) */
+.ctl[data-state="loading"]::after,
+.ctl.is-busy::after {
+  content: "";
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateY(-50%);
+  animation: ctl-boil 900ms linear infinite;
+  opacity: 0.7;
+  z-index: 2;
+}
+
+@keyframes ctl-boil {
+  0%, 100% { opacity: 0.35; transform: translateY(-50%) scale(0.85); }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.15); }
+}
+
+/* Error shake */
+.ctl.is-shake,
+.ctl-shake {
+  animation: ctl-shake 320ms ease-in-out;
+}
+@keyframes ctl-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+/* ----- Stamp toasts ----- */
+.auth-toast-host {
+  z-index: var(--ctl-z-toast) !important;
+}
+
+.auth-toast.ctl-toast,
+.ctl-toast {
+  background-color: transparent !important;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--ctl-ink) !important;
+  font-family: var(--kaiti);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  opacity: 0;
+  transform: translateY(-18px) scale(1.06);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.auth-toast.ctl-toast.show,
+.ctl-toast.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.ctl-toast--success,
+.auth-toast--success.ctl-toast {
+  background-image: url("../assets/controls/ctl-toast-success.webp");
+  color: #1a3a22 !important;
+}
+.ctl-toast--error,
+.auth-toast--error.ctl-toast {
+  background-image: url("../assets/controls/ctl-toast-error.webp");
+  color: #5a1a14 !important;
+}
+.ctl-toast--info,
+.auth-toast--info.ctl-toast {
+  background-image: url("../assets/controls/ctl-toast-info.webp");
+}
+
+/* ----- Castbar ----- */
+.ctl-castbar {
+  position: relative;
+  width: min(240px, 100%);
+  height: 16px;
+  margin: 0.55rem auto 0.25rem;
+  background-image: url("../assets/controls/ctl-castbar-track.webp");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  overflow: hidden;
+}
+.ctl-castbar-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background-image: url("../assets/controls/ctl-castbar-fill.webp");
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+  background-position: left center;
+  transition: width 0.25s ease-in-out;
+}
+.ctl-castbar.is-indeterminate .ctl-castbar-fill {
+  width: 38%;
+  animation: ctl-cast-slide 1.1s linear infinite;
+}
+@keyframes ctl-cast-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+.ctl-castbar-label {
+  text-align: center;
+  font-family: var(--kaiti);
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin: 0.35rem 0 0;
+}
+
+#pvpLobbyLoading.ctl-loading-host,
+.fill-mode-loading.ctl-loading-host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ----- PvP sketch → ctl chrome (img still present for buy/sell swap) ----- */
+.pvp-sketch-ctl.ctl {
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+  min-height: 56px;
+}
+.pvp-sketch-ctl.ctl .pvp-sketch-chrome,
+.pvp-sketch-ctl.ctl .pvp-sketch-icon {
+  opacity: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+.pvp-sketch-ctl.ctl-msg {
+  width: 56px;
+  min-width: 56px;
+}
+.pvp-sketch-ctl.ctl-msg .pvp-sketch-icon {
+  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+.pvp-trade-primary.ctl-buy .pvp-sketch-label { color: var(--ctl-buy); }
+.pvp-trade-primary.ctl-sell .pvp-sketch-label { color: var(--ctl-sell); }
+.pvp-trade-hold.ctl-hold .pvp-sketch-label { color: var(--ctl-ink); }
+
+/* Hide CSS background when using img chrome (avoid double shell) */
+.pvp-sketch-ctl.ctl.has-chrome-img {
+  background-image: none !important;
+}
+
+/* pvp-btn press when not yet full ctl skin */
+.pvp-btn {
+  box-shadow: 2px 2px 0 var(--line);
+}
+.pvp-btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--line);
+}
+
+/* Auth primary busy keeps width + loading skin when .ctl-primary */
+.auth-primary.ctl-primary {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: transparent;
+  min-width: 8.5em;
+  width: 100%;
+  max-width: 220px;
+  align-self: center;
+  color: var(--ctl-kraft);
+}
+.auth-primary.ctl-primary.is-busy {
+  opacity: 1;
+  box-shadow: none;
+}
+
+/* ----- Modal / overlay silk (§6.4) ----- */
+.ctl-overlay,
+.auth-modal,
+.feedback-modal,
+.announcements-modal,
+.pvp-dialog,
+.pvp-opp-card-modal {
+  /* ink dim backdrop */
+  background: var(--ctl-dim, rgba(44, 40, 36, 0.45));
+}
+
+.ctl-overlay .ctl-panel,
+.auth-modal .auth-dialog,
+.feedback-modal .feedback-dialog,
+.announcements-modal .announcements-dialog,
+.pvp-dialog .pvp-dialog-card,
+.pvp-opp-card-modal .pvp-opp-card-dialog {
+  transform-origin: center center;
+  transition:
+    opacity var(--ctl-modal-exit-ms) ease-in,
+    transform var(--ctl-modal-exit-ms) ease-in;
+}
+
+/* Enter: fade + scale 220–280ms */
+.ctl-overlay.is-open:not(.is-leaving) .ctl-panel,
+.auth-modal.is-open:not(.is-leaving) .auth-dialog,
+.feedback-modal.is-open:not(.is-leaving) .feedback-dialog,
+.announcements-modal.is-open:not(.is-leaving) .announcements-dialog,
+.pvp-dialog.is-open:not(.is-leaving) .pvp-dialog-card,
+.pvp-opp-card-modal.is-open:not(.is-leaving) .pvp-opp-card-dialog {
+  animation: ctl-modal-in var(--ctl-modal-enter-ms) var(--ctl-ease-pop) both;
+}
+
+.ctl-overlay.is-open,
+.auth-modal.is-open,
+.feedback-modal.is-open,
+.announcements-modal.is-open,
+.pvp-dialog.is-open,
+.pvp-opp-card-modal.is-open {
+  animation: ctl-dim-in 180ms ease both;
+}
+
+.ctl-overlay.is-leaving,
+.auth-modal.is-leaving,
+.feedback-modal.is-leaving,
+.announcements-modal.is-leaving,
+.pvp-dialog.is-leaving,
+.pvp-opp-card-modal.is-leaving {
+  animation: ctl-dim-out var(--ctl-modal-exit-ms) ease-in both;
+  pointer-events: none;
+}
+.ctl-overlay.is-leaving .ctl-panel,
+.auth-modal.is-leaving .auth-dialog,
+.feedback-modal.is-leaving .feedback-dialog,
+.announcements-modal.is-leaving .announcements-dialog,
+.pvp-dialog.is-leaving .pvp-dialog-card,
+.pvp-opp-card-modal.is-leaving .pvp-opp-card-dialog {
+  animation: ctl-modal-out var(--ctl-modal-exit-ms) ease-in both;
+}
+
+@keyframes ctl-modal-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes ctl-modal-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.96) translateY(4px); }
+}
+@keyframes ctl-dim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ctl-dim-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+body.ctl-scroll-lock {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* z-index ladder */
+.announcements-modal { z-index: 140; }
+.auth-modal { z-index: var(--ctl-z-modal); }
+.feedback-modal { z-index: 155; }
+.pvp-dialog:not(.pvp-invite-dialog) { z-index: 145; }
+.pvp-invite-dialog { z-index: var(--ctl-z-invite) !important; }
+.pvp-opp-card-modal { z-index: 152; }
+.auth-toast-host { z-index: var(--ctl-z-toast) !important; }
+
+/* Kill competing rise anim when ctl overlay class present */
+.pvp-dialog.is-open .pvp-dialog-card,
+.pvp-invite-dialog.is-open .pvp-dialog-card {
+  animation-name: ctl-modal-in;
+  animation-duration: var(--ctl-modal-enter-ms);
+  animation-timing-function: var(--ctl-ease-pop);
+}
+
+/* ----- View swap: lobby ↔ room ↔ settlement ----- */
+.pvp-screen {
+  transition: opacity 280ms ease-in-out, transform 280ms ease-in-out;
+}
+.pvp-screen.ctl-view-out {
+  opacity: 0;
+  transform: translateX(-12px);
+  pointer-events: none;
+}
+.pvp-screen.active.ctl-view-in {
+  animation: ctl-view-in 300ms ease-in-out both;
+}
+.pvp-screen.pvp-instant.active.ctl-view-in,
+.pvp-screen.pvp-instant.active {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+@keyframes ctl-view-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Align legacy pvp-rise with §6.4 view budget (≤320ms) */
+.pvp-screen.active .pvp-wrap { animation-duration: 300ms; }
+
+/* ----- prefers-reduced-motion ----- */
+@media (prefers-reduced-motion: reduce) {
+  .action-btn,
+  .pvp-btn,
+  .ctl,
+  .pvp-sketch-ctl {
+    transition:
+      transform var(--ctl-press-ms) linear,
+      box-shadow var(--ctl-press-ms) linear,
+      filter var(--ctl-press-ms) linear !important;
+  }
+  /* Keep press displacement; kill boil / long slides / scale pop */
+  .ctl[data-state="loading"]::after,
+  .ctl.is-busy::after,
+  .ctl-castbar.is-indeterminate .ctl-castbar-fill {
+    animation: none !important;
+  }
+  .ctl.is-shake,
+  .ctl-shake {
+    animation: none !important;
+    outline: 2px solid var(--ctl-buy);
+  }
+  .ctl-overlay.is-open:not(.is-leaving) .ctl-panel,
+  .auth-modal.is-open:not(.is-leaving) .auth-dialog,
+  .feedback-modal.is-open:not(.is-leaving) .feedback-dialog,
+  .announcements-modal.is-open:not(.is-leaving) .announcements-dialog,
+  .pvp-dialog.is-open:not(.is-leaving) .pvp-dialog-card,
+  .pvp-opp-card-modal.is-open:not(.is-leaving) .pvp-opp-card-dialog,
+  .pvp-dialog.is-open .pvp-dialog-card,
+  .pvp-invite-dialog.is-open .pvp-dialog-card {
+    animation: ctl-fade-short 120ms ease both !important;
+  }
+  .ctl-overlay.is-leaving .ctl-panel,
+  .auth-modal.is-leaving .auth-dialog,
+  .feedback-modal.is-leaving .feedback-dialog,
+  .announcements-modal.is-leaving .announcements-dialog,
+  .pvp-dialog.is-leaving .pvp-dialog-card,
+  .pvp-opp-card-modal.is-leaving .pvp-opp-card-dialog {
+    animation: ctl-fade-short-out 100ms ease both !important;
+  }
+  .pvp-screen,
+  .pvp-screen.active.ctl-view-in {
+    transition: opacity 120ms ease !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  .auth-toast.ctl-toast,
+  .ctl-toast {
+    transition: opacity 120ms ease !important;
+    transform: none !important;
+  }
+}
+
+@keyframes ctl-fade-short {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ctl-fade-short-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ----- P2 (partial): input / textarea shells + close-x ----- */
+.auth-form input[type=text],
+.auth-form input[type=password],
+.auth-form input:not([type]),
+.ctl-input {
+  appearance: none;
+  -webkit-appearance: none;
+  border-style: solid !important; border-color: transparent !important; border-width: 10px !important;
+  border-image: url("../assets/controls/ctl-input-shell-default.png") 14 fill / 10px stretch;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ctl-ink);
+  padding: 4px 6px !important;
+  min-height: 44px;
+  outline: none;
+  box-shadow: none;
+  caret-color: var(--ctl-buy);
+}
+.auth-form input[type=text]:focus,
+.auth-form input[type=password]:focus,
+.auth-form input:not([type]):focus,
+.ctl-input:focus {
+  border-image-source: url("../assets/controls/ctl-input-shell-focus.png");
+}
+.auth-form input:user-invalid,
+.ctl-input[aria-invalid="true"] {
+  border-image-source: url("../assets/controls/ctl-input-shell-error.png");
+}
+.feedback-dialog textarea,
+.ctl-textarea {
+  appearance: none;
+  border-style: solid !important; border-color: transparent !important; border-width: 14px !important;
+  border-image: url("../assets/controls/ctl-textarea-shell-default.png") 18 fill / 14px stretch;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--ctl-ink);
+  padding: 2px 4px !important;
+  outline: none;
+  box-shadow: none;
+  caret-color: var(--ctl-buy);
+}
+.feedback-dialog textarea:focus,
+.ctl-textarea:focus { border-image-source: url("../assets/controls/ctl-textarea-shell-focus.png"); }
+.feedback-dialog textarea:user-invalid,
+.ctl-textarea[aria-invalid="true"] { border-image-source: url("../assets/controls/ctl-textarea-shell-error.png"); }
+[data-theme="dark"] .auth-form input,
+[data-theme="dark"] .feedback-dialog textarea { color: #2c2824; }
+
+.auth-close,
+.feedback-close-x,
+.announcements-close-x,
+.pvp-opp-card-close {
+  width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: url("../assets/controls/ctl-close-x-default.png") center / 100% 100% no-repeat !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  cursor: pointer;
+  transition: transform 70ms linear;
+}
+.auth-close:active,
+.feedback-close-x:active,
+.announcements-close-x:active,
+.pvp-opp-card-close:active {
+  background-image: url("../assets/controls/ctl-close-x-press.png") !important;
+  transform: translate(1px, 1px);
+}
+/* P2 TODO (follow-up PR): ctl-checkbox/radio/switch + ctl-modal-paper 9-slice + avatar-frame are packed but not yet wired;
+   remaining native inputs: auth checkbox, fill-mode radios, hindsight/report/rewind fields. */
+
+/* Long label (回到大厅（计时继续）) — keep within 160px shell */
+#pvpLeaveLobby { width: min(220px, 100%); letter-spacing: 0.04em; font-size: 0.88rem; }
+.pvp-dialog .pvp-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+
+/* ----- Neutralize legacy chrome under ctl shells (no double outline / OS look) ----- */
+.pvp-btn.ctl,
+.action-btn.ctl,
+.auth-primary.ctl,
+.pvp-sketch-ctl.ctl {
+  border: none !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  padding: 0 0.6rem !important;
+  box-shadow: none !important;
+  outline-offset: 2px;
+}
+/* Hard shadow is baked into the slice; press = translate + press frame + ink dim. */
+.ctl,
+.ctl:hover,
+.ctl:active,
+.ctl[data-state] { box-shadow: none !important; }
+
+/* Label ink on light shells (assets are kraft-filled; never kraft-on-kraft) */
+.ctl-primary,
+.auth-primary.ctl-primary { color: var(--ctl-ink) !important; }
+.ctl-secondary { color: var(--ctl-ink) !important; }
+.ctl-danger { color: #a83232 !important; }
+[data-theme="dark"] .ctl-primary,
+[data-theme="dark"] .ctl-secondary,
+[data-theme="dark"] .ctl-hold,
+[data-theme="dark"] .ctl-cancel-ready,
+[data-theme="dark"] .ctl-challenge { color: #3a3530 !important; }
+
+/* Solo .action-btn.<kind> legacy shorthand beats .ctl-<kind>; re-assert shells at matching specificity */
+.action-btn.ctl.buy { background-image: url("../assets/controls/ctl-buy-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-buy) !important; }
+.action-btn.ctl.buy:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.action-btn.ctl.buy[data-state="press"] { background-image: url("../assets/controls/ctl-buy-press.webp"); }
+.action-btn.ctl.buy:disabled,
+.action-btn.ctl.buy[data-state="disabled"] { background-image: url("../assets/controls/ctl-buy-disabled.webp"); }
+.action-btn.ctl.buy[data-state="locked"] { background-image: url("../assets/controls/ctl-buy-locked.webp"); }
+.action-btn.ctl.sell { background-image: url("../assets/controls/ctl-sell-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-sell) !important; }
+.action-btn.ctl.sell:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.action-btn.ctl.sell[data-state="press"] { background-image: url("../assets/controls/ctl-sell-press.webp"); }
+.action-btn.ctl.sell:disabled,
+.action-btn.ctl.sell[data-state="disabled"] { background-image: url("../assets/controls/ctl-sell-disabled.webp"); }
+.action-btn.ctl.sell[data-state="locked"] { background-image: url("../assets/controls/ctl-sell-locked.webp"); }
+.action-btn.ctl.hold { background-image: url("../assets/controls/ctl-hold-default.webp"); background-size: 100% 100%; background-repeat: no-repeat; color: var(--ctl-ink) !important; }
+.action-btn.ctl.hold:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+.action-btn.ctl.hold[data-state="press"] { background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.action-btn.ctl.hold:disabled,
+.action-btn.ctl.hold[data-state="disabled"] { background-image: url("../assets/controls/ctl-hold-disabled.webp"); }
+.action-btn.ctl.hold[data-state="locked"] { background-image: url("../assets/controls/ctl-hold-locked.webp"); }
+#holdBtn.ctl.is-fast-forwarding { box-shadow: none !important; filter: brightness(0.92) saturate(1.2); background-image: url("../assets/controls/ctl-hold-press.webp"); }
+.pvp-dialog .ctl:focus-visible,
+.ctl:focus-visible { outline: 2px dashed var(--ctl-ink); outline-offset: 3px; border-radius: 10px; }
