@@ -2,6 +2,7 @@ import { clearShareMeta, setShareMeta, selectShareView, getSession } from './gam
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
+import { showStampToast } from './controls.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -257,7 +258,7 @@ export async function saveResultShareImage() {
         void sheet.offsetWidth;
         if (!ok || typeof html2canvas !== 'function') {
             sheet.classList.remove('capturing');
-            alert('当前环境无法生成分享图，请稍后再试');
+            showStampToast('当前环境无法生成分享图，请稍后再试', 'error');
             return;
         }
         const bg = getComputedStyle(document.documentElement).getPropertyValue('--card').trim()
@@ -272,7 +273,7 @@ export async function saveResultShareImage() {
         sheet.classList.remove('capturing');
         const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
         if (!blob) {
-            alert('生成分享图失败，请稍后再试');
+            showStampToast('生成分享图失败，请稍后再试', 'error');
             return;
         }
         const shareStock = selectShareView().currentStock;
@@ -291,7 +292,7 @@ export async function saveResultShareImage() {
         console.error('结算分享图失败', err);
         const sheet = document.getElementById('resultShareSheet');
         if (sheet) sheet.classList.remove('capturing');
-        alert('生成分享图失败，请稍后再试');
+        showStampToast('生成分享图失败，请稍后再试', 'error');
     } finally {
         if (btn) {
             btn.disabled = false;

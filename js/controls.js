@@ -407,6 +407,52 @@ export function hideCrisisSheet() {
   return Promise.resolve();
 }
 
+/**
+ * 手绘确认 sheet，替代 window.confirm。返回 Promise<boolean>：
+ * 确定 → true；取消 / Esc / 点遮罩 → false。只 resolve 一次。
+ */
+let confirmPending = null;
+export function ctlConfirm(message, { title = "", okLabel = "确定", cancelLabel = "取消", danger = false } = {}) {
+  let root = document.getElementById("ctlConfirmSheet");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "ctlConfirmSheet";
+    root.className = "ctl-overlay ctl-sheet ctl-confirm";
+    root.hidden = true;
+    root.innerHTML = `<div class="ctl-panel ctl-sheet-panel ctl-paper" role="alertdialog" aria-modal="true" aria-labelledby="ctlConfirmTitle" aria-describedby="ctlConfirmBody">
+        <h2 id="ctlConfirmTitle"></h2><p id="ctlConfirmBody"></p><div class="ctl-sheet-actions">
+        <button type="button" class="ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" id="ctlConfirmCancel"><span class="ctl-label"></span></button>
+        <button type="button" class="ctl ctl-primary" data-ctl-kind="primary" data-state="default" id="ctlConfirmOk" data-ctl-focus><span class="ctl-label"></span></button></div></div>`;
+    root.addEventListener("click", (e) => { if (e.target === root) settleConfirm(false); });
+    root.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.stopPropagation(); settleConfirm(false); } });
+    root.querySelector("#ctlConfirmOk").addEventListener("click", () => settleConfirm(true));
+    root.querySelector("#ctlConfirmCancel").addEventListener("click", () => settleConfirm(false));
+    document.body.appendChild(root);
+  }
+  // 若上一次确认尚未作答，按取消处理，避免悬挂的 Promise。
+  if (confirmPending) settleConfirm(false);
+  const t = root.querySelector("#ctlConfirmTitle");
+  t.textContent = title;
+  t.hidden = !title;
+  root.querySelector("#ctlConfirmBody").textContent = String(message ?? "");
+  root.querySelector("#ctlConfirmOk .ctl-label").textContent = okLabel;
+  root.querySelector("#ctlConfirmCancel .ctl-label").textContent = cancelLabel;
+  const ok = root.querySelector("#ctlConfirmOk");
+  ok.className = `ctl ${danger ? "ctl-danger" : "ctl-primary"}`;
+  ok.dataset.ctlKind = danger ? "danger" : "primary";
+  return new Promise((resolve) => {
+    confirmPending = resolve;
+    openCtlSheet(root, { focusSelector: "#ctlConfirmOk" });
+  });
+}
+function settleConfirm(value) {
+  const r = confirmPending;
+  if (!r) return;
+  confirmPending = null;
+  closeCtlSheet(document.getElementById("ctlConfirmSheet"));
+  r(value);
+}
+
 let controlsInited = false;
 
 export function initControls() {

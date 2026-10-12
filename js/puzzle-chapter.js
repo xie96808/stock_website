@@ -9,6 +9,7 @@ import {
   deactivateScreen,
   setHeaderChrome,
 } from './screen-router.js';
+import { ctlConfirm } from './controls.js';
 import { formatLevelGoalLines } from './puzzle-goals-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 
@@ -477,7 +478,7 @@ async function startPuzzleLevel(levelKey, { afterAbandon = false, entryFee = nul
         return;
       }
       if (active?.gameKind === 'puzzle' && Array.isArray(active?.bars) && active.bars.length) {
-        const cont = window.confirm(
+        const cont = await ctlConfirm(
           '已有进行中的残局对局。\n\n确定：继续原局\n取消：放弃并开新局'
         );
         if (cont) {
@@ -488,7 +489,7 @@ async function startPuzzleLevel(levelKey, { afterAbandon = false, entryFee = nul
         await abandonThenRetry(levelKey, activeId);
         return;
       }
-      const drop = window.confirm(
+      const drop = await ctlConfirm(
         (json.error?.message || '已有进行中的云端对局') +
           '\n\n确定：放弃原局并开新残局\n取消：返回关卡列表'
       );

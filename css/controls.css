@@ -18,6 +18,7 @@
   --ctl-ease-pop: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ctl-z-modal: 150;
   --ctl-z-invite: 160;
+  --ctl-z-confirm: 165;
   --ctl-z-crisis: 170;
   --ctl-z-toast: 180;
 }
@@ -849,6 +850,10 @@ body.ctl-scroll-lock {
 }
 
 /* Crisis: highest layer (below toast), backdrop does not dismiss (JS). */
+.ctl-confirm { z-index: var(--ctl-z-confirm) !important; }
+.ctl-confirm .ctl-sheet-panel h2 { font-family: var(--kaiti); font-size: 1.15rem; margin: 0 0 0.5rem; }
+.ctl-confirm .ctl-sheet-panel h2[hidden] { display: none; }
+.ctl-confirm .ctl-sheet-panel p { margin: 0 0 0.9rem; line-height: 1.6; white-space: pre-line; }
 .ctl-crisis { z-index: var(--ctl-z-crisis) !important; }
 .ctl-crisis .ctl-sheet-panel h2 { font-family: var(--kaiti); font-size: 1.2rem; margin: 0 0 0.5rem; color: var(--ctl-buy); }
 .ctl-crisis .ctl-sheet-panel p { margin: 0 0 0.9rem; line-height: 1.6; }

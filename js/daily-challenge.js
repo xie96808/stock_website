@@ -1,6 +1,6 @@
 /** F01 每日同题挑战 — hub card + confirm + start/resume/leaderboard */
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
-import { openCtlSheet, closeCtlSheet } from './controls.js';
+import { openCtlSheet, closeCtlSheet, ctlConfirm } from './controls.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 import {
   abandonActiveCloudGame,
@@ -371,14 +371,14 @@ async function runFreshDailyStart() {
 
 async function handleActiveConflict(activeGame) {
   const kind = activeGame.gameKind === 'daily' ? '今日挑战' : '经典练习';
-  const okContinue = window.confirm(
+  const okContinue = await ctlConfirm(
     `已有进行中的云端对局（${kind}）。\n\n确定：继续原局\n取消：可再选是否放弃原局后新开今日挑战`
   );
   if (okContinue) {
     await startCloudFromMeta(activeGame);
     return;
   }
-  const okAbandon = window.confirm(
+  const okAbandon = await ctlConfirm(
     '要放弃当前云端对局并开启今日挑战吗？放弃不退韭币；若原局也是今日挑战，今日机会不恢复。'
   );
   if (!okAbandon) return;
