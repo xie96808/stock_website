@@ -1,5 +1,6 @@
 /** Homepage IA Scheme A: root + 模拟盘二级 hub + 三级玩法/残局章节选择 */
 
+import { loadChunk } from "./chunk-reload.js";
 import {
   refreshDailyChallengeFlag,
   refreshDailyChallengeCard,
@@ -113,7 +114,7 @@ export function showSimHub(opts = {}) {
   refreshPuzzleChapterFlag()
     .then(() => refreshPuzzleChapterCard())
     .catch(() => {});
-  import("./pvp/lobby.js")
+  loadChunk(() => import("./pvp/lobby.js"))
     .then((mod) => mod.refreshPvpEntry())
     .catch(() => {});
 }
