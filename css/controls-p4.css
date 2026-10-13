@@ -289,3 +289,11 @@ html:not([data-theme="dark"]) #authChip :is(.announcements-btn, .auth-login-btn,
     gap: 10px;
   }
 }
+
+/* Lane corner ribbons: clip to the inner edge of the hand-drawn ink line
+   (lane-card art: ink ≈5–7px in from left/top, ≈9–10px from right, shadow below/right),
+   the band keeps its own top/right offsets inside the clip box, so its label stays whole. */
+html:not([data-theme="dark"]) .start-screen .lane-ribbon-clip {
+  inset: 7px 10px 10px 7px;
+  border-radius: 10px 12px 10px 12px;
+}
