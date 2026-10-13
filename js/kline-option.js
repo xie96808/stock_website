@@ -51,25 +51,27 @@ function pvpMarkerPoints(bars, marks) {
         } else if (buy) {
             label = mine ? '买' : '对手买';
             color = '#fffaf3';
-            bg = mine ? '#e05252' : 'rgba(224, 82, 82, 0.78)';
+            // Mine stays 正红; opponent uses indigo so the two buys do not look alike.
+            bg = mine ? '#e05252' : '#2f6fed';
         } else {
             label = mine ? '卖' : '对手卖';
             color = '#f7fff4';
-            bg = mine ? '#3db86a' : 'rgba(61, 184, 106, 0.78)';
+            // Mine stays 负绿; opponent uses violet.
+            bg = mine ? '#3db86a' : '#7c4dff';
         }
         const above = valuation || sell;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
-            symbol: 'roundRect',
-            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [44, 18],
+            symbol: mine || valuation ? 'roundRect' : 'diamond',
+            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [40, 40],
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
             symbolOffset: valuation ? [0, -22] : mine ? (above ? [0, -26] : [0, 28]) : (above ? [0, -44] : [0, 46]),
             itemStyle: {
                 color: bg,
-                borderColor: valuation ? '#c9a227' : (buy ? '#e05252' : '#3db86a'),
-                borderWidth: 1,
+                borderColor: valuation ? '#c9a227' : (buy ? (mine ? '#e05252' : '#1e4fc4') : (mine ? '#3db86a' : '#5b2fd6')),
+                borderWidth: mine || valuation ? 1 : 2,
             },
             label: {
                 show: true,
@@ -478,11 +480,18 @@ export function buildKlineOption(vm) {
 
     const option = {
         backgroundColor: 'transparent',
+        // PvP: no series tween — otherwise a lock/resize looks like the candles jerk.
+        animation: !isPvp,
         legend,
         dataZoom,
         tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'cross' },
+            // PvP: click to open (mobile WebView has no hover). Dismiss via Esc / outside / second click / trade action.
+            triggerOn: isPvp ? 'click' : 'mousemove|click',
+            axisPointer: { type: isPvp ? 'line' : 'cross' },
+            hideDelay: isPvp ? 0 : 100,
+            alwaysShowContent: false,
+            enterable: isPvp,
             backgroundColor: isResult ? 'rgba(22, 22, 29, 0.95)' : 'rgba(13,17,23,0.97)',
             borderColor: isResult ? 'rgba(200, 164, 78, 0.2)' : 'rgba(88,166,255,0.2)',
             textStyle: isResult
@@ -497,8 +506,11 @@ export function buildKlineOption(vm) {
                     const isUp = kd.close >= kd.open;
                     const clr = isUp ? '#e05252' : '#3db86a';
                     const title = pvpTipTitle(kd.label);
-                    let html = `<div style="padding:4px 2px">
-                        ${title ? `<div style="margin-bottom:5px;color:#8b949e;font-size:11px">${title}</div>` : ""}
+                    let html = `<div style="padding:4px 2px;min-width:9.5rem" data-pvp-tip="1">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+                          ${title ? `<div style="color:#8b949e;font-size:11px">${title}</div>` : "<div></div>"}
+                          <button type="button" data-pvp-tip-close="1" style="appearance:none;border:1px solid #8b949e;border-radius:999px;background:#1b2230;color:#e6edf3;font-size:11px;line-height:1;padding:3px 8px;cursor:pointer">关闭</button>
+                        </div>
                         <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
                         <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
                         <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>`;
@@ -691,7 +703,7 @@ export function buildKlineOption(vm) {
         series,
     };
 
-    if (!isResult) {
+    if (!isResult && !isPvp) {
         option.animation = true;
         option.animationDuration = 300;
     }

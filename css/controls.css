@@ -1297,8 +1297,8 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   border-radius: 50%;
 }
 #pvpRoomScreen #pvpBattleTop .ctl-seat-panel .pvp-seat-avatar {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: none !important;
   background: #e9dfcb !important;

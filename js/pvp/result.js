@@ -300,6 +300,12 @@ function showSettle(view, celebrate) {
     }, 4000);
   }
   text("pvpWinTitle", resultHeadline(view));
+  const winTitle = document.getElementById("pvpWinTitle");
+  if (winTitle) winTitle.dataset.outcome = outcome || "";
+  const meSide = document.getElementById("pvpWinMeSide");
+  const oppSide = document.getElementById("pvpWinOppSide");
+  if (meSide) meSide.dataset.outcome = view?.me?.outcome || "";
+  if (oppSide) oppSide.dataset.outcome = view?.opponent?.outcome || "";
   paintIdentity("pvpWin", view);
   const auth = getAuthState().user;
   paintSettleSide("Me", {

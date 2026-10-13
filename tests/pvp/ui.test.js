@@ -91,8 +91,18 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opp.label.show, true);
   assert.equal(opp.symbolOffset[0], 0);
   assert.ok(opp.symbolOffset[1] <= -24);
-  assert.equal(opp.symbol, "roundRect");
-  assert.match(String(opp.itemStyle.color), /61, 184, 106|3db86a/i);
+  assert.equal(opp.symbol, "diamond");
+  assert.match(String(opp.itemStyle.color), /7c4dff/i);
+  const oppBuy = buildKlineOption({
+    mode: "pvp",
+    bars,
+    historyLength: 1,
+    pvpMarks: [{ label: "d1", side: "opponent", kind: "buy" }],
+  }).series[0].markPoint.data.find((point) => point.value === "对手买");
+  assert.equal(oppBuy.itemStyle.color, "#2f6fed");
+  assert.equal(oppBuy.symbol, "diamond");
+  assert.equal(opt.tooltip.triggerOn, "click");
+  assert.equal(opt.animation, false);
   const valued = buildKlineOption({
     mode: "pvp",
     bars,
