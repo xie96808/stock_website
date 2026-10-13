@@ -7,6 +7,7 @@
  * invite link + QR, slogan.
  */
 import { displayAvatarUrl, getAuthState } from "./auth.js";
+import { handleAvatarError } from "./avatar-fallback.js";
 import { showStampToast } from "./controls.js";
 import { formatCoin, formatPpm, formatWindow, resultHeadline } from "./pvp/copy.js";
 import { rankIconPathForTitle } from "../shared/pvpRating.js";
@@ -218,7 +219,14 @@ export async function buildPvpShareCard(view) {
 
   document.body.appendChild(root);
   await Promise.all([...root.querySelectorAll("img")].map((node) => (
-    node.complete ? Promise.resolve() : new Promise((r) => { node.onload = r; node.onerror = () => { node.style.visibility = "hidden"; r(); }; })
+    (node.complete && node.naturalWidth > 0) ? Promise.resolve() : new Promise((r) => {
+      node.onload = r;
+      node.onerror = () => {
+        // Custom avatar 404 → default preset once; anything else just hides.
+        if (handleAvatarError(node)) return;
+        node.style.visibility = "hidden"; r();
+      };
+    })
   )));
   return root;
 }
