@@ -20,7 +20,11 @@ if printf "%s" "$LIST" | grep -E "(^|/)\.env\." | grep -v "\.env\.example$" >/de
   fail=1
 fi
 check "\.sqlite(-wal|-shm)?$"
-check "(^|/)node_modules(/|$)"
+# node_modules is allowed only as the bundled production deps of server/ (S1)
+if printf "%s\n" "$LIST" | grep -E "(^|/)node_modules(/|$)" | grep -vE "^(\./)?server/node_modules(/|$)" >/dev/null; then
+  echo "FORBIDDEN matched: node_modules outside server/" >&2
+  fail=1
+fi
 check "(^|/)server/tests(/|$)"
 check "(^|/)backups(/|$)"
 check "backup-status\.json"
