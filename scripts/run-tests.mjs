@@ -12,6 +12,7 @@ const runs = [
   ["node", ["--test", "server/tests/admin.integration.test.js"]],
   ["node", ["--test", "server/tests/admin-password.integration.test.js"]],
   ["node", ["--test", "server/tests/admin-settings.integration.test.js"]],
+  ["node", ["--test", "server/tests/admin-content.integration.test.js"]],
   ["node", ["--test", "server/tests/announcements.integration.test.js"]],
   ["node", ["--test", "server/tests/feedback.integration.test.js"]],
   ["node", ["--test", "server/tests/jiu-coin.integration.test.js"]],

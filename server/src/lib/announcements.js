@@ -76,8 +76,27 @@ function mapAdmin(row) {
   };
 }
 
+/**
+ * Promote scheduled drafts that are due (admin 「定时发布」). No-op when nothing is
+ * scheduled, so behavior without schedules is unchanged.
+ */
+export function promoteDueAnnouncements(db = openDb()) {
+  try {
+    return db
+      .prepare(
+        `UPDATE announcements
+         SET status = 'published', published_at = scheduled_at, scheduled_at = NULL, updated_at = datetime('now')
+         WHERE status = 'draft' AND scheduled_at IS NOT NULL AND datetime(scheduled_at) <= datetime('now')`
+      )
+      .run().changes;
+  } catch {
+    return 0; // column not migrated yet
+  }
+}
+
 /** Published notices, newest first (by published_at, then id). */
 export function listPublishedAnnouncements({ limit = 50 } = {}) {
+  promoteDueAnnouncements();
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const rows = openDb()
     .prepare(
@@ -92,6 +111,7 @@ export function listPublishedAnnouncements({ limit = 50 } = {}) {
 }
 
 export function listAdminAnnouncements({ status = "", limit = 50, cursor = null } = {}) {
+  promoteDueAnnouncements();
   const lim = Math.min(Math.max(Number(limit) || 50, 1), 100);
   const clauses = [];
   const params = [];

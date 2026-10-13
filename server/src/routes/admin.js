@@ -39,6 +39,19 @@ import {
 } from "../lib/feedback.js";
 import { detectImageMime } from "../lib/avatars.js";
 import { listAppSettings, updateAppSetting } from "../lib/appSettings.js";
+import {
+  adminContentOverview,
+  adminDailyBoard,
+  adminDailySetHidden,
+  adminListShares,
+  adminRevokeShare,
+  adminScheduleAnnouncement,
+  adminCancelSchedule,
+  scheduledAnnouncementMap,
+  adminFeedbackUnread,
+  adminFeedbackNote,
+  adminSetFeedbackNote,
+} from "../lib/adminContent.js";
 import { seedNearDailyChallenges } from "../lib/dailyChallenge.js";
 import { seedAllPuzzleChapters } from "../lib/puzzleChapter.js";
 import fs from "node:fs";
@@ -379,7 +392,7 @@ router.get("/admin/feedback/:id", (req, res) => {
   if (id == null) return fail(res, 400, "INVALID_ID", "反馈 ID 无效");
   const data = getAdminFeedback(id);
   if (!data) return fail(res, 404, "NOT_FOUND", "反馈不存在");
-  return ok(res, { feedback: data });
+  return ok(res, { feedback: data, adminNote: adminFeedbackNote(openDb(), id) });
 });
 
 router.patch("/admin/feedback/:id", requireAdminVerified, (req, res) => {
@@ -547,6 +560,68 @@ router.put("/admin/settings/:key", requireAdminVerified, (req, res) => {
     }
   }
   return ok(res, { setting: result.setting });
+});
+
+/* ---- batch 3: content, daily board, shares, scheduling, feedback notes ---- */
+const result3 = (res, r) => (r.ok ? ok(res, r) : fail(res, r.status || 400, r.code, r.message));
+
+router.get("/admin/content/overview", (req, res) => ok(res, adminContentOverview(openDb())));
+
+router.get("/admin/daily/board", (req, res) => result3(res, adminDailyBoard(openDb(), { date: req.query.date || "" })));
+
+router.patch("/admin/daily/attempts/:id", requireAdminVerified, (req, res) =>
+  result3(res, adminDailySetHidden(openDb(), {
+    attemptId: String(req.params.id),
+    hide: req.body?.hide,
+    actorId: req.user.id,
+    reason: req.body?.reason,
+    requestId: res.locals.requestId,
+  })));
+
+router.get("/admin/pvp/shares", (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  if (!Number.isFinite(limit) || limit < 1 || limit > 50) return fail(res, 400, "BAD_PAYLOAD", "列表长度无效");
+  return ok(res, adminListShares(openDb(), { status: req.query.status || "", cursor: req.query.cursor || "", limit }));
+});
+
+router.post("/admin/pvp/shares/:code/revoke", requireAdminVerified, (req, res) =>
+  result3(res, adminRevokeShare(openDb(), {
+    code: String(req.params.code),
+    actorId: req.user.id,
+    reason: req.body?.reason,
+    requestId: res.locals.requestId,
+  })));
+
+router.post("/admin/announcements/:id/schedule", requireAdminVerified, (req, res) => {
+  const id = parseAnnouncementId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  return result3(res, adminScheduleAnnouncement(openDb(), {
+    id,
+    publishAt: req.body?.publishAt,
+    actorId: req.user.id,
+    requestId: res.locals.requestId,
+  }));
+});
+
+router.delete("/admin/announcements/:id/schedule", requireAdminVerified, (req, res) => {
+  const id = parseAnnouncementId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "公告 ID 无效");
+  return result3(res, adminCancelSchedule(openDb(), { id, actorId: req.user.id, requestId: res.locals.requestId }));
+});
+
+router.get("/admin/announcements-scheduled", (req, res) => ok(res, { scheduled: scheduledAnnouncementMap(openDb()) }));
+
+router.get("/admin/feedback-unread", (req, res) => ok(res, adminFeedbackUnread(openDb())));
+
+router.put("/admin/feedback/:id/note", requireAdminVerified, (req, res) => {
+  const id = parseFeedbackId(req.params.id);
+  if (id == null) return fail(res, 400, "INVALID_ID", "反馈 ID 无效");
+  return result3(res, adminSetFeedbackNote(openDb(), {
+    id,
+    note: req.body?.note,
+    actorId: req.user.id,
+    requestId: res.locals.requestId,
+  }));
 });
 
 export default router;

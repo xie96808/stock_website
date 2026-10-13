@@ -48,6 +48,7 @@ function showLoggedIn(user) {
   updateVerifyBadge();
   const cur = document.querySelector('.tabs .tab[aria-selected="true"]');
   if (cur) queueMicrotask(() => cur.click());
+  queueMicrotask(() => refreshFbBadge().catch(() => {}));
 }
 
 function showLoggedOut() {
@@ -589,6 +590,7 @@ function handleAnnReauthRequired(r) {
   return false;
 }
 
+let annScheduled = {};
 function renderAnnouncements(items) {
   const el = $("annList");
   if (!el) return;
@@ -602,7 +604,7 @@ function renderAnnouncements(items) {
       #${a.id} · <code>${escapeHtml(a.status)}</code>
       · ${escapeHtml(a.title || "(无标题)")}
       · ${escapeHtml((a.body || "").slice(0, 48))}
-      · ${escapeHtml(a.publishedAt || "—")}
+      · ${escapeHtml(a.publishedAt || "—")}${annScheduled[a.id] && a.status === "draft" ? ` <span class="tag over">定时 ${escapeHtml(fmtBeijing(annScheduled[a.id]))}</span>` : ""}
       <button type="button" data-ann="${a.id}">填入</button>
     </div>`
     )
@@ -620,6 +622,7 @@ function renderAnnouncements(items) {
       $("annTitle").value = a.title || "";
       $("annBody").value = a.body || "";
       $("annStatus").value = a.status || "draft";
+      renderAnnPreview();
     };
   });
 }
@@ -632,6 +635,10 @@ $("annSearchBtn").onclick = async () => {
   if (r.status !== 200) {
     setMsg($("annMsg"), r.json?.error?.message || "加载公告失败");
     return;
+  }
+  {
+    const sm = await api("/admin/announcements-scheduled");
+    annScheduled = sm.status === 200 ? sm.json.data.scheduled || {} : {};
   }
   renderAnnouncements(r.json.data.items);
 };
@@ -790,8 +797,11 @@ function renderFeedbackList(items) {
   });
 }
 
-function renderFeedbackDetail(f) {
+let fbNoteState = null;
+function renderFeedbackDetail(f, note) {
   const host = $("fbDetail");
+  if (note !== undefined) fbNoteState = note ? { ...note, id: f?.id } : null;
+  renderFeedbackNote(f);
   if (!host || !f) {
     if (host) host.innerHTML = "";
     return;
@@ -799,7 +809,7 @@ function renderFeedbackDetail(f) {
   const imgs = (f.images || [])
     .map(
       (img) =>
-        `<a href="${escapeHtml(img.url)}" target="_blank" rel="noopener">
+        `<a href="${escapeHtml(img.url)}" target="_blank" rel="noopener" data-lightbox="${escapeHtml(img.url)}">
           <img src="${escapeHtml(img.url)}" alt="反馈图" style="max-width:160px;max-height:160px;border:1px solid #666;border-radius:8px;margin:4px;object-fit:cover" />
         </a>`
     )
@@ -811,6 +821,12 @@ function renderFeedbackDetail(f) {
     <pre style="white-space:pre-wrap;font:inherit;background:#fffdf8;border:1px solid #ccc;border-radius:8px;padding:10px;margin:8px 0">${escapeHtml(f.body || "")}</pre>
     <div>${imgs || "<span class=\"note\">无图片</span>"}</div>
   </div>`;
+  host.querySelectorAll("a[data-lightbox]").forEach((a) => {
+    a.onclick = (e) => {
+      e.preventDefault();
+      openLightbox(a.dataset.lightbox, a);
+    };
+  });
 }
 
 function handleFbReauthRequired(r) {
@@ -845,7 +861,7 @@ $("fbLoadBtn").onclick = async () => {
     setMsg($("fbMsg"), r.json?.error?.message || "加载失败");
     return;
   }
-  renderFeedbackDetail(r.json.data.feedback);
+  renderFeedbackDetail(r.json.data.feedback, r.json.data.adminNote || { note: "" });
   setMsg($("fbMsg"), `已加载 #${id}`, true);
 };
 
@@ -869,6 +885,7 @@ async function patchFeedbackStatus(status) {
   renderFeedbackDetail(r.json.data.feedback);
   setMsg($("fbMsg"), `反馈 #${id} 已标为 ${status}`, true);
   $("fbSearchBtn").click();
+  refreshFbBadge();
 }
 
 $("fbMarkReadBtn").onclick = () => patchFeedbackStatus("read");
@@ -1369,3 +1386,274 @@ document.querySelectorAll(".tabs .tab").forEach((t) => {
     }
   });
 });
+
+
+/* ================= batch 3 ================= */
+function parseUtcSql(s) {
+  if (!s) return null;
+  const t = Date.parse(String(s).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? "" : "Z"));
+  return Number.isFinite(t) ? t : null;
+}
+function isFutureUtc(s) {
+  const t = parseUtcSql(s);
+  return t != null && t > Date.now();
+}
+function fmtBeijing(s) {
+  const t = typeof s === "number" ? s : parseUtcSql(s);
+  if (t == null) return String(s || "—");
+  return new Date(t).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+/* ---- announcement preview + schedule ---- */
+function renderAnnPreview() {
+  const box = $("annPreview");
+  if (!box) return;
+  const title = $("annTitle").value.trim();
+  const body = $("annBody").value.trim();
+  if (!title && !body) {
+    box.innerHTML = `<p class="dim">在上方输入标题和正文即可预览</p>`;
+    return;
+  }
+  box.innerHTML = `<div class="announcements-dialog ann-preview-dialog">
+      <h2 class="announcements-title">系统公告</h2>
+      <div class="announcements-list"><article class="announcements-item">
+        ${title ? `<h3 class="announcements-item-title">${escapeHtml(title)}</h3>` : ""}
+        <time class="announcements-item-time">${escapeHtml(fmtBeijing(Date.now()))}</time>
+        <div class="announcements-item-body">${escapeHtml(body).replace(/\n/g, "<br>")}</div>
+      </article></div>
+    </div>`;
+}
+$("annTitle").addEventListener("input", renderAnnPreview);
+$("annBody").addEventListener("input", renderAnnPreview);
+
+function beijingLocalToIso(v) {
+  // datetime-local value is wall-clock; interpret it as Asia/Shanghai (UTC+8, no DST).
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(v || "");
+  if (!m) return null;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 8, +m[5]);
+  return new Date(t).toISOString();
+}
+
+$("annScheduleBtn").onclick = () => guarded($("annScheduleBtn"), async () => {
+  setMsg($("annMsg"), "");
+  const id = parsePositiveId($("annId").value);
+  if (!id) return setMsg($("annMsg"), "请先「新建」或「填入」一条公告（需要 ID）");
+  const iso = beijingLocalToIso($("annPublishAt").value);
+  if (!iso) return setMsg($("annMsg"), "请选择发布时间");
+  if (!window.confirm(`公告 #${id} 将于 ${fmtBeijing(Date.parse(iso))}（北京时间）自动上线，确认？`)) return;
+  const r = await api(`/admin/announcements/${id}/schedule`, { method: "POST", csrf: csrfToken, body: { publishAt: iso } });
+  if (handleAnnReauthRequired(r)) return;
+  if (r.status !== 200) return setMsg($("annMsg"), r.json?.error?.message || "定时失败");
+  await $("annSearchBtn").onclick();
+  setMsg($("annMsg"), `公告 #${id} 已定时：${fmtBeijing(r.json.data.scheduledAt)}（北京时间）自动发布`, true);
+});
+
+$("annUnscheduleBtn").onclick = () => guarded($("annUnscheduleBtn"), async () => {
+  setMsg($("annMsg"), "");
+  const id = parsePositiveId($("annId").value);
+  if (!id) return setMsg($("annMsg"), "请先「填入」一条定时公告");
+  const r = await api(`/admin/announcements/${id}/schedule`, { method: "DELETE", csrf: csrfToken });
+  if (handleAnnReauthRequired(r)) return;
+  if (r.status !== 200) return setMsg($("annMsg"), r.json?.error?.message || "取消失败");
+  await $("annSearchBtn").onclick();
+  setMsg($("annMsg"), `公告 #${id} 已取消定时（仍为草稿）`, true);
+});
+
+/* ---- feedback badge, note, lightbox ---- */
+async function refreshFbBadge() {
+  const r = await api("/admin/feedback-unread");
+  const b = $("fbUnreadBadge");
+  if (r.status !== 200 || !b) return;
+  const n = Number(r.json.data.count) || 0;
+  b.textContent = n > 99 ? "99+" : String(n);
+  b.classList.toggle("hidden", n === 0);
+}
+
+function renderFeedbackNote(f) {
+  const box = $("fbNoteBox");
+  if (!box) return;
+  if (!f) {
+    box.classList.add("hidden");
+    return;
+  }
+  box.classList.remove("hidden");
+  if (fbNoteState && fbNoteState.id === f.id) {
+    $("fbNote").value = fbNoteState.note || "";
+    $("fbNoteMeta").textContent = fbNoteState.at ? `上次保存 ${fmtBeijing(fbNoteState.at)}${fbNoteState.by ? ` · #${fbNoteState.by}` : ""}` : "";
+  }
+}
+
+$("fbNoteBtn").onclick = () => guarded($("fbNoteBtn"), async () => {
+  setMsg($("fbMsg"), "");
+  const id = parsePositiveId($("fbId").value);
+  if (!id) return setMsg($("fbMsg"), "请先加载一条反馈");
+  const r = await api(`/admin/feedback/${id}/note`, { method: "PUT", csrf: csrfToken, body: { note: $("fbNote").value } });
+  if (handleFbReauthRequired(r)) return;
+  if (r.status !== 200) return setMsg($("fbMsg"), r.json?.error?.message || "保存失败");
+  fbNoteState = { ...(r.json.data.note || {}), id };
+  $("fbNoteMeta").textContent = `已保存 ${fmtBeijing(fbNoteState.at)}`;
+  setMsg($("fbMsg"), `反馈 #${id} 备注已保存`, true);
+});
+
+let lightboxReturn = null;
+function openLightbox(url, from) {
+  let lb = $("lightbox");
+  if (!lb) {
+    lb = document.createElement("div");
+    lb.id = "lightbox";
+    lb.className = "lightbox";
+    lb.setAttribute("role", "dialog");
+    lb.setAttribute("aria-modal", "true");
+    lb.setAttribute("aria-label", "反馈图片");
+    lb.innerHTML = `<img alt="反馈图片" /><button type="button" class="lb-close" aria-label="关闭">关闭</button>`;
+    document.body.appendChild(lb);
+    lb.addEventListener("click", (e) => {
+      if (e.target === lb || e.target.classList.contains("lb-close")) closeLightbox();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !lb.classList.contains("hidden")) closeLightbox();
+    });
+  }
+  lightboxReturn = from || null;
+  lb.querySelector("img").src = url;
+  lb.classList.remove("hidden");
+  lb.querySelector(".lb-close").focus();
+}
+function closeLightbox() {
+  const lb = $("lightbox");
+  if (!lb) return;
+  lb.classList.add("hidden");
+  lb.querySelector("img").removeAttribute("src");
+  if (lightboxReturn) lightboxReturn.focus();
+}
+
+/* ---- content overview ---- */
+async function loadContent() {
+  const r = await api("/admin/content/overview");
+  const box = $("contentOverview");
+  if (r.status !== 200) {
+    box.innerHTML = `<p class="msg">${escapeHtml(r.json?.error?.message || "读取失败")}</p>`;
+    return;
+  }
+  const d = r.json.data;
+  const on = (v) => `<span class="tag ${v ? "over" : ""}">${v ? "开" : "关"}</span>`;
+  const q = d.quiz;
+  const chapters = d.puzzles.chapters.map((c) => `<tr><td>${escapeHtml(c.chapterId)}</td><td>${c.published}/${c.levels}</td><td>${c.players}</td><td>${c.twoStarClears}</td><td>${c.played7d}</td></tr>`).join("");
+  box.innerHTML = `<div class="stats">
+      <div class="stat"><b>${on(d.flags.quizRewards)}</b><span>答题奖励</span></div>
+      <div class="stat"><b>${on(d.flags.puzzleChapter)}</b><span>残局</span></div>
+      <div class="stat"><b>${on(d.flags.puzzleWeekly)}</b><span>周榜</span></div>
+      <div class="stat"><b>${on(d.flags.dailyChallenge)}</b><span>每日挑战</span></div>
+      <div class="stat"><b>${on(d.flags.ghostDuel)}</b><span>幽灵对局</span></div>
+    </div>
+    <h3 class="grp">每日答题（${escapeHtml(q.today)}）</h3>
+    <dl class="kv">
+      <dt>题库</dt><dd>${q.activeQuestions} 题启用</dd>
+      <dt>今日题组</dt><dd>${q.todaySet ? `${q.todaySet.questions} 题 · 完成奖 ${q.todaySet.rewardComplete} · 全对加 ${q.todaySet.rewardBonus}（≥${q.todaySet.bonusMinCorrect} 题）` : "尚未生成（首个用户打开时生成）"}</dd>
+      <dt>今日</dt><dd>开始 ${q.attemptsToday} · 完成 ${q.settledToday} · 发放 ${q.coinsToday} 韭币</dd>
+      <dt>近 7 天</dt><dd>${q.attempts7d} 次作答</dd>
+    </dl>
+    <h3 class="grp">残局章节</h3>
+    <div class="table-wrap"><table class="tbl"><thead><tr><th>章节</th><th>上线/关卡</th><th>玩家</th><th>两星</th><th>7天活跃</th></tr></thead><tbody>${chapters || `<tr><td colspan="5">暂无章节</td></tr>`}</tbody></table></div>
+    <h3 class="grp">今日挑战</h3>
+    <p class="note left">${d.daily.missing ? `${escapeHtml(d.daily.date)} 尚未生成` : `${escapeHtml(d.daily.date)} · ${escapeHtml(d.daily.stockName)}（${escapeHtml(d.daily.stockCode)}）· 参与 ${d.daily.attempts} · 完成 ${d.daily.settled}`}</p>`;
+}
+$("contentRefreshBtn").onclick = () => guarded($("contentRefreshBtn"), loadContent);
+
+/* ---- daily board ---- */
+let dailySeq = 0;
+function todayBeijing() {
+  return new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
+}
+async function loadDaily() {
+  const date = $("dailyDate").value || todayBeijing();
+  $("dailyDate").value = date;
+  const seq = ++dailySeq;
+  const r = await api(`/admin/daily/board?date=${encodeURIComponent(date)}`);
+  if (seq !== dailySeq) return;
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "读取失败");
+  const d = r.json.data;
+  $("dailyInfo").innerHTML = d.challenge
+    ? `<p class="note left">${escapeHtml(d.date)} · ${escapeHtml(d.challenge.stockName)}（${escapeHtml(d.challenge.stockCode)}）· ${d.challenge.gameDays} 天 · 共 ${d.entries.length} 条记录</p>`
+    : `<p class="note left">${escapeHtml(d.date)} 没有挑战</p>`;
+  const el = $("dailyList");
+  if (!d.entries.length) {
+    el.innerHTML = `<div class="item">无记录</div>`;
+    return;
+  }
+  let rank = 0;
+  el.innerHTML = d.entries.map((e) => {
+    const onBoard = e.boardEligible && e.status === "settled" && e.userStatus === "active";
+    if (onBoard) rank += 1;
+    const action = e.hiddenByAdmin
+      ? `<button type="button" data-daily="${escapeHtml(e.attemptId)}" data-hide="false">恢复上榜</button>`
+      : onBoard ? `<button type="button" data-daily="${escapeHtml(e.attemptId)}" data-hide="true">隐藏</button>` : "";
+    return `<div class="item daily-row">
+      <span class="rank">${onBoard ? `#${rank}` : "—"}</span>
+      <span class="who"><strong>${escapeHtml(e.nickname || "")}</strong> <code>${escapeHtml(e.username || "")}</code> · #${e.userId}</span>
+      <span class="meta">${escapeHtml(e.status)} · 收益 ${ppmPct(e.returnPpm)} · 回撤 ${ppmPct(e.mddPpm)}${e.hiddenByAdmin ? ` · <span class="tag over">后台隐藏</span>` : !onBoard ? " · 不在榜" : ""}</span>
+      ${action}
+    </div>`;
+  }).join("");
+  el.querySelectorAll("button[data-daily]").forEach((btn) => {
+    btn.onclick = () => guarded(btn, async () => {
+      const reason = $("dailyReason").value.trim();
+      if (reason.length < 2) return setMsg($("opsMsg"), "请填写原因（至少 2 个字）");
+      const hide = btn.dataset.hide === "true";
+      if (hide && !window.confirm("把这条记录移出每日挑战公开榜？")) return;
+      const r2 = await api(`/admin/daily/attempts/${encodeURIComponent(btn.dataset.daily)}`, { method: "PATCH", csrf: csrfToken, body: { hide, reason } });
+      reauthLost(r2);
+      if (r2.status !== 200) return setMsg($("opsMsg"), r2.json?.error?.message || "操作失败");
+      setMsg($("opsMsg"), hide ? "已从公开榜隐藏" : "已恢复上榜", true);
+      await loadDaily();
+    });
+  });
+}
+$("dailyBtn").onclick = () => guarded($("dailyBtn"), loadDaily);
+
+/* ---- share links ---- */
+let shareCursor = null;
+let shareSeq = 0;
+const SHARE_LABEL = { open: "进行中", joined: "已加入", cancelled: "已作废", expired: "已过期" };
+async function loadShares({ more = false } = {}) {
+  const qs = new URLSearchParams({ limit: "20" });
+  const st = $("shareStatus").value;
+  if (st) qs.set("status", st);
+  if (more) {
+    if (!shareCursor) return;
+    qs.set("cursor", shareCursor);
+  }
+  const seq = ++shareSeq;
+  $("shareMoreBtn").disabled = true;
+  const r = await api(`/admin/pvp/shares?${qs}`);
+  if (seq !== shareSeq) return;
+  $("shareMoreBtn").disabled = false;
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "查询失败");
+  const el = $("shareList");
+  const items = r.json.data.items || [];
+  if (!more) el.innerHTML = items.length ? "" : `<div class="item">无结果</div>`;
+  el.insertAdjacentHTML("beforeend", items.map((s) => `<div class="item" data-share="${escapeHtml(s.code)}">
+      <code>${escapeHtml(s.code)}</code> · ${escapeHtml(s.nickname || "")} #${s.fromUserId} · ${SHARE_LABEL[s.status] || escapeHtml(s.status)}
+      · 创建 ${escapeHtml(fmtBeijing(Number(s.createdAt)))} · 到期 ${escapeHtml(fmtBeijing(Number(s.expiresAt)))}
+      ${s.status === "open" ? `<button type="button" data-revoke="${escapeHtml(s.code)}">作废</button>` : ""}
+    </div>`).join(""));
+  el.querySelectorAll("button[data-revoke]:not([data-wired])").forEach((btn) => {
+    btn.dataset.wired = "1";
+    btn.onclick = () => guarded(btn, async () => {
+      const reason = pvpReason();
+      if (!reason) return;
+      if (!window.confirm(`作废分享链接 ${btn.dataset.revoke}？对方将无法再加入。`)) return;
+      const r2 = await api(`/admin/pvp/shares/${encodeURIComponent(btn.dataset.revoke)}/revoke`, { method: "POST", csrf: csrfToken, body: { reason } });
+      reauthLost(r2);
+      if (r2.status !== 200) return setMsg($("opsMsg"), r2.json?.error?.message || "作废失败");
+      setMsg($("opsMsg"), `链接 ${btn.dataset.revoke} 已作废`, true);
+      await loadShares();
+    });
+  });
+  shareCursor = r.json.data.nextCursor || null;
+  $("shareMoreBtn").classList.toggle("hidden", !shareCursor);
+}
+$("shareBtn").onclick = () => loadShares();
+$("shareMoreBtn").onclick = () => loadShares({ more: true });
+
+TAB_LOADERS.content = () => Promise.all([loadContent(), loadDaily()]);
