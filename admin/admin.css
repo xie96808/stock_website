@@ -179,12 +179,38 @@ button.ghost { opacity: 0.85; }
 h2 { font-size: 1.05rem; margin: 1rem 0 0.4rem; }
 code { font-size: 0.85em; }
 
+/* batch 2: settings, pvp, version, audit */
+.grp { font-size: 0.95rem; margin: 0.6rem 0 0.1rem; opacity: 0.8; }
+.list.settings { max-height: none; overflow: visible; }
+.setting .s-head { display: flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; align-items: baseline; }
+.setting .s-meta { font-size: 0.8rem; opacity: 0.75; }
+.setting .s-ctl { margin: 0.35rem 0 0; }
+.setting .s-ctl input[type="number"] { flex: 0 1 8rem; }
+.item .s-ctl button, .item .row button { margin-left: 0; }
+.tag { display: inline-block; font-size: 0.72rem; padding: 0 0.4rem; border: 1px solid var(--line); border-radius: 999px; }
+.tag.over { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.switch { min-width: 5.5rem; }
+.switch.on { border-image-source: url("../assets/controls/ctl-chip-btn-active.png?v=20261013s"); color: var(--ok); font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.4rem; margin: 0.4rem 0; }
+.stat { border: 1px dashed var(--line); border-radius: 10px; padding: 0.4rem 0.5rem; text-align: center; }
+.stat b { display: block; font-size: 1.15rem; }
+.stat span { font-size: 0.78rem; opacity: 0.7; }
+summary.plain { display: flex; flex-wrap: wrap; gap: 0.1rem 0.6rem; grid-template-columns: none; }
+ul.plain { list-style: none; margin: 0; padding: 0; }
+.diff { font-size: 0.78rem; opacity: 0.75; margin-top: 0.15rem; }
+code.wrap { word-break: break-all; }
+.pre { white-space: pre-wrap; }
+.st-playing, .st-waiting_ready { color: var(--accent); font-weight: 700; }
+.st-aborted { opacity: 0.6; }
+a { color: var(--accent); }
+
 @media (max-width: 480px) {
   .card { border-width: 16px; padding: 0.5rem 0.4rem 0.75rem; }
   .row > input:not(.grow), .row > select { flex: 1 1 8rem; }
   .row > button { flex: 1 1 auto; }
-  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
-  .tab { padding: 0.2rem 0.3rem; }
+  .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.25rem; }
+  .tab { padding: 0.15rem 0.1rem; min-width: 0; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
   .user-row > summary { grid-template-columns: 28px 1fr auto; padding: 0.45rem 0.5rem; }
   .user-detail { padding: 0 0.55rem 0.6rem; }
   .kv { grid-template-columns: 4.6em 1fr; }

@@ -47,6 +47,9 @@
         <button type="button" role="tab" class="tab" data-tab="games" aria-selected="false">战绩</button>
         <button type="button" role="tab" class="tab" data-tab="ann" aria-selected="false">公告</button>
         <button type="button" role="tab" class="tab" data-tab="fb" aria-selected="false">反馈</button>
+        <button type="button" role="tab" class="tab" data-tab="settings" aria-selected="false">开关</button>
+        <button type="button" role="tab" class="tab" data-tab="pvp" aria-selected="false">对战</button>
+        <button type="button" role="tab" class="tab" data-tab="version" aria-selected="false">版本</button>
         <button type="button" role="tab" class="tab" data-tab="audit" aria-selected="false">审计</button>
         <button type="button" role="tab" class="tab" data-tab="security" aria-selected="false">安全</button>
       </nav>
@@ -82,9 +85,9 @@
       </div>
       <p class="note">软删会写 tombstone 并撤销会话；整库备份恢复仍仅 CLI。自助注销（凭据已清）不可在此恢复登录。</p>
 
-            </section>
+      </section>
 
-<section class="tabpanel" data-panel="coin" role="tabpanel">
+      <section class="tabpanel" data-panel="coin" role="tabpanel">
       <h2>韭币 · 余额调整</h2>
       <div class="row">
         <input id="coinUserId" placeholder="用户 ID" />
@@ -99,9 +102,9 @@
       </div>
       <p class="note">用户列表会显示当前韭币余额；调整需二次验证，写入审计。</p>
 
-            </section>
+      </section>
 
-<section class="tabpanel" data-panel="games" role="tabpanel">
+      <section class="tabpanel" data-panel="games" role="tabpanel">
       <h2>战绩 · 下榜 / 判无效</h2>
       <div class="row">
         <input id="gameQ" class="grow" placeholder="对局 ID / 用户 ID / 登录名 / 昵称" />
@@ -121,9 +124,9 @@
       </div>
 
 
-            </section>
+      </section>
 
-<section class="tabpanel" data-panel="ann" role="tabpanel">
+      <section class="tabpanel" data-panel="ann" role="tabpanel">
       <h2>系统公告 · 发布 / 草稿 / 归档</h2>
       <div class="row">
         <select id="annStatusFilter">
@@ -157,9 +160,9 @@
       <p class="note">写操作需二次验证。无 ID 时点「发布」且正文已填，将直接新建并上线。公开页仅展示 published；「今日关闭」由访客本地日历日记住。</p>
 
 
-            </section>
+      </section>
 
-<section class="tabpanel" data-panel="fb" role="tabpanel">
+      <section class="tabpanel" data-panel="fb" role="tabpanel">
       <h2>用户反馈 · 查看 / 已读 / 归档</h2>
       <div class="row">
         <select id="fbStatusFilter">
@@ -181,14 +184,117 @@
       <p id="fbMsg" class="msg"></p>
       <p class="note">列表最新优先。详情含正文与图片（仅管理员可见）。改状态需二次验证。</p>
 
-            </section>
+      </section>
 
-<section class="tabpanel" data-panel="audit" role="tabpanel">
+      <section class="tabpanel" data-panel="settings" role="tabpanel">
+      <h2>功能开关</h2>
+      <p class="note left">没改过的项沿用服务器环境变量（标「默认」）。改动立即生效，并写入审计；「恢复默认」会删除覆盖，回到环境变量的值。需二次验证。</p>
+      <div class="row">
+        <input id="setReason" class="grow" maxlength="200" placeholder="改动原因（必填，2–200 字）" />
+        <button type="button" id="setRefreshBtn" class="ghost">刷新</button>
+      </div>
+      <div id="setList" class="list settings"></div>
+      </section>
+
+      <section class="tabpanel" data-panel="pvp" role="tabpanel">
+      <h2>实时对战 · 概况</h2>
+      <div id="pvpOverview" class="stats"><p class="note left">切到本页时自动加载</p></div>
+      <div class="row">
+        <input id="pvpReason" class="grow" maxlength="200" placeholder="原因（必填，停新局/中止/处理举报共用）" />
+        <button type="button" id="pvpRefreshBtn" class="ghost">刷新</button>
+      </div>
+      <div class="row">
+        <button type="button" id="pvpDrainBtn">停止接新局</button>
+        <button type="button" id="pvpAbortBtn">中止全部进行中对局…</button>
+      </div>
+      <p class="note left">「停止接新局」只拦新对局，进行中的会继续打完；「中止」会把进行中的对局判为系统作废并退还入场韭币，需要再确认一次。</p>
+
+      <h2>对战参数</h2>
+      <p class="note left">参数改动使用「开关」页的原因输入框，只影响之后新开的对局。</p>
+      <div id="pvpParamList" class="list settings"></div>
+
+      <h2>对局</h2>
+      <div class="row">
+        <select id="pvpMatchStatus">
+          <option value="">全部</option>
+          <option value="waiting_ready">waiting_ready</option>
+          <option value="playing">playing</option>
+          <option value="settled">settled</option>
+          <option value="aborted">aborted</option>
+        </select>
+        <button type="button" id="pvpMatchBtn">查询对局</button>
+      </div>
+      <div id="pvpMatchList" class="list users"></div>
+      <div class="row center"><button type="button" id="pvpMatchMoreBtn" class="ghost hidden">加载更多</button></div>
+
+      <h2>举报</h2>
+      <div class="row">
+        <select id="pvpReportStatus">
+          <option value="open">待处理</option>
+          <option value="resolved">已处理</option>
+          <option value="dismissed">已驳回</option>
+        </select>
+        <button type="button" id="pvpReportBtn">查询举报</button>
+      </div>
+      <div id="pvpReportList" class="list users"></div>
+      <div class="row center"><button type="button" id="pvpReportMoreBtn" class="ghost hidden">加载更多</button></div>
+      </section>
+
+      <section class="tabpanel" data-panel="version" role="tabpanel">
+      <h2>安卓版本</h2>
+      <p class="note left">只读：读取线上 <code>/download/app-version.json</code>，并核对 APK 大小。发版由 CI 打 tag 完成，后台不提供发布入口。</p>
+      <div class="row"><button type="button" id="verBtn">读取版本清单</button></div>
+      <div id="verBox" class="list"></div>
+      </section>
+
+      <section class="tabpanel" data-panel="audit" role="tabpanel">
       <h2>审计日志</h2>
       <div class="row">
+        <input id="auditActor" inputmode="numeric" placeholder="操作者 ID" />
+        <input id="auditAction" list="auditActions" placeholder="动作，如 settings.update" />
+        <datalist id="auditActions">
+          <option value="user.disable"></option>
+          <option value="user.enable"></option>
+          <option value="user.soft_delete"></option>
+          <option value="user.restore"></option>
+          <option value="user.password_reset"></option>
+          <option value="jiu_coin.add"></option>
+          <option value="jiu_coin.sub"></option>
+          <option value="jiu_coin.set"></option>
+          <option value="game.unlist"></option>
+          <option value="game.relist"></option>
+          <option value="game.invalidate"></option>
+          <option value="game.restore"></option>
+          <option value="announcement.create"></option>
+          <option value="announcement.update"></option>
+          <option value="announcement.archive"></option>
+          <option value="feedback.read"></option>
+          <option value="feedback.archived"></option>
+          <option value="settings.update"></option>
+          <option value="settings.reset"></option>
+          <option value="pvp.drain"></option>
+          <option value="pvp.undrain"></option>
+          <option value="pvp.abort_active"></option>
+          <option value="pvp.report.update"></option>
+        </datalist>
+        <select id="auditTargetType">
+          <option value="">全部对象</option>
+          <option value="user">user</option>
+          <option value="game">game</option>
+          <option value="announcement">announcement</option>
+          <option value="feedback">feedback</option>
+          <option value="setting">setting</option>
+                    <option value="pvp_report">pvp_report</option>
+          <option value="pvp_runtime">pvp_runtime</option>
+        </select>
+        <input id="auditTargetId" placeholder="对象 ID" />
+      </div>
+      <div class="row">
         <button type="button" id="auditBtn">刷新最近审计</button>
+        <button type="button" id="auditClearBtn" class="ghost">清空筛选</button>
       </div>
       <div id="auditList" class="list"></div>
+      <div class="row center"><button type="button" id="auditMoreBtn" class="ghost hidden">加载更多</button></div>
       </section>
 
       <section class="tabpanel" data-panel="security" role="tabpanel">

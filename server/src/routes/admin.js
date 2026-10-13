@@ -38,6 +38,9 @@ import {
   resolveFeedbackImage,
 } from "../lib/feedback.js";
 import { detectImageMime } from "../lib/avatars.js";
+import { listAppSettings, updateAppSetting } from "../lib/appSettings.js";
+import { seedNearDailyChallenges } from "../lib/dailyChallenge.js";
+import { seedAllPuzzleChapters } from "../lib/puzzleChapter.js";
 import fs from "node:fs";
 import { ok, fail } from "../lib/http.js";
 import {
@@ -510,6 +513,40 @@ router.post("/admin/pvp/abort-active", requireAdminVerified, (req, res) => {
   });
   if (result?.ok) notifyAborted(result.matchIds);
   return pvpAdminResult(res, result);
+});
+
+/* ---- runtime settings (feature switches / PvP params) ---- */
+router.get("/admin/settings", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return ok(res, { items: listAppSettings(openDb()) });
+});
+
+const SEED_ON_ENABLE = {
+  dailyChallengeEnabled: () => seedNearDailyChallenges(),
+  ghostDuelEnabled: () => seedNearDailyChallenges(),
+  puzzleChapterEnabled: () => seedAllPuzzleChapters(),
+};
+
+router.put("/admin/settings/:key", requireAdminVerified, (req, res) => {
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  if (!("value" in body)) return fail(res, 400, "BAD_PAYLOAD", "缺少 value（null 表示恢复环境默认）");
+  const key = String(req.params.key || "");
+  const result = updateAppSetting(openDb(), {
+    key,
+    value: body.value,
+    actorId: req.user.id,
+    reason: body.reason,
+    requestId: res.locals.requestId,
+  });
+  if (!result.ok) return fail(res, result.status || 400, result.code, result.message);
+  if (result.setting.value === true && SEED_ON_ENABLE[key]) {
+    try {
+      SEED_ON_ENABLE[key]();
+    } catch (e) {
+      console.warn(`seed after enabling ${key} failed:`, e.message || e);
+    }
+  }
+  return ok(res, { setting: result.setting });
 });
 
 export default router;
