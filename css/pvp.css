@@ -1616,3 +1616,12 @@
 .pvp-opp-card-signature.is-empty{opacity:.65;font-style:italic}
 .pvp-seat-face--tappable{cursor:pointer;touch-action:manipulation}
 .pvp-seat-face--tappable:focus-visible{outline:2px solid #2a2a2a;outline-offset:3px;border-radius:50%}
+
+/* 对战档案 entry inside the account panel (replaces the home top-bar chip). */
+.pvp-settings-archive {
+  display: flex;
+  width: 100%;
+  margin-top: 10px;
+  justify-content: center;
+}
+.pvp-settings-archive[hidden] { display: none; }

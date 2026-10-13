@@ -1,4 +1,4 @@
-import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
+import { closeAuthModal, displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { rankPoints, rankProgress, rankIconPathForTitle } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
@@ -169,18 +169,8 @@ export async function syncPvpProfile() {
   const on = await pvpEnabled();
   const auth = getAuthState();
   const loggedIn = !!(auth.user && auth.ready !== false);
-  let chip = document.getElementById("pvpArchiveBtn");
-  const host = document.getElementById("authChip");
-  if (on && host && !chip) {
-    chip = document.createElement("button");
-    chip.type = "button";
-    chip.id = "pvpArchiveBtn";
-    chip.className = "auth-login-btn";
-    chip.textContent = "对战档案";
-    chip.addEventListener("click", () => { showPvpHistory().catch(() => {}); });
-    host.appendChild(chip);
-  }
-  if (chip) chip.hidden = !(on && loggedIn);
+  // 对战档案 lives in the account panel (top-right 个人资料), not as a home chip.
+  document.getElementById("pvpArchiveBtn")?.remove();
 
   const panel = document.getElementById("authSettingsPanel");
   if (!panel) return;
@@ -196,10 +186,26 @@ export async function syncPvpProfile() {
     rank.id = "pvpSettingsRank";
     rank.className = "pvp-settings-rank";
     rank.textContent = "段位";
-    section.append(title, rank);
+    const archive = document.createElement("button");
+    archive.type = "button";
+    archive.id = "pvpSettingsArchiveBtn";
+    archive.className = "auth-secondary ctl ctl-secondary pvp-settings-archive";
+    archive.dataset.ctlKind = "secondary";
+    archive.dataset.state = "default";
+    const label = document.createElement("span");
+    label.className = "ctl-label";
+    label.textContent = "对战档案";
+    archive.append(label);
+    archive.addEventListener("click", () => {
+      closeAuthModal();
+      showPvpHistory().catch(() => {});
+    });
+    section.append(title, rank, archive);
     panel.insertBefore(section, panel.querySelector("hr") || null);
   }
   if (section) section.hidden = !on;
+  const archiveBtn = document.getElementById("pvpSettingsArchiveBtn");
+  if (archiveBtn) archiveBtn.hidden = !(on && loggedIn);
   const rank = document.getElementById("pvpSettingsRank");
   if (rank && on && loggedIn) {
     pvpFetch("/me/pvp/stats").then(({ data }) => {
