@@ -64,7 +64,10 @@ restore_db(){
   chown stockapi:stockapi "$DB"* || true
 }
 rollback(){
-  local rc=$?; trap - ERR; set +e
+  local rc=$?
+  # set -E makes subshells inherit this trap; only the top-level shell may roll back
+  [[ $BASHPID == "$$" ]] || exit "$rc"
+  trap - ERR; set +e
   echo "!!! DEPLOY FAILED phase=$PHASE rc=$rc — rolling back to $PREV" >&2
   systemctl stop "$SVC"
   [[ "$DB_RESTORE" == 1 ]] && restore_db
