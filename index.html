@@ -440,11 +440,13 @@
 
         <section class="pvp-screen" id="pvpLobbyScreen">
             <div class="pvp-wrap">
-                <div class="pvp-head">
-                    <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
-                    <div class="pvp-title-block">
-                        <p class="pvp-kicker">在线对弈</p>
-                        <h2>双人对战</h2>
+                <div class="pvp-head pvp-hub-head">
+                    <div class="pvp-hub-back-row">
+                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
+                    </div>
+                    <div class="pvp-title-block pvp-hub-title">
+                        <p class="pvp-kicker pvp-hub-kicker">在线对弈</p>
+                        <h2 class="pvp-hub-h2">双人对战</h2>
                     </div>
                 </div>
                 <div class="pvp-lobby-hero">
@@ -462,27 +464,18 @@
                         <path class="pvp-sketch-ink" d="M92 132 H188"/>
                     </svg>
                     <div>
-                        <p class="pvp-lead">同一段行情，两个人各做各的决定。打开应用就能被约到。</p>
                         <p id="pvpLobbyCount" aria-live="polite"></p>
                     </div>
                 </div>
                 <p id="pvpLobbyClosed" hidden></p>
-                <ul class="pvp-rules">
-                    <li>双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
-                    <li>胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
-                    <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
-                    <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
-                </ul>
                 <p id="pvpLobbyLoading" class="ctl-loading-host" hidden>大厅加载中…</p>
                 <div id="pvpLobbyGuest" hidden>
                     <p>登录后才能约战。游客只能查看规则和在线人数。</p>
                     <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpLobbyLogin" data-ctl-kind="primary" data-state="default"><span class="ctl-label">登录</span></button>
                 </div>
                 <div id="pvpLobbyMember" hidden>
-                    <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyEligibility" hidden></p>
-                    <p id="pvpLobbyBalance"></p>
-                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">分享对战</span></button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary pvp-share-big" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><svg class="pvp-share-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4.5 15.8 C10 13.2 19.5 8.6 27.4 4.6 C25.2 11.8 22.6 20.4 20.3 27.2 C18.4 23.6 16.6 20.6 14.6 17.8 C11.2 17.2 7.8 16.6 4.5 15.8 Z"/><path d="M14.6 17.8 C18.2 14.4 22.4 9.8 27.4 4.6 M14.6 17.8 L14 24.6 C15.4 23.2 16.6 22 17.8 21"/></svg><span class="ctl-label">分享对战</span></button>
                     <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
@@ -491,6 +484,17 @@
                     <div id="pvpLobbyList"></div>
                     <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。也可以去玩幽灵对局，或稍后再来。</p>
                     <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLobbyModes" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">去玩幽灵对局</span></button>
+                    <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
+                    <p id="pvpLobbyBalance" class="pvp-dossier-balance"></p>
+                </div>
+                <div class="pvp-hub-about">
+                    <p class="pvp-lead">同一段行情，两个人各做各的决定。打开应用就能被约到。</p>
+                    <ul class="pvp-rules">
+                    <li>双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
+                    <li>胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
+                    <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
+                    <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
+                    </ul>
                 </div>
                 <p id="pvpLobbyError" role="status"></p>
             </div>

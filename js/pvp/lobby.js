@@ -4,6 +4,7 @@ import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
+import { mountBattleCover, setPvpAvatar } from "./bot-art.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
 
@@ -315,7 +316,7 @@ function faceImage(person) {
   img.alt = "";
   img.width = 40;
   img.height = 40;
-  img.src = displayAvatarUrl(person || { avatarId: 1 });
+  setPvpAvatar(img, person || { avatarId: 1 }, { size: 40 });
   return img;
 }
 
@@ -389,7 +390,7 @@ function renderList(entries, state) {
     img.alt = "";
     img.width = 40;
     img.height = 40;
-    img.src = displayAvatarUrl(entry);
+    setPvpAvatar(img, entry, { size: 40 });
     const body = document.createElement("div");
     const name = document.createElement("strong");
     name.textContent = entry.nickname || "对手";
@@ -419,15 +420,30 @@ function renderList(entries, state) {
   }
 }
 
+let balanceEl = null;
+/** 余额 lives inside the rank card; fillDossier() rebuilds the card, so re-dock it. */
+function dockBalance(node) {
+  balanceEl = balanceEl || document.getElementById("pvpLobbyBalance");
+  if (!balanceEl) return;
+  if (node && !node.hidden) {
+    if (balanceEl.parentNode !== node) node.append(balanceEl);
+  } else {
+    const member = document.getElementById("pvpLobbyMember");
+    if (member && balanceEl.parentNode !== member) member.append(balanceEl);
+  }
+}
+
 function paintLobbyMe(state) {
   const node = document.getElementById("pvpLobbyMe");
   if (state?.me) {
     fillDossier(node, state.me);
+    dockBalance(node);
     return;
   }
   const auth = getAuthState().user;
   if (!auth) {
     if (node) node.hidden = true;
+    dockBalance(node);
     return;
   }
   fillDossier(node, {
@@ -438,6 +454,7 @@ function paintLobbyMe(state) {
     inPlacement: true,
     empty: true,
   });
+  dockBalance(node);
   pvpFetch("/me/pvp/stats").then(({ data }) => {
     if (!showing) return;
     fillDossier(node, {
@@ -453,6 +470,7 @@ function paintLobbyMe(state) {
       winRate: data?.winRate,
       empty: !data || data.empty,
     });
+    dockBalance(node);
   }).catch(() => {});
 }
 
@@ -489,7 +507,7 @@ function renderState(state) {
     shareBtn.disabled = !ok;
   }
   const balance = state.balance == null ? "—" : escapeHtml(state.balance);
-  const balanceNode = document.getElementById("pvpLobbyBalance");
+  const balanceNode = balanceEl || document.getElementById("pvpLobbyBalance");
   if (balanceNode) {
     balanceNode.innerHTML = `余额 <span class="jiu-coin-amt"><span class="jiu-price-num">${balance}</span>${coinIconHtml({ size: 14 })}</span>`;
     balanceNode.setAttribute("aria-label", `余额 ${state.balance ?? "—"} 韭币`);
@@ -602,6 +620,7 @@ export async function showPvpLobby({ instant = false } = {}) {
   prepareScreen(Route.PVP_LOBBY);
   activateScreen(Route.PVP_LOBBY);
   setRouteHash(Route.PVP_LOBBY);
+  mountBattleCover(lobby?.querySelector(".pvp-sketch"));
   window.setTimeout(() => {
     loadChunk(() => import("./result.js")).then((mod) => mod.releasePvpResult()).catch(() => {});
   }, 0);

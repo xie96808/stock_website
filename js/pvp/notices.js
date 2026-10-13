@@ -1,3 +1,4 @@
+import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { parseRouteHash } from "../screen-router.js";
 import { openCtlOverlay, closeCtlOverlay, setCtlState } from "../controls.js";
@@ -126,7 +127,7 @@ function showInvite(card) {
   if (showingId === card.challengeId && !node.hidden) return;
   showingId = card.challengeId;
   const img = document.getElementById("pvpInviteAvatar");
-  if (img) img.src = displayAvatarUrl(card);
+  if (img) setPvpAvatar(img, card, { size: 64 });
   const copy = document.getElementById("pvpInviteCopy");
   if (copy) copy.textContent = `${card.nickname || "对手"} 邀请你对战`;
   const note = document.getElementById("pvpInviteNote");
