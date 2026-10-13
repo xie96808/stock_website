@@ -18,6 +18,20 @@ mkdir -p "$STAGING/bundle/server" "$STAGING/bundle/shared" "$OUTPUT_DIR"
 tar -C server --exclude=node_modules --exclude=data --exclude=tests --exclude=.env -cf - . | tar -C "$STAGING/bundle/server" -xf -
 find "$STAGING/bundle/server" -maxdepth 1 -type f -name '.env.*' ! -name '.env.example' -delete
 [[ -f server/.env.example ]] && cp -a server/.env.example "$STAGING/bundle/server/.env.example"
+
+# S1: ship prebuilt production node_modules so the server never runs npm ci
+# (10-12: npm ci on the 1.6 GB ECS exhausted memory and hung the box).
+# Must be built with the production Node major (see .nvmrc) on glibc <= target.
+if [[ "${SKIP_NODE_MODULES:-0}" != "1" ]]; then
+  WANT_MAJOR="$(cut -d. -f1 .nvmrc)"
+  HAVE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
+  [[ "$WANT_MAJOR" == "$HAVE_MAJOR" ]] || { echo "node major $HAVE_MAJOR != .nvmrc $WANT_MAJOR; build with Node $WANT_MAJOR" >&2; exit 1; }
+  cp -a server/package-lock.json "$STAGING/bundle/server/package-lock.json"
+  (cd "$STAGING/bundle/server" && npm ci --omit=dev --no-audit --no-fund >/dev/null)
+  node "$ROOT_DIR/deploy/check-native-bundle.mjs" write "$STAGING/bundle/server"
+  mkdir -p "$STAGING/bundle/server/deploy"
+  cp -a "$ROOT_DIR/deploy/check-native-bundle.mjs" "$STAGING/bundle/server/deploy/"
+fi
 tar -C shared -cf - . | tar -C "$STAGING/bundle/shared" -xf -
 
 # Memory plan P1: binary columnar twin of data/stocks_data.json, shipped with the
