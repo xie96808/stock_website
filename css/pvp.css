@@ -1075,8 +1075,18 @@
 }
 
 .pvp-gift-glyph {
+  /* Fixed glyph box: emoji, drawn art and emoji fallback all occupy the same
+     height so every gift button in the row ends up the same height. */
+  --pvp-gift-glyph-box: 1.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: var(--pvp-gift-glyph-box);
+  min-width: var(--pvp-gift-glyph-box);
   font-size: 1.35rem;
   line-height: 1;
+  overflow: visible;
 }
 
 .pvp-gift-name {
@@ -1785,7 +1795,7 @@
 
 /* Drawn gift art (臭鱼 / 菜叶); emoji fallback keeps the same box. */
 .pvp-gift-glyph .pvp-gift-img-wrap,
-.pvp-gift-glyph .pvp-gift-img { display: block; width: 34px; height: 34px; margin: 0 auto; }
+.pvp-gift-glyph .pvp-gift-img { display: block; width: var(--pvp-gift-glyph-box); height: var(--pvp-gift-glyph-box); margin: 0 auto; }
 .pvp-gift-glyph .pvp-gift-img { object-fit: contain; pointer-events: none; user-select: none; }
 .pvp-gift-emoji .pvp-gift-fly-img-wrap,
 .pvp-gift-emoji .pvp-gift-fly-img { display: block; width: 96px; height: 96px; object-fit: contain; }
