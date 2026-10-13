@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { openDb } from "../db/connection.js";
 import { RULE_VERSION, GAME_DAYS } from "../../../shared/rules.js";
+import { toColumnarPack, decodeColpack, sha256FileSync, COLPACK_SUFFIX } from "./colpack.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -17,6 +18,8 @@ let _filePath = null;
 let _dateTable = [];
 /** @type {{ index: number, historyLength: number, minStart: number, maxStart: number }[] | null} */
 let _eligible = null;
+/** @type {"colpack"|"json"|null} */
+let _lastLoadSource = null;
 
 function resolveDatasetPath() {
   if (process.env.STOCKGAME_DATASET_PATH) {
@@ -101,67 +104,6 @@ export function sliceBars(stock, start, end) {
   return out;
 }
 
-/**
- * Convert parsed JSON pack (array of {code,name,py,jp,kline:[{date,open,...}]})
- * into columnar stocks. Uses Float64 for all numerics so JSON serialization of
- * emitted numbers stays bit/string-identical to the object-pack era.
- * Dates are interned into a shared string table + Int32Array indices.
- */
-function toColumnarPack(parsed) {
-  /** @type {Map<string, number>} */
-  const dateIndex = new Map();
-  /** @type {string[]} */
-  const dateTable = [];
-
-  function internDate(d) {
-    const key = String(d || "");
-    let idx = dateIndex.get(key);
-    if (idx !== undefined) return idx;
-    idx = dateTable.length;
-    dateTable.push(key);
-    dateIndex.set(key, idx);
-    return idx;
-  }
-
-  const pack = new Array(parsed.length);
-  for (let si = 0; si < parsed.length; si++) {
-    const s = parsed[si];
-    const kline = Array.isArray(s?.kline) ? s.kline : [];
-    const n = kline.length;
-    const dates = new Int32Array(n);
-    const open = new Float64Array(n);
-    const high = new Float64Array(n);
-    const low = new Float64Array(n);
-    const close = new Float64Array(n);
-    const volume = new Float64Array(n);
-    for (let i = 0; i < n; i++) {
-      const b = kline[i] || {};
-      dates[i] = internDate(b.date);
-      open[i] = Number(b.open);
-      high[i] = Number(b.high);
-      low[i] = Number(b.low);
-      close[i] = Number(b.close);
-      volume[i] = b.volume != null ? Number(b.volume) : 0;
-    }
-    pack[si] = {
-      code: s.code,
-      name: s.name,
-      py: s.py,
-      jp: s.jp,
-      n,
-      dates,
-      open,
-      high,
-      low,
-      close,
-      volume,
-    };
-    // Drop object kline ASAP so peak RSS does not hold both representations.
-    parsed[si] = null;
-  }
-  return { pack, dateTable };
-}
-
 function buildEligible(pack) {
   const eligible = [];
   for (let i = 0; i < pack.length; i++) {
@@ -204,18 +146,23 @@ export function getDatasetMeta() {
 export function ensureDatasetLoaded() {
   if (_pack && _version) return { pack: _pack, version: _version, filePath: _filePath };
   const filePath = resolveDatasetPath();
-  // Single read: hash file bytes, then parse from the same buffer.
-  let buf = fs.readFileSync(filePath);
-  const version = crypto.createHash("sha256").update(buf).digest("hex");
-  const parsed = JSON.parse(buf.toString("utf8"));
-  buf = null; // drop file bytes before columnar conversion
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error("dataset pack empty or invalid");
+  let loaded = tryLoadColpack(filePath);
+  if (!loaded) {
+    // JSON path. Single read: hash file bytes, then parse from the same buffer.
+    let buf = fs.readFileSync(filePath);
+    const version = crypto.createHash("sha256").update(buf).digest("hex");
+    const parsed = JSON.parse(buf.toString("utf8"));
+    buf = null; // drop file bytes before columnar conversion
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error("dataset pack empty or invalid");
+    }
+    const { pack, dateTable } = toColumnarPack(parsed);
+    // Release object-graph refs as soon as columnar pack is ready.
+    parsed.length = 0;
+    loaded = { pack, dateTable, version, source: "json" };
   }
-  const { pack, dateTable } = toColumnarPack(parsed);
-  // Release object-graph refs as soon as columnar pack is ready (toColumnarPack
-  // already nulls per-stock kline; clear the array shell too).
-  parsed.length = 0;
+  _lastLoadSource = loaded.source;
+  const { pack, dateTable, version } = loaded;
   _pack = pack;
   _dateTable = dateTable;
   _eligible = buildEligible(pack);
@@ -242,6 +189,35 @@ export function ensureDatasetLoaded() {
   return { pack: _pack, version: _version, filePath: _filePath };
 }
 
+/** "colpack" | "json" | null — which representation the current pack came from. */
+export function getDatasetLoadSource() {
+  return _lastLoadSource;
+}
+
+/**
+ * Prefer the prebuilt binary twin (<json>.colpack, see colpack.js) — avoids the
+ * JSON.parse boot spike. Used only when it was built from these exact JSON bytes
+ * (size + streamed sha256 match); otherwise falls back to the JSON path.
+ * STOCKGAME_DATASET_COLPACK=0 disables; =<path> overrides the location.
+ */
+function tryLoadColpack(jsonPath) {
+  const flag = process.env.STOCKGAME_DATASET_COLPACK;
+  if (flag === "0") return null;
+  const colPath = flag && flag !== "1" ? path.resolve(flag) : jsonPath + COLPACK_SUFFIX;
+  if (!fs.existsSync(colPath)) return null;
+  try {
+    const decoded = decodeColpack(fs.readFileSync(colPath));
+    const size = fs.statSync(jsonPath).size;
+    if (decoded.sourceBytes !== size) throw new Error(`source size ${decoded.sourceBytes} != ${size}`);
+    const sha = sha256FileSync(jsonPath);
+    if (decoded.sourceSha256 !== sha) throw new Error("source sha256 mismatch");
+    return { pack: decoded.pack, dateTable: decoded.dateTable, version: sha, source: "colpack" };
+  } catch (e) {
+    console.warn(`dataset: ignoring colpack ${colPath}: ${e.message}; using JSON`);
+    return null;
+  }
+}
+
 /** Reset cached pack (tests). */
 export function resetDatasetCache() {
   _pack = null;
@@ -249,6 +225,7 @@ export function resetDatasetCache() {
   _filePath = null;
   _dateTable = [];
   _eligible = null;
+  _lastLoadSource = null;
 }
 
 /**
