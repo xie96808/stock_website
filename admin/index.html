@@ -10,6 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32.png?v=20260908">
   <link rel="icon" type="image/png" href="/favicon.png?v=20260908">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=20260908">
+  <link rel="stylesheet" href="../css/announcements.css" />
   <link rel="stylesheet" href="./admin.css" />
 </head>
 <body>
@@ -46,7 +47,8 @@
         <button type="button" role="tab" class="tab" data-tab="coin" aria-selected="false">韭币</button>
         <button type="button" role="tab" class="tab" data-tab="games" aria-selected="false">战绩</button>
         <button type="button" role="tab" class="tab" data-tab="ann" aria-selected="false">公告</button>
-        <button type="button" role="tab" class="tab" data-tab="fb" aria-selected="false">反馈</button>
+        <button type="button" role="tab" class="tab" data-tab="fb" aria-selected="false">反馈<span id="fbUnreadBadge" class="tab-badge hidden" aria-label="未读反馈"></span></button>
+        <button type="button" role="tab" class="tab" data-tab="content" aria-selected="false">内容</button>
         <button type="button" role="tab" class="tab" data-tab="settings" aria-selected="false">开关</button>
         <button type="button" role="tab" class="tab" data-tab="pvp" aria-selected="false">对战</button>
         <button type="button" role="tab" class="tab" data-tab="version" aria-selected="false">版本</button>
@@ -156,7 +158,14 @@
         <button type="button" id="annPublishBtn">发布</button>
         <button type="button" id="annArchiveBtn">归档</button>
       </div>
+      <div class="row">
+        <label class="inline">草稿定时发布（北京时间）<input id="annPublishAt" type="datetime-local" /></label>
+        <button type="button" id="annScheduleBtn">定时发布</button>
+        <button type="button" id="annUnscheduleBtn" class="ghost">取消定时</button>
+      </div>
       <p id="annMsg" class="msg"></p>
+      <h3 class="grp">站内预览</h3>
+      <div id="annPreview" class="ann-preview" aria-live="polite"><p class="dim">在上方输入标题和正文即可预览</p></div>
       <p class="note">写操作需二次验证。无 ID 时点「发布」且正文已填，将直接新建并上线。公开页仅展示 published；「今日关闭」由访客本地日历日记住。</p>
 
 
@@ -181,9 +190,31 @@
         <button type="button" id="fbArchiveBtn">归档</button>
       </div>
       <div id="fbDetail" class="list"></div>
+      <div id="fbNoteBox" class="hidden">
+        <h3 class="grp">处理备注（仅后台可见，不会发给用户）</h3>
+        <textarea id="fbNote" maxlength="1000" rows="3" placeholder="例如：已复现，下个版本修复"></textarea>
+        <div class="row"><button type="button" id="fbNoteBtn">保存备注</button><span id="fbNoteMeta" class="dim"></span></div>
+      </div>
       <p id="fbMsg" class="msg"></p>
       <p class="note">列表最新优先。详情含正文与图片（仅管理员可见）。改状态需二次验证。</p>
 
+      </section>
+
+      <section class="tabpanel" data-panel="content" role="tabpanel">
+      <h2>学院 · 答题 · 残局</h2>
+      <p class="note left">只读统计。开关在「开关」页。</p>
+      <div class="row"><button type="button" id="contentRefreshBtn" class="ghost">刷新</button></div>
+      <div id="contentOverview"><p class="note left">切到本页时自动加载</p></div>
+
+      <h2>每日挑战 · 榜单</h2>
+      <div class="row">
+        <input id="dailyDate" type="date" />
+        <button type="button" id="dailyBtn">查看榜单</button>
+      </div>
+      <div class="row"><input id="dailyReason" class="grow" maxlength="200" placeholder="隐藏/恢复原因（必填）" /></div>
+      <div id="dailyInfo"></div>
+      <div id="dailyList" class="list users"></div>
+      <p class="note left">「隐藏」把该记录移出公开榜（不改收益、不扣韭币）；「恢复」只能撤销后台隐藏，不能把迟交/无效记录放上榜。</p>
       </section>
 
       <section class="tabpanel" data-panel="settings" role="tabpanel">
@@ -238,6 +269,21 @@
       </div>
       <div id="pvpReportList" class="list users"></div>
       <div class="row center"><button type="button" id="pvpReportMoreBtn" class="ghost hidden">加载更多</button></div>
+
+      <h2>分享链接</h2>
+      <div class="row">
+        <select id="shareStatus">
+          <option value="open">进行中</option>
+          <option value="">全部</option>
+          <option value="joined">已加入</option>
+          <option value="cancelled">已作废</option>
+          <option value="expired">已过期</option>
+        </select>
+        <button type="button" id="shareBtn">查询链接</button>
+      </div>
+      <div id="shareList" class="list users"></div>
+      <div class="row center"><button type="button" id="shareMoreBtn" class="ghost hidden">加载更多</button></div>
+      <p class="note left">「作废」只对进行中的链接生效，复用上方原因输入框；已加入的对局不受影响。</p>
       </section>
 
       <section class="tabpanel" data-panel="version" role="tabpanel">

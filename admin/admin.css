@@ -204,6 +204,25 @@ code.wrap { word-break: break-all; }
 .st-aborted { opacity: 0.6; }
 a { color: var(--accent); }
 
+/* batch 3 */
+.tab { position: relative; }
+.tab-badge { display: inline-block; min-width: 1.3em; margin-left: 0.2em; padding: 0 0.3em; border-radius: 999px; background: #b03a2e; color: #fff; font-size: 0.7rem; line-height: 1.35; font-weight: 700; vertical-align: 0.1em; }
+label.inline { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin: 0; }
+.ann-preview { margin: 0.4rem 0 0.8rem; }
+.ann-preview .announcements-dialog { max-height: none; margin: 0 auto; }
+.table-wrap { overflow-x: auto; }
+.tbl { border-collapse: collapse; width: 100%; font-size: 0.86rem; }
+.tbl th, .tbl td { border-bottom: 1px dashed var(--line); padding: 0.25rem 0.4rem; text-align: left; white-space: nowrap; }
+.daily-row { display: grid; grid-template-columns: 2.6em 1fr auto; grid-template-areas: "rank who btn" "rank meta btn"; column-gap: 0.5rem; align-items: center; }
+.daily-row .rank { grid-area: rank; font-weight: 700; }
+.daily-row .who { grid-area: who; min-width: 0; }
+.daily-row .meta { grid-area: meta; font-size: 0.82rem; opacity: 0.8; }
+.daily-row > button { grid-area: btn; }
+#fbNoteBox textarea { margin-top: 0.2rem; }
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(20, 16, 10, 0.82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem; animation: drop 160ms ease-out; }
+.lightbox img { max-width: 100%; max-height: calc(100vh - 6rem); object-fit: contain; border-radius: 8px; background: #fff; }
+.lightbox .lb-close { color: var(--fg); }
+
 @media (max-width: 480px) {
   .card { border-width: 16px; padding: 0.5rem 0.4rem 0.75rem; }
   .row > input:not(.grow), .row > select { flex: 1 1 8rem; }
@@ -211,6 +230,7 @@ a { color: var(--accent); }
   .tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.25rem; }
   .tab { padding: 0.15rem 0.1rem; min-width: 0; }
   .stats { grid-template-columns: repeat(2, 1fr); }
+  .tab-badge { position: absolute; top: -9px; right: -9px; margin: 0; font-size: 0.62rem; min-width: 1.3em; padding: 0 0.2em; }
   .user-row > summary { grid-template-columns: 28px 1fr auto; padding: 0.45rem 0.5rem; }
   .user-detail { padding: 0 0.55rem 0.6rem; }
   .kv { grid-template-columns: 4.6em 1fr; }
