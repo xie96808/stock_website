@@ -1782,3 +1782,11 @@
   .pvp-details-fold,
   .pvp-details-fold[data-open="true"] { transition: none; }
 }
+
+/* Drawn gift art (臭鱼 / 菜叶); emoji fallback keeps the same box. */
+.pvp-gift-glyph .pvp-gift-img-wrap,
+.pvp-gift-glyph .pvp-gift-img { display: block; width: 34px; height: 34px; margin: 0 auto; }
+.pvp-gift-glyph .pvp-gift-img { object-fit: contain; pointer-events: none; user-select: none; }
+.pvp-gift-emoji .pvp-gift-fly-img-wrap,
+.pvp-gift-emoji .pvp-gift-fly-img { display: block; width: 96px; height: 96px; object-fit: contain; }
+.pvp-gift-img-fallback, .pvp-gift-fly-img-fallback { display: inline-block; line-height: 1; }

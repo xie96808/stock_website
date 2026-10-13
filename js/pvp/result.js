@@ -8,6 +8,7 @@ import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marks
 import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
+import { hydrateGiftButton } from "./gift-art.js";
 
 let chart = null;
 let chartObserver = null;
@@ -437,6 +438,7 @@ function wireGifts(view) {
   const note = document.getElementById("pvpGiftNote");
   if (note) note.textContent = "";
   const buttons = [...document.querySelectorAll("#pvpGifts .pvp-gift-send")];
+  for (const button of buttons) hydrateGiftButton(button);
   const canSend = !!view?.opponent?.userId && !!view?.matchId;
   if (box) box.hidden = !canSend;
   for (const button of buttons) {
