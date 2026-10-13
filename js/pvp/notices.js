@@ -7,7 +7,7 @@ import { giftArtNode } from "./gift-art.js";
 
 const GIFT_MS = 1700;
 const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "💨", coffee: "☕", fish: "🐟", leaf: "🥬" };
-const GIFT_NAME = { flower: "花花", tomato: "番茄", pipe: "电子烟斗", coffee: "咖啡", fish: "臭鱼", leaf: "菜叶" };
+const GIFT_NAME = { flower: "花花", tomato: "番茄", pipe: "烟斗", coffee: "咖啡", fish: "臭鱼", leaf: "菜叶" };
 const IGNORE_KEY = "pvp-ignored-invites";
 const JOIN_KEY = "pvp-join-code";
 

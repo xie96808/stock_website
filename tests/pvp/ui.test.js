@@ -230,7 +230,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(resultHtml, /class="pvp-gift-row"/);
   assert.match(resultHtml, /aria-label="花花"/);
   assert.match(resultHtml, /aria-label="番茄"/);
-  assert.match(resultHtml, /aria-label="电子烟斗"/);
+  assert.match(resultHtml, /aria-label="烟斗"/);
   assert.match(resultHtml, /aria-label="咖啡"/);
   assert.match(resultHtml, /🌸/);
   assert.match(resultHtml, /🍅/);
@@ -262,7 +262,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(analysis, /下面是这段行情|技术复盘/);
   const notices = readFileSync(new URL("js/pvp/notices.js", root), "utf8");
   assert.match(notices, /送来\$\{GIFT_NAME\[kind\]\}/);
-  assert.match(notices, /电子烟斗/);
+  assert.match(notices, /烟斗/);
   assert.match(notices, /咖啡/);
   assert.match(notices, /GIFT_MS = 1700/);
   assert.match(notices, /🌸/);
@@ -272,7 +272,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(css, /pvp-settle-card/);
   assert.match(css, /max-width:\s*360px/);
   assert.match(css, /pvp-gift-caption/);
-  assert.match(css, /pvp-gift-row[\s\S]*flex-wrap:\s*nowrap/);
+  assert.match(css, /\.pvp-gift-row \{[^}]*flex-wrap:\s*wrap;/);
   assert.match(css, /position:\s*absolute/);
   assert.match(room, /已行动/);
   assert.doesNotMatch(room, /pvpSelfLock|lockCaption|opponentLockText/);
