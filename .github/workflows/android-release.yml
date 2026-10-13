@@ -57,6 +57,8 @@ jobs:
           NOTES="$IN_NOTES"
           if [[ "$REF_TYPE" == "tag" ]]; then
             [[ "$REF_NAME" == "$TAG" ]] || { echo "tag $REF_NAME != gradle versionName ($TAG)" >&2; exit 1; }
+            # actions/checkout can leave the pushed tag as a lightweight ref; refetch the real tag object.
+            git fetch --force --no-tags origin "refs/tags/$REF_NAME:refs/tags/$REF_NAME" >/dev/null 2>&1 || true
             if [[ -z "$NOTES" ]] && git cat-file -t "$REF_NAME" 2>/dev/null | grep -qx tag; then
               # Annotated tag message becomes the notes. A lightweight tag must not fall through to the commit subject.
               NOTES="$(git cat-file tag "$REF_NAME" | sed '1,/^$/d' | sed '/-----BEGIN PGP/,$d')"
