@@ -1,0 +1,34 @@
+# Build the API release tarball with prebuilt production node_modules (S1).
+# Runs in Ubuntu 22.04 (same glibc 2.35 as the ECS) with the Node version in .nvmrc,
+# so better-sqlite3 / argon2 binaries match the server ABI. Does NOT deploy.
+name: API package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["server/**", "shared/**", "deploy/package-api-production.sh", "deploy/check-native-bundle.mjs", ".nvmrc"]
+
+permissions:
+  contents: read
+
+jobs:
+  package-api:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Build API package (bundled node_modules)
+        run: |
+          OUTPUT_DIR="$RUNNER_TEMP/api" bash deploy/package-api-production.sh "$GITHUB_SHA"
+          ls -l "$RUNNER_TEMP/api"
+          tar -xzf "$RUNNER_TEMP/api/stock-website-api-$GITHUB_SHA.tar.gz" -C "$RUNNER_TEMP" ./server/.native-bundle.json
+          cat "$RUNNER_TEMP/server/.native-bundle.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stock-website-api-${{ github.sha }}
+          path: ${{ runner.temp }}/api/
+          retention-days: 30
