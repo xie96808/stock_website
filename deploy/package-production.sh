@@ -39,9 +39,6 @@ EEOF
 # (sha matches server datasetVersion). Keeps unversioned fallback for old clients.
 node "$ROOT_DIR/deploy/emit-versioned-pack.mjs" "$STAGING/release"
 
-# Binary columnar twin for the API (memory plan P1): avoids the ~390 MB JSON.parse
-# boot spike. Not text, so precompress skips it. API falls back to JSON if absent/stale.
-node "$ROOT_DIR/deploy/emit-colpack.mjs" "$STAGING/release"
 
 # Precompress for nginx gzip_static + brotli_static (.gz + .br).
 # Includes data/stocks_data.json (~55MB) and the versioned hardlink twin;

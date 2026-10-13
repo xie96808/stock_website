@@ -8,6 +8,8 @@ import { toColumnarPack, decodeColpack, sha256FileSync, COLPACK_SUFFIX } from ".
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
+/** server/ dir (API package root): prebuilt colpack ships in server/dataset/. */
+const serverRoot = path.resolve(__dirname, "../..");
 
 const DEFAULT_HISTORY = 30;
 
@@ -195,7 +197,8 @@ export function getDatasetLoadSource() {
 }
 
 /**
- * Prefer the prebuilt binary twin (<json>.colpack, see colpack.js) — avoids the
+ * Prefer the prebuilt binary twin (server/dataset/<name>.colpack from the API
+ * package, else <json>.colpack; see colpack.js) — avoids the
  * JSON.parse boot spike. Used only when it was built from these exact JSON bytes
  * (size + streamed sha256 match); otherwise falls back to the JSON path.
  * STOCKGAME_DATASET_COLPACK=0 disables; =<path> overrides the location.
@@ -203,8 +206,11 @@ export function getDatasetLoadSource() {
 function tryLoadColpack(jsonPath) {
   const flag = process.env.STOCKGAME_DATASET_COLPACK;
   if (flag === "0") return null;
-  const colPath = flag && flag !== "1" ? path.resolve(flag) : jsonPath + COLPACK_SUFFIX;
-  if (!fs.existsSync(colPath)) return null;
+  const candidates = flag && flag !== "1"
+    ? [path.resolve(flag)]
+    : [path.join(serverRoot, "dataset", path.basename(jsonPath) + COLPACK_SUFFIX), jsonPath + COLPACK_SUFFIX];
+  const colPath = candidates.find((p) => fs.existsSync(p));
+  if (!colPath) return null;
   try {
     const decoded = decodeColpack(fs.readFileSync(colPath));
     const size = fs.statSync(jsonPath).size;
