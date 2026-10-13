@@ -5,6 +5,7 @@ import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-ro
 import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
+import { loadChunk } from "../chunk-reload.js";
 
 let showing = false;
 let stopPoll = null;
@@ -202,7 +203,7 @@ export async function challengeFromResult(userId) {
 
 async function enterMatch(matchId) {
   leavePvpLobby();
-  const room = await import("./room.js");
+  const room = await loadChunk(() => import("./room.js"));
   await room.showPvpRoom(matchId);
 }
 
@@ -602,7 +603,7 @@ export async function showPvpLobby({ instant = false } = {}) {
   activateScreen(Route.PVP_LOBBY);
   setRouteHash(Route.PVP_LOBBY);
   window.setTimeout(() => {
-    import("./result.js").then((mod) => mod.releasePvpResult()).catch(() => {});
+    loadChunk(() => import("./result.js")).then((mod) => mod.releasePvpResult()).catch(() => {});
   }, 0);
   wireLobby();
   wirePresence();
@@ -642,6 +643,6 @@ export async function openPvpHash(matchId) {
     if (typeof window.showSimHub === "function") window.showSimHub();
     return;
   }
-  const result = await import("./result.js");
+  const result = await loadChunk(() => import("./result.js"));
   await result.openPvpMatch(matchId);
 }

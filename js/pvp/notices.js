@@ -2,6 +2,7 @@ import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { parseRouteHash } from "../screen-router.js";
 import { openCtlOverlay, closeCtlOverlay, setCtlState } from "../controls.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, pvpSocketHealthy, whenAuthReady } from "./transport.js";
+import { loadChunk } from "../chunk-reload.js";
 
 const GIFT_MS = 1700;
 const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "💨", coffee: "☕" };
@@ -95,9 +96,9 @@ async function maybeEnterReady(data) {
   pulling = true;
   pulledMatch = id;
   try {
-    const lobby = await import("./lobby.js");
+    const lobby = await loadChunk(() => import("./lobby.js"));
     lobby.leavePvpLobby();
-    const room = await import("./room.js");
+    const room = await loadChunk(() => import("./room.js"));
     await room.showPvpRoom(id);
   } catch {
     pulledMatch = "";
@@ -182,9 +183,9 @@ async function respond(accept) {
     saveIgnored();
     hideInvite();
     if (accept && data?.matchId) {
-      const lobby = await import("./lobby.js");
+      const lobby = await loadChunk(() => import("./lobby.js"));
       lobby.leavePvpLobby();
-      const room = await import("./room.js");
+      const room = await loadChunk(() => import("./room.js"));
       await room.showPvpRoom(data.matchId);
       return;
     }
@@ -239,7 +240,7 @@ export function startPvpNotices() {
       let code = "";
       try { code = sessionStorage.getItem(JOIN_KEY) || ""; } catch { code = ""; }
       if (code) {
-        import("./lobby.js").then((mod) => mod.joinSharedBattle(code)).catch(() => {});
+        loadChunk(() => import("./lobby.js")).then((mod) => mod.joinSharedBattle(code)).catch(() => {});
       }
     }
     beat();

@@ -7,6 +7,7 @@ import { coinIconHtml } from "../jiu-coin.js";
 import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
 import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
+import { loadChunk } from "../chunk-reload.js";
 
 let chart = null;
 let chartObserver = null;
@@ -512,7 +513,7 @@ function paintResultBody(view, { celebrate = false } = {}) {
     again.hidden = !view?.opponent?.userId;
     again.dataset.userId = view?.opponent?.userId ? String(view.opponent.userId) : "";
     again.onclick = () => {
-      import("./lobby.js")
+      loadChunk(() => import("./lobby.js"))
         .then((mod) => mod.challengeFromResult(again.dataset.userId))
         .catch(() => {});
     };
@@ -533,9 +534,9 @@ function wireShareImage() {
     const view = shown;
     let setCtlState = null;
     try {
-      ({ setCtlState } = await import("../controls.js"));
+      ({ setCtlState } = await loadChunk(() => import("../controls.js")));
       setCtlState(button, "loading", { syncImg: false });
-      const mod = await import("../share-image.js");
+      const mod = await loadChunk(() => import("../share-image.js"));
       await mod.savePvpShareImage(view);
     } catch (err) {
       console.warn("pvp share image failed", err);
@@ -591,6 +592,6 @@ export async function openPvpMatch(matchId) {
     showPvpResult(data);
     return;
   }
-  const room = await import("./room.js");
+  const room = await loadChunk(() => import("./room.js"));
   room.showPvpRoom(matchId, data);
 }

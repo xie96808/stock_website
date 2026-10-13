@@ -78,6 +78,19 @@ rm -f "$ROOT_ARCHIVE"
 grep -qx "APP_GIT_SHA=$REVISION" "$TEMP/release.env" || die "release revision mismatch"
 grep -q "\"revision\":\"$REVISION\"" "$TEMP/version.json" || die "version.json revision mismatch"
 
+# Keep the previous release's fingerprinted js/css (one generation) so tabs and
+# WebViews opened before this deploy can still lazy-load their chunks instead of
+# failing with "Failed to fetch dynamically imported module".
+if [[ -n "$PREVIOUS" && -d "$PREVIOUS" ]]; then
+  CARRIED=0; rm -f "$TARGET.carried-assets"
+  while IFS= read -r -d '' f; do
+    [[ -f "$PREVIOUS.carried-assets" ]] && grep -qxF "$f" "$PREVIOUS.carried-assets" && continue
+    [[ -e "$TEMP/$f" ]] && continue
+    mkdir -p "$TEMP/$(dirname "$f")"; cp -a "$PREVIOUS/$f" "$TEMP/$f"; printf '%s\n' "$f" >> "$TARGET.carried-assets"; CARRIED=$((CARRIED+1))
+  done < <(cd "$PREVIOUS" && find js css -type f -regextype posix-extended -regex '.*\.[0-9a-f]{10}\.(js|css)(\.gz|\.br)?' -print0 2>/dev/null)
+  echo "carried $CARRIED fingerprinted assets from previous release"
+fi
+
 chown -R root:root "$TEMP"
 chmod -R a+rX "$TEMP"
 
