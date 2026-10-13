@@ -239,6 +239,9 @@ function renderStats(stats, user) {
   });
   node.append(card);
   if (!stats || stats.empty) return;
+  const recentLabel = document.createElement("p");
+  recentLabel.className = "pvp-dots-label";
+  recentLabel.textContent = "近期战绩";
   const dots = document.createElement("div");
   dots.className = "pvp-dots";
   for (const outcome of stats.recent || []) {
@@ -250,7 +253,30 @@ function renderStats(stats, user) {
   const completed = document.createElement("p");
   completed.className = "pvp-dossier-more";
   completed.textContent = `完整局 ${stats.completedGames} · 完整局平均收益 ${formatPpm(stats.meanCompletedReturnPpm)} · 最佳完整局收益 ${formatPpm(stats.bestCompletedReturnPpm)} · 近 20 场认输 ${stats.recentForfeits}`;
+  if ((stats.recent || []).length) node.append(recentLabel);
   node.append(dots, completed);
+}
+
+// 「战绩详情」fold: detailed rows hidden by default, toggled by a hand-drawn control.
+function setHistoryFold(open) {
+  const toggle = document.getElementById("pvpHistoryToggle");
+  const fold = document.getElementById("pvpHistoryFold");
+  if (!toggle || !fold) return;
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  const glyph = toggle.querySelector(".pvp-details-glyph");
+  if (glyph) glyph.textContent = open ? "▴" : "▾";
+  fold.dataset.open = open ? "true" : "false";
+  fold.inert = !open;
+  fold.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function bindHistoryFold() {
+  const toggle = document.getElementById("pvpHistoryToggle");
+  if (!toggle || toggle.dataset.bound === "1") return;
+  toggle.dataset.bound = "1";
+  toggle.addEventListener("click", () => {
+    setHistoryFold(toggle.getAttribute("aria-expanded") !== "true");
+  });
 }
 
 function renderBlocks(data) {
@@ -310,6 +336,10 @@ export async function showPvpHistory() {
   const statsNode = document.getElementById("pvpStats");
   const blocks = document.getElementById("pvpBlockList");
   if (list) list.replaceChildren();
+  bindHistoryFold();
+  setHistoryFold(false);
+  const foldToggle = document.getElementById("pvpHistoryToggle");
+  if (foldToggle) foldToggle.hidden = true;
   if (statsNode) statsNode.replaceChildren();
   if (blocks) blocks.replaceChildren();
   if (empty) {
@@ -333,6 +363,7 @@ export async function showPvpHistory() {
       }
       return;
     }
+    if (foldToggle) foldToggle.hidden = false;
     for (const row of entries) {
       const item = document.createElement("button");
       item.type = "button";

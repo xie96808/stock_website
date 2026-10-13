@@ -1625,3 +1625,39 @@
   justify-content: center;
 }
 .pvp-settings-archive[hidden] { display: none; }
+
+/* 对战档案 「战绩详情」 fold (doc §6.4: enter 260ms cubic-bezier(.2,.8,.2,1), exit 200ms ease-in). */
+.pvp-dots-label {
+  margin: 10px 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft, var(--muted, #6b6258));
+}
+.pvp-details-toggle {
+  display: flex;
+  width: 100%;
+  max-width: 372px;
+  margin: 12px 0 0;
+  justify-content: center;
+}
+.pvp-details-toggle[hidden] { display: none; }
+.pvp-details-toggle .ctl-label { display: inline-flex; align-items: center; gap: 8px; }
+.pvp-details-glyph { font-size: 0.85em; line-height: 1; }
+.pvp-details-fold {
+  display: grid;
+  margin-bottom: 14px;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 200ms ease-in, opacity 200ms ease-in;
+}
+.pvp-details-fold[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 260ms cubic-bezier(.2,.8,.2,1), opacity 260ms cubic-bezier(.2,.8,.2,1);
+}
+.pvp-details-fold-inner { min-height: 0; overflow: hidden; }
+.pvp-details-fold[data-open="true"] .pvp-details-fold-inner { padding-top: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .pvp-details-fold,
+  .pvp-details-fold[data-open="true"] { transition: none; }
+}

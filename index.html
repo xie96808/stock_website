@@ -728,7 +728,12 @@
                 <p>战绩只对你自己可见。</p>
                 <div id="pvpStats"></div>
                 <p id="pvpHistoryEmpty" hidden>尚无战绩</p>
-                <div id="pvpHistoryList"></div>
+                <button type="button" class="pvp-details-toggle ctl ctl-secondary" id="pvpHistoryToggle" data-ctl-kind="secondary" data-state="default" aria-expanded="false" aria-controls="pvpHistoryFold" hidden><span class="ctl-label">战绩详情<span class="pvp-details-glyph" aria-hidden="true">▾</span></span></button>
+                <div class="pvp-details-fold" id="pvpHistoryFold" data-open="false">
+                    <div class="pvp-details-fold-inner">
+                        <div id="pvpHistoryList"></div>
+                    </div>
+                </div>
                 <h3>我的屏蔽</h3>
                 <div id="pvpBlockList"></div>
             </div>
