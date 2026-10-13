@@ -1800,3 +1800,86 @@
 .pvp-gift-emoji .pvp-gift-fly-img-wrap,
 .pvp-gift-emoji .pvp-gift-fly-img { display: block; width: 96px; height: 96px; object-fit: contain; }
 .pvp-gift-img-fallback, .pvp-gift-fly-img-fallback { display: inline-block; line-height: 1; }
+
+/* Sender-side gift throw (js/pvp/gift-throw.js). Transform/opacity only. */
+.pvp-throw-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  pointer-events: none;
+  overflow: hidden;
+  contain: strict;
+}
+.pvp-throw {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  will-change: transform;
+}
+.pvp-throw-proj {
+  position: absolute;
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.25));
+}
+.pvp-throw-proj .pvp-throw-img-wrap,
+.pvp-throw-proj .pvp-throw-img { display: block; width: 44px; height: 44px; object-fit: contain; }
+.pvp-throw-emoji,
+.pvp-throw-img-fallback { font-size: 34px; line-height: 1; }
+.pvp-throw-ring {
+  position: absolute;
+  left: -30px;
+  top: -30px;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 4px solid var(--pvp-throw-color, #e06a5a);
+  opacity: 0;
+}
+.pvp-throw-bit {
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50% 50% 50% 0;
+  background: var(--pvp-throw-color, #e06a5a);
+}
+.pvp-throw-flower { --pvp-throw-color: #f29bb8; }
+.pvp-throw-tomato { --pvp-throw-color: #d8392b; }
+.pvp-throw-pipe { --pvp-throw-color: rgba(150, 150, 160, 0.7); }
+.pvp-throw-pipe .pvp-throw-bit { border-radius: 50%; }
+.pvp-throw-coffee { --pvp-throw-color: #7a4a26; }
+.pvp-throw-fish { --pvp-throw-color: #9ab06a; }
+.pvp-throw-leaf { --pvp-throw-color: #5fa040; }
+.pvp-throw-target {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+.pvp-throw-target-face {
+  position: absolute;
+  left: -24px;
+  top: -24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--ink, #2c2824);
+  background: var(--card, #fff);
+  color: var(--ink, #2c2824);
+  font: 700 12px/44px var(--kaiti, serif);
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+}

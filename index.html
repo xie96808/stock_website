@@ -637,6 +637,18 @@
                         <span class="pvp-score-meta" id="pvpResultOppMeta"></span>
                     </div>
                 </div>
+                <div class="pvp-gifts" id="pvpGifts" hidden>
+                    <p class="pvp-kicker">送给对手</p>
+                    <div class="pvp-gift-row">
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower" aria-label="花花"><span class="pvp-gift-glyph" aria-hidden="true">🌸</span><span class="pvp-gift-name">花花</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato" aria-label="番茄"><span class="pvp-gift-glyph" aria-hidden="true">🍅</span><span class="pvp-gift-name">番茄</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe" aria-label="烟斗"><span class="pvp-gift-glyph" aria-hidden="true">💨</span><span class="pvp-gift-name">烟斗</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="coffee" aria-label="咖啡"><span class="pvp-gift-glyph" aria-hidden="true">☕</span><span class="pvp-gift-name">咖啡</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="fish" aria-label="臭鱼"><span class="pvp-gift-glyph" aria-hidden="true">🐟</span><span class="pvp-gift-name">臭鱼</span></button>
+                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="leaf" aria-label="菜叶"><span class="pvp-gift-glyph" aria-hidden="true">🥬</span><span class="pvp-gift-name">菜叶</span></button>
+                    </div>
+                    <p id="pvpGiftNote"></p>
+                </div>
                 <div class="pvp-explain pvp-explain-with-art" id="pvpResultRatingBox" hidden>
                     <div class="pvp-explain-main">
                         <p class="pvp-explain-label">段位分</p>
@@ -676,18 +688,6 @@
                         <p id="pvpReportNote"></p>
                     </form>
                     <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpResultBlock" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">屏蔽对手</span></button>
-                </div>
-                <div class="pvp-gifts" id="pvpGifts" hidden>
-                    <p class="pvp-kicker">送给对手</p>
-                    <div class="pvp-gift-row">
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="flower" aria-label="花花"><span class="pvp-gift-glyph" aria-hidden="true">🌸</span><span class="pvp-gift-name">花花</span></button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="tomato" aria-label="番茄"><span class="pvp-gift-glyph" aria-hidden="true">🍅</span><span class="pvp-gift-name">番茄</span></button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="pipe" aria-label="烟斗"><span class="pvp-gift-glyph" aria-hidden="true">💨</span><span class="pvp-gift-name">烟斗</span></button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="coffee" aria-label="咖啡"><span class="pvp-gift-glyph" aria-hidden="true">☕</span><span class="pvp-gift-name">咖啡</span></button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="fish" aria-label="臭鱼"><span class="pvp-gift-glyph" aria-hidden="true">🐟</span><span class="pvp-gift-name">臭鱼</span></button>
-                        <button type="button" class="pvp-btn pvp-gift-send" data-kind="leaf" aria-label="菜叶"><span class="pvp-gift-glyph" aria-hidden="true">🥬</span><span class="pvp-gift-name">菜叶</span></button>
-                    </div>
-                    <p id="pvpGiftNote"></p>
                 </div>
                 <div class="pvp-actions">
                     <button type="button" class="pvp-btn pvp-btn-primary ctl ctl-primary" id="pvpResultAgain" data-ctl-kind="primary" data-state="default" hidden><span class="ctl-label">再次约战</span></button>

@@ -9,6 +9,7 @@ import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
 import { hydrateGiftButton } from "./gift-art.js";
+import { playGiftThrow } from "./gift-throw.js";
 
 let chart = null;
 let chartObserver = null;
@@ -454,6 +455,7 @@ function wireGifts(view) {
           method: "POST",
           body: { kind: button.dataset.kind },
         });
+        try { playGiftThrow(button.dataset.kind, button); } catch { /* animation is cosmetic */ }
         if (note) note.textContent = "已送出。";
       } catch (err) {
         if (note) note.textContent = err.message || "没能送出";
