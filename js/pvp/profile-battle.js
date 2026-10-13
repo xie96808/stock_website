@@ -1,4 +1,4 @@
-import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
+import { closeAuthModal, displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { rankPoints, rankProgress, rankIconPathForTitle } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
@@ -169,18 +169,8 @@ export async function syncPvpProfile() {
   const on = await pvpEnabled();
   const auth = getAuthState();
   const loggedIn = !!(auth.user && auth.ready !== false);
-  let chip = document.getElementById("pvpArchiveBtn");
-  const host = document.getElementById("authChip");
-  if (on && host && !chip) {
-    chip = document.createElement("button");
-    chip.type = "button";
-    chip.id = "pvpArchiveBtn";
-    chip.className = "auth-login-btn";
-    chip.textContent = "对战档案";
-    chip.addEventListener("click", () => { showPvpHistory().catch(() => {}); });
-    host.appendChild(chip);
-  }
-  if (chip) chip.hidden = !(on && loggedIn);
+  // 对战档案 lives in the account panel (top-right 个人资料), not as a home chip.
+  document.getElementById("pvpArchiveBtn")?.remove();
 
   const panel = document.getElementById("authSettingsPanel");
   if (!panel) return;
@@ -196,10 +186,26 @@ export async function syncPvpProfile() {
     rank.id = "pvpSettingsRank";
     rank.className = "pvp-settings-rank";
     rank.textContent = "段位";
-    section.append(title, rank);
+    const archive = document.createElement("button");
+    archive.type = "button";
+    archive.id = "pvpSettingsArchiveBtn";
+    archive.className = "auth-secondary ctl ctl-secondary pvp-settings-archive";
+    archive.dataset.ctlKind = "secondary";
+    archive.dataset.state = "default";
+    const label = document.createElement("span");
+    label.className = "ctl-label";
+    label.textContent = "对战档案";
+    archive.append(label);
+    archive.addEventListener("click", () => {
+      closeAuthModal();
+      showPvpHistory().catch(() => {});
+    });
+    section.append(title, rank, archive);
     panel.insertBefore(section, panel.querySelector("hr") || null);
   }
   if (section) section.hidden = !on;
+  const archiveBtn = document.getElementById("pvpSettingsArchiveBtn");
+  if (archiveBtn) archiveBtn.hidden = !(on && loggedIn);
   const rank = document.getElementById("pvpSettingsRank");
   if (rank && on && loggedIn) {
     pvpFetch("/me/pvp/stats").then(({ data }) => {
@@ -233,6 +239,9 @@ function renderStats(stats, user) {
   });
   node.append(card);
   if (!stats || stats.empty) return;
+  const recentLabel = document.createElement("p");
+  recentLabel.className = "pvp-dots-label";
+  recentLabel.textContent = "近期战绩";
   const dots = document.createElement("div");
   dots.className = "pvp-dots";
   for (const outcome of stats.recent || []) {
@@ -244,7 +253,30 @@ function renderStats(stats, user) {
   const completed = document.createElement("p");
   completed.className = "pvp-dossier-more";
   completed.textContent = `完整局 ${stats.completedGames} · 完整局平均收益 ${formatPpm(stats.meanCompletedReturnPpm)} · 最佳完整局收益 ${formatPpm(stats.bestCompletedReturnPpm)} · 近 20 场认输 ${stats.recentForfeits}`;
+  if ((stats.recent || []).length) node.append(recentLabel);
   node.append(dots, completed);
+}
+
+// 「战绩详情」fold: detailed rows hidden by default, toggled by a hand-drawn control.
+function setHistoryFold(open) {
+  const toggle = document.getElementById("pvpHistoryToggle");
+  const fold = document.getElementById("pvpHistoryFold");
+  if (!toggle || !fold) return;
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  const glyph = toggle.querySelector(".pvp-details-glyph");
+  if (glyph) glyph.textContent = open ? "▴" : "▾";
+  fold.dataset.open = open ? "true" : "false";
+  fold.inert = !open;
+  fold.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+function bindHistoryFold() {
+  const toggle = document.getElementById("pvpHistoryToggle");
+  if (!toggle || toggle.dataset.bound === "1") return;
+  toggle.dataset.bound = "1";
+  toggle.addEventListener("click", () => {
+    setHistoryFold(toggle.getAttribute("aria-expanded") !== "true");
+  });
 }
 
 function renderBlocks(data) {
@@ -304,6 +336,10 @@ export async function showPvpHistory() {
   const statsNode = document.getElementById("pvpStats");
   const blocks = document.getElementById("pvpBlockList");
   if (list) list.replaceChildren();
+  bindHistoryFold();
+  setHistoryFold(false);
+  const foldToggle = document.getElementById("pvpHistoryToggle");
+  if (foldToggle) foldToggle.hidden = true;
   if (statsNode) statsNode.replaceChildren();
   if (blocks) blocks.replaceChildren();
   if (empty) {
@@ -327,6 +363,7 @@ export async function showPvpHistory() {
       }
       return;
     }
+    if (foldToggle) foldToggle.hidden = false;
     for (const row of entries) {
       const item = document.createElement("button");
       item.type = "button";
