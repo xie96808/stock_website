@@ -11,8 +11,8 @@ android {
         applicationId = "top.xieyw.stockgame"
         minSdk = 24
         targetSdk = 35
-        versionCode = 17
-        versionName = "1.1.2"
+        versionCode = 18
+        versionName = "1.1.3"
     }
 
     signingConfigs {
