@@ -572,3 +572,40 @@ html:not([data-theme="dark"]) .pill[data-mode="light"] {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--terra);
 }
+
+/* Paper band behind the fixed top chrome once the page is scrolled (js/controls-p4.js
+   initChromeBand). Sits above page content, below #authChip (40) / .top-left-chrome (45)
+   and every modal; repeats the notebook ruling so the band reads as the same sheet. */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 58px;
+    z-index: 39;
+    pointer-events: none;
+    background-color: var(--paper);
+    background-image: repeating-linear-gradient(transparent 0 27px, var(--grid-line) 27px 28px);
+    -webkit-mask-image: linear-gradient(#000 0 calc(100% - 8px), transparent);
+    mask-image: linear-gradient(#000 0 calc(100% - 8px), transparent);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+html.is-chrome-scrolled body::after {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 160ms ease, visibility 0s;
+}
+@media (max-width: 640px) {
+    body::after { height: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    body::after, html.is-chrome-scrolled body::after { transition: none; }
+}
+/* Sticky PvP countdown must stay visible below the band, not hidden under it. */
+html.is-chrome-scrolled #pvpBattleTop { top: 58px; }
+@media (max-width: 640px) {
+    html.is-chrome-scrolled #pvpBattleTop { top: 62px; }
+}

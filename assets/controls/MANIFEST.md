@@ -116,7 +116,7 @@ Sizes from pr161-review screenshots (780px captures = 2× of 390 CSS px).
 | `ctl-timer-ring-fill-segmented` | 72×72 | fill-segmented | center | 4px | false | ink band with 12 tick gaps; conic mask; tilt=0 |
 | `ctl-timer-ring-urgent` | 72×72 | urgent | center | 4px | false | cinnabar band for last seconds; conic mask; tilt=0 |
 | `ctl-share-save-default` | 56×48 | default | center | 4px | false | terracotta/cinnabar pill, icon-only; hand-drawn download-tray icon centered; no label zone; tilt=0 |
-| `ctl-share-save-press` | 56×48 | press | center | 4px | false | sunk: shadow 0.8px, nudged +2/+2.4, darker, thicker stroke; tilt=0 |
+| `ctl-share-save-press` | 56×48 | press | center | 4px | false | sunk: shadow 0.8px, nudged +1.2/+1.4 (reduced so the untilted pill stays inside the safe margin), darker, thicker stroke; tilt=0 |
 | `ctl-share-save-loading` | 56×48 | loading | center | 4px | false | hand-drawn spinner arc in icon area (rotate via CSS or swap); tilt=0 |
 | `ctl-share-save-disabled` | 56×48 | disabled | center | 4px | false | light kraft fill, dashed border, faint hatch, faded icon; tilt=0 |
 
