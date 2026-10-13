@@ -1,3 +1,4 @@
+import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
 import { coinIconHtml } from "../jiu-coin.js";
@@ -184,7 +185,7 @@ function openOppCard(face) {
   const recent = document.getElementById("pvpOppCardRecent");
   const signature = document.getElementById("pvpOppCardSignature");
   if (avatar) {
-    avatar.src = displayAvatarUrl(face);
+    setPvpAvatar(avatar, face, { size: 64 });
     avatar.alt = "";
   }
   if (name) name.textContent = face.nickname || "对手";
@@ -235,7 +236,7 @@ function paintSeat(prefix, face, fallback) {
   const who = face?.nickname || fallback;
   if (name) name.textContent = who;
   if (img) {
-    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    setPvpAvatar(img, face || { avatarId: 1 });
     img.alt = "";
   }
 }

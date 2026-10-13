@@ -1883,3 +1883,153 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   opacity: 0;
 }
+
+/* ---------- 双人对战 hub layout (back row / centred title / share / bottom dossier) ---------- */
+#pvpLobbyScreen .pvp-hub-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+#pvpLobbyScreen .pvp-hub-back-row {
+  display: flex;
+  justify-content: flex-start;
+}
+#pvpLobbyScreen .pvp-hub-title {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.15rem;
+}
+#pvpLobbyScreen .pvp-hub-kicker {
+  display: inline-block;
+  padding: 0.12rem 0.7rem 0.18rem;
+  border: 2px solid var(--terra, #c4553b);
+  border-radius: 6px 10px 7px 11px;
+  color: var(--terra, #c4553b);
+  font-family: var(--kaiti);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.36em;
+  text-indent: 0.36em;
+  transform: rotate(-2.5deg);
+}
+#pvpLobbyScreen .pvp-hub-h2 {
+  position: relative;
+  margin: 0;
+  padding: 0 0.2em 0.32em;
+  font-family: var(--kaiti);
+  font-weight: 800;
+  font-size: clamp(2.3rem, 10vw, 3.2rem);
+  line-height: 1.15;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  color: var(--ink);
+  text-shadow: 2px 2px 0 color-mix(in srgb, var(--terra, #c4553b) 28%, transparent);
+}
+/* Brush stroke under the title (inline SVG, follows currentColor via mask). */
+#pvpLobbyScreen .pvp-hub-h2::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 0;
+  height: 0.38em;
+  background: var(--terra, #c4553b);
+  opacity: 0.85;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C30 4 62 6 96 7 C130 8 160 3 197 6 L196 9 C160 7 128 12 94 11 C60 10 30 9 4 12 Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 14' preserveAspectRatio='none'%3E%3Cpath d='M3 9 C30 4 62 6 96 7 C130 8 160 3 197 6 L196 9 C160 7 128 12 94 11 C60 10 30 9 4 12 Z'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+
+#pvpLobbyScreen .pvp-cover-wrap {
+  display: block;
+  grid-column: 1 / -1;
+  width: min(560px, 100%);
+  margin: 0 auto;
+}
+#pvpLobbyScreen .pvp-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+  object-fit: contain;
+}
+
+/* Big centred 分享对战 with a hand-drawn paper-plane icon. */
+#pvpLobbyScreen .pvp-share-big {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: min(320px, 100%);
+  min-height: 58px;
+  margin: 0.4rem auto 0.6rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+#pvpLobbyScreen .pvp-share-big[hidden] { display: none; }
+#pvpLobbyScreen .pvp-share-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  fill: color-mix(in srgb, var(--terra, #c4553b) 18%, transparent);
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: rotate(-6deg);
+}
+#pvpLobbyScreen #pvpShareNote { text-align: center; }
+
+/* 余额 docked inside the rank card, right side of the score row. */
+#pvpLobbyScreen .pvp-dossier-balance { margin: 0.4rem 0; }
+#pvpLobbyScreen .pvp-dossier .pvp-dossier-balance {
+  position: absolute;
+  right: 0;
+  top: 58px;
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 18px;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+#pvpLobbyScreen .pvp-dossier:not(.ctl-rank-card) { position: relative; }
+#pvpLobbyScreen #pvpLobbyMe { margin-top: 1.1rem; }
+#pvpLobbyScreen .pvp-hub-about { margin-top: 0.8rem; }
+/* Cover art carries the title: keep the heading for screen readers only. */
+#pvpLobbyScreen.pvp-hub-has-cover .pvp-hub-title {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+/* Drawn bot avatars: transparent art inside the round avatar frame. bot-a and
+   bot-glitch are cut flat at the bottom, so they sit on the frame's bottom edge
+   and the round clip makes the cut read as intentional. */
+img.pvp-bot-art {
+  object-fit: cover;
+  object-position: 50% 100%;
+  background: var(--paper-2, #efe6d6);
+  border-radius: 50%;
+  overflow: hidden;
+}
+/* Trim the transparent margin under the flat cut (~5.6% of the 512 canvas) so
+   the cut lands on the bottom of the round frame, which clips its corners. */
+img.pvp-bot-art[data-bot-art="bot-a"],
+img.pvp-bot-art[data-bot-art="bot-glitch"] {
+  object-fit: cover;
+  object-position: 50% 100%;
+  object-view-box: inset(0% 5.6% 5.6% 5.6%);
+}

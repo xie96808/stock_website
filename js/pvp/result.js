@@ -1,3 +1,4 @@
+import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
 import { buildKlineOption } from "../kline-option.js";
@@ -56,7 +57,7 @@ function paintSeat(prefix, face, fallback) {
   const who = face?.nickname || fallback;
   if (name) name.textContent = who;
   if (img) {
-    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    setPvpAvatar(img, face || { avatarId: 1 });
     img.alt = "";
   }
 }
@@ -251,10 +252,8 @@ function coinPhrase(delta) {
   if (value > 0) {
     return `<span class="jiu-coin-amt" aria-label="获得 ${value} 韭币">获得 <span class="jiu-price-num">${value}</span>${icon}</span>`;
   }
-  if (value < 0) {
-    const lost = Math.abs(value);
-    return `<span class="jiu-coin-amt" aria-label="失去 ${lost} 韭币">失去 <span class="jiu-price-num">${lost}</span>${icon}</span>`;
-  }
+  // Losses: no "失去 N" label (balance/fee logic unchanged; see 余额 in the hub).
+  if (value < 0) return "";
   return `<span class="jiu-coin-amt" aria-label="韭币 0"><span class="jiu-price-num">0</span>${icon}</span>`;
 }
 
@@ -273,7 +272,7 @@ function paintSettleSide(which, face, fallback) {
   const name = document.getElementById(`pvpWin${which}Name`);
   if (name) name.textContent = face?.nickname || fallback;
   if (img) {
-    img.src = displayAvatarUrl(face || { avatarId: 1 });
+    setPvpAvatar(img, face || { avatarId: 1 });
     img.alt = "";
   }
   paintSettleReturn(`pvpWin${which}Return`, face?.returnPpm);
