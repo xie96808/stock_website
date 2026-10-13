@@ -980,3 +980,19 @@
     color: var(--mute);
     letter-spacing: 0.04em;
 }
+
+/* Corner ribbons live in a clip box so the rotated band never pokes past the card. */
+.start-screen .lane-ribbon-clip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+}
+/* Desktop row layout: keep the CTA pill clear of the corner ribbon and inside the card ink. */
+@media (min-width: 801px) {
+    .start-screen :is(.daily-challenge-lane, .classic-mode-lane, .oneshot-mode-lane, .survival-mode-lane) {
+        padding-right: 46px;
+    }
+}

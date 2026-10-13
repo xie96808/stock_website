@@ -224,7 +224,7 @@
                     <div class="lanes sim-hub-lanes play-modes-lanes" id="playModes" hidden>
                         <button type="button" class="hub-back" onclick="showSimHub()">← 返回模拟盘</button>
                         <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
-                            <span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span>
+                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span></span>
                             <span class="mark daily-challenge-mark">日</span>
                             <span class="copy">
                                 <small>全站同题挑战</small>
@@ -236,7 +236,7 @@
                         </button>
                         <button type="button" class="hub-board-link ctl ctl-secondary" id="dailyChallengeBoardBtn" data-ctl-kind="secondary" data-state="default" hidden onclick="onDailyChallengeBoardClick(event)"><span class="ctl-label">查看日榜</span></button>
                         <button type="button" class="lane classic-mode-lane" onclick="startClassicPractice()">
-                            <span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span>
+                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span></span>
                             <span class="mark classic-mode-mark">练</span>
                             <span class="copy">
                                 <small>经典练习</small>
@@ -246,7 +246,7 @@
                             <span class="cta cta-fill classic-mode-cta">开始经典练习</span>
                         </button>
                         <button type="button" class="lane oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
-                            <span class="oneshot-mode-ribbon" aria-hidden="true">一击</span>
+                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="oneshot-mode-ribbon" aria-hidden="true">一击</span></span>
                             <span class="mark oneshot-mode-mark">梭</span>
                             <span class="copy">
                                 <small>一把梭</small>
@@ -256,7 +256,7 @@
                             <span class="cta cta-fill oneshot-mode-cta">开始一把梭</span>
                         </button>
                         <button type="button" class="lane survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
-                            <span class="survival-mode-ribbon" aria-hidden="true">风险</span>
+                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="survival-mode-ribbon" aria-hidden="true">风险</span></span>
                             <span class="mark survival-mode-mark">生</span>
                             <span class="copy">
                                 <small>活过三十日</small>

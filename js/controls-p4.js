@@ -26,7 +26,25 @@ function wrapGlyph(btn) {
   btn.dataset.p4Back = "1";
 }
 
+/* Fixed top chrome (纸/墨 · 缩放 · 公告/韭币/账号) floats over the page; once the page
+   scrolls, html.is-chrome-scrolled shows a paper band behind it so content no longer
+   shows through the gaps between the chips (base.css body::after). */
+let chromeBandBound = false;
+export function initChromeBand(win = typeof window !== "undefined" ? window : null) {
+  if (!win || chromeBandBound) return;
+  chromeBandBound = true;
+  const html = win.document.documentElement;
+  let raf = 0;
+  const sync = () => {
+    raf = 0;
+    html.classList.toggle("is-chrome-scrolled", (win.scrollY || 0) > 4);
+  };
+  win.addEventListener("scroll", () => { if (!raf) raf = win.requestAnimationFrame(sync); }, { passive: true });
+  sync();
+}
+
 export function initP4Controls(root = document) {
+  if (root === (typeof document !== "undefined" ? document : null)) initChromeBand();
   root.querySelectorAll(BACK_SEL).forEach(wrapGlyph);
   if (typeof MutationObserver !== "function" || !root.body) return;
   let queued = false;
