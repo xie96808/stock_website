@@ -8,6 +8,8 @@ import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marks
 import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
+import { hydrateGiftButton } from "./gift-art.js";
+import { playGiftThrow } from "./gift-throw.js";
 
 let chart = null;
 let chartObserver = null;
@@ -300,6 +302,12 @@ function showSettle(view, celebrate) {
     }, 4000);
   }
   text("pvpWinTitle", resultHeadline(view));
+  const winTitle = document.getElementById("pvpWinTitle");
+  if (winTitle) winTitle.dataset.outcome = outcome || "";
+  const meSide = document.getElementById("pvpWinMeSide");
+  const oppSide = document.getElementById("pvpWinOppSide");
+  if (meSide) meSide.dataset.outcome = view?.me?.outcome || "";
+  if (oppSide) oppSide.dataset.outcome = view?.opponent?.outcome || "";
   paintIdentity("pvpWin", view);
   const auth = getAuthState().user;
   paintSettleSide("Me", {
@@ -431,6 +439,7 @@ function wireGifts(view) {
   const note = document.getElementById("pvpGiftNote");
   if (note) note.textContent = "";
   const buttons = [...document.querySelectorAll("#pvpGifts .pvp-gift-send")];
+  for (const button of buttons) hydrateGiftButton(button);
   const canSend = !!view?.opponent?.userId && !!view?.matchId;
   if (box) box.hidden = !canSend;
   for (const button of buttons) {
@@ -446,6 +455,7 @@ function wireGifts(view) {
           method: "POST",
           body: { kind: button.dataset.kind },
         });
+        try { playGiftThrow(button.dataset.kind, button); } catch { /* animation is cosmetic */ }
         if (note) note.textContent = "已送出。";
       } catch (err) {
         if (note) note.textContent = err.message || "没能送出";

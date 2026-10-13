@@ -91,8 +91,18 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opp.label.show, true);
   assert.equal(opp.symbolOffset[0], 0);
   assert.ok(opp.symbolOffset[1] <= -24);
-  assert.equal(opp.symbol, "roundRect");
-  assert.match(String(opp.itemStyle.color), /61, 184, 106|3db86a/i);
+  assert.equal(opp.symbol, "diamond");
+  assert.match(String(opp.itemStyle.color), /7c4dff/i);
+  const oppBuy = buildKlineOption({
+    mode: "pvp",
+    bars,
+    historyLength: 1,
+    pvpMarks: [{ label: "d1", side: "opponent", kind: "buy" }],
+  }).series[0].markPoint.data.find((point) => point.value === "对手买");
+  assert.equal(oppBuy.itemStyle.color, "#2f6fed");
+  assert.equal(oppBuy.symbol, "diamond");
+  assert.equal(opt.tooltip.triggerOn, "click");
+  assert.equal(opt.animation, false);
   const valued = buildKlineOption({
     mode: "pvp",
     bars,
@@ -220,7 +230,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(resultHtml, /class="pvp-gift-row"/);
   assert.match(resultHtml, /aria-label="花花"/);
   assert.match(resultHtml, /aria-label="番茄"/);
-  assert.match(resultHtml, /aria-label="电子烟斗"/);
+  assert.match(resultHtml, /aria-label="烟斗"/);
   assert.match(resultHtml, /aria-label="咖啡"/);
   assert.match(resultHtml, /🌸/);
   assert.match(resultHtml, /🍅/);
@@ -252,7 +262,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(analysis, /下面是这段行情|技术复盘/);
   const notices = readFileSync(new URL("js/pvp/notices.js", root), "utf8");
   assert.match(notices, /送来\$\{GIFT_NAME\[kind\]\}/);
-  assert.match(notices, /电子烟斗/);
+  assert.match(notices, /烟斗/);
   assert.match(notices, /咖啡/);
   assert.match(notices, /GIFT_MS = 1700/);
   assert.match(notices, /🌸/);
@@ -262,7 +272,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(css, /pvp-settle-card/);
   assert.match(css, /max-width:\s*360px/);
   assert.match(css, /pvp-gift-caption/);
-  assert.match(css, /pvp-gift-row[\s\S]*flex-wrap:\s*nowrap/);
+  assert.match(css, /\.pvp-gift-row \{[^}]*flex-wrap:\s*wrap;/);
   assert.match(css, /position:\s*absolute/);
   assert.match(room, /已行动/);
   assert.doesNotMatch(room, /pvpSelfLock|lockCaption|opponentLockText/);

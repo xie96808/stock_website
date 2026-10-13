@@ -51,4 +51,6 @@ test("gifts wait until the match is over, and a fast second send is refused", ()
   assert.equal(stranger.status, 404);
   const unknown = sendReaction(db, { matchId: "m2", fromUserId: 1, kind: "coin", now: 8_000 });
   assert.equal(unknown.status, 400);
+  assert.equal(sendReaction(db, { matchId: "m2", fromUserId: 1, kind: "fish", now: 10_000 }).ok, true);
+  assert.equal(sendReaction(db, { matchId: "m2", fromUserId: 1, kind: "leaf", now: 12_000 }).ok, true);
 });

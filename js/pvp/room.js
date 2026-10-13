@@ -286,11 +286,14 @@ function destroyChart() {
   chartKey = "";
   chartZoomKey = "";
   chartClickBound = false;
+  tipDismissBound = false;
+  tipIndex = -1;
   if (chartObserver) {
     chartObserver.disconnect();
     chartObserver = null;
   }
   if (chart) {
+    try { chart.__pvpTipCleanup?.(); } catch { /* ignore */ }
     chart.dispose();
     chart = null;
   }
@@ -494,17 +497,29 @@ function paintActions() {
 }
 
 function bindChartResize(node) {
-  window.resizePvpChart = () => { if (chart) chart.resize(); };
+  let lastW = 0;
+  let lastH = 0;
+  const resizeIfNeeded = () => {
+    if (!chart || !node) return;
+    const w = node.clientWidth;
+    const h = node.clientHeight;
+    if (w < 8 || h < 8) return;
+    if (w === lastW && h === lastH) return;
+    lastW = w;
+    lastH = h;
+    chart.resize();
+  };
+  window.resizePvpChart = resizeIfNeeded;
   if (chartObserver) chartObserver.disconnect();
   if (typeof ResizeObserver === "function") {
     chartObserver = new ResizeObserver(() => {
-      window.requestAnimationFrame(() => { if (chart) chart.resize(); });
+      window.requestAnimationFrame(resizeIfNeeded);
     });
     chartObserver.observe(node);
   } else {
     chartObserver = null;
   }
-  window.setTimeout(() => { if (chart) chart.resize(); }, 50);
+  window.setTimeout(resizeIfNeeded, 50);
 }
 
 function bindBottomToggle(chartInstance) {
@@ -526,6 +541,66 @@ function bindBottomToggle(chartInstance) {
   });
 }
 
+
+function hidePvpTip() {
+  if (!chart) return;
+  try { chart.dispatchAction({ type: "hideTip" }); } catch { /* ignore */ }
+  try { chart.dispatchAction({ type: "updateAxisPointer", currTrigger: "leave" }); } catch { /* ignore */ }
+}
+
+let tipIndex = -1;
+let tipDismissBound = false;
+
+function bindTipDismiss(chartInstance) {
+  if (tipDismissBound || !chartInstance) return;
+  tipDismissBound = true;
+  chartInstance.on("showTip", (params) => {
+    tipIndex = Number.isInteger(params?.dataIndex) ? params.dataIndex : -1;
+  });
+  chartInstance.on("hideTip", () => { tipIndex = -1; });
+  // Second tap on the same candle closes the tip (click triggerOn alone toggles poorly on some WebViews).
+  chartInstance.getZr().on("click", (event) => {
+    if (!chart || view?.status !== "playing") return;
+    // Clicks on the bottom pane still toggle volume/MACD (bindBottomToggle). Tip dismiss only.
+    if (tipIndex < 0) return;
+    try {
+      const pt = chart.convertFromPixel({ seriesIndex: 0 }, [event.offsetX, event.offsetY]);
+      if (!Array.isArray(pt) || !Number.isFinite(pt[0])) {
+        hidePvpTip();
+        return;
+      }
+    } catch {
+      hidePvpTip();
+    }
+  });
+  const onKey = (e) => {
+    if (e.key === "Escape") hidePvpTip();
+  };
+  const onDoc = (e) => {
+    const node = document.getElementById("pvpChart");
+    if (!node || tipIndex < 0) return;
+    if (node.contains(e.target)) return;
+    // Trade / message controls should clear the tip without trapping the tap.
+    hidePvpTip();
+  };
+  const onCloseBtn = (e) => {
+    const t = e.target;
+    if (!(t instanceof Element)) return;
+    if (!t.closest("[data-pvp-tip-close]")) return;
+    e.preventDefault();
+    e.stopPropagation();
+    hidePvpTip();
+  };
+  document.addEventListener("keydown", onKey);
+  document.addEventListener("pointerdown", onDoc, true);
+  document.addEventListener("click", onCloseBtn, true);
+  chartInstance.__pvpTipCleanup = () => {
+    document.removeEventListener("keydown", onKey);
+    document.removeEventListener("pointerdown", onDoc, true);
+    document.removeEventListener("click", onCloseBtn, true);
+  };
+}
+
 async function paintChart() {
   const node = document.getElementById("pvpChart");
   const market = view?.market;
@@ -543,6 +618,7 @@ async function paintChart() {
       chart = echarts.init(node);
       bindChartResize(node);
       bindBottomToggle(chart);
+      bindTipDismiss(chart);
     }
     chart.setOption(buildKlineOption({
       mode: "pvp",
@@ -630,6 +706,9 @@ async function refresh() {
 
 async function postAction(action) {
   if (!view || view.status !== "playing" || isSubmitting() || pendingNetwork) return;
+  hidePvpTip();
+  // Avoid the browser scrolling a newly-focused trade control into view (chart jerk).
+  try { document.activeElement?.blur?.(); } catch { /* ignore */ }
   setSubmitting(true);
   postedLock = false;
   setText("pvpActionError", "");
@@ -797,6 +876,11 @@ function wireRoom() {
   document.getElementById("pvpLeaveDialog")?.addEventListener("keydown", onLeaveKey);
   document.getElementById("pvpReadyBtn")?.addEventListener("click", () => { postReady().catch(() => {}); });
   document.getElementById("pvpCancelReadyBtn")?.addEventListener("click", () => { postCancelReady().catch(() => {}); });
+  const guardTradePointer = (el) => {
+    el?.addEventListener("pointerdown", () => { hidePvpTip(); }, { passive: true });
+  };
+  guardTradePointer(document.getElementById("pvpHold"));
+  guardTradePointer(document.getElementById("pvpTradePrimary"));
   document.getElementById("pvpHold")?.addEventListener("click", () => { postAction("hold").catch(() => {}); });
   document.getElementById("pvpBuy")?.addEventListener("click", () => { postAction("buy").catch(() => {}); });
   document.getElementById("pvpSell")?.addEventListener("click", () => { postAction("sell").catch(() => {}); });

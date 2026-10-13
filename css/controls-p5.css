@@ -192,6 +192,7 @@ html:not([data-theme="dark"]) .pvp-gift-send:disabled {
   opacity: 0.9;
 }
 html:not([data-theme="dark"]) .pvp-gift-send .pvp-gift-glyph {
+  --pvp-gift-glyph-box: 1.25rem;
   font-size: 1rem;
 }
 html:not([data-theme="dark"]) .pvp-gift-row {

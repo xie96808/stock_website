@@ -3,10 +3,11 @@ import { parseRouteHash } from "../screen-router.js";
 import { openCtlOverlay, closeCtlOverlay, setCtlState } from "../controls.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, pvpSocketHealthy, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
+import { giftArtNode } from "./gift-art.js";
 
 const GIFT_MS = 1700;
-const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "💨", coffee: "☕" };
-const GIFT_NAME = { flower: "花花", tomato: "番茄", pipe: "电子烟斗", coffee: "咖啡" };
+const GIFT_EMOJI = { flower: "🌸", tomato: "🍅", pipe: "💨", coffee: "☕", fish: "🐟", leaf: "🥬" };
+const GIFT_NAME = { flower: "花花", tomato: "番茄", pipe: "烟斗", coffee: "咖啡", fish: "臭鱼", leaf: "菜叶" };
 const IGNORE_KEY = "pvp-ignored-invites";
 const JOIN_KEY = "pvp-join-code";
 
@@ -59,7 +60,7 @@ function giftStage() {
   return node;
 }
 
-function showGift(event) {
+export function showGift(event) {
   if (!event || seenGifts.has(event.id)) return;
   seenGifts.add(event.id);
   const stage = giftStage();
@@ -69,7 +70,9 @@ function showGift(event) {
   const emoji = GIFT_EMOJI[kind];
   const art = document.createElement("p");
   art.className = "pvp-gift-emoji";
-  art.textContent = emoji;
+  const drawn = giftArtNode(kind, { size: 96, className: "pvp-gift-fly-img" });
+  if (drawn) art.append(drawn);
+  else art.textContent = emoji;
   const caption = document.createElement("p");
   caption.className = "pvp-gift-caption";
   const who = event.nickname || "对手";
