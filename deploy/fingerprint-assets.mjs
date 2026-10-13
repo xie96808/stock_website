@@ -269,6 +269,10 @@ export function fingerprintRelease(root, { fingerprintImages = true } = {}) {
       // Keep assets/ URLs stable (JS assigns paths by string, e.g. pvp btn-buy/sell).
       const relImg = relative(rootResolved, file).split(sep).join("/");
       if (relImg === "assets" || relImg.startsWith("assets/")) continue;
+      // Avatar presets are built by JS string (images/avatars/NN.png) in site,
+      // admin, PvP, leaderboards and share image — keep them unhashed so the
+      // one HTML reference (ghost HUD 01.png) doesn't rename the default away.
+      if (relImg.startsWith("images/avatars/")) continue;
       imageAssets.add(file);
     }
   }

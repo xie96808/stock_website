@@ -9,6 +9,9 @@ import {
 } from "./auth-state.js";
 import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
+import { installAvatarFallback } from "./avatar-fallback.js";
+
+installAvatarFallback();
 
 const AVATAR_LABELS = ["", "鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
 const PASSWORD_HINT = "至少 4 位";

@@ -145,10 +145,21 @@ let userQuery = "";
 let userSearchSeq = 0;
 const userDetailCache = new Map();
 
-function avatarSrc(u) {
-  if (u.avatarUrl) return u.avatarUrl;
+function presetAvatarSrc(u) {
   return `/images/avatars/${String(u.avatarId || 1).padStart(2, "0")}.png`;
 }
+function avatarSrc(u) {
+  return u.avatarUrl || presetAvatarSrc(u);
+}
+// Broken custom avatar → the user's preset, then the default preset.
+document.addEventListener("error", (e) => {
+  const img = e.target;
+  if (!img || img.tagName !== "IMG" || !img.classList.contains("ava")) return;
+  const src = img.getAttribute("src") || "";
+  const fb = img.dataset.fallbackSrc || "/images/avatars/01.png";
+  if (src !== fb) img.setAttribute("src", fb);
+  else if (src !== "/images/avatars/01.png") img.setAttribute("src", "/images/avatars/01.png");
+}, true);
 
 function ppmPct(ppm) {
   if (ppm == null || !Number.isFinite(Number(ppm))) return "—";
@@ -160,7 +171,7 @@ const RESULT_LABEL = { win: "胜", loss: "负", draw: "平" };
 function userRowHtml(u) {
   return `<details class="item user-row" data-row-uid="${u.id}">
       <summary>
-        <img class="ava" src="${escapeHtml(avatarSrc(u))}" alt="" width="32" height="32" loading="lazy" decoding="async">
+        <img class="ava" src="${escapeHtml(avatarSrc(u))}" data-fallback-src="${escapeHtml(presetAvatarSrc(u))}" alt="" width="32" height="32" loading="lazy" decoding="async">
         <span class="who"><strong>${escapeHtml(u.nickname)}</strong> <code>${escapeHtml(u.username)}</code></span>
         <span class="meta">#${u.id} · <span class="st st-${escapeHtml(u.status)}">${escapeHtml(u.status)}</span> · ${escapeHtml(u.role)}
         · 韭币 ${u.jiuCoinBalance ?? 0}</span>

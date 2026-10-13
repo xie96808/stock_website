@@ -541,3 +541,21 @@ test('fingerprint: assets/ images stay unhashed (JS string paths)', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('fingerprint: avatar presets stay unhashed even when HTML references them', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sw-fp-ava-'));
+  try {
+    mkdirSync(join(dir, 'images', 'avatars'), { recursive: true });
+    writeFileSync(join(dir, 'images', 'avatars', '01.png'), 'png01');
+    writeFileSync(join(dir, 'images', 'avatars', '02.png'), 'png02');
+    writeFileSync(join(dir, 'images', 'logo.png'), 'logo');
+    writeFileSync(join(dir, 'index.html'), '<img src="images/avatars/01.png"><img src="images/logo.png">');
+    fingerprintRelease(dir, { fingerprintImages: true });
+    assert.deepEqual(readdirSync(join(dir, 'images', 'avatars')).sort(), ['01.png', '02.png']);
+    const html = readFileSync(join(dir, 'index.html'), 'utf8');
+    assert.match(html, /src="images\/avatars\/01\.png"/);
+    assert.ok(readdirSync(join(dir, 'images')).some((n) => /^logo\.[a-f0-9]{10}\.png$/.test(n)), 'other images still hashed');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
