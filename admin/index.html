@@ -15,8 +15,8 @@
 <body>
   <main class="wrap">
     <header class="head">
-      <h1>最小治理后台</h1>
-      <p class="note">非公网运营工具 · 禁用/软删用户 / 下榜与判无效 / 审计。需管理员账号 + 二次验证。整库恢复仅 CLI。</p>
+      <h1>治理后台</h1>
+      <p class="note">非公网运营工具 · 账号 / 韭币 / 战绩 / 公告 / 反馈 / 审计 / 密码。需管理员账号 + 二次验证。整库恢复仅 CLI。</p>
     </header>
 
     <section id="loginPanel" class="card">
@@ -39,8 +39,19 @@
           <button type="button" id="logoutBtn" class="ghost">退出</button>
         </div>
       </div>
-      <p id="opsMsg" class="msg"></p>
+      <p id="opsMsg" class="msg" role="status" aria-live="polite"></p>
 
+      <nav class="tabs" role="tablist" aria-label="后台功能">
+        <button type="button" role="tab" class="tab" data-tab="users" aria-selected="true">账号</button>
+        <button type="button" role="tab" class="tab" data-tab="coin" aria-selected="false">韭币</button>
+        <button type="button" role="tab" class="tab" data-tab="games" aria-selected="false">战绩</button>
+        <button type="button" role="tab" class="tab" data-tab="ann" aria-selected="false">公告</button>
+        <button type="button" role="tab" class="tab" data-tab="fb" aria-selected="false">反馈</button>
+        <button type="button" role="tab" class="tab" data-tab="audit" aria-selected="false">审计</button>
+        <button type="button" role="tab" class="tab" data-tab="security" aria-selected="false">安全</button>
+      </nav>
+
+      <section class="tabpanel" data-panel="users" role="tabpanel">
       <h2>用户 · 禁用 / 解禁 / 软删 / 恢复</h2>
       <div class="row">
         <input id="userQ" placeholder="用户 ID / 登录名 / 昵称" />
@@ -52,7 +63,8 @@
         </select>
         <button type="button" id="userSearchBtn">搜索</button>
       </div>
-      <div id="userList" class="list"></div>
+      <div id="userList" class="list users"></div>
+      <div class="row center"><button type="button" id="userMoreBtn" class="ghost hidden">加载更多</button></div>
       <div class="row">
         <input id="banUserId" placeholder="用户 ID" />
         <select id="banStatus">
@@ -70,6 +82,9 @@
       </div>
       <p class="note">软删会写 tombstone 并撤销会话；整库备份恢复仍仅 CLI。自助注销（凭据已清）不可在此恢复登录。</p>
 
+            </section>
+
+<section class="tabpanel" data-panel="coin" role="tabpanel">
       <h2>韭币 · 余额调整</h2>
       <div class="row">
         <input id="coinUserId" placeholder="用户 ID" />
@@ -84,6 +99,9 @@
       </div>
       <p class="note">用户列表会显示当前韭币余额；调整需二次验证，写入审计。</p>
 
+            </section>
+
+<section class="tabpanel" data-panel="games" role="tabpanel">
       <h2>战绩 · 下榜 / 判无效</h2>
       <div class="row">
         <input id="gameQ" class="grow" placeholder="对局 ID / 用户 ID / 登录名 / 昵称" />
@@ -103,6 +121,9 @@
       </div>
 
 
+            </section>
+
+<section class="tabpanel" data-panel="ann" role="tabpanel">
       <h2>系统公告 · 发布 / 草稿 / 归档</h2>
       <div class="row">
         <select id="annStatusFilter">
@@ -124,7 +145,7 @@
         </select>
       </div>
       <div class="row">
-        <textarea id="annBody" class="grow" rows="3" placeholder="正文（必填）" style="width:100%;min-height:4.5rem;font:inherit"></textarea>
+        <textarea id="annBody" class="grow" rows="3" placeholder="正文（必填）"></textarea>
       </div>
       <div class="row">
         <button type="button" id="annCreateBtn">新建</button>
@@ -136,6 +157,9 @@
       <p class="note">写操作需二次验证。无 ID 时点「发布」且正文已填，将直接新建并上线。公开页仅展示 published；「今日关闭」由访客本地日历日记住。</p>
 
 
+            </section>
+
+<section class="tabpanel" data-panel="fb" role="tabpanel">
       <h2>用户反馈 · 查看 / 已读 / 归档</h2>
       <div class="row">
         <select id="fbStatusFilter">
@@ -157,11 +181,38 @@
       <p id="fbMsg" class="msg"></p>
       <p class="note">列表最新优先。详情含正文与图片（仅管理员可见）。改状态需二次验证。</p>
 
+            </section>
+
+<section class="tabpanel" data-panel="audit" role="tabpanel">
       <h2>审计日志</h2>
       <div class="row">
         <button type="button" id="auditBtn">刷新最近审计</button>
       </div>
       <div id="auditList" class="list"></div>
+      </section>
+
+      <section class="tabpanel" data-panel="security" role="tabpanel">
+      <h2>重置用户密码</h2>
+      <div class="row">
+        <input id="pwResetUserId" placeholder="用户 ID" />
+        <input id="pwResetReason" class="grow" maxlength="200" placeholder="原因（必填，如：用户线下核验身份）" />
+        <button type="button" id="pwResetBtn">生成临时密码</button>
+      </div>
+      <div id="pwResetResult" class="secret hidden" aria-live="polite"></div>
+      <p class="note">需二次验证。生成后旧密码立即失效、该用户所有设备下线；临时密码只显示一次，请经可信渠道交给用户并提醒其登录后自行修改。不能重置自己或其他管理员。</p>
+
+      <h2>修改我的密码</h2>
+      <div class="row">
+        <input id="selfPwCur" type="password" autocomplete="current-password" placeholder="当前密码" />
+        <input id="selfPwNew" type="password" autocomplete="new-password" placeholder="新密码" />
+        <input id="selfPwNew2" type="password" autocomplete="new-password" placeholder="再次输入新密码" />
+        <button type="button" id="selfPwBtn">修改密码</button>
+      </div>
+      <p class="note">修改成功后所有会话下线，需要用新密码重新登录。</p>
+
+      <h2>管理员被锁在门外？</h2>
+      <p class="note left">忘记管理员密码时，由服务器运维在主机上执行：<br><code>node server/scripts/admin-reset-password.mjs &lt;管理员登录名&gt;</code><br>脚本打印一次性临时密码、撤销该账号全部会话并写入审计；网页端不提供免验证找回。</p>
+      </section>
     </section>
   </main>
   <script type="module" src="./admin.js"></script>

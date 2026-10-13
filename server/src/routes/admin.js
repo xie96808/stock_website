@@ -1,6 +1,11 @@
 import { Router } from "express";
-import { verifyPassword } from "../lib/crypto.js";
-import { findUserById } from "../lib/users.js";
+import { randomInt } from "node:crypto";
+import { verifyPassword, hashPassword } from "../lib/crypto.js";
+import { findUserById, updatePassword } from "../lib/users.js";
+import { revokeAllUserSessions } from "../lib/sessions.js";
+import { writeAuditLog } from "../lib/audit.js";
+import { consumeRateLimit, rateLimitFail } from "../lib/rateLimit.js";
+import { readMyStats } from "../lib/pvp/lobby.js";
 import {
   setAdminVerified,
   isAdminVerified,
@@ -101,7 +106,57 @@ router.get("/admin/users/:id", (req, res) => {
   if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
   const data = getAdminUser(id);
   if (!data) return fail(res, 404, "NOT_FOUND", "用户不存在");
-  return ok(res, data);
+  let pvp = null;
+  try {
+    pvp = readMyStats(openDb(), id);
+  } catch {
+    pvp = null;
+  }
+  return ok(res, { ...data, pvp });
+});
+
+// Unambiguous alphabet (no 0/O/1/l/I) for one-time temporary passwords.
+const TEMP_PW_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export function generateTempPassword(len = 12) {
+  let out = "";
+  for (let i = 0; i < len; i += 1) out += TEMP_PW_ALPHABET[randomInt(TEMP_PW_ALPHABET.length)];
+  // Guarantee at least one digit and one letter so it passes validatePassword.
+  return `${out.slice(0, len - 2)}${TEMP_PW_ALPHABET[randomInt(23)]}${"23456789"[randomInt(8)]}`;
+}
+
+/**
+ * Admin resets a regular user's password to a one-time temporary password.
+ * Reauth + CSRF required; refuses admins and self (use CLI or /me/password).
+ * The temp password is returned once and never logged or audited.
+ */
+router.post("/admin/users/:id/password-reset", requireAdminVerified, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (!reason) return fail(res, 400, "REASON_REQUIRED", "请填写原因");
+  if (reason.length > 200) return fail(res, 400, "REASON_TOO_LONG", "原因过长");
+  const byAdmin = consumeRateLimit(`admin-pwreset:actor:${req.user.id}`, 10, 10 * 60 * 1000);
+  if (!byAdmin.ok) return rateLimitFail(res, byAdmin.retryAfterSec, "重置过于频繁，请稍后再试");
+  const row = findUserById(id);
+  if (!row) return fail(res, 404, "NOT_FOUND", "用户不存在");
+  if (row.id === req.user.id) return fail(res, 409, "SELF_RESET", "不能在这里重置自己的密码，请用「修改我的密码」");
+  if (row.role === "admin") return fail(res, 409, "ADMIN_TARGET", "管理员密码只能用服务器命令行重置");
+  if (row.status === "deleted" || row.password_hash === "!") return fail(res, 409, "USER_DELETED", "已注销账号不能重置密码");
+  const byTarget = consumeRateLimit(`admin-pwreset:target:${id}`, 3, 10 * 60 * 1000);
+  if (!byTarget.ok) return rateLimitFail(res, byTarget.retryAfterSec, "该账号刚重置过，请稍后再试");
+  const tempPassword = generateTempPassword();
+  updatePassword(id, await hashPassword(tempPassword));
+  revokeAllUserSessions(id);
+  writeAuditLog({
+    actorId: req.user.id,
+    action: "user.password_reset",
+    targetType: "user",
+    targetId: String(id),
+    reason,
+    requestId: res.locals.requestId,
+  });
+  res.set("Cache-Control", "no-store");
+  return ok(res, { userId: id, username: row.username_normalized, tempPassword, sessionsRevoked: true });
 });
 
 router.post("/admin/users/:id/jiu-coin", requireAdminVerified, (req, res) => {

@@ -134,28 +134,177 @@ $("reauthBtn").onclick = async () => {
   setMsg($("opsMsg"), "二次验证成功（约 15 分钟有效）", true);
 };
 
-function renderUsers(items) {
+let userCursor = null;
+let userQuery = "";
+let userSearchSeq = 0;
+const userDetailCache = new Map();
+
+function avatarSrc(u) {
+  if (u.avatarUrl) return u.avatarUrl;
+  return `/images/avatars/${String(u.avatarId || 1).padStart(2, "0")}.png`;
+}
+
+function ppmPct(ppm) {
+  if (ppm == null || !Number.isFinite(Number(ppm))) return "—";
+  return `${(Number(ppm) / 10000).toFixed(2)}%`;
+}
+
+const RESULT_LABEL = { win: "胜", loss: "负", draw: "平" };
+
+function userRowHtml(u) {
+  return `<details class="item user-row" data-row-uid="${u.id}">
+      <summary>
+        <img class="ava" src="${escapeHtml(avatarSrc(u))}" alt="" width="32" height="32" loading="lazy" decoding="async">
+        <span class="who"><strong>${escapeHtml(u.nickname)}</strong> <code>${escapeHtml(u.username)}</code></span>
+        <span class="meta">#${u.id} · <span class="st st-${escapeHtml(u.status)}">${escapeHtml(u.status)}</span> · ${escapeHtml(u.role)}
+        · 韭币 ${u.jiuCoinBalance ?? 0}</span>
+        <button type="button" data-uid="${u.id}">填入</button>
+      </summary>
+      <div class="user-detail" data-detail-uid="${u.id}"><p class="note left">展开加载详情…</p></div>
+    </details>`;
+}
+
+function userDetailHtml(u, d) {
+  const user = d?.user || u;
+  const st = d?.stats || {};
+  const p = d?.pvp || null;
+  const recent = p && !p.empty && p.recent?.length
+    ? p.recent.map((r) => `<span class="res res-${escapeHtml(r)}">${RESULT_LABEL[r] || escapeHtml(r)}</span>`).join("")
+    : "—";
+  const pvpLine = !p || p.empty
+    ? `<dd>暂无对战记录</dd>`
+    : `<dd>${escapeHtml(p.title?.name || "—")} · 积分 ${p.rating ?? "—"}${p.title?.inPlacement ? "（定级中）" : ""}</dd>
+       <dt>对战战绩</dt><dd>${p.wins} 胜 ${p.losses} 负 ${p.draws} 平 · 胜率 ${Math.round((p.winRate || 0) * 100)}% · 近期逃跑 ${p.recentForfeits ?? 0}</dd>
+       <dt>近期</dt><dd class="recent">${recent}</dd>`;
+  const isBan = user.status === "disabled";
+  const canMod = user.role !== "admin" && user.status !== "deleted";
+  return `<dl class="kv">
+      <dt>签名</dt><dd>${user.signature ? escapeHtml(user.signature) : "<span class=\"dim\">（未设置）</span>"}</dd>
+      <dt>韭币</dt><dd>${user.jiuCoinBalance ?? 0}</dd>
+      <dt>单机战绩</dt><dd>已结算 ${st.settledCount ?? 0} · 有效 ${st.validCount ?? 0} · 已下榜 ${st.hiddenCount ?? 0}</dd>
+      <dt>段位</dt>${pvpLine}
+      <dt>上榜</dt><dd>${user.leaderboardOptIn ? "参与" : "不参与"}</dd>
+      <dt>注册</dt><dd>${escapeHtml(user.createdAt || "—")}${user.deletedAt ? ` · 注销 ${escapeHtml(user.deletedAt)}` : ""}</dd>
+    </dl>
+    ${canMod ? `<div class="row inline-mod">
+      <input class="grow" data-reason-uid="${user.id}" maxlength="200" placeholder="原因（必填）" />
+      <button type="button" data-ban-uid="${user.id}" data-to="${isBan ? "active" : "disabled"}">${isBan ? "解禁" : "禁用"}</button>
+      <button type="button" class="ghost" data-pw-uid="${user.id}">重置密码…</button>
+    </div>` : `<p class="note left">${user.role === "admin" ? "管理员账号不可在此禁用或重置密码" : "已注销账号请用「软删/恢复」处理"}</p>`}`;
+}
+
+async function loadUserDetail(uid, force = false) {
+  const box = document.querySelector(`[data-detail-uid="${uid}"]`);
+  if (!box) return;
+  if (!force && userDetailCache.has(uid)) {
+    box.innerHTML = userDetailHtml(null, userDetailCache.get(uid));
+    wireDetail(box);
+    return;
+  }
+  const r = await api(`/admin/users/${encodeURIComponent(uid)}`);
+  if (r.status !== 200) {
+    box.innerHTML = `<p class="msg">${escapeHtml(r.json?.error?.message || "详情加载失败")}</p>`;
+    return;
+  }
+  userDetailCache.set(uid, r.json.data);
+  const cur = document.querySelector(`[data-detail-uid="${uid}"]`);
+  if (!cur) return;
+  cur.innerHTML = userDetailHtml(null, r.json.data);
+  wireDetail(cur);
+}
+
+function wireDetail(box) {
+  box.querySelectorAll("button[data-ban-uid]").forEach((btn) => {
+    btn.onclick = async () => {
+      if (btn.disabled) return;
+      const uid = btn.dataset.banUid;
+      const reason = box.querySelector(`[data-reason-uid="${uid}"]`)?.value || "";
+      if (!reason.trim()) {
+        setMsg($("opsMsg"), "请填写原因");
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const r = await api(`/admin/users/${encodeURIComponent(uid)}/status`, {
+          method: "PATCH",
+          csrf: csrfToken,
+          body: { status: btn.dataset.to, reason },
+        });
+        if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+          adminVerified = false;
+          updateVerifyBadge();
+        }
+        if (r.status !== 200) {
+          setMsg($("opsMsg"), r.json?.error?.message || "操作失败");
+          return;
+        }
+        setMsg($("opsMsg"), `用户 #${uid} 状态已更新为 ${r.json.data.user.status}`, true);
+        userDetailCache.delete(Number(uid));
+        await reloadUserRow(Number(uid));
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+  box.querySelectorAll("button[data-pw-uid]").forEach((btn) => {
+    btn.onclick = () => {
+      $("pwResetUserId").value = btn.dataset.pwUid;
+      setResultHidden();
+      selectTab("security");
+      $("pwResetReason").focus();
+    };
+  });
+}
+
+async function reloadUserRow(uid) {
+  const r = await api(`/admin/users/${encodeURIComponent(uid)}`);
+  if (r.status !== 200) return;
+  userDetailCache.set(uid, r.json.data);
+  const row = document.querySelector(`[data-row-uid="${uid}"]`);
+  if (!row) return;
+  const wasOpen = row.open;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = userRowHtml(r.json.data.user);
+  const fresh = tmp.firstElementChild;
+  row.replaceWith(fresh);
+  wireUserRow(fresh);
+  if (wasOpen) fresh.open = true;
+}
+
+function fillUserId(uid) {
+  $("banUserId").value = uid;
+  if ($("delUserId")) $("delUserId").value = uid;
+  if ($("coinUserId")) $("coinUserId").value = uid;
+  if ($("pwResetUserId")) $("pwResetUserId").value = uid;
+}
+
+function wireUserRow(row) {
+  const btn = row.querySelector("button[data-uid]");
+  if (btn) {
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      fillUserId(btn.dataset.uid);
+      setMsg($("opsMsg"), `已填入用户 #${btn.dataset.uid}`, true);
+    };
+  }
+  row.addEventListener("toggle", () => {
+    if (row.open) loadUserDetail(Number(row.dataset.rowUid));
+  });
+}
+
+function renderUsers(items, { append = false } = {}) {
   const el = $("userList");
-  if (!items?.length) {
+  if (!append) el.innerHTML = "";
+  if (!items?.length && !append) {
     el.innerHTML = `<div class="item">无结果</div>`;
     return;
   }
-  el.innerHTML = items
-    .map(
-      (u) => `<div class="item">
-      #${u.id} · <code>${escapeHtml(u.username)}</code> · ${escapeHtml(u.nickname)}
-      · ${escapeHtml(u.status)} · ${escapeHtml(u.role)}
-      · 韭币 ${u.jiuCoinBalance ?? 0}
-      <button type="button" data-uid="${u.id}">填入</button>
-    </div>`
-    )
-    .join("");
-  el.querySelectorAll("button[data-uid]").forEach((btn) => {
-    btn.onclick = () => {
-      $("banUserId").value = btn.dataset.uid;
-      if ($("delUserId")) $("delUserId").value = btn.dataset.uid;
-      if ($("coinUserId")) $("coinUserId").value = btn.dataset.uid;
-    };
+  const tmp = document.createElement("div");
+  tmp.innerHTML = (items || []).map(userRowHtml).join("");
+  [...tmp.children].forEach((row) => {
+    el.appendChild(row);
+    wireUserRow(row);
   });
 }
 
@@ -187,18 +336,39 @@ $("coinAdjustBtn").onclick = async () => {
   $("userSearchBtn").click();
 };
 
-$("userSearchBtn").onclick = async () => {
+async function searchUsers({ more = false } = {}) {
   setMsg($("opsMsg"), "");
   const qs = new URLSearchParams();
-  if ($("userQ").value.trim()) qs.set("q", $("userQ").value.trim());
-  if ($("userStatus").value) qs.set("status", $("userStatus").value);
+  if (more) {
+    if (!userCursor) return;
+    qs.set("cursor", userCursor);
+    for (const [k, v] of new URLSearchParams(userQuery)) qs.set(k, v);
+  } else {
+    if ($("userQ").value.trim()) qs.set("q", $("userQ").value.trim());
+    if ($("userStatus").value) qs.set("status", $("userStatus").value);
+    userQuery = qs.toString();
+    userDetailCache.clear();
+  }
+  const seq = ++userSearchSeq;
+  const moreBtn = $("userMoreBtn");
+  moreBtn.disabled = true;
   const r = await api(`/admin/users?${qs}`);
+  if (seq !== userSearchSeq) return;
+  moreBtn.disabled = false;
   if (r.status !== 200) {
     setMsg($("opsMsg"), r.json?.error?.message || "搜索失败");
     return;
   }
-  renderUsers(r.json.data.items);
-};
+  renderUsers(r.json.data.items, { append: more });
+  userCursor = r.json.data.nextCursor || null;
+  moreBtn.classList.toggle("hidden", !userCursor);
+}
+
+$("userSearchBtn").onclick = () => searchUsers();
+$("userMoreBtn").onclick = () => searchUsers({ more: true });
+$("userQ").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") searchUsers();
+});
 
 $("banBtn").onclick = async () => {
   setMsg($("opsMsg"), "");
@@ -656,3 +826,125 @@ $("fbArchiveBtn").onclick = () => patchFeedbackStatus("archived");
 
 
 refreshSession().catch(() => showLoggedOut());
+
+
+/* ---- tabs ---- */
+const TAB_KEY = "adminTab";
+function selectTab(name) {
+  const tabs = [...document.querySelectorAll(".tabs .tab")];
+  if (!tabs.some((t) => t.dataset.tab === name)) name = "users";
+  tabs.forEach((t) => {
+    const on = t.dataset.tab === name;
+    t.setAttribute("aria-selected", on ? "true" : "false");
+    t.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll(".tabpanel").forEach((p) => {
+    p.classList.toggle("hidden", p.dataset.panel !== name);
+  });
+  try { sessionStorage.setItem(TAB_KEY, name); } catch { /* ignore */ }
+}
+document.querySelectorAll(".tabs .tab").forEach((t, i, all) => {
+  t.addEventListener("click", () => selectTab(t.dataset.tab));
+  t.addEventListener("keydown", (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const n = all[(i + (e.key === "ArrowRight" ? 1 : all.length - 1)) % all.length];
+    selectTab(n.dataset.tab);
+    n.focus();
+  });
+});
+let initialTab = "users";
+try { initialTab = sessionStorage.getItem(TAB_KEY) || "users"; } catch { /* ignore */ }
+selectTab(initialTab);
+
+/* ---- password reset (admin -> user) ---- */
+function setResultHidden() {
+  const box = $("pwResetResult");
+  box.innerHTML = "";
+  box.classList.add("hidden");
+}
+
+let pwResetBusy = false;
+$("pwResetBtn").onclick = async () => {
+  if (pwResetBusy) return;
+  setMsg($("opsMsg"), "");
+  setResultHidden();
+  const id = parsePositiveId($("pwResetUserId").value);
+  const reason = $("pwResetReason").value.trim();
+  if (!id) return setMsg($("opsMsg"), "请填写有效的用户 ID");
+  if (!reason) return setMsg($("opsMsg"), "请填写原因");
+  if (!window.confirm(`确认为用户 #${id} 生成临时密码？旧密码会立即失效，所有设备下线。`)) return;
+  pwResetBusy = true;
+  $("pwResetBtn").disabled = true;
+  try {
+    const r = await api(`/admin/users/${id}/password-reset`, {
+      method: "POST",
+      csrf: csrfToken,
+      body: { reason },
+    });
+    if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+      adminVerified = false;
+      updateVerifyBadge();
+    }
+    if (r.status !== 200) {
+      setMsg($("opsMsg"), r.json?.error?.message || "重置失败");
+      return;
+    }
+    const d = r.json.data;
+    const box = $("pwResetResult");
+    box.innerHTML = `<p>用户 <code>${escapeHtml(d.username)}</code>（#${d.userId}）的临时密码，只显示这一次：</p>
+      <div class="row"><code class="pw" id="pwResetValue">${escapeHtml(d.tempPassword)}</code>
+      <button type="button" id="pwCopyBtn">复制</button>
+      <button type="button" id="pwHideBtn" class="ghost">我已记下，隐藏</button></div>
+      <p class="note left">已下线 ${d.sessionsRevoked ?? 0} 个会话。</p>`;
+    box.classList.remove("hidden");
+    $("pwResetReason").value = "";
+    $("pwCopyBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(d.tempPassword);
+        setMsg($("opsMsg"), "临时密码已复制", true);
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents($("pwResetValue"));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        setMsg($("opsMsg"), "无法自动复制，已选中，请手动复制");
+      }
+    };
+    $("pwHideBtn").onclick = setResultHidden;
+    setMsg($("opsMsg"), `已为用户 #${d.userId} 重置密码`, true);
+  } finally {
+    pwResetBusy = false;
+    $("pwResetBtn").disabled = false;
+  }
+};
+
+/* ---- change own password ---- */
+let selfPwBusy = false;
+$("selfPwBtn").onclick = async () => {
+  if (selfPwBusy) return;
+  setMsg($("opsMsg"), "");
+  const currentPassword = $("selfPwCur").value;
+  const newPassword = $("selfPwNew").value;
+  if (!currentPassword || !newPassword) return setMsg($("opsMsg"), "请填写当前密码和新密码");
+  if (newPassword !== $("selfPwNew2").value) return setMsg($("opsMsg"), "两次输入的新密码不一致");
+  selfPwBusy = true;
+  $("selfPwBtn").disabled = true;
+  try {
+    const r = await api("/me/password", {
+      method: "POST",
+      csrf: csrfToken,
+      body: { currentPassword, newPassword },
+    });
+    if (r.status !== 204 && r.status !== 200) {
+      setMsg($("opsMsg"), r.json?.error?.message || "修改失败");
+      return;
+    }
+    ["selfPwCur", "selfPwNew", "selfPwNew2"].forEach((k) => ($(k).value = ""));
+    showLoggedOut();
+    setMsg($("loginMsg"), "密码已修改，请用新密码重新登录", true);
+  } finally {
+    selfPwBusy = false;
+    $("selfPwBtn").disabled = false;
+  }
+};
