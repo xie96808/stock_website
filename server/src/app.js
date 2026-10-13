@@ -23,6 +23,7 @@ import { pvpRecoveryError, runBootRecovery } from "./lib/pvp/recovery.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
 import { seedNearDailyChallenges } from "./lib/dailyChallenge.js";
 import { seedAllPuzzleChapters } from "./lib/puzzleChapter.js";
+import { loadAppSettings } from "./lib/appSettings.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -34,6 +35,14 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       runBootRecovery(openDb());
     } catch (err) {
       console.error("pvp recovery failed:", err && err.message ? err.message : err);
+    }
+  }
+  if (!skipMigrate) {
+    try {
+      const n = loadAppSettings(openDb());
+      if (n) console.log(`app_settings: ${n} admin override(s) active`);
+    } catch (err) {
+      console.error("app_settings load failed (env values apply):", err && err.message ? err.message : err);
     }
   }
   warmDataset();

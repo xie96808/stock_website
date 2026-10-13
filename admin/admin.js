@@ -3,6 +3,8 @@ const API = "/api/v1";
 
 let csrfToken = null;
 let adminVerified = false;
+/** Tabs whose data was loaded this session (cleared on logout). */
+const tabLoaded = new Set();
 
 function $(id) {
   return document.getElementById(id);
@@ -22,8 +24,8 @@ function escapeHtml(s) {
     .replace(/"/g, "&quot;");
 }
 
-async function api(path, { method = "GET", body, csrf } = {}) {
-  const headers = { Accept: "application/json" };
+async function api(path, { method = "GET", body, csrf, headers: extra } = {}) {
+  const headers = { Accept: "application/json", ...(extra || {}) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (csrf) headers["X-CSRF-Token"] = csrf;
   const res = await fetch(`${API}${path}`, {
@@ -44,6 +46,8 @@ function showLoggedIn(user) {
   $("opsPanel").classList.remove("hidden");
   $("whoami").textContent = `${user.nickname || user.username}（${user.username}）`;
   updateVerifyBadge();
+  const cur = document.querySelector('.tabs .tab[aria-selected="true"]');
+  if (cur) queueMicrotask(() => cur.click());
 }
 
 function showLoggedOut() {
@@ -51,6 +55,7 @@ function showLoggedOut() {
   $("opsPanel").classList.add("hidden");
   csrfToken = null;
   adminVerified = false;
+  tabLoaded.clear();
 }
 
 function updateVerifyBadge() {
@@ -455,31 +460,76 @@ $("modBtn").onclick = async () => {
   $("gameSearchBtn").click();
 };
 
-$("auditBtn").onclick = async () => {
+let auditCursor = null;
+let auditQuery = "";
+let auditSeq = 0;
+
+function auditItemHtml(a) {
+  const diff = a.before || a.after
+    ? `<div class="diff"><code>${escapeHtml(JSON.stringify(a.before ?? null))}</code> → <code>${escapeHtml(JSON.stringify(a.after ?? null))}</code></div>`
+    : "";
+  return `<div class="item">
+      #${a.id} · ${escapeHtml(a.createdAt)} · actor=${a.actorId ?? "—"}
+      · <code>${escapeHtml(a.action)}</code>
+      · ${escapeHtml(a.targetType)}/${escapeHtml(a.targetId)}
+      · ${escapeHtml(a.reason || "")}
+    ${diff}</div>`;
+}
+
+async function loadAudit({ more = false } = {}) {
   setMsg($("opsMsg"), "");
-  const r = await api("/admin/audit-logs?limit=30");
+  const qs = new URLSearchParams();
+  if (more) {
+    if (!auditCursor) return;
+    for (const [k, v] of new URLSearchParams(auditQuery)) qs.set(k, v);
+    qs.set("cursor", auditCursor);
+  } else {
+    qs.set("limit", "30");
+    const actor = ($("auditActor")?.value || "").trim();
+    if (actor) {
+      if (!/^\d+$/.test(actor)) return setMsg($("opsMsg"), "操作者 ID 需为数字");
+      qs.set("actorId", actor);
+    }
+    const action = ($("auditAction")?.value || "").trim();
+    if (action) qs.set("action", action);
+    const tt = $("auditTargetType")?.value || "";
+    if (tt) qs.set("targetType", tt);
+    const tid = ($("auditTargetId")?.value || "").trim();
+    if (tid) qs.set("targetId", tid);
+    auditQuery = qs.toString();
+  }
+  const seq = ++auditSeq;
+  const moreBtn = $("auditMoreBtn");
+  if (moreBtn) moreBtn.disabled = true;
+  const r = await api(`/admin/audit-logs?${qs}`);
+  if (seq !== auditSeq) return;
+  if (moreBtn) moreBtn.disabled = false;
   if (r.status !== 200) {
     setMsg($("opsMsg"), r.json?.error?.message || "加载审计失败");
     return;
   }
   const el = $("auditList");
   const items = r.json.data.items || [];
-  if (!items.length) {
+  if (!more && !items.length) {
     el.innerHTML = `<div class="item">暂无审计</div>`;
-    return;
+  } else if (more) {
+    el.insertAdjacentHTML("beforeend", items.map(auditItemHtml).join(""));
+  } else {
+    el.innerHTML = items.map(auditItemHtml).join("");
   }
-  el.innerHTML = items
-    .map(
-      (a) => `<div class="item">
-      #${a.id} · ${escapeHtml(a.createdAt)} · actor=${a.actorId ?? "—"}
-      · <code>${escapeHtml(a.action)}</code>
-      · ${escapeHtml(a.targetType)}/${escapeHtml(a.targetId)}
-      · ${escapeHtml(a.reason || "")}
-    </div>`
-    )
-    .join("");
-};
+  auditCursor = r.json.data.nextCursor || null;
+  if (moreBtn) moreBtn.classList.toggle("hidden", !auditCursor);
+}
 
+$("auditBtn").onclick = () => loadAudit();
+if ($("auditMoreBtn")) $("auditMoreBtn").onclick = () => loadAudit({ more: true });
+if ($("auditClearBtn")) {
+  $("auditClearBtn").onclick = () => {
+    ["auditActor", "auditAction", "auditTargetId"].forEach((k) => ($(k).value = ""));
+    $("auditTargetType").value = "";
+    loadAudit();
+  };
+}
 
 async function handleAdminUserMutation(path, body, successMsg) {
   setMsg($("opsMsg"), "");
@@ -948,3 +998,374 @@ $("selfPwBtn").onclick = async () => {
     $("selfPwBtn").disabled = false;
   }
 };
+
+
+/* ---- shared helpers for batch 2 ---- */
+function newIdemKey() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function reauthLost(r) {
+  if (r.status === 403 && r.json?.error?.code === "ADMIN_REAUTH_REQUIRED") {
+    adminVerified = false;
+    updateVerifyBadge();
+  }
+}
+
+async function guarded(btn, fn) {
+  if (!btn || btn.dataset.busy === "1") return;
+  btn.dataset.busy = "1";
+  btn.disabled = true;
+  try {
+    await fn();
+  } finally {
+    btn.dataset.busy = "";
+    btn.disabled = false;
+  }
+}
+
+/* ---- feature switches ---- */
+const GROUP_LABEL = { site: "站点", feature: "玩法", pvp: "对战" };
+let settingsCache = null;
+let settingsSeq = 0;
+
+function fmtVal(it, v) {
+  if (it.type === "bool") return v ? "开" : "关";
+  return String(v);
+}
+
+function settingRowHtml(it) {
+  let control = "";
+  if (it.type === "bool") {
+    control = `<button type="button" class="switch ${it.value ? "on" : ""}" role="switch" aria-checked="${it.value ? "true" : "false"}" data-set-key="${it.key}" data-set-bool="${it.value ? "false" : "true"}">${it.value ? "已开启" : "已关闭"}</button>`;
+  } else if (it.type === "int") {
+    control = `<input type="number" inputmode="numeric" min="${it.min}" max="${it.max}" step="1" value="${it.value}" data-set-input="${it.key}" aria-label="${escapeHtml(it.label)}" />
+      <button type="button" data-set-key="${it.key}" data-set-save="1">保存</button>`;
+  } else {
+    control = `<select data-set-input="${it.key}" aria-label="${escapeHtml(it.label)}">${it.options.map((o) => `<option value="${escapeHtml(o)}" ${o === it.value ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}</select>
+      <button type="button" data-set-key="${it.key}" data-set-save="1">保存</button>`;
+  }
+  const meta = it.overridden
+    ? `<span class="tag over">已覆盖</span> 环境默认 ${escapeHtml(fmtVal(it, it.envValue))}${it.updatedAt ? ` · ${escapeHtml(it.updatedAt)}${it.updatedBy ? ` · #${it.updatedBy}` : ""}` : ""}`
+    : `<span class="tag">默认</span> 来自环境变量`;
+  return `<div class="item setting" data-setting="${it.key}">
+      <div class="s-head"><strong>${escapeHtml(it.label)}</strong> <code>${escapeHtml(it.key)}</code></div>
+      <div class="s-meta">${meta}${it.note ? ` · ${escapeHtml(it.note)}` : ""}${it.type === "int" ? ` · 范围 ${it.min}–${it.max}` : ""}</div>
+      <div class="row s-ctl">${control}${it.overridden ? `<button type="button" class="ghost" data-set-key="${it.key}" data-set-reset="1">恢复默认</button>` : ""}</div>
+    </div>`;
+}
+
+function renderSettings() {
+  if (!settingsCache) return;
+  const groups = { site: [], feature: [], pvp: [] };
+  for (const it of settingsCache) (groups[it.group] || groups.feature).push(it);
+  const setList = $("setList");
+  setList.innerHTML = ["site", "feature", "pvp"]
+    .map((g) => `<h3 class="grp">${GROUP_LABEL[g]}</h3>` + groups[g].filter((it) => g !== "pvp" || it.type === "bool").map(settingRowHtml).join(""))
+    .join("");
+  $("pvpParamList").innerHTML = groups.pvp.filter((it) => it.type !== "bool").map(settingRowHtml).join("");
+  for (const box of [setList, $("pvpParamList")]) wireSettings(box);
+}
+
+async function loadSettings() {
+  const seq = ++settingsSeq;
+  const r = await api("/admin/settings");
+  if (seq !== settingsSeq) return;
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "读取开关失败");
+    return;
+  }
+  settingsCache = r.json.data.items;
+  renderSettings();
+}
+
+async function saveSetting(key, value, label) {
+  const reason = $("setReason").value.trim();
+  if (reason.length < 2) {
+    setMsg($("opsMsg"), "请先在「开关」页填写改动原因（至少 2 个字）");
+    return;
+  }
+  const r = await api(`/admin/settings/${encodeURIComponent(key)}`, {
+    method: "PUT",
+    csrf: csrfToken,
+    body: { value, reason },
+  });
+  reauthLost(r);
+  if (r.status !== 200) {
+    setMsg($("opsMsg"), r.json?.error?.message || "保存失败");
+    return;
+  }
+  const st = r.json.data.setting;
+  settingsCache = settingsCache.map((it) => (it.key === key ? st : it));
+  renderSettings();
+  setMsg($("opsMsg"), value === null ? `「${label}」已恢复默认：${fmtVal(st, st.value)}` : `「${label}」已设为 ${fmtVal(st, st.value)}`, true);
+}
+
+function wireSettings(box) {
+  box.querySelectorAll("button[data-set-key]").forEach((btn) => {
+    btn.onclick = () => guarded(btn, async () => {
+      const key = btn.dataset.setKey;
+      const it = settingsCache.find((x) => x.key === key);
+      if (!it) return;
+      if (btn.dataset.setReset) {
+        if (!window.confirm(`把「${it.label}」恢复为环境默认（${fmtVal(it, it.envValue)}）？`)) return;
+        return saveSetting(key, null, it.label);
+      }
+      let value;
+      if (it.type === "bool") {
+        value = btn.dataset.setBool === "true";
+        if (!window.confirm(`确认${value ? "开启" : "关闭"}「${it.label}」？对所有用户立即生效。`)) return;
+      } else {
+        const input = box.querySelector(`[data-set-input="${key}"]`);
+        if (it.type === "int") {
+          value = Number(input.value);
+          if (!Number.isInteger(value) || value < it.min || value > it.max) {
+            setMsg($("opsMsg"), `「${it.label}」需为 ${it.min}–${it.max} 的整数`);
+            return;
+          }
+        } else value = input.value;
+        if (value === it.value) {
+          setMsg($("opsMsg"), `「${it.label}」没有变化`);
+          return;
+        }
+      }
+      await saveSetting(key, value, it.label);
+    });
+  });
+}
+
+$("setRefreshBtn").onclick = () => guarded($("setRefreshBtn"), loadSettings);
+
+/* ---- PvP ---- */
+let pvpDraining = false;
+const pvpCursors = { match: null, report: null };
+const pvpSeq = { overview: 0, match: 0, report: 0 };
+
+async function loadPvpOverview() {
+  const seq = ++pvpSeq.overview;
+  const r = await api("/admin/pvp/overview");
+  if (seq !== pvpSeq.overview) return;
+  const box = $("pvpOverview");
+  if (r.status !== 200) {
+    box.innerHTML = `<p class="msg">${escapeHtml(r.json?.error?.message || "读取失败")}</p>`;
+    return;
+  }
+  const d = r.json.data;
+  pvpDraining = !!d.draining;
+  box.innerHTML = `<div class="stat"><b>${pvpDraining ? "已停新局" : "正常接局"}</b><span>状态</span></div>
+    <div class="stat"><b>${d.activeRooms ?? 0}</b><span>进行中房间</span></div>
+    <div class="stat"><b>${d.waitingReady ?? 0}</b><span>等待准备</span></div>
+    <div class="stat"><b>${d.playing ?? 0}</b><span>对局中</span></div>
+    <div class="stat"><b>${d.openReports ?? 0}</b><span>待处理举报</span></div>`;
+  $("pvpDrainBtn").textContent = pvpDraining ? "恢复接新局" : "停止接新局";
+}
+
+function pvpReason() {
+  const v = $("pvpReason").value.trim();
+  if (v.length < 2) {
+    setMsg($("opsMsg"), "请填写原因（至少 2 个字）");
+    return null;
+  }
+  return v;
+}
+
+$("pvpRefreshBtn").onclick = () => guarded($("pvpRefreshBtn"), async () => {
+  await Promise.all([loadPvpOverview(), loadSettings()]);
+});
+
+$("pvpDrainBtn").onclick = () => guarded($("pvpDrainBtn"), async () => {
+  const reason = pvpReason();
+  if (!reason) return;
+  const to = !pvpDraining;
+  if (!window.confirm(to ? "停止接新局？进行中的对局不受影响。" : "恢复接新局？")) return;
+  const r = await api("/admin/pvp/drain", {
+    method: "POST", csrf: csrfToken, body: { drain: to, reason }, headers: { "Idempotency-Key": newIdemKey() },
+  });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "操作失败");
+  setMsg($("opsMsg"), to ? "已停止接新局" : "已恢复接新局", true);
+  await loadPvpOverview();
+});
+
+$("pvpAbortBtn").onclick = () => guarded($("pvpAbortBtn"), async () => {
+  const reason = pvpReason();
+  if (!reason) return;
+  const pre = await api("/admin/pvp/abort-active", { method: "POST", csrf: csrfToken, body: { reason } , headers: { "Idempotency-Key": newIdemKey() } });
+  reauthLost(pre);
+  if (pre.status !== 200) return setMsg($("opsMsg"), pre.json?.error?.message || "预览失败");
+  const p = pre.json.data;
+  const n = (p.waitingReady ?? 0) + (p.playing ?? 0);
+  if (!n) return setMsg($("opsMsg"), "当前没有进行中的对局", true);
+  if (!window.confirm(`将中止 ${n} 局（等待 ${p.waitingReady ?? 0} · 对局中 ${p.playing ?? 0}），并退还入场韭币。确认？`)) return;
+  const r = await api("/admin/pvp/abort-active", {
+    method: "POST", csrf: csrfToken, body: { confirm: true, reason }, headers: { "Idempotency-Key": newIdemKey() },
+  });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "中止失败");
+  setMsg($("opsMsg"), `已中止 ${r.json.data.matchIds?.length ?? n} 局`, true);
+  await loadPvpOverview();
+});
+
+function matchRowHtml(m) {
+  return `<details class="item user-row" data-match="${escapeHtml(m.matchId)}">
+    <summary class="plain"><span class="who"><code>${escapeHtml(String(m.matchId).slice(0, 8))}</code> · <span class="st st-${escapeHtml(m.status)}">${escapeHtml(m.status)}</span>${m.terminalReason ? ` · ${escapeHtml(m.terminalReason)}` : ""}</span>
+    <span class="meta">${escapeHtml(m.createdAt ? new Date(Number(m.createdAt) || m.createdAt).toLocaleString("zh-CN", { hour12: false }) : "—")}</span></summary>
+    <div class="user-detail" data-match-detail="${escapeHtml(m.matchId)}"><p class="note left">展开加载…</p></div>
+  </details>`;
+}
+
+function matchDetailHtml(d) {
+  const players = (d.players || []).map((p) => `<li>座位 ${p.seat} · 用户 #${p.userId} · ${escapeHtml(p.outcome || "—")} · 收益 ${ppmPct(p.returnPpm)} · 回撤 ${ppmPct(p.mddPpm)} · 韭币 ${p.coinDelta ?? 0}</li>`).join("");
+  const ledger = (d.ledger || []).map((l) => `<li>#${l.userId} ${l.delta > 0 ? "+" : ""}${l.delta} ${escapeHtml(l.reason)}</li>`).join("");
+  return `<dl class="kv">
+    <dt>对局</dt><dd><code>${escapeHtml(d.matchId)}</code></dd>
+    <dt>股票</dt><dd>${escapeHtml(d.stockName || "—")} ${escapeHtml(d.stockCode || "")}</dd>
+    <dt>结果</dt><dd>${escapeHtml(d.terminalType || d.status)}${d.winnerUserId ? ` · 胜者 #${d.winnerUserId}` : ""} · 回合 ${d.resolvedRounds ?? 0}</dd>
+    <dt>选手</dt><dd><ul class="plain">${players || "<li>—</li>"}</ul></dd>
+    <dt>流水</dt><dd><ul class="plain">${ledger || "<li>—</li>"}</ul></dd>
+  </dl>`;
+}
+
+async function loadMatches({ more = false } = {}) {
+  const qs = new URLSearchParams({ limit: "20" });
+  const st = $("pvpMatchStatus").value;
+  if (st) qs.set("status", st);
+  if (more) {
+    if (!pvpCursors.match) return;
+    qs.set("cursor", pvpCursors.match);
+  }
+  const seq = ++pvpSeq.match;
+  $("pvpMatchMoreBtn").disabled = true;
+  const r = await api(`/admin/pvp/matches?${qs}`);
+  if (seq !== pvpSeq.match) return;
+  $("pvpMatchMoreBtn").disabled = false;
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "查询失败");
+  const el = $("pvpMatchList");
+  const items = r.json.data.entries || [];
+  if (!more) el.innerHTML = items.length ? "" : `<div class="item">无结果</div>`;
+  el.insertAdjacentHTML("beforeend", items.map(matchRowHtml).join(""));
+  el.querySelectorAll("details[data-match]:not([data-wired])").forEach((row) => {
+    row.dataset.wired = "1";
+    row.addEventListener("toggle", async () => {
+      if (!row.open || row.dataset.loaded) return;
+      const id = row.dataset.match;
+      const d = await api(`/admin/pvp/matches/${encodeURIComponent(id)}`);
+      const box = row.querySelector("[data-match-detail]");
+      if (d.status !== 200) {
+        box.innerHTML = `<p class="msg">${escapeHtml(d.json?.error?.message || "加载失败")}</p>`;
+        return;
+      }
+      row.dataset.loaded = "1";
+      box.innerHTML = matchDetailHtml(d.json.data);
+    });
+  });
+  pvpCursors.match = r.json.data.nextCursor || null;
+  $("pvpMatchMoreBtn").classList.toggle("hidden", !pvpCursors.match);
+}
+
+const REPORT_REASON = { cheating: "作弊", abuse: "辱骂", afk: "挂机", other: "其他" };
+function reportRowHtml(p) {
+  const open = p.status === "open";
+  return `<div class="item" data-report="${p.id}">
+    #${p.id} · 对局 <code>${escapeHtml(String(p.matchId).slice(0, 8))}</code> · #${p.reporterId} 举报 #${p.reportedId}
+    · ${escapeHtml(REPORT_REASON[p.reason] || p.reason)} · ${escapeHtml(p.status)}
+    ${p.detail ? `<div class="dim">${escapeHtml(p.detail)}</div>` : ""}
+    ${open ? `<div class="row"><button type="button" data-rep-id="${p.id}" data-rep-to="resolved">已处理</button><button type="button" class="ghost" data-rep-id="${p.id}" data-rep-to="dismissed">驳回</button></div>` : ""}
+  </div>`;
+}
+
+async function loadReports({ more = false } = {}) {
+  const qs = new URLSearchParams({ limit: "20", status: $("pvpReportStatus").value });
+  if (more) {
+    if (!pvpCursors.report) return;
+    qs.set("cursor", pvpCursors.report);
+  }
+  const seq = ++pvpSeq.report;
+  $("pvpReportMoreBtn").disabled = true;
+  const r = await api(`/admin/pvp/reports?${qs}`);
+  if (seq !== pvpSeq.report) return;
+  $("pvpReportMoreBtn").disabled = false;
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "查询失败");
+  const el = $("pvpReportList");
+  const items = r.json.data.entries || [];
+  if (!more) el.innerHTML = items.length ? "" : `<div class="item">无结果</div>`;
+  el.insertAdjacentHTML("beforeend", items.map(reportRowHtml).join(""));
+  el.querySelectorAll("button[data-rep-id]:not([data-wired])").forEach((btn) => {
+    btn.dataset.wired = "1";
+    btn.onclick = () => guarded(btn, async () => {
+      const reason = pvpReason();
+      if (!reason) return;
+      const r2 = await api(`/admin/pvp/reports/${btn.dataset.repId}`, {
+        method: "PATCH", csrf: csrfToken, body: { status: btn.dataset.repTo, reason }, headers: { "Idempotency-Key": newIdemKey() },
+      });
+      reauthLost(r2);
+      if (r2.status !== 200) return setMsg($("opsMsg"), r2.json?.error?.message || "处理失败");
+      setMsg($("opsMsg"), `举报 #${btn.dataset.repId} 已${btn.dataset.repTo === "resolved" ? "处理" : "驳回"}`, true);
+      await Promise.all([loadReports(), loadPvpOverview()]);
+    });
+  });
+  pvpCursors.report = r.json.data.nextCursor || null;
+  $("pvpReportMoreBtn").classList.toggle("hidden", !pvpCursors.report);
+}
+
+$("pvpMatchBtn").onclick = () => loadMatches();
+$("pvpMatchMoreBtn").onclick = () => loadMatches({ more: true });
+$("pvpReportBtn").onclick = () => loadReports();
+$("pvpReportMoreBtn").onclick = () => loadReports({ more: true });
+
+/* ---- app version (read-only) ---- */
+function fmtBytes(n) {
+  if (!Number.isFinite(n)) return "—";
+  return `${(n / 1024 / 1024).toFixed(2)} MB（${n.toLocaleString("en-US")} B）`;
+}
+
+$("verBtn").onclick = () => guarded($("verBtn"), async () => {
+  const box = $("verBox");
+  box.innerHTML = `<div class="item">读取中…</div>`;
+  let j;
+  try {
+    const res = await fetch(`/download/app-version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    j = await res.json();
+  } catch (e) {
+    box.innerHTML = `<div class="item msg">读取失败：${escapeHtml(e.message || String(e))}</div>`;
+    return;
+  }
+  let sizeCheck = "未核对";
+  try {
+    const u = new URL(j.apkUrl, location.href);
+    if (u.origin === location.origin) {
+      const h = await fetch(u.pathname, { method: "HEAD", cache: "no-store" });
+      const len = Number(h.headers.get("content-length"));
+      sizeCheck = !h.ok ? `APK 不可访问（HTTP ${h.status}）` : len === Number(j.size) ? "✓ 与清单一致" : `✗ 实际 ${fmtBytes(len)}`;
+    } else sizeCheck = "APK 不在本站，跳过核对";
+  } catch {
+    sizeCheck = "核对失败";
+  }
+  const pub = j.publishedAt ? new Date(j.publishedAt).toLocaleString("zh-CN", { hour12: false, timeZone: "Asia/Shanghai" }) + "（北京时间）" : "—";
+  box.innerHTML = `<div class="item"><dl class="kv">
+    <dt>版本</dt><dd><strong>${escapeHtml(j.versionName)}</strong>（versionCode ${escapeHtml(j.versionCode)}）</dd>
+    <dt>强制更新</dt><dd>低于 versionCode ${escapeHtml(j.minSupportedVersionCode ?? 1)} 时强制</dd>
+    <dt>发布时间</dt><dd>${escapeHtml(pub)}</dd>
+    <dt>大小</dt><dd>${fmtBytes(Number(j.size))} · ${escapeHtml(sizeCheck)}</dd>
+    <dt>SHA-256</dt><dd><code class="wrap">${escapeHtml(j.sha256)}</code></dd>
+    <dt>下载</dt><dd><a href="${escapeHtml(j.apkUrl)}" rel="noopener">${escapeHtml(j.apkUrl)}</a></dd>
+    <dt>更新说明</dt><dd class="pre">${escapeHtml(j.notes || "")}</dd>
+  </dl></div>`;
+});
+
+/* ---- lazy-load per tab ---- */
+const TAB_LOADERS = {
+  settings: () => loadSettings(),
+  pvp: () => Promise.all([loadPvpOverview(), loadSettings()]),
+};
+document.querySelectorAll(".tabs .tab").forEach((t) => {
+  t.addEventListener("click", () => {
+    const fn = TAB_LOADERS[t.dataset.tab];
+    if (fn && !tabLoaded.has(t.dataset.tab) && !$("opsPanel").classList.contains("hidden")) {
+      tabLoaded.add(t.dataset.tab);
+      fn();
+    }
+  });
+});

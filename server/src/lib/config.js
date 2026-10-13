@@ -178,3 +178,68 @@ export const config = {
 export function newRequestId() {
   return crypto.randomUUID();
 }
+
+/**
+ * Runtime overrides (admin 「功能开关」, table app_settings). Each overridable key
+ * becomes an accessor: reads return the override when one is set, otherwise the
+ * env/config base value. Assigning (tests, scripts) changes the base value as before.
+ */
+const settingOverrides = new Map();
+export const OVERRIDABLE_KEYS = [
+  "registrationEnabled",
+  "cloudGamesEnabled",
+  "leaderboardEnabled",
+  "quizRewardsEnabled",
+  "dailyChallengeEnabled",
+  "gameRewindEnabled",
+  "puzzleChapterEnabled",
+  "puzzleWeeklyEnabled",
+  "oneshotModeEnabled",
+  "survivalModeEnabled",
+  "ghostDuelEnabled",
+  "pvpBattleEnabled",
+  "pvpBotsEnabled",
+  "pvpMaxActiveMatches",
+  "pvpEntryCost",
+  "pvpWinReward",
+  "pvpDailyRewardCap",
+  "pvpPairLimit24h",
+  "pvpDaySeconds",
+  "pvpMaxBotMatches",
+  "pvpHumanRoomReserve",
+  "pvpBotTier",
+];
+const baseValues = {};
+for (const key of OVERRIDABLE_KEYS) {
+  baseValues[key] = config[key];
+  Object.defineProperty(config, key, {
+    enumerable: true,
+    configurable: false,
+    get() {
+      return settingOverrides.has(key) ? settingOverrides.get(key) : baseValues[key];
+    },
+    set(v) {
+      baseValues[key] = v;
+    },
+  });
+}
+
+/** Env/config value, ignoring any admin override. */
+export function configBaseValue(key) {
+  return baseValues[key];
+}
+
+export function hasSettingOverride(key) {
+  return settingOverrides.has(key);
+}
+
+/** Replace all overrides (boot load) or patch one key (value === undefined clears). */
+export function setSettingOverride(key, value) {
+  if (!OVERRIDABLE_KEYS.includes(key)) throw new Error(`not overridable: ${key}`);
+  if (value === undefined) settingOverrides.delete(key);
+  else settingOverrides.set(key, value);
+}
+
+export function clearSettingOverrides() {
+  settingOverrides.clear();
+}
