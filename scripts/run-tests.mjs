@@ -7,6 +7,7 @@ const runs = [
   ["node", ["--test", "server/tests/auth.integration.test.js"]],
   ["node", ["--test", "server/tests/games.integration.test.js"]],
   ["node", ["--test", "server/tests/dataset-columnar.equivalence.test.js"]],
+  ["node", ["--test", "server/tests/dataset-colpack.equivalence.test.js"]],
 
   ["node", ["--test", "server/tests/leaderboard.integration.test.js"]],
   ["node", ["--test", "server/tests/admin.integration.test.js"]],

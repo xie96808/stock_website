@@ -39,6 +39,7 @@ EEOF
 # (sha matches server datasetVersion). Keeps unversioned fallback for old clients.
 node "$ROOT_DIR/deploy/emit-versioned-pack.mjs" "$STAGING/release"
 
+
 # Precompress for nginx gzip_static + brotli_static (.gz + .br).
 # Includes data/stocks_data.json (~55MB) and the versioned hardlink twin;
 # inode-aware precompress avoids double brotli. Requires Node zlib.

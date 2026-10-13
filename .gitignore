@@ -9,3 +9,4 @@ server/data/
 *.jks
 android-signing/
 **/keystore.b64
+server/dataset/

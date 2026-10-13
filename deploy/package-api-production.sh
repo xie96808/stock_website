@@ -33,6 +33,13 @@ if [[ "${SKIP_NODE_MODULES:-0}" != "1" ]]; then
   cp -a "$ROOT_DIR/deploy/check-native-bundle.mjs" "$STAGING/bundle/server/deploy/"
 fi
 tar -C shared -cf - . | tar -C "$STAGING/bundle/shared" -xf -
+
+# Memory plan P1: binary columnar twin of data/stocks_data.json, shipped with the
+# API (outside the public web root). The API uses it only when its recorded sha256
+# matches the JSON at STOCKGAME_DATASET_PATH; otherwise it parses the JSON as before.
+if [[ -f data/stocks_data.json ]]; then
+  node "$ROOT_DIR/deploy/emit-colpack.mjs" data/stocks_data.json --out "$STAGING/bundle/server/dataset/stocks_data.json.colpack"
+fi
 find "$STAGING/bundle" -name .DS_Store -delete
 
 cat > "$STAGING/bundle/release.env" <<EOF

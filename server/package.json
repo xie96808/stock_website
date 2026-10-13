@@ -13,7 +13,8 @@
     "db:restore-check": "node src/lib/backup.js restore-check",
     "db:restore": "node src/lib/backup.js restore",
     "admin:create": "node scripts/admin-promote.mjs",
-    "db:replay-tombstones": "node scripts/replay-tombstones.mjs"
+    "db:replay-tombstones": "node scripts/replay-tombstones.mjs",
+    "dataset:colpack": "node ../deploy/emit-colpack.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
