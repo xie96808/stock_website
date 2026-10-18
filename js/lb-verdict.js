@@ -58,3 +58,47 @@ export function resultVerdict(game, board) {
   }
   return { kind: 'other', beat: null, text: RECENT_STATUS_TEXT[game.status] || '本局未计入榜单' };
 }
+
+const BOARD_KINDS = new Set(['classic', 'oneshot', 'survival']);
+
+/**
+ * Which /leaderboard query holds this game? Only classic / oneshot / survival have a board there;
+ * daily / ghost / puzzle games are scored elsewhere and must NOT borrow the classic board's rank.
+ * @param {{gameKind?:string|null, assistClass?:string|null, fillMode?:string}} share
+ * @returns {{ fillMode:string, params:Record<string,string> } | null}
+ */
+export function shareBoardQuery(share) {
+  const kind = (share && share.gameKind) || 'classic';
+  if (!BOARD_KINDS.has(kind)) return null;
+  const fillMode = share && share.fillMode === 'same_close' ? 'same_close' : 'next_open';
+  const params = { fillMode };
+  if (kind === 'oneshot' || kind === 'survival') params.gameKind = kind;
+  else if (share && share.assistClass === 'undo') params.assistClass = 'undo';
+  return { fillMode, params };
+}
+
+/**
+ * Turn a /leaderboard payload into what the result screen may say about THIS game.
+ * Rank / beat-% (which feed the hint and the share caption) are only offered when this exact game
+ * is on the board as the player's best; every other outcome gets an explicit verdict or nothing.
+ * @param {{cloudGameId?:string|null, fillMode?:string}} share
+ * @param {object|null} data  GET /leaderboard `data`
+ * @param {string} fillMode
+ */
+export function planShareRank(share, data, fillMode) {
+  const empty = { verdict: null, label: null, meta: null };
+  if (!data) return empty;
+  const recent = Array.isArray(data.myRecent) ? data.myRecent : [];
+  const gameId = share && share.cloudGameId;
+  const mine = gameId ? recent.find((g) => g && g.gameId === gameId) || null : null;
+  const total = Number(data.total || 0);
+  const rank = data.myRank == null ? null : data.myRank;
+  const label = boardLabel(fillMode, data.assistClass, data.gameKind);
+  const verdict = resultVerdict(mine, { rank, total, fillMode, assistClass: data.assistClass, gameKind: data.gameKind });
+  let meta = null;
+  if (mine && mine.status === 'counted' && mine.isBest && rank != null && total >= 2) {
+    const beatPct = Math.max(0, Math.min(99, Math.round(((total - rank) / total) * 100)));
+    meta = { rank, boardTotal: total, beatPct };
+  }
+  return { verdict, label, meta };
+}

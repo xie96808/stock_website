@@ -1,5 +1,5 @@
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
-import { resultVerdict, boardLabel } from './lb-verdict.js';
+import { shareBoardQuery, planShareRank } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
@@ -158,31 +158,17 @@ export async function refreshShareRankMeta() {
     if (!auth || !auth.user || !share.cloudMode || share.saveStatus !== 'saved') {
         return null;
     }
-    const session = getSession();
-    const kind = session && session.gameKind;
-    const fillMode = share.fillMode === 'same_close' ? 'same_close' : 'next_open';
-    // Ask the board this game belongs to: its own kind and assist class (反悔局 → undo board).
-    const qs = new URLSearchParams({ fillMode: fillMode });
-    if (kind === 'oneshot' || kind === 'survival') qs.set('gameKind', kind);
-    else if (session && session.assistClass === 'undo') qs.set('assistClass', 'undo');
+    // Ask the board this game belongs to (own kind / 反悔 class). daily / ghost / puzzle have no board here.
+    const query = shareBoardQuery(share);
+    if (!query) return null;
     try {
-        const { data } = await api('/leaderboard?' + qs.toString());
-        const total = Number((data && data.total) || 0);
-        const myRank = data && data.myRank;
-        const recent = (data && data.myRecent) || [];
-        const mine = recent.find(function (g) { return g.gameId === share.cloudGameId; }) || null;
-        lastBoardLabel = boardLabel(fillMode, data && data.assistClass, data && data.gameKind);
-        lastVerdict = resultVerdict(mine, {
-            rank: myRank == null ? null : myRank,
-            total: total,
-            fillMode: fillMode,
-            assistClass: data && data.assistClass,
-            gameKind: data && data.gameKind,
-        });
-        if (myRank == null || !(total >= 2)) return null;
-        const beat = Math.max(0, Math.min(99, Math.round(((total - myRank) / total) * 100)));
-        setShareMeta({ rank: myRank, boardTotal: total, beatPct: beat });
-        return { myRank: myRank, total: total, beat: beat };
+        const { data } = await api('/leaderboard?' + new URLSearchParams(query.params).toString());
+        const plan = planShareRank(share, data, query.fillMode);
+        lastBoardLabel = plan.label;
+        lastVerdict = plan.verdict;
+        if (!plan.meta) return null;
+        setShareMeta({ rank: plan.meta.rank, boardTotal: plan.meta.boardTotal, beatPct: plan.meta.beatPct });
+        return { myRank: plan.meta.rank, total: plan.meta.boardTotal, beat: plan.meta.beatPct };
     } catch (e) {
         return null;
     }
