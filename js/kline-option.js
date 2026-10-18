@@ -18,6 +18,10 @@ function pvpNiceStep(span) {
     return unit * pow;
 }
 
+/** PvP plot-area left inset (px). The rotated y-axis title sits PVP_Y_NAME_GAP px left of the axis; the inset must leave room for it plus the tick labels, or the title is clipped by the canvas edge. */
+const PVP_GRID_LEFT = 56;
+const PVP_Y_NAME_GAP = 40;
+
 function pvpAxisBound(value, ratio, toward) {
     const span = (value.max - value.min) || Math.abs(value.max) || 1;
     const raw = toward > 0 ? value.max + span * ratio : value.min - span * ratio;
@@ -685,14 +689,14 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp && pvpTwoPane
             ? [
-                { left: 40, right: 24, top: 12, bottom: '34%' },
-                { left: 40, right: 24, top: '72%', bottom: 16 }
+                { left: PVP_GRID_LEFT, right: 24, top: 12, bottom: '34%' },
+                { left: PVP_GRID_LEFT, right: 24, top: '72%', bottom: 16 }
             ]
             : isPvp
             ? [
-                { left: 40, right: 24, top: 26, bottom: '42%' },
-                { left: 40, right: 24, top: '62%', bottom: '24%' },
-                { left: 40, right: 24, top: '80%', bottom: 16 }
+                { left: PVP_GRID_LEFT, right: 24, top: 26, bottom: '42%' },
+                { left: PVP_GRID_LEFT, right: 24, top: '62%', bottom: '24%' },
+                { left: PVP_GRID_LEFT, right: 24, top: '80%', bottom: 16 }
             ]
             : isResult
             ? [
@@ -755,7 +759,7 @@ export function buildKlineOption(vm) {
                     type: 'value', scale: true, gridIndex: 0,
                     name: '相对价 (d1=100)',
                     nameLocation: 'middle',
-                    nameGap: 36,
+                    nameGap: PVP_Y_NAME_GAP,
                     nameTextStyle: { color: axisLabelColor, fontSize: 10 },
                     axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                     axisLine: { show: false },
@@ -771,7 +775,7 @@ export function buildKlineOption(vm) {
                     type: 'value', scale: true, gridIndex: 0,
                     name: '相对价 (d1=100)',
                     nameLocation: 'middle',
-                    nameGap: 36,
+                    nameGap: PVP_Y_NAME_GAP,
                     nameTextStyle: { color: axisLabelColor, fontSize: 10 },
                     axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                     axisLine: { show: false },
