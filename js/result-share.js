@@ -1,5 +1,5 @@
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
-import { shareBoardQuery, planShareRank } from './lb-verdict.js';
+import { shareBoardQuery, planShareRank, bestGameText } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
@@ -47,10 +47,17 @@ function buildResultPromoCaption() {
     const ret = formatReturnPctDisplay();
     const board = rankBoardLabel(share);
     const beat = share.shareBeatPct;
-    if (beat != null) {
+    if (beat != null && beat > 0) {
         return (
             '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
             '，在' + board + '榜上超越了 ' + beat + '% 的玩家，你也来试试吧！'
+        );
+    }
+    if (beat === 0) {
+        // last place on the board: no "超越 0%" fragment
+        return (
+            '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
+            '，登上了' + board + '榜，你也来试试吧！'
         );
     }
     return (
@@ -69,9 +76,9 @@ function buildResultShareCopyText() {
     if (ranked) {
         const bits = [];
         if (rank != null) bits.push('目前排在第 ' + rank + ' 名');
-        if (beat != null) bits.push('超越约 ' + beat + '% 的玩家');
+        if (beat != null && beat > 0) bits.push('超越约 ' + beat + '% 的玩家');
         const mid = bits.join('／');
-        return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
+        if (mid) return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
     }
     return opening + '，收益率 ' + ret + '。你也来试试？\n' + SHARE_SITE_URL;
 }
@@ -186,9 +193,7 @@ export function updateShareRankHint() {
     }
     if (share.shareBeatPct != null && share.shareRank != null) {
         el.hidden = false;
-        el.textContent =
-            '已上' + rankBoardLabel(share) + '榜 · #' + share.shareRank +
-            ' · 超越约 ' + share.shareBeatPct + '% 玩家';
+        el.textContent = bestGameText(rankBoardLabel(share), share.shareRank, share.shareBeatPct);
         return;
     }
     if (share.cloudMode && share.saveStatus === 'saving') {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resultVerdict, boardLabel, shareBoardQuery, planShareRank } from '../js/lb-verdict.js';
+import { resultVerdict, boardLabel, shareBoardQuery, planShareRank, bestGameText } from '../js/lb-verdict.js';
 
 const board = { rank: 13, total: 15, fillMode: 'next_open', assistClass: 'clean', gameKind: 'classic' };
 
@@ -8,8 +8,19 @@ test('best game: keeps rank + beat copy', () => {
   const v = resultVerdict({ status: 'counted', isBest: true, assistClass: 'clean' }, board);
   assert.equal(v.kind, 'best');
   assert.equal(v.beat, 13);
-  assert.match(v.text, /#13/);
+  assert.match(v.text, /^本局已上次日开盘榜 · #13/);
   assert.match(v.text, /超越约 13%/);
+});
+
+test('wording: best game is always 「本局已上…榜」 and the beat tail is dropped at 0%', () => {
+  assert.equal(bestGameText('次日开盘', 3, 87), '本局已上次日开盘榜 · #3 · 超越约 87% 玩家');
+  assert.equal(bestGameText('次日开盘', 16, 0), '本局已上次日开盘榜 · #16');
+  assert.equal(bestGameText('一把梭·次日开盘', 1, null), '本局已上一把梭·次日开盘榜 · #1');
+  assert.equal(bestGameText('次日开盘', null, null), '本局已上次日开盘榜');
+  const last = resultVerdict({ status: 'counted', isBest: true }, { rank: 15, total: 15, fillMode: 'next_open', assistClass: 'clean', gameKind: 'classic' });
+  assert.equal(last.text, '本局已上次日开盘榜 · #15');
+  assert.doesNotMatch(last.text, /超越/);
+  assert.doesNotMatch(last.text, /已入/);
 });
 
 test('recorded but not personal best says so explicitly', () => {

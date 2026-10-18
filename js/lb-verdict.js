@@ -23,6 +23,16 @@ export function boardLabel(fillMode, assistClass, gameKind) {
  * @param {{status:string,isBest:boolean}|null} game  this game's myRecent entry (null = not found)
  * @param {{rank:number|null,total:number,fillMode:string,assistClass?:string,gameKind?:string}} board
  */
+/**
+ * The one wording for "this game is the player's best on the board". Shared by the verdict and the
+ * result-screen hint so the two can never drift apart. The 「超越约 N% 玩家」 tail is dropped at 0%
+ * (last place), where it only reads as noise.
+ */
+export function bestGameText(label, rank, beat) {
+  if (rank == null) return `本局已上${label}榜`;
+  return `本局已上${label}榜 · #${rank}` + (beat != null && beat > 0 ? ` · 超越约 ${beat}% 玩家` : '');
+}
+
 export function resultVerdict(game, board) {
   if (!game) return null;
   const label = boardLabel(board.fillMode, game.assistClass || board.assistClass, board.gameKind);
@@ -36,9 +46,7 @@ export function resultVerdict(game, board) {
       return {
         kind: 'best',
         beat,
-        text: rank != null
-          ? `本局已入${label}榜 · #${rank}` + (beat != null ? ` · 超越约 ${beat}% 玩家` : '')
-          : `本局已入${label}榜`,
+        text: bestGameText(label, rank, beat),
       };
     }
     return {
