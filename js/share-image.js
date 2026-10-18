@@ -6,6 +6,7 @@
  * rating change + rank, return curves (static canvas image), stock/date,
  * invite link + QR, slogan.
  */
+import { importWithRetry } from "./lazy-import.js";
 import { displayAvatarUrl, getAuthState } from "./auth.js";
 import { handleAvatarError } from "./avatar-fallback.js";
 import { showStampToast } from "./controls.js";
@@ -102,7 +103,11 @@ export function drawCurvesDataUrl(view, w = 960, h = 300) {
 }
 
 async function qrDataUrl(text) {
-  const { default: qrcode } = await import("./vendor/qrcode.js");
+  const { default: qrcode } = await importWithRetry(
+    "qrcode",
+    () => import("./vendor/qrcode.js"),
+    () => new URL("./vendor/qrcode.js", import.meta.url).href,
+  );
   const qr = qrcode(0, "M");
   qr.addData(text);
   qr.make();
@@ -232,7 +237,11 @@ export async function buildPvpShareCard(view) {
 }
 
 export async function renderNodeToCanvas(node) {
-  const { default: html2canvas } = await import("./vendor/html2canvas.esm.js");
+  const { default: html2canvas } = await importWithRetry(
+    "html2canvas",
+    () => import("./vendor/html2canvas.esm.js"),
+    () => new URL("./vendor/html2canvas.esm.js", import.meta.url).href,
+  );
   return html2canvas(node, {
     backgroundColor: KRAFT,
     scale: 1,

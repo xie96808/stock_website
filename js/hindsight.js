@@ -1,4 +1,5 @@
 // ========== HINDSIGHT CALCULATOR — 当初买了该多好 ==========
+import { importWithRetry } from './lazy-import.js';
 import { gameState } from './state.js';
 import { ensureStocksLoaded } from './pack-store.js';
 import {
@@ -572,7 +573,11 @@ async function _loadHtml2canvas() {
     if (typeof html2canvas === 'function') return true;
     try {
         const mod = await Promise.race([
-            import('./vendor/html2canvas.esm.js'),
+            importWithRetry(
+                'html2canvas',
+                () => import('./vendor/html2canvas.esm.js'),
+                () => new URL('./vendor/html2canvas.esm.js', import.meta.url).href
+            ),
             new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
         ]);
         window.html2canvas = mod.default;
