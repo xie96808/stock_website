@@ -324,6 +324,9 @@ export function selectShareView(s = getSession()) {
     shareBeatPct: s.shareBeatPct,
     shareBoardTotal: s.shareBoardTotal,
     cloudMode: s.cloudMode,
+    cloudGameId: s.cloudGameId,
+    gameKind: s.gameKind || null,
+    assistClass: s.assistClass || null,
     saveStatus: s.saveStatus,
     currentStock: s.currentStock,
   };

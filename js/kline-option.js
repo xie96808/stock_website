@@ -243,6 +243,13 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
  * @param {boolean} [vm.showDataZoomSlider] - desktop slider; default true for result, false for game
  * @param {boolean} [vm.resetDataZoom=true] - PvP: false keeps the player's zoom; true shows every bar
  */
+// MA legend (5/10/20/30日线) metrics. One fixed set for every width, sized so the four entries stay on a
+// single row inside the narrowest phone chart (~282px at 360 CSS px). Never width-dependent: a legend that
+// reflows would change the chart's top inset and make the plot jump (see the K-line size-stability rules).
+export const LEGEND_FONT_PX = 10;
+export const LEGEND_ITEM_W = 14;
+export const LEGEND_ITEM_GAP = 8;
+
 export function buildKlineOption(vm) {
     const {
         bars,
@@ -487,10 +494,10 @@ export function buildKlineOption(vm) {
             data: ['5日线', '10日线', '20日线', '30日线'],
             top: 0,
             left: 10,
-            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
-            itemWidth: 18,
+            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
+            itemWidth: LEGEND_ITEM_W,
             itemHeight: 2,
-            itemGap: 12
+            itemGap: LEGEND_ITEM_GAP
         };
     } else if (isPvp) {
         legend = {
@@ -523,11 +530,11 @@ export function buildKlineOption(vm) {
             },
             selectedMode: false,
             top: 5,
-            left: 10,
-            textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
-            itemWidth: 18,
+            left: 8,
+            textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
+            itemWidth: LEGEND_ITEM_W,
             itemHeight: 2,
-            itemGap: 12
+            itemGap: LEGEND_ITEM_GAP
         };
     }
 

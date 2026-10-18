@@ -117,3 +117,15 @@ test('buildKlineOption omits dataZoom start/end when not resetting', () => {
   assert.equal(opt.dataZoom[0].start, undefined);
   assert.equal(opt.dataZoom[0].end, undefined);
 });
+
+test('legend(d): MA legend uses compact fixed metrics so 4 entries fit one row at 360px', async () => {
+  const { LEGEND_FONT_PX, LEGEND_ITEM_W, LEGEND_ITEM_GAP } = await import('../js/kline-option.js');
+  // widest layout: 5/10/20/30日线 text (3+4+4+4 CJK/digit chars, ~font px each) + 4 symbols + 3 gaps + left inset
+  const chars = 3 + 4 + 4 + 4;
+  const est = chars * LEGEND_FONT_PX + 4 * (LEGEND_ITEM_W + 5) + 3 * LEGEND_ITEM_GAP + 8;
+  assert.ok(est <= 270, 'legend would wrap on a 282px chart: ' + est);
+  const bars = Array.from({ length: 30 }, (_, i) => ({ date: '2026-01-' + String(i + 1).padStart(2, '0'), open: 10, high: 11, low: 9, close: 10.5, volume: 1000 }));
+  const opt = buildKlineOption({ bars, mode: 'game' });
+  assert.equal(opt.legend.textStyle.fontSize, LEGEND_FONT_PX);
+  assert.equal(opt.legend.itemGap, LEGEND_ITEM_GAP);
+});

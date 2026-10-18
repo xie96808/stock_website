@@ -1134,3 +1134,24 @@
   .market-stage .chart-stage { flex: none; height: clamp(420px, 58vh, 620px); min-height: 0; }
   .market-stage #kline-chart { height: 100%; min-height: 0; }
 }
+
+/* (c) Desktop with a short viewport (e.g. 1280x800): the three action buttons used to stack in a 190px column
+   at the very bottom of the left board and fell below the first screen. Lay them out as one row (same grid the
+   phone bar uses) and tighten the board's row gap, so 买入/卖出/观望 stay visible without scrolling.
+   Taller screens (>900px) and phones (<=900px) keep their existing layout. */
+@media (min-width: 901px) and (max-height: 900px) {
+  .asset-board { gap: 6px; }
+  .action-zone {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px 8px;
+    align-items: stretch;
+  }
+  .action-zone .action-btn { width: auto; padding: 12px 6px; letter-spacing: 0.12em; }
+  .action-zone .action-hint,
+  .action-zone .ff-hint,
+  .action-zone #fastForwardBtn,
+  .action-zone #finishBtn,
+  .action-zone #rewindBtn { grid-column: 1 / -1; text-align: center; }
+}
