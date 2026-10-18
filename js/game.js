@@ -1,5 +1,6 @@
 // ========== GAME FUNCTIONS ==========
 import { chartRefs } from './state.js';
+import { hideResumeBanner } from './resume-banner.js';
 import { initActionZoneSync } from './action-zone-sync.js';
 import {
     getSession,
@@ -97,6 +98,7 @@ function syncMobileIntelDefaults() {
 
 
 export async function startGame(options = {}) {
+    hideResumeBanner();
     // Use-case owns reset + seed (puzzle / window DTO / pack / local); view owns chrome.
     prepareSessionSeed({
         cloud: options.cloud || null,
@@ -758,9 +760,11 @@ export function updateUI() {
         : null;
     const survivalFloat = session.gameKind === 'survival'
         ? survivalFloatHud(
-            session.returnPpm != null
-              ? session.returnPpm
-              : Math.round((session.totalReturn - 1) * 1e6),
+            // Same source as the 收益率 card (totalReturn). session.returnPpm lags one decision
+            // behind in live play, which made 「相对开局」 disagree with the card until a reload.
+            Number.isFinite(session.totalReturn)
+              ? Math.round((session.totalReturn - 1) * 1e6)
+              : session.returnPpm != null ? session.returnPpm : 0,
             session.modifiers
           )
         : null;

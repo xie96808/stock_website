@@ -996,3 +996,69 @@
         padding-right: 46px;
     }
 }
+
+/* ===== 继续对局 banner (home / 模拟盘) — clean paper card, ink outline, no textures ===== */
+.resume-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 16px;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    width: min(920px, 100%);
+    margin: 0 auto 14px;
+    padding: 12px 14px 12px 16px;
+    position: relative;
+    z-index: 2;
+    background: var(--card);
+    color: var(--ink);
+    border: 1.6px solid var(--line);
+    border-radius: 16px 22px 15px 20px;
+    box-shadow: 2px 3px 0 var(--line);
+}
+.resume-banner[hidden] { display: none; }
+.resume-banner__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 220px;
+}
+.resume-banner__tag {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    padding: 1px 8px 1px 10px;
+    color: var(--terra);
+    border: 1.4px solid var(--terra);
+    border-radius: 6px 9px 5px 8px;
+    transform: rotate(-2deg);
+}
+.resume-banner__title { font-size: 1.02rem; letter-spacing: 0.06em; }
+.resume-banner__meta { font-size: 0.86rem; color: var(--mute); line-height: 1.4; }
+.resume-banner__actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.resume-banner__btn {
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    min-height: 40px;
+    padding: 0 16px;
+    cursor: pointer;
+    color: var(--ink);
+    background: var(--card);
+    border: 1.6px solid var(--line);
+    border-radius: 14px 18px 13px 17px;
+    box-shadow: 1px 2px 0 var(--line);
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out;
+    -webkit-tap-highlight-color: transparent;
+}
+.resume-banner__btn--primary { color: var(--terra-ink); background: var(--terra); }
+.resume-banner__btn:active:not(:disabled) { transform: translate(1px, 2px); box-shadow: 0 0 0 var(--line); }
+.resume-banner__btn:disabled { opacity: 0.6; cursor: progress; }
+@media (max-width: 480px) {
+    .resume-banner { padding: 11px 12px; }
+    .resume-banner__actions { width: 100%; }
+    .resume-banner__btn { flex: 1 1 0; }
+    .resume-banner__btn--primary { flex: 2 1 0; }
+}
+@media (prefers-reduced-motion: reduce) { .resume-banner__btn { transition: none; } }

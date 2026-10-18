@@ -12,6 +12,7 @@ import {
 } from "./puzzle-chapter.js";
 
 import { prefetchStocksPack } from "./pack-store.js";
+import { refreshResumeBanner } from "./resume-banner.js";
 import { gameState } from "./state.js";
 import {
   Route,
@@ -95,6 +96,7 @@ export function showHome() {
   hidePuzzleChaptersPanel();
   setHubMascotLevel(1);
   setRouteHash(Route.HOME);
+  refreshResumeBanner().catch(() => {});
 }
 
 /** 模拟盘二级 hub: 玩法入口 / 残局 / 我的战绩 / 练习榜 */
@@ -109,6 +111,7 @@ export function showSimHub(opts = {}) {
   hidePuzzleChaptersPanel();
   setHubMascotLevel(2);
   if (updateHash) setRouteHash(Route.SIM);
+  refreshResumeBanner().catch(() => {});
   // Intent to play: warm pack immediately (don't wait for Start / idle timer).
   prefetchStocksPack(gameState);
   refreshPuzzleChapterFlag()
@@ -131,6 +134,7 @@ export function showPlayModes() {
   if (modes) modes.hidden = false;
   setHubMascotLevel(3);
   setRouteHash(Route.SIM);
+  refreshResumeBanner().catch(() => {});
   prefetchStocksPack(gameState);
   refreshDailyChallengeFlag()
     .then(() => refreshDailyChallengeCard())

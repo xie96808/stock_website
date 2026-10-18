@@ -96,6 +96,18 @@
         <!-- Start Screen — 手绘 notebook split -->
         <section class="start-screen animate-in" id="startScreen" data-hub-level="1">
 
+            <div class="resume-banner" id="resumeGameBanner" role="region" aria-label="进行中的对局" hidden>
+                <div class="resume-banner__copy">
+                    <span class="resume-banner__tag">进行中</span>
+                    <strong class="resume-banner__title">你有一局进行中的游戏</strong>
+                    <span class="resume-banner__meta" id="resumeGameBannerMeta" aria-live="polite"></span>
+                </div>
+                <div class="resume-banner__actions">
+                    <button type="button" class="resume-banner__btn resume-banner__btn--ghost" id="resumeGameAbandonBtn"><span class="resume-banner__label">放弃</span></button>
+                    <button type="button" class="resume-banner__btn resume-banner__btn--primary" id="resumeGameContinueBtn"><span class="resume-banner__label">继续对局</span></button>
+                </div>
+            </div>
+
             <div class="page">
                 <aside class="art">
                     <div class="frame" data-hub-level="1">
@@ -1390,6 +1402,7 @@
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup, hideKBPopupSoon, toggleKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
+        import { initResumeBanner } from './js/resume-banner.js';
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
         import { initChromeOverflow } from './js/chrome-overflow.js';
@@ -1498,6 +1511,7 @@
         window.__puzzleStartGame = startGame;
         initPageZoom();
         initChromeOverflow();
+        initResumeBanner();
         initAuth()
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));
