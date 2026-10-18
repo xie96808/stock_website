@@ -8,11 +8,17 @@
 
 export const ECHARTS_VERSION = '5.4.3';
 
-/** Primary jsDelivr, then unpkg fallback (same version pin). */
+/** CDN fallbacks: jsDelivr, then unpkg (same version pin). */
 export const ECHARTS_CDN_URLS = Object.freeze([
   `https://cdn.jsdelivr.net/npm/echarts@${ECHARTS_VERSION}/dist/echarts.min.js`,
   `https://unpkg.com/echarts@${ECHARTS_VERSION}/dist/echarts.min.js`,
 ]);
+
+/** Same-origin copy (js/vendor/echarts.min.js, v5.4.3) — tried first so charts work when CDNs are blocked/slow. */
+export const ECHARTS_LOCAL_URL = new URL('./vendor/echarts.min.js', import.meta.url).href;
+
+/** Local first, CDNs only as fallback. */
+export const ECHARTS_URLS = Object.freeze([ECHARTS_LOCAL_URL, ...ECHARTS_CDN_URLS]);
 
 export const ECHARTS_STATUS = Object.freeze({
   IDLE: 'idle',
@@ -153,7 +159,7 @@ export function ensureEcharts(opts) {
   const options = opts || {};
   const timeoutMs = options.timeoutMs == null ? 12000 : options.timeoutMs;
   const doc = options.document || (typeof document !== 'undefined' ? document : null);
-  const urls = options.urls || ECHARTS_CDN_URLS;
+  const urls = options.urls || ECHARTS_URLS;
 
   const existing = markReadyFromGlobal();
   if (existing) return Promise.resolve(existing);

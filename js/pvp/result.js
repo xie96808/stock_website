@@ -131,7 +131,7 @@ function paintReplay(view) {
     const last = side.curve?.[side.curve.length - 1];
     const item = document.createElement("li");
     const valued = side.valued ? " · 已估值" : "";
-    item.innerHTML = `${escapeHtml(name)} ${colorReturnHtml(formatPpm(last?.returnPpm))} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${colorReturnHtml(formatPpm(side.curveMddPpm))}${escapeHtml(valued)}`;
+    item.innerHTML = `${escapeHtml(name)} ${colorReturnHtml(formatPpm(last?.returnPpm))} · 买 ${side.buyCount} · 卖 ${side.sellCount} · 曲线回撤 ${colorReturnHtml(formatPpm(drawdownPpm(side.curveMddPpm)))}${escapeHtml(valued)}`;
     curve?.appendChild(item);
   }
   for (const row of replay.divergences || []) {
@@ -139,6 +139,13 @@ function paintReplay(view) {
     item.textContent = row.text || "";
     gaps?.appendChild(item);
   }
+}
+
+/** Curve drawdown is a magnitude from the server; show it as a fall (-4.71%), never "+4.71%". */
+function drawdownPpm(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n === 0) return value == null ? null : 0;
+  return -Math.abs(n);
 }
 
 function paintAnalysis(view) {

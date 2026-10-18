@@ -116,7 +116,7 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.series[0].itemStyle.color0, "#3db86a");
   assert.equal(opt.series[0].markLine, undefined);
   assert.equal(opt.series[0].barWidth, "76%");
-  assert.ok(opt.grid[0].right <= 12);
+  assert.ok(opt.grid[0].right <= 24 && opt.grid[0].right >= 20); // PVP-04: room for the half-width of the last mark
   assert.ok(opt.grid[0].left <= 44);
   assert.equal(opt.dataZoom[0].start, 0);
   assert.equal(opt.dataZoom[0].end, 100);
@@ -369,4 +369,42 @@ test("battle chart can hide MA legend and toggle bottom indicator pane", () => {
   assert.equal(macd.grid.length, 2);
   assert.ok(macd.series.some((s) => s.name === "MACD"));
   assert.ok(!macd.series.some((s) => s.name === "成交量"));
+});
+
+test("pvp marks stack instead of overlapping (PVP-04)", () => {
+  const bars = Array.from({ length: 12 }, (_, i) => ({
+    label: i < 4 ? `h${i + 1}` : `d${i - 3}`,
+    open: 10, close: 10.5, low: 9.5, high: 11, volume: 1,
+  }));
+  const opt = buildKlineOption({
+    mode: "pvp", bars, historyLength: 4,
+    pvpMarks: [
+      { label: "d1", side: "me", kind: "buy" },
+      { label: "d1", side: "opponent", kind: "buy" },
+      { label: "d2", side: "opponent", kind: "buy" },
+      { label: "d2", side: "me", kind: "sell" },
+      { label: "d2", side: "opponent", kind: "sell" },
+      { label: "d8", side: "me", kind: "buy" },
+    ],
+  });
+  const points = opt.series[0].markPoint.data;
+  const rect = (p) => {
+    const half = p.symbolSize[1] / 2;
+    const c = p.symbolOffset[1];
+    return { x: points.indexOf(p), lo: c - half, hi: c + half, label: p.coord[0], above: c < 0 };
+  };
+  for (let i = 0; i < points.length; i += 1) {
+    for (let j = i + 1; j < points.length; j += 1) {
+      const a = points[i];
+      const b = points[j];
+      if ((a.symbolOffset[1] < 0) !== (b.symbolOffset[1] < 0)) continue;
+      const dx = Math.abs(Number(a.coord[0].slice(1)) - Number(b.coord[0].slice(1)));
+      if (dx >= 4) continue;
+      const ra = rect(a);
+      const rb = rect(b);
+      assert.ok(ra.hi <= rb.lo || rb.hi <= ra.lo, `${a.value}@${a.coord[0]} overlaps ${b.value}@${b.coord[0]}`);
+    }
+  }
+  const far = points.find((p) => p.coord[0] === "d8");
+  assert.ok(far.symbolOffset[1] < 30, "an isolated mark stays next to its candle");
 });

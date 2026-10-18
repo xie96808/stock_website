@@ -832,7 +832,7 @@ export function myStats(userId, query = {}) {
 
   const params = [userId, ruleVersion, datasetVersion];
   let sql = `
-    SELECT r.return_ppm
+    SELECT r.return_ppm, r.trade_count
     FROM game_sessions s
     JOIN game_results r ON r.game_id = s.id
     WHERE s.user_id = ? AND s.status = 'settled'
@@ -857,13 +857,18 @@ export function myStats(userId, query = {}) {
     sql += ` AND s.game_kind = 'classic'`;
   }
 
-  const rows = db.prepare(sql).all(...params);
+  const allRows = db.prepare(sql).all(...params);
+  // Audit LB-04: same trade_count>=1 rule as the leaderboards (zero-trade games are not records).
+  // The number left out is returned so the UI can say so instead of silently disagreeing.
+  const rows = allRows.filter((r) => Number(r.trade_count || 0) >= 1);
+  const excludedZeroTrade = allRows.length - rows.length;
   const count = rows.length;
   if (count === 0) {
     return {
       status: 200,
       data: {
         count: 0,
+        excludedZeroTrade,
         bestReturnPpm: null,
         bestReturnPct: null,
         avgReturnPpm: null,
@@ -891,6 +896,7 @@ export function myStats(userId, query = {}) {
     status: 200,
     data: {
       count,
+      excludedZeroTrade,
       bestReturnPpm: best,
       bestReturnPct: (best / 10000).toFixed(2),
       avgReturnPpm: avgPpm,

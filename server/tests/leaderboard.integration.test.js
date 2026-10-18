@@ -275,7 +275,8 @@ test("8 gameCount + winRate on board key", async () => {
     returnPpm: -50000,
     finishedAt: "2026-09-07T08:00:00.000Z",
   });
-  // zero-buy settled valid still counts toward stats (me/stats filter), not ranking seat alone
+  // Audit LB-02/LB-04: a zero-trade game is not a board game, so it must not inflate the row's
+  // 局数/胜率 either (it used to: 5 局 / 80% while the average only counted traded games).
   const zero = await settleHolds(auth, "next_open", `lb8-z-${Date.now()}`);
   forceResultRanking(zero.gameId, {
     returnPpm: 10,
@@ -286,13 +287,20 @@ test("8 gameCount + winRate on board key", async () => {
   const board = await api("/api/v1/leaderboard?fillMode=next_open");
   assertOk(board.status, board.json, 200);
   assert.ok(board.json.data.myRank >= 1);
-  // 3 wins + 1 loss + 1 zero-buy with return>0 => 5 valid settled; wins with ppm>0 = 4
-  assert.equal(board.json.data.myGameCount, 5);
-  assert.equal(board.json.data.myWinRate, 80);
+  // 3 wins + 1 loss traded = 4 board games (zero-trade game excluded); wins = 3 → 75%
+  assert.equal(board.json.data.myGameCount, 4);
+  assert.equal(board.json.data.myWinRate, 75);
   const seat = board.json.data.top10.find((r) => r.rank === board.json.data.myRank);
   assert.ok(seat);
-  assert.equal(seat.gameCount, 5);
-  assert.equal(seat.winRate, 80);
+  assert.equal(seat.gameCount, 4);
+  assert.equal(seat.winRate, 75);
+
+  // /me/stats uses the same rule and reports how many zero-trade games were left out.
+  const stats = await api("/api/v1/me/stats?fillMode=next_open");
+  assertOk(stats.status, stats.json, 200);
+  assert.equal(stats.json.data.count, 4);
+  assert.equal(stats.json.data.winRate, 75);
+  assert.equal(stats.json.data.excludedZeroTrade, 1);
 });
 
 test("9 in-memory board cache hit + invalidate on opt-in", async () => {

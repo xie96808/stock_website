@@ -452,7 +452,9 @@ function paintActions() {
   const primary = document.getElementById("pvpTradePrimary");
   const hold = document.getElementById("pvpHold");
   const holding = !!view?.me?.holding;
-  const wantSell = holding && !!view?.me?.canSell;
+  // Label follows what the player holds, never the transient canSell/canBuy (those go false during the
+  // reveal gap and used to flip a holder's 卖出 to a grey 买入). canSell/canBuy only drive `disabled`.
+  const wantSell = holding;
   const wantBuy = !holding && !!view?.me?.canBuy;
   const primaryImg = document.getElementById("pvpTradePrimaryImg");
   const primaryLabel = document.getElementById("pvpTradePrimaryLabel");

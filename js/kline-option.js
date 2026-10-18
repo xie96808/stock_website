@@ -34,9 +34,21 @@ function pvpAxisBound(value, ratio, toward) {
  */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
+    // Collision stacking (PVP-04): marks are placed left to right. A mark whose horizontal neighbours on the
+    // same side of the candle (within ~4 bars) are already placed starts beyond their outer edge, so
+    // pills/diamonds never sit on top of each other. Shapes stay distinct (mine = pill, opponent = diamond).
+    const BASE_GAP = 16;
+    const STACK_GAP = 3;
+    const NEAR_BARS = 4;
+    const placedSide = { above: [], below: [] };
+    const placed = [];
     for (const mark of Array.isArray(marks) ? marks : []) {
-        const bar = bars.find((item) => item && item.label === mark.label);
-        if (!bar || !mark.kind) continue;
+        const index = bars.findIndex((item) => item && item.label === mark.label);
+        if (index < 0 || !mark.kind) continue;
+        placed.push({ mark, index, bar: bars[index] });
+    }
+    placed.sort((a, b) => a.index - b.index);
+    for (const { mark, index, bar } of placed) {
         const mine = mark.side === 'me';
         const valuation = mark.kind === 'valuation';
         const sell = mark.kind === 'sell';
@@ -60,14 +72,23 @@ function pvpMarkerPoints(bars, marks) {
             bg = mine ? '#3db86a' : '#7c4dff';
         }
         const above = valuation || sell;
+        const size = valuation ? [52, 18] : mine ? [28, 18] : [40, 40];
+        const height = size[1];
+        const side = above ? placedSide.above : placedSide.below;
+        let inner = BASE_GAP;
+        for (const other of side) {
+            if (Math.abs(other.index - index) < NEAR_BARS) inner = Math.max(inner, other.outer + STACK_GAP);
+        }
+        side.push({ index, outer: inner + height });
+        const center = inner + height / 2;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
             symbol: mine || valuation ? 'roundRect' : 'diamond',
-            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [40, 40],
+            symbolSize: size,
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
-            symbolOffset: valuation ? [0, -22] : mine ? (above ? [0, -26] : [0, 28]) : (above ? [0, -44] : [0, 46]),
+            symbolOffset: [0, above ? -center : center],
             itemStyle: {
                 color: bg,
                 borderColor: valuation ? '#c9a227' : (buy ? (mine ? '#e05252' : '#1e4fc4') : (mine ? '#3db86a' : '#5b2fd6')),
@@ -595,14 +616,14 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp && pvpTwoPane
             ? [
-                { left: 40, right: 8, top: 12, bottom: '34%' },
-                { left: 40, right: 8, top: '72%', bottom: 16 }
+                { left: 40, right: 24, top: 12, bottom: '34%' },
+                { left: 40, right: 24, top: '72%', bottom: 16 }
             ]
             : isPvp
             ? [
-                { left: 40, right: 8, top: 26, bottom: '42%' },
-                { left: 40, right: 8, top: '62%', bottom: '24%' },
-                { left: 40, right: 8, top: '80%', bottom: 16 }
+                { left: 40, right: 24, top: 26, bottom: '42%' },
+                { left: 40, right: 24, top: '62%', bottom: '24%' },
+                { left: 40, right: 24, top: '80%', bottom: 16 }
             ]
             : isResult
             ? [
@@ -712,8 +733,11 @@ export function buildKlineOption(vm) {
     };
 
     if (!isResult && !isPvp) {
-        option.animation = true;
-        option.animationDuration = 300;
+        // Audit UI-04: every decision re-ran a 0.7–1.2s tween over the whole chart (looked like jitter).
+        // The live game chart updates in place; only the first paint may animate (never on setOption updates).
+        option.animation = false;
+        option.animationDuration = 0;
+        option.animationDurationUpdate = 0;
     }
 
     return option;

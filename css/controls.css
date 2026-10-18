@@ -1436,7 +1436,8 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
   filter: none;
   animation: ctl-share-spin-wobble 0.9s linear infinite;
 }
-.ctl-share-save[data-state="disabled"]:not(.is-busy) { background-image: url("../assets/controls/ctl-share-save-disabled.webp?v=20261013s"); }
+/* UI-06: clean default art greyed by CSS instead of the hatch-textured disabled art. */
+.ctl-share-save[data-state="disabled"]:not(.is-busy) { background-image: url("../assets/controls/ctl-share-save-default.webp?v=20261013s"); filter: grayscale(1); opacity: 0.55; }
 @keyframes ctl-share-spin-wobble {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.72; }

@@ -1101,3 +1101,36 @@
     letter-spacing: 0.04em;
     color: var(--mode-ghost-ink, #312e81);
 }
+
+/* ===== audit round 2 (UI-05): 反悔 + cost always on one line ===== */
+.action-btn.rewind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 2px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.action-btn.rewind .rewind-btn-icon { margin-right: 0; flex: 0 0 auto; }
+.action-btn.rewind .rewind-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.action-btn.rewind .jiu-coin-amt { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex: 0 0 auto; }
+@media (max-width: 380px) {
+  .action-btn.rewind { font-size: 0.8rem; }
+}
+
+/* ===== audit round 2 (UI-04): desktop chart height must not follow sibling content =====
+   The right column stretches to the left panel; the chart used flex:1, so it grew/shrank whenever
+   波段分析 / hints below changed (509↔562px) while the canvas kept its old size. Fixed, viewport-based height. */
+@media (min-width: 801px) {
+  .market-stage { flex: none; min-height: 0; }
+  .market-stage .chart-stage { flex: none; height: clamp(420px, 58vh, 620px); min-height: 0; }
+  .market-stage #kline-chart { height: 100%; min-height: 0; }
+}

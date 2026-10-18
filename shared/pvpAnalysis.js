@@ -8,7 +8,7 @@ import { buildEquityCurveCash, buyHoldBenchmarkPpm, mddPpmFromCurve } from './eq
 import { GAME_DAYS, INITIAL_CASH } from './rules.js';
 import { PVP_FILL_MODE } from './pvpMetrics.js';
 
-export const PVP_ANALYSIS_VERSION = 'pvp-analysis-v1';
+export const PVP_ANALYSIS_VERSION = 'pvp-analysis-v2';
 
 const ACTION_WORD = { buy: '买入', sell: '卖出', hold: '持有' };
 
@@ -31,16 +31,23 @@ function signedPoints(ppm) {
   return ppm > 0 ? `+${text}` : text;
 }
 
-/** Same-day actions and the change in the return gap. Not a causal claim. */
+/**
+ * Round N is decided after day N's close and fills at day N+1's open (PvP is next_open), so its
+ * effect shows up in day N+1's return, not day N's. The text says exactly that and never claims a cause.
+ */
 export function divergenceText({ round, me, opponent, gapChangePpm }) {
   const mine = ACTION_WORD[me] || '操作';
   const theirs = ACTION_WORD[opponent] || '操作';
-  return `第 ${round} 个交易日，你${mine}，对手${theirs}。两人当日收益差变化 ${signedPoints(gapChangePpm)} 个百分点。这只说明当天操作不同，不能据此断定是这次操作造成的。`;
+  const next = round + 1;
+  const dayWord = next >= GAME_DAYS ? `第 ${next} 个交易日（终局估值）` : `第 ${next} 个交易日`;
+  return `第 ${round} 回合，你${mine}，对手${theirs}。这一回合的操作在${dayWord}开盘成交，当日两人收益差变化 ${signedPoints(gapChangePpm)} 个百分点。这只说明操作不同，不能据此断定是这次操作造成的。`;
 }
 
 /**
  * Among decided rounds whose actions differ, keep at most `limit`,
- * largest absolute same-day gap change first. Equal changes keep the earlier round.
+ * largest absolute gap change first. Equal changes keep the earlier round.
+ * Round N's action is paired with the NEXT day's return change (ppm[N+1] - ppm[N]); for the last
+ * round ppm[N+1] is the final valuation. Rounds whose next day is not revealed yet are skipped.
  */
 export function pickDivergences({ actionsA, actionsB, ppmA, ppmB, limit = 3 } = {}) {
   const rounds = Math.min(actionsA?.length || 0, actionsB?.length || 0);
@@ -50,8 +57,8 @@ export function pickDivergences({ actionsA, actionsB, ppmA, ppmB, limit = 3 } = 
     const seat2 = actionsB[round - 1];
     if (seat1 === seat2) continue;
     if (!Number.isInteger(ppmA?.[round]) || !Number.isInteger(ppmB?.[round])) continue;
-    if (!Number.isInteger(ppmA?.[round - 1]) || !Number.isInteger(ppmB?.[round - 1])) continue;
-    const gapChangePpm = (ppmA[round] - ppmB[round]) - (ppmA[round - 1] - ppmB[round - 1]);
+    if (!Number.isInteger(ppmA?.[round + 1]) || !Number.isInteger(ppmB?.[round + 1])) continue;
+    const gapChangePpm = (ppmA[round + 1] - ppmB[round + 1]) - (ppmA[round] - ppmB[round]);
     rows.push({ round, seat1, seat2, gapChangePpm, abs: Math.abs(gapChangePpm) });
   }
   rows.sort((a, b) => (b.abs - a.abs) || (a.round - b.round));
@@ -154,6 +161,7 @@ export function projectReplay(doc, viewerSeat) {
       return {
         round: row.round,
         dayLabel: `d${row.round}`,
+        effectDay: row.round + 1,
         me: meAction,
         opponent: opponentAction,
         gapChangePpm,

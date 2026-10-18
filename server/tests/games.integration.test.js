@@ -407,7 +407,10 @@ test("P1 me/games pagination limit", async () => {
 
   const stats = await api("/api/v1/me/stats", { csrf: auth.csrfToken });
   assert.equal(stats.status, 200);
-  assert.ok(stats.json.data.count >= 3);
+  // LB-04: /me/stats uses the leaderboard's eligibility (>=1 trade). These three games are all-hold,
+  // so none is counted, but they are still listed by /me/games above and reported as skipped.
+  assert.equal(stats.json.data.count, 0);
+  assert.equal(stats.json.data.excludedZeroTrade, 3);
 });
 
 test("P1 concurrent identical finish → single result", async () => {

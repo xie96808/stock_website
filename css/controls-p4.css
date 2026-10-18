@@ -18,7 +18,8 @@
   --p4-tag-neutral: image-set(url("../assets/controls/ctl-stamp-tag-neutral.webp?v=20261013s") 1x, url("../assets/controls/ctl-stamp-tag-neutral@2x.webp?v=20261013s") 2x);
   --p4-back: image-set(url("../assets/controls/ctl-back-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-back-default@2x.webp?v=20261013s") 2x);
   --p4-back-press: image-set(url("../assets/controls/ctl-back-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-back-press@2x.webp?v=20261013s") 2x);
-  --p4-back-disabled: image-set(url("../assets/controls/ctl-back-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-back-disabled@2x.webp?v=20261013s") 2x);
+  /* UI-06: the drawn disabled art carries a diagonal hatch texture; use the clean default art, greyed by CSS. */
+  --p4-back-disabled: var(--p4-back);
   --p4-chip: image-set(url("../assets/controls/ctl-chip-btn-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-chip-btn-default@2x.webp?v=20261013s") 2x);
   --p4-chip-press: image-set(url("../assets/controls/ctl-chip-btn-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-chip-btn-press@2x.webp?v=20261013s") 2x);
   --p4-chip-active: image-set(url("../assets/controls/ctl-chip-btn-active.webp?v=20261013s") 1x, url("../assets/controls/ctl-chip-btn-active@2x.webp?v=20261013s") 2x);
@@ -173,7 +174,8 @@ html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle
 }
 html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back):disabled {
   border-image-source: var(--p4-back-disabled);
-  opacity: 0.8;
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 /* "←" glyph is redundant with the drawn arrow (js/controls-p4.js wraps it). */
 .p4-back-glyph { display: none; }
