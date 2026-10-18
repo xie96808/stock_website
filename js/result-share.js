@@ -1,6 +1,6 @@
 import { importWithRetry } from './lazy-import.js';
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
-import { resultVerdict } from './lb-verdict.js';
+import { shareBoardQuery, planShareRank, bestGameText } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
@@ -10,14 +10,22 @@ const SHARE_SITE_HOST = 'stockgame.xieyw.top';
 const SHARE_SITE_URL = 'https://stockgame.xieyw.top';
 
 let lastVerdict = null;
+// Board the rank/beat% came from (e.g. 一把梭·次日开盘, 次日开盘·反悔). Not always the plain fill-mode board.
+let lastBoardLabel = null;
 
 export function clearShareRankMeta() {
     lastVerdict = null;
+    lastBoardLabel = null;
     clearShareMeta();
 }
 
 function fillModeBoardLabel(mode) {
     return mode === 'same_close' ? '当日收盘' : '次日开盘';
+}
+
+/** Label of the board the shown rank belongs to (falls back to the plain fill-mode board). */
+function rankBoardLabel(share) {
+    return lastBoardLabel || fillModeBoardLabel(share.fillMode);
 }
 
 function formatReturnPctDisplay() {
@@ -37,12 +45,19 @@ function formatReturnPctDisplay() {
 function buildResultPromoCaption() {
     const share = selectShareView();
     const ret = formatReturnPctDisplay();
-    const board = fillModeBoardLabel(share.fillMode);
+    const board = rankBoardLabel(share);
     const beat = share.shareBeatPct;
-    if (beat != null) {
+    if (beat != null && beat > 0) {
         return (
             '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
             '，在' + board + '榜上超越了 ' + beat + '% 的玩家，你也来试试吧！'
+        );
+    }
+    if (beat === 0) {
+        // last place on the board: no "超越 0%" fragment
+        return (
+            '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
+            '，登上了' + board + '榜，你也来试试吧！'
         );
     }
     return (
@@ -61,9 +76,9 @@ function buildResultShareCopyText() {
     if (ranked) {
         const bits = [];
         if (rank != null) bits.push('目前排在第 ' + rank + ' 名');
-        if (beat != null) bits.push('超越约 ' + beat + '% 的玩家');
+        if (beat != null && beat > 0) bits.push('超越约 ' + beat + '% 的玩家');
         const mid = bits.join('／');
-        return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
+        if (mid) return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
     }
     return opening + '，收益率 ' + ret + '。你也来试试？\n' + SHARE_SITE_URL;
 }
@@ -150,30 +165,17 @@ export async function refreshShareRankMeta() {
     if (!auth || !auth.user || !share.cloudMode || share.saveStatus !== 'saved') {
         return null;
     }
-    const session = getSession();
-    const kind = session && session.gameKind;
-    const fillMode = share.fillMode === 'same_close' ? 'same_close' : 'next_open';
-    // Ask the board this game belongs to: its own kind and assist class (反悔局 → undo board).
-    const qs = new URLSearchParams({ fillMode: fillMode });
-    if (kind === 'oneshot' || kind === 'survival') qs.set('gameKind', kind);
-    else if (session && session.assistClass === 'undo') qs.set('assistClass', 'undo');
+    // Ask the board this game belongs to (own kind / 反悔 class). daily / ghost / puzzle have no board here.
+    const query = shareBoardQuery(share);
+    if (!query) return null;
     try {
-        const { data } = await api('/leaderboard?' + qs.toString());
-        const total = Number((data && data.total) || 0);
-        const myRank = data && data.myRank;
-        const recent = (data && data.myRecent) || [];
-        const mine = recent.find(function (g) { return g.gameId === share.cloudGameId; }) || null;
-        lastVerdict = resultVerdict(mine, {
-            rank: myRank == null ? null : myRank,
-            total: total,
-            fillMode: fillMode,
-            assistClass: data && data.assistClass,
-            gameKind: data && data.gameKind,
-        });
-        if (myRank == null || !(total >= 2)) return null;
-        const beat = Math.max(0, Math.min(99, Math.round(((total - myRank) / total) * 100)));
-        setShareMeta({ rank: myRank, boardTotal: total, beatPct: beat });
-        return { myRank: myRank, total: total, beat: beat };
+        const { data } = await api('/leaderboard?' + new URLSearchParams(query.params).toString());
+        const plan = planShareRank(share, data, query.fillMode);
+        lastBoardLabel = plan.label;
+        lastVerdict = plan.verdict;
+        if (!plan.meta) return null;
+        setShareMeta({ rank: plan.meta.rank, boardTotal: plan.meta.boardTotal, beatPct: plan.meta.beatPct });
+        return { myRank: plan.meta.rank, total: plan.meta.boardTotal, beat: plan.meta.beatPct };
     } catch (e) {
         return null;
     }
@@ -191,9 +193,7 @@ export function updateShareRankHint() {
     }
     if (share.shareBeatPct != null && share.shareRank != null) {
         el.hidden = false;
-        el.textContent =
-            '已上' + fillModeBoardLabel(share.fillMode) + '榜 · #' + share.shareRank +
-            ' · 超越约 ' + share.shareBeatPct + '% 玩家';
+        el.textContent = bestGameText(rankBoardLabel(share), share.shareRank, share.shareBeatPct);
         return;
     }
     if (share.cloudMode && share.saveStatus === 'saving') {
