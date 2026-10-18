@@ -1,7 +1,7 @@
 import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
-import { buildKlineOption } from "../kline-option.js";
+import { buildKlineOption, relaxPvpMarkers } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
 import { coinIconHtml } from "../jiu-coin.js";
@@ -213,7 +213,7 @@ async function paintChart(view, bestPoints) {
         chartObserver.observe(node);
       }
     }
-    chart.setOption(buildKlineOption({
+    const option = buildKlineOption({
       mode: "pvp",
       bars,
       historyLength: market.historyLength || 0,
@@ -221,7 +221,9 @@ async function paintChart(view, bestPoints) {
       bestPoints: bestPoints || null,
       showDataZoomSlider: false,
       resetDataZoom: true,
-    }), { replaceMerge: ["series"] });
+    });
+    chart.setOption(option, { replaceMerge: ["series"] });
+    relaxPvpMarkers(chart, option.series?.[0]?.markPoint?.data);
     chart.resize();
     window.setTimeout(() => { if (chart && mine === paintToken) chart.resize(); }, 80);
   } catch (err) {

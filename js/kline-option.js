@@ -111,6 +111,68 @@ function pvpMarkerPoints(bars, marks) {
     return points;
 }
 
+/**
+ * PVP-04, pass 2 (pixels). pvpMarkerPoints() already lane-stacks marks by bar index, but vertical room
+ * depends on each bar's price, which only the rendered chart knows. After every render this nudges any mark
+ * that still overlaps an earlier one further out (and flips it to the other side if it would leave the canvas).
+ * It always starts from the pristine offsets in `baseData`, so repeated runs never compound.
+ */
+const relaxState = new WeakMap();
+
+export function relaxPvpMarkers(chart, baseData) {
+    if (!chart || !Array.isArray(baseData) || !baseData.length) return;
+    const state = relaxState.get(chart) || { sig: '' };
+    state.base = baseData;
+    relaxState.set(chart, state);
+    const run = () => {
+        const base = state.base;
+        const height = chart.getHeight ? chart.getHeight() : 0;
+        if (!base || !height) return;
+        const placed = [];
+        const next = [];
+        for (const item of base) {
+            const w = item.symbolSize[0];
+            const h = item.symbolSize[1];
+            let px;
+            try {
+                px = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, item.coord);
+            } catch (e) {
+                px = null;
+            }
+            if (!px || !Number.isFinite(px[0]) || !Number.isFinite(px[1])) { next.push(item); continue; }
+            const baseOffset = item.symbolOffset[1];
+            const tryPlace = (sign) => {
+                let cy = px[1] + sign * Math.abs(baseOffset);
+                for (let i = 0; i < 14; i += 1) {
+                    const hit = placed.find((r) => Math.abs(px[0] - r.cx) < (w + r.w) / 2 - 1 && Math.abs(cy - r.cy) < (h + r.h) / 2 + 1);
+                    if (!hit) break;
+                    cy = sign < 0 ? hit.cy - (h + hit.h) / 2 - 2 : hit.cy + (h + hit.h) / 2 + 2;
+                }
+                return cy;
+            };
+            const sign = baseOffset < 0 ? -1 : 1;
+            let cy = tryPlace(sign);
+            if (cy - h / 2 < 2 || cy + h / 2 > height - 2) {
+                const alt = tryPlace(-sign);
+                if (alt - h / 2 >= 2 && alt + h / 2 <= height - 2) cy = alt;
+            }
+            placed.push({ cx: px[0], cy, w, h });
+            next.push({ ...item, symbolOffset: [0, Math.round(cy - px[1])] });
+        }
+        const sig = next.map((n) => n.symbolOffset[1]).join(',');
+        if (sig === state.sig) return;
+        state.sig = sig;
+        chart.setOption({ series: [{ markPoint: { data: next } }] });
+    };
+    state.run = run;
+    if (!state.bound) {
+        state.bound = true;
+        chart.on('finished', () => { if (state.run) state.run(); });
+    }
+    state.sig = '';
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run); else run();
+}
+
 /** History categories stay `hN` for mark lookup. The axis does not print that prefix. */
 function pvpAxisText(value) {
     const text = String(value ?? "");

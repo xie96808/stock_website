@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildKlineOption } from "../../js/kline-option.js";
+import { buildKlineOption, relaxPvpMarkers } from "../../js/kline-option.js";
 import {
   formatRemain,
   formatWinRate,
@@ -407,4 +407,41 @@ test("pvp marks stack instead of overlapping (PVP-04)", () => {
   }
   const far = points.find((p) => p.coord[0] === "d8");
   assert.ok(far.symbolOffset[1] < 30, "an isolated mark stays next to its candle");
+});
+
+test("pixel pass pushes overlapping marks apart and is idempotent (PVP-04)", () => {
+  // Fake chart: x = 10px per bar, y = price * 4 (so same-price bars share the same pixel row).
+  const labels = ["d1", "d2", "d3"];
+  const applied = [];
+  let finished = null;
+  const chart = {
+    getHeight: () => 300,
+    convertToPixel: (_axes, coord) => [labels.indexOf(coord[0]) * 10 + 20, 200 - Number(coord[1]) * 4],
+    setOption: (opt) => applied.push(opt.series[0].markPoint.data),
+    on: (name, fn) => { if (name === "finished") finished = fn; },
+  };
+  const base = labels.map((label) => ({
+    coord: [label, 10],
+    value: "对手买",
+    symbolSize: [40, 40],
+    symbolOffset: [0, 26],
+  }));
+  const raf = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (fn) => fn();
+  try {
+    relaxPvpMarkers(chart, base);
+    assert.equal(applied.length, 1);
+    const rects = applied[0].map((p) => ({ cy: 160 + p.symbolOffset[1], h: p.symbolSize[1] }));
+    for (let i = 0; i < rects.length; i += 1) {
+      for (let j = i + 1; j < rects.length; j += 1) {
+        assert.ok(Math.abs(rects[i].cy - rects[j].cy) >= 40, "40px diamonds on neighbouring bars must not overlap");
+      }
+    }
+    // Re-running from the pristine base gives the same answer, so nothing compounds.
+    finished();
+    assert.equal(applied.length, 1);
+    assert.equal(base[0].symbolOffset[1], 26, "the caller's base data is never mutated");
+  } finally {
+    globalThis.requestAnimationFrame = raf;
+  }
 });
