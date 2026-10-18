@@ -566,16 +566,20 @@ function _renderQuote() {
     if (aut) aut.textContent = q.author;
 }
 
-function _loadHtml2canvas() {
-    if (typeof html2canvas === 'function') return Promise.resolve(true);
-    return new Promise((resolve) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-        s.async = true;
-        s.onload = () => resolve(typeof html2canvas === 'function');
-        s.onerror = () => resolve(false);
-        document.head.appendChild(s);
-    });
+/** Vendored html2canvas (same-origin) with a hard timeout — the old jsdelivr <script> could hang forever
+ *  on networks where the CDN is slow/blocked (same root cause as the result-screen 保存图片 hang). */
+async function _loadHtml2canvas() {
+    if (typeof html2canvas === 'function') return true;
+    try {
+        const mod = await Promise.race([
+            import('./vendor/html2canvas.esm.js'),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000)),
+        ]);
+        window.html2canvas = mod.default;
+        return typeof html2canvas === 'function';
+    } catch (e) {
+        return false;
+    }
 }
 
 const HINDSIGHT_SITE_URL = 'https://stockgame.xieyw.top';

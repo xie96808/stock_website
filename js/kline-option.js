@@ -255,6 +255,14 @@ export function buildKlineOption(vm) {
     const axisLabelColor = paperChart ? '#6b6660' : '#8b949e';
     const splitLineColor = paperChart ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
 
+    // Y labels are right-aligned to the grid's left edge: reserve their real width (px, same for the
+    // price and volume grids so candles and bars stay aligned) instead of a % that clipped them.
+    const maxPriceChars = bars.reduce((m, d) => {
+        const hi = Math.max(Number(d.high) || 0, Number(d.open) || 0, Number(d.close) || 0);
+        return Math.max(m, hi.toFixed(2).length);
+    }, 4);
+    const yAxisLeftPx = Math.round(12 + maxPriceChars * 6.3);
+
     const xAxisBottomLabel = isPvp
         ? {
             color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, hideOverlap: true,
@@ -598,12 +606,12 @@ export function buildKlineOption(vm) {
             ]
             : isResult
             ? [
-                { left: '10%', right: '2%', top: '12%', bottom: wantSlider ? '38%' : '35%' },
-                { left: '10%', right: '2%', top: wantSlider ? '70%' : '72%', bottom: wantSlider ? '14%' : '8%' }
+                { left: yAxisLeftPx, right: 14, top: '12%', bottom: wantSlider ? '38%' : '35%' },
+                { left: yAxisLeftPx, right: 14, top: wantSlider ? '70%' : '72%', bottom: wantSlider ? '14%' : 30 }
             ]
             : [
-                { left: '8%', right: '2%', top: '8%', bottom: '34%' },
-                { left: '8%', right: '2%', top: '73%', bottom: '6%' }
+                { left: yAxisLeftPx, right: 14, top: 26, bottom: '38%' },
+                { left: yAxisLeftPx, right: 14, top: '66%', bottom: 30 }
             ],
         xAxis: isPvp && pvpTwoPane
             ? [

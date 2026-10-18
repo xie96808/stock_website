@@ -2,7 +2,6 @@ import { clearShareMeta, setShareMeta, selectShareView, getSession } from './gam
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
-import { showStampToast } from './controls.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -185,18 +184,6 @@ export function updateShareRankHint() {
     el.textContent = '游客/练习局可用简明文案；登录并上榜后分享图可带超越比例';
 }
 
-function loadHtml2canvas() {
-    if (typeof html2canvas === 'function') return Promise.resolve(true);
-    return new Promise((resolve) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-        s.async = true;
-        s.onload = () => resolve(typeof html2canvas === 'function');
-        s.onerror = () => resolve(false);
-        document.head.appendChild(s);
-    });
-}
-
 function ensureResultShareSheet() {
     let sheet = document.getElementById('resultShareSheet');
     if (sheet) return sheet;
@@ -244,59 +231,162 @@ function populateResultShareSheet() {
     return sheet;
 }
 
+/* ---------- 保存图片 (result screen) ----------
+ * Root cause of the old "生成中…" hang: html2canvas was injected from the jsdelivr CDN with no
+ * timeout. Where the CDN is slow/blocked (mainland networks, Android WebView) the <script> neither
+ * loads nor errors, so the promise never settled and the button stayed disabled. It also finished
+ * with <a download>, which Android WebView silently ignores. Now: vendored html2canvas (same as the
+ * PvP path), hard timeouts at every stage, delivery via the StockGameApp.saveImage bridge →
+ * navigator.share → <a download>, a shutter-style preview as proof, and a retry toast on failure. */
+const SAVE_LOAD_TIMEOUT_MS = 10000;
+const SAVE_RENDER_TIMEOUT_MS = 20000;
+const SAVE_PREVIEW_MS = 1500;
+let saveImageBusy = false;
+
+function withTimeout(promise, ms, tag) {
+    let timer = 0;
+    const timeout = new Promise(function (_, reject) {
+        timer = window.setTimeout(function () { reject(new Error('timeout:' + tag)); }, ms);
+    });
+    return Promise.race([promise, timeout]).finally(function () { window.clearTimeout(timer); });
+}
+
+async function renderShareSheetCanvas(sheet, bg) {
+    const mod = await withTimeout(import('./vendor/html2canvas.esm.js'), SAVE_LOAD_TIMEOUT_MS, 'load');
+    const h2c = mod.default;
+    return withTimeout(h2c(sheet, {
+        backgroundColor: bg || '#f7f1e3',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        imageTimeout: 6000,
+        width: sheet.offsetWidth,
+        height: sheet.offsetHeight,
+        windowWidth: sheet.offsetWidth,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+        onclone: function (doc) {
+            const c = doc.getElementById('resultShareSheet');
+            if (c) { c.style.left = '0px'; c.style.top = '0px'; c.style.zIndex = '1'; }
+        },
+    }), SAVE_RENDER_TIMEOUT_MS, 'render');
+}
+
+/** Screenshot-style preview: white flash, the card drops in, auto-closes (~1.5s) or on tap. */
+function showSavePreview(canvas, how) {
+    const old = document.getElementById('resultSavePreview');
+    if (old) old.remove();
+    const copy = {
+        'bridge-saved': '已保存到相册',
+        'bridge-shared': '已打开系统分享',
+        shared: '已打开分享',
+        downloaded: '图片已保存',
+    }[how] || '图片已保存';
+    const root = document.createElement('div');
+    root.id = 'resultSavePreview';
+    root.className = 'result-save-preview';
+    root.setAttribute('role', 'status');
+    const flash = document.createElement('div');
+    flash.className = 'result-save-preview__flash';
+    const card = document.createElement('div');
+    card.className = 'result-save-preview__card';
+    const img = document.createElement('img');
+    img.alt = '分享图预览';
+    try { img.src = canvas.toDataURL('image/png'); } catch (e) { /* tainted: caption only */ }
+    const cap = document.createElement('div');
+    cap.className = 'result-save-preview__cap';
+    cap.textContent = '✓ ' + copy;
+    card.append(img, cap);
+    root.append(flash, card);
+    document.body.appendChild(root);
+    let closed = false;
+    const close = function () {
+        if (closed) return;
+        closed = true;
+        root.classList.add('is-out');
+        window.setTimeout(function () { root.remove(); }, 180);
+    };
+    root.addEventListener('click', close);
+    window.setTimeout(close, SAVE_PREVIEW_MS);
+    return root;
+}
+
+/** Error toast with a 重试 button (no browser dialog). Stays ~6s; own element so showStampToast's 2.2s timer can't remove it. */
+function showSaveRetryToast(message, onRetry) {
+    let host = document.getElementById('authToastHost');
+    if (!host) {
+        host = document.createElement('div');
+        host.className = 'auth-toast-host';
+        host.id = 'authToastHost';
+        host.setAttribute('aria-live', 'polite');
+        document.body.appendChild(host);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'auth-toast ctl-toast ctl-toast--error auth-toast--error result-retry-toast';
+    toast.setAttribute('role', 'alert');
+    toast.style.pointerEvents = 'auto';
+    const text = document.createElement('span');
+    text.textContent = message;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'result-retry-toast__btn';
+    btn.textContent = '重试';
+    const hide = function () {
+        toast.classList.remove('show');
+        window.setTimeout(function () { toast.remove(); }, 200);
+    };
+    btn.addEventListener('click', function (ev) { ev.stopPropagation(); hide(); onRetry(); });
+    toast.addEventListener('click', hide);
+    toast.append(text, btn);
+    host.appendChild(toast);
+    requestAnimationFrame(function () { toast.classList.add('show'); });
+    window.setTimeout(hide, 6000);
+}
+
 export async function saveResultShareImage() {
+    if (saveImageBusy) return;
+    saveImageBusy = true;
     const btn = document.getElementById('resultShareImageBtn');
-    const orig = btn ? (btn.querySelector('.ctl-label') || btn).textContent : '';
+    const labelEl = btn ? (btn.querySelector('.ctl-label') || btn) : null;
+    const orig = labelEl ? labelEl.textContent : '';
     if (btn) {
         btn.disabled = true;
-        (btn.querySelector('.ctl-label') || btn).textContent = '生成中…';
+        labelEl.textContent = '生成中…';
     }
+    let sheet = null;
     try {
-        const ok = await loadHtml2canvas();
-        const sheet = populateResultShareSheet();
+        sheet = populateResultShareSheet();
         sheet.classList.add('capturing');
         void sheet.offsetWidth;
-        if (!ok || typeof html2canvas !== 'function') {
-            sheet.classList.remove('capturing');
-            showStampToast('当前环境无法生成分享图，请稍后再试', 'error');
-            return;
-        }
         const bg = getComputedStyle(document.documentElement).getPropertyValue('--card').trim()
             || getComputedStyle(sheet).backgroundColor
             || '#f7f1e3';
-        const canvas = await html2canvas(sheet, {
-            backgroundColor: bg || '#f7f1e3',
-            scale: 2,
-            useCORS: true,
-            logging: false,
-        });
+        const canvas = await renderShareSheetCanvas(sheet, bg);
         sheet.classList.remove('capturing');
-        const blob = await new Promise(function (resolve) { canvas.toBlob(resolve, 'image/png'); });
-        if (!blob) {
-            showStampToast('生成分享图失败，请稍后再试', 'error');
-            return;
-        }
         const shareStock = selectShareView().currentStock;
         const code = (shareStock && shareStock.code) || 'game';
         const safeCode = String(code).replace(/[\\\/:*?"<>|]/g, '_');
         const filename = '结算分享_' + safeCode + '.png';
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        const bridge = window.StockGameApp;
+        const hasBridge = !!(bridge && typeof bridge.saveImage === 'function');
+        const { deliverImage } = await withTimeout(import('./share-image.js'), SAVE_LOAD_TIMEOUT_MS, 'deliver-load');
+        const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: buildResultPromoCaption() });
+        if (how === 'cancelled') return;
+        // In the Android shell, a bridge that did not report "saved" means nothing reached the album
+        // and WebView ignores <a download>: do not claim success.
+        if (hasBridge && how === 'downloaded') throw new Error('bridge-save-failed');
+        showSavePreview(canvas, how);
     } catch (err) {
         console.error('结算分享图失败', err);
-        const sheet = document.getElementById('resultShareSheet');
-        if (sheet) sheet.classList.remove('capturing');
-        showStampToast('生成分享图失败，请稍后再试', 'error');
+        showSaveRetryToast('保存图片失败，请重试', function () { void saveResultShareImage(); });
     } finally {
+        if (sheet) sheet.classList.remove('capturing');
+        saveImageBusy = false;
         if (btn) {
             btn.disabled = false;
-            (btn.querySelector('.ctl-label') || btn).textContent = orig || '📷 保存分享图';
+            labelEl.textContent = orig || '保存图片';
         }
     }
 }

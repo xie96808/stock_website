@@ -1,5 +1,6 @@
 // ========== GAME FUNCTIONS ==========
 import { chartRefs } from './state.js';
+import { initActionZoneSync } from './action-zone-sync.js';
 import {
     getSession,
     getStocksCatalog,
@@ -108,6 +109,7 @@ export async function startGame(options = {}) {
     prepareScreen(Route.GAME);
     activateScreen(Route.GAME);
     syncMobileIntelDefaults();
+    initActionZoneSync();
 
     // Clear leftover 波段分析 from a previous run
     const tagsEl = document.getElementById('waveAnalysisTags');

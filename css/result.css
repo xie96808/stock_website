@@ -799,3 +799,123 @@
     letter-spacing: 0.04em;
     word-break: break-all;
 }
+
+/* ===== normal-mode audit (D): compact result actions — hand-drawn icon + short label, 3-up grid =====
+   Clean ink-outline buttons (no art-shell grain/speckle). 再来一局 spans two columns as the primary. */
+.result-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+.result-actions .play-again-btn.ctl.result-act {
+    width: 100% !important;
+    min-width: 0;
+    height: 44px !important;
+    min-height: 44px;
+    margin: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 6px !important;
+    font-size: 0.9rem;
+    letter-spacing: 0.04em !important;
+    color: var(--ink) !important;
+    background-image: none !important;
+    background-color: var(--card) !important;
+    border: 1.6px solid var(--line) !important;
+    border-radius: 16px 20px 15px 19px !important;
+    box-shadow: 1px 2px 0 var(--line) !important;
+    transition: transform 90ms ease-out, box-shadow 90ms ease-out;
+}
+.result-actions .play-again-btn.ctl.result-act:hover { transform: none; }
+.result-actions .play-again-btn.ctl.result-act:active:not(:disabled) {
+    background-image: none !important;
+    transform: translate(1px, 2px);
+    box-shadow: 0 0 0 var(--line) !important;
+}
+.result-actions .play-again-btn.ctl.result-act:disabled { opacity: 0.55; cursor: progress; }
+.result-actions .play-again-btn.ctl.result-act--primary {
+    grid-column: span 2;
+    font-size: 1.02rem;
+    letter-spacing: 0.12em !important;
+    color: var(--terra-ink) !important;
+    background-color: var(--terra) !important;
+}
+.result-actions .ctl-label { white-space: nowrap; }
+.result-act__icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+@media (max-width: 380px) {
+    .result-actions { gap: 6px; }
+    .result-actions .play-again-btn.ctl.result-act { font-size: 0.84rem; gap: 3px; padding: 0 3px !important; letter-spacing: 0 !important; }
+    .result-actions .play-again-btn.ctl.result-act--primary { font-size: 0.96rem; }
+    .result-act__icon { width: 18px; height: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .result-actions .play-again-btn.ctl.result-act { transition: none; }
+}
+@media (min-width: 700px) {
+    .result-actions { max-width: 460px; margin-left: auto; margin-right: auto; }
+}
+
+/* ===== 保存图片: shutter preview + retry toast ===== */
+.result-save-preview {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 16, 12, 0.38);
+    animation: rsp-in 120ms ease-out both;
+}
+.result-save-preview.is-out { opacity: 0; transition: opacity 180ms ease-out; }
+.result-save-preview__flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    pointer-events: none;
+    animation: rsp-flash 320ms ease-out both;
+}
+.result-save-preview__card {
+    position: relative;
+    width: min(64vw, 260px);
+    padding: 8px 8px 10px;
+    background: var(--card);
+    border: 1.6px solid var(--line);
+    border-radius: 6px 10px 5px 9px;
+    box-shadow: 3px 4px 0 var(--line);
+    transform: rotate(-2deg);
+    animation: rsp-drop 260ms cubic-bezier(.2, .9, .3, 1.2) 80ms both;
+}
+.result-save-preview__card img { display: block; width: 100%; height: auto; border-radius: 3px; background: var(--paper-2); }
+.result-save-preview__cap { margin-top: 8px; text-align: center; font-weight: 700; letter-spacing: 0.1em; color: var(--ink); font-size: 0.95rem; }
+@keyframes rsp-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rsp-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+@keyframes rsp-drop { from { opacity: 0; transform: translateY(-14px) scale(1.12) rotate(-2deg); } to { opacity: 1; transform: translateY(0) scale(1) rotate(-2deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .result-save-preview, .result-save-preview__card { animation: none; }
+    .result-save-preview__flash { display: none; }
+}
+.result-retry-toast { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.result-retry-toast__btn {
+    font: inherit;
+    font-weight: 700;
+    min-height: 32px;
+    padding: 2px 14px;
+    color: #8a2a2a;
+    background: #fff8f6;
+    border: 1.5px solid #8a2a2a;
+    border-radius: 9px 12px 8px 11px;
+    cursor: pointer;
+}
+.result-retry-toast__btn:active { transform: translate(1px, 1px); }

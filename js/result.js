@@ -78,6 +78,18 @@ function paintPuzzleGradeHero({ stars, pending, reward }) {
  * Result view: paint settle chrome / share / review.
  * Cloud persist goes through persistSettledCloudGame (use-case boundary) → finishCloudGame HTTP.
  */
+/** Set a result-action label without wiping the hand-drawn icon next to it. */
+function setBtnLabel(btn, text) {
+    if (!btn) return;
+    const l = btn.querySelector('.ctl-label');
+    (l || btn).textContent = text;
+}
+function btnLabel(btn) {
+    if (!btn) return '';
+    const l = btn.querySelector('.ctl-label');
+    return (l || btn).textContent;
+}
+
 export function endGame() {
     // Settlement P&L / valuation already applied by finishSettle() via shared engine.
     // Do not invent a day-30 sell fill here.
@@ -147,7 +159,7 @@ export function endGame() {
         if (lbBtn) lbBtn.hidden = true;
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
         if (playBtn && playBtn.getAttribute('onclick') === 'playAgain()') {
-            playBtn.textContent = '返回残局列表';
+            setBtnLabel(playBtn, '返回残局列表');
         }
         // Celebration / reward layer on top of full result screen + 残局复盘.
         const debriefInput = {
@@ -170,28 +182,28 @@ export function endGame() {
             // Oneshot / survival: open kind-specific practice board tabs. Daily: day-board modal.
             if (view.gameKind === 'oneshot') {
                 lbBtn.hidden = false;
-                lbBtn.textContent = '查看一把梭榜';
+                setBtnLabel(lbBtn, '一把梭榜');
             } else if (view.gameKind === 'survival') {
                 lbBtn.hidden = false;
-                lbBtn.textContent = '查看生存榜';
+                setBtnLabel(lbBtn, '生存榜');
             } else if (view.gameKind === 'daily') {
                 lbBtn.hidden = false;
-                lbBtn.textContent = '查看日榜';
+                setBtnLabel(lbBtn, '日榜');
             } else {
                 lbBtn.hidden = false;
-                lbBtn.textContent = '查看排行榜';
+                setBtnLabel(lbBtn, '排行榜');
             }
         }
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
-        if (playBtn && playBtn.textContent.includes('残局')) {
-            playBtn.textContent = '再来一局';
+        if (playBtn && btnLabel(playBtn).includes('残局')) {
+            setBtnLabel(playBtn, '再来一局');
         }
         if (playBtn && view.gameKind === 'oneshot') {
-            playBtn.textContent = '再来一把梭';
+            setBtnLabel(playBtn, '再来一把梭');
         } else if (playBtn && view.gameKind === 'survival') {
-            playBtn.textContent = '再来生存模式';
-        } else if (playBtn && (playBtn.textContent === '再来一把梭' || playBtn.textContent === '再来生存模式')) {
-            playBtn.textContent = '再来一局';
+            setBtnLabel(playBtn, '再来生存模式');
+        } else if (playBtn && (btnLabel(playBtn) === '再来一把梭' || btnLabel(playBtn) === '再来生存模式')) {
+            setBtnLabel(playBtn, '再来一局');
         }
     }
 
