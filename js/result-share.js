@@ -1,5 +1,5 @@
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
-import { resultVerdict } from './lb-verdict.js';
+import { resultVerdict, boardLabel } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
@@ -10,14 +10,22 @@ const SHARE_SITE_HOST = 'stockgame.xieyw.top';
 const SHARE_SITE_URL = 'https://stockgame.xieyw.top';
 
 let lastVerdict = null;
+// Board the rank/beat% came from (e.g. 一把梭·次日开盘, 次日开盘·反悔). Not always the plain fill-mode board.
+let lastBoardLabel = null;
 
 export function clearShareRankMeta() {
     lastVerdict = null;
+    lastBoardLabel = null;
     clearShareMeta();
 }
 
 function fillModeBoardLabel(mode) {
     return mode === 'same_close' ? '当日收盘' : '次日开盘';
+}
+
+/** Label of the board the shown rank belongs to (falls back to the plain fill-mode board). */
+function rankBoardLabel(share) {
+    return lastBoardLabel || fillModeBoardLabel(share.fillMode);
 }
 
 function formatReturnPctDisplay() {
@@ -37,7 +45,7 @@ function formatReturnPctDisplay() {
 function buildResultPromoCaption() {
     const share = selectShareView();
     const ret = formatReturnPctDisplay();
-    const board = fillModeBoardLabel(share.fillMode);
+    const board = rankBoardLabel(share);
     const beat = share.shareBeatPct;
     if (beat != null) {
         return (
@@ -163,6 +171,7 @@ export async function refreshShareRankMeta() {
         const myRank = data && data.myRank;
         const recent = (data && data.myRecent) || [];
         const mine = recent.find(function (g) { return g.gameId === share.cloudGameId; }) || null;
+        lastBoardLabel = boardLabel(fillMode, data && data.assistClass, data && data.gameKind);
         lastVerdict = resultVerdict(mine, {
             rank: myRank == null ? null : myRank,
             total: total,
@@ -192,7 +201,7 @@ export function updateShareRankHint() {
     if (share.shareBeatPct != null && share.shareRank != null) {
         el.hidden = false;
         el.textContent =
-            '已上' + fillModeBoardLabel(share.fillMode) + '榜 · #' + share.shareRank +
+            '已上' + rankBoardLabel(share) + '榜 · #' + share.shareRank +
             ' · 超越约 ' + share.shareBeatPct + '% 玩家';
         return;
     }
