@@ -488,3 +488,55 @@ test("13 average myRank outside top10", async () => {
   assert.equal(board.json.data.myRank, 12);
   assert.ok(!board.json.data.top10.some((r) => r.nickname === "均名11"));
 });
+
+test("F1 myRecent lists every finished game with an explicit board verdict (incl. zero-trade)", async () => {
+  clearJar();
+  const auth = await register(`lbr${Date.now().toString(36)}`);
+  await optIn(auth.csrfToken);
+  const a = await settleBuySell(auth, "same_close", `lbr-a-${Date.now()}`);
+  const h = await settleHolds(auth, "same_close", `lbr-h-${Date.now()}`);
+  const r = await api("/api/v1/leaderboard?fillMode=same_close&assistClass=clean");
+  assertOk(r.status, r.json, 200);
+  const rec = r.json.data.myRecent;
+  assert.equal(rec.length, 2);
+  const byId = Object.fromEntries(rec.map((g) => [g.gameId, g]));
+  assert.equal(byId[a.gameId].status, "counted");
+  assert.equal(byId[a.gameId].isBest, true);
+  assert.equal(byId[h.gameId].status, "no_trade");
+  assert.equal(byId[h.gameId].isBest, false);
+  assert.equal(rec[0].gameId, h.gameId, "newest first");
+  // guests get no personal fields
+  clearJar();
+  const g = await api("/api/v1/leaderboard?fillMode=same_close");
+  assert.equal(g.json.data.myRecent, null);
+  assert.equal(g.json.data.myEntry, null);
+});
+
+test("F2 viewer outside Top 10 still gets their own row (myEntry)", async () => {
+  clearJar();
+  const stamp = Date.now().toString(36);
+  const players = [];
+  for (let i = 0; i < 11; i++) {
+    clearJar();
+    const auth = await register(`lbt${i}${stamp}`);
+    await optIn(auth.csrfToken);
+    const g = await settleBuySell(auth, "next_open", `lbt-${i}-${stamp}`);
+    players.push({ auth, gameId: g.gameId, i });
+  }
+  // everyone high except the last registered who is the lowest return of all boards entries.
+  for (const p of players) {
+    forceResultRanking(p.gameId, { returnPpm: p.i === 10 ? -900000 : 500000 + p.i * 1000 });
+  }
+  const last = players[10];
+  // re-login as last (jar is cookie-based; register of same name not possible) → use the jar from last register
+  // The test helper keeps the most recent session in jar, which is `last`.
+  const r = await api("/api/v1/leaderboard?fillMode=next_open&assistClass=clean");
+  assertOk(r.status, r.json, 200);
+  const d = r.json.data;
+  assert.equal(d.top10.length, 10);
+  assert.ok(d.myRank > 10, `rank ${d.myRank}`);
+  assert.ok(d.myEntry, "myEntry present");
+  assert.equal(d.myEntry.rank, d.myRank);
+  assert.equal(d.myEntry.returnPpm, -900000);
+  assert.equal(d.myRecent.find((x) => x.gameId === last.gameId).status, "counted");
+});

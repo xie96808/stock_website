@@ -293,3 +293,48 @@
 .leaderboard-row.lb-row-survive {
   border-color: color-mix(in srgb, var(--mode-survival) 28%, var(--line));
 }
+
+/* Own row (outside Top 10 / highlighted) + recent games */
+.leaderboard-row.is-me {
+  background: color-mix(in srgb, var(--accent, #c0392b) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #c0392b) 40%, transparent);
+}
+.lb-me-tag {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0 0.35rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  border: 1px solid currentColor;
+  opacity: 0.8;
+}
+.leaderboard-gap { text-align: center; opacity: 0.5; line-height: 1; letter-spacing: 0.3em; }
+.lb-recent { margin-top: 0.6rem; font-size: 0.82rem; }
+.lb-recent-title { opacity: 0.7; margin-bottom: 0.35rem; }
+.lb-recent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+.lb-recent-row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.3rem 0.1rem;
+  border-bottom: 1px dashed color-mix(in srgb, currentColor 16%, transparent);
+}
+.lb-recent-row.is-off .lb-recent-txt { opacity: 0.75; }
+.lb-recent-ret { font-weight: 700; font-variant-numeric: tabular-nums; }
+.lb-recent-ret.pos { color: #e05252; }
+.lb-recent-ret.neg { color: #3db86a; }
+.lb-recent-time { opacity: 0.6; font-size: 0.72rem; white-space: nowrap; }
+.cloud-save-retry {
+  margin-left: 0.4rem;
+  padding: 0.2rem 0.7rem;
+  min-height: 32px;
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.cloud-save-retry:active { transform: scale(0.96); }

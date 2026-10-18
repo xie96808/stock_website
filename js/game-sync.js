@@ -98,6 +98,16 @@ export function paintCloudSaveStatus(session = getSession()) {
   el.hidden = false;
   el.className = "cloud-save-status status-" + (session.saveStatus || "idle");
   el.textContent = map[session.saveStatus] || "云端对局进行中";
+  if (session.saveStatus === "fail" && typeof window !== "undefined" && typeof window.retrySettleSave === "function") {
+    // A finished game that failed to save must never be silent: offer an explicit retry.
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cloud-save-retry";
+    btn.textContent = "重试保存";
+    btn.addEventListener("click", () => window.retrySettleSave());
+    el.appendChild(document.createTextNode(" "));
+    el.appendChild(btn);
+  }
 }
 
 let saveStatusUiHandler = paintCloudSaveStatus;

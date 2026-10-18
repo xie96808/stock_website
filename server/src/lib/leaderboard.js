@@ -623,6 +623,58 @@ function rankForSeat(db, board, seat) {
   return Number(row?.better || 0) + 1;
 }
 
+
+const RECENT_N = 5;
+
+/**
+ * Viewer's own latest settled games for this fillMode + gameKind, with an explicit
+ * "is this game on the board?" verdict. Boards are one-row-per-user best, so a worse
+ * later game never shows as a row; this makes every finished game visible to its owner.
+ * Pure read; no writes.
+ */
+function loadMyRecent(db, viewer, board, bestGameId) {
+  const kind = board.gameKind || GAME_KIND_CLASSIC;
+  const rows = db
+    .prepare(
+      `SELECT s.id AS game_id, s.finished_at AS finished_at, s.assist_class AS assist_class,
+              s.rule_version AS rule_version, s.dataset_version AS dataset_version,
+              r.return_ppm AS return_ppm, r.trade_count AS trade_count,
+              r.leaderboard_hidden AS hidden, r.validity AS validity
+       FROM game_sessions s
+       JOIN game_results r ON r.game_id = s.id
+       WHERE s.user_id = ? AND s.status = 'settled' AND s.fill_mode = ? AND s.game_kind = ?
+       ORDER BY s.finished_at DESC, s.id DESC
+       LIMIT ?`
+    )
+    .all(viewer.id, board.fillMode, kind, RECENT_N);
+  const optIn = viewer.leaderboardOptIn != null ? !!viewer.leaderboardOptIn : true;
+  const assistOk = (a) => {
+    if (kind !== GAME_KIND_CLASSIC || !board.assistClass) return true;
+    if (board.assistClass === ASSIST_ALL) return a === "clean" || a === "undo";
+    return a === board.assistClass;
+  };
+  return rows.map((g) => {
+    let status = "counted";
+    if (g.validity !== "valid") status = "invalid";
+    else if (g.hidden) status = "hidden";
+    else if (!optIn) status = "not_opted_in";
+    else if (!(g.trade_count >= 1)) status = "no_trade";
+    else if (g.rule_version !== board.ruleVersion || g.dataset_version !== board.datasetVersion) {
+      status = "other_version";
+    } else if (!assistOk(g.assist_class)) status = "other_assist_board";
+    return {
+      gameId: g.game_id,
+      finishedAt: g.finished_at,
+      returnPpm: g.return_ppm,
+      returnPct: ppmToPct(g.return_ppm),
+      tradeCount: g.trade_count,
+      assistClass: g.assist_class,
+      status,
+      isBest: status === "counted" && g.game_id === bestGameId,
+    };
+  });
+}
+
 /**
  * GET /leaderboard payload.
  * @param {{ fillMode, metric?, ruleVersion?, datasetVersion? }} query
@@ -639,6 +691,8 @@ export function getLeaderboard(query = {}, viewerUser = null) {
   let myGameCount = null;
   let myWinRate = null;
   let ineligibilityReason = null;
+  let myEntry = null;
+  let myRecent = null;
 
   if (viewerUser) {
     const inTop = shared._topUserIds.find((s) => s.userId === viewerUser.id);
@@ -656,6 +710,22 @@ export function getLeaderboard(query = {}, viewerUser = null) {
         myGameCount = stats.gameCount;
         myWinRate = stats.winRate;
         ineligibilityReason = null;
+        // Outside Top N: give the client the viewer's own row so it is never invisible.
+        myEntry = publicEntry(
+          {
+            rank: myRank,
+            nickname: viewerUser.nickname,
+            avatar_id: viewerUser.avatarId,
+            avatar_custom_path: null,
+            return_ppm: seat.return_ppm,
+            finished_at: seat.finished_at,
+            game_count: myGameCount,
+            win_rate: myWinRate,
+            is_busted: seat.is_busted,
+          },
+          { includeBusted: board.gameKind === GAME_KIND_SURVIVAL }
+        );
+        myEntry.avatarUrl = viewerUser.avatarUrl || null;
       } else {
         myRank = null;
         ineligibilityReason = userIneligibility(db, viewerUser, board);
@@ -664,6 +734,14 @@ export function getLeaderboard(query = {}, viewerUser = null) {
         myWinRate = stats.winRate;
       }
     }
+  }
+
+  if (viewerUser) {
+    let bestGameId = null;
+    if (board.metric !== "average") {
+      bestGameId = loadViewerBestSeat(db, viewerUser.id, board)?.game_id ?? null;
+    }
+    myRecent = loadMyRecent(db, viewerUser, board, bestGameId);
   }
 
   return {
@@ -682,6 +760,8 @@ export function getLeaderboard(query = {}, viewerUser = null) {
       myGameCount,
       myWinRate,
       ineligibilityReason,
+      myEntry,
+      myRecent,
     },
   };
 }

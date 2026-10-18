@@ -36,6 +36,7 @@ onThemeChange((theme) => {
 });
 
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
+if (typeof window !== 'undefined') window.retrySettleSave = () => retrySettleSave();
 
 /** Paint result hero for puzzle: icon stars +「残局结算」(no giant digit). */
 function paintPuzzleGradeHero({ stars, pending, reward }) {
@@ -345,6 +346,7 @@ export function endGame() {
             updateSaveStatusUi();
             if (res && live.gameKind !== 'puzzle') await refreshShareRankMeta();
             updateShareRankHint();
+            if (!res && live.gameKind !== 'puzzle') notifySaveFailed(live.saveError);
         }).catch(() => {
             const live = getSession();
             if (live.gameKind === 'puzzle' && !live.puzzleResult) {
@@ -364,7 +366,48 @@ export function endGame() {
             }
             updateSaveStatusUi();
             updateShareRankHint();
+            if (live.gameKind !== 'puzzle') notifySaveFailed(live.saveError);
         });
+    }
+}
+
+let saveRetryBusy = false;
+
+/** Visible failure for a finished game that could not be saved (never silent). */
+function notifySaveFailed(err) {
+    try { showToast('战绩未能保存到云端：' + (err || '网络异常') + '。点结算页「重试保存」', 'error'); } catch (_) {}
+    if (typeof window !== 'undefined' && !window.__saveRetryOnline) {
+        window.__saveRetryOnline = true;
+        window.addEventListener('online', function () {
+            const live = getSession();
+            if (live.saveStatus === 'fail') void retrySettleSave();
+        });
+    }
+}
+
+/** Re-submit the settled game (server finish is idempotent per submission hash). */
+export async function retrySettleSave() {
+    if (saveRetryBusy) return;
+    saveRetryBusy = true;
+    try {
+        const res = await persistSettledCloudGame({ finishCloud: finishCloudGame }).catch(() => null);
+        const live = getSession();
+        updateSaveStatusUi();
+        if (res) {
+            const el = document.getElementById('finalReturn');
+            if (el && live.returnPct != null) {
+                const v = parseFloat(live.returnPct);
+                el.textContent = (v >= 0 ? '+' : '') + live.returnPct + '%';
+                el.className = 'final-return ' + (v > 0 ? 'positive' : v < 0 ? 'negative' : 'zero');
+            }
+            await refreshShareRankMeta();
+            updateShareRankHint();
+            try { showToast('战绩已保存', 'success'); } catch (_) {}
+        } else {
+            notifySaveFailed(live.saveError);
+        }
+    } finally {
+        saveRetryBusy = false;
     }
 }
 

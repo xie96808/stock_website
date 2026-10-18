@@ -10,6 +10,7 @@ import {
   parseRouteHash,
 } from "./screen-router.js";
 import { formatShanghaiDateTime } from "./time.js";
+import { RECENT_STATUS_TEXT } from "./lb-verdict.js";
 
 const REASON_TEXT = {
   not_opted_in: "尚未列入排行榜，打开资料设置并保存即可参与",
@@ -115,6 +116,26 @@ function syncMetricNote(metric) {
   }
 }
 
+function renderRecent(data) {
+  const rec = Array.isArray(data.myRecent) ? data.myRecent : [];
+  if (!rec.length) return "";
+  const rows = rec
+    .map((g) => {
+      const cls = g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : "";
+      const txt = g.status === "counted"
+        ? (g.isBest ? "当前最佳 · 计入榜单" : "已计入 · 非个人最佳")
+        : (RECENT_STATUS_TEXT[g.status] || "未计入");
+      const undo = g.assistClass === "undo" ? " · 反悔" : "";
+      return `<li class="lb-recent-row${g.status === "counted" ? "" : " is-off"}">
+          <span class="lb-recent-ret ${cls}">${fmtPct(g.returnPpm, g.returnPct)}</span>
+          <span class="lb-recent-txt">${escapeHtml(txt + undo)}</span>
+          <span class="lb-recent-time">${fmtFinished(g.finishedAt)}</span>
+        </li>`;
+    })
+    .join("");
+  return `<div class="lb-recent"><div class="lb-recent-title">我的最近对局（每局都有记录，榜单按个人最佳单局排名）</div><ul class="lb-recent-list">${rows}</ul></div>`;
+}
+
 function renderPanel(data) {
   const listEl = document.getElementById("leaderboardList");
   const metaEl = document.getElementById("leaderboardMeta");
@@ -153,7 +174,7 @@ function renderPanel(data) {
     } else if (data.myRank != null) {
       const stats = fmtWinStats(data.myGameCount, data.myWinRate);
       mineEl.innerHTML = `<div class="mine-card">你的名次：<strong>#${data.myRank}</strong>
-          <span class="mine-stats">${escapeHtml(stats)}</span></div>`;
+          <span class="mine-stats">${escapeHtml(stats)} · 共 ${Number(data.total || 0)} 人上榜</span></div>`;
     } else {
       const reason = REASON_TEXT[data.ineligibilityReason] || "暂未上榜";
       const optBtn =
@@ -164,6 +185,7 @@ function renderPanel(data) {
       mineEl.querySelector("#lbSettingsBtn")?.addEventListener("click", () => openAuthModal("settings"));
     }
   }
+  if (mineEl && auth.user) mineEl.insertAdjacentHTML("beforeend", renderRecent(data));
   const items = data.top10 || [];
   if (!listEl) return;
   if (!items.length) {
@@ -172,8 +194,8 @@ function renderPanel(data) {
   }
   const label = retLabel(metric);
   const survivalBoard = data.gameKind === "survival";
-  listEl.innerHTML = items
-    .map((row) => {
+  const meRank = auth.user ? data.myRank : null;
+  const rowHtml = (row, extraCls = "") => {
       const cls =
         row.returnPpm > 0 ? "pos" : row.returnPpm < 0 ? "neg" : "";
       const stats = fmtWinStats(row.gameCount, row.winRate);
@@ -182,15 +204,18 @@ function renderPanel(data) {
           ? `<small class="lb-survive-badge lb-survive-bust">爆仓</small>`
           : `<small class="lb-survive-badge lb-survive-ok">活穿</small>`
         : "";
-      return `<li class="leaderboard-row${survivalBoard ? (row.busted ? " lb-row-bust" : " lb-row-survive") : ""}">
+      return `<li class="leaderboard-row${survivalBoard ? (row.busted ? " lb-row-bust" : " lb-row-survive") : ""}${extraCls}">
           <span class="lb-rank">#${row.rank}</span>
           <img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">
-          <span class="lb-nick">${escapeHtml(row.nickname)}${survBadge}<small class="lb-stats">${escapeHtml(stats)}</small></span>
+          <span class="lb-nick"><span class="lb-nick-name">${escapeHtml(row.nickname)}${extraCls ? '<small class="lb-me-tag">我</small>' : ""}${survBadge}</span><small class="lb-stats">${escapeHtml(stats)}</small></span>
           <span class="lb-ret ${cls}" title="${escapeHtml(label)}"><small class="lb-ret-label">${escapeHtml(label)}</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;
-    })
-    .join("");
+  };
+  const tail = data.myEntry
+    ? `<li class="leaderboard-gap" aria-hidden="true">⋯</li>` + rowHtml(data.myEntry, " is-me")
+    : "";
+  listEl.innerHTML = items.map((row) => rowHtml(row, meRank != null && row.rank === meRank ? " is-me" : "")).join("") + tail;
 }
 
 async function fetchLeaderboard(metric, fillMode, assistClass = activeAssist, gameKind = activeGameKind) {
