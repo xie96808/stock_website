@@ -96,6 +96,18 @@
         <!-- Start Screen — 手绘 notebook split -->
         <section class="start-screen animate-in" id="startScreen" data-hub-level="1">
 
+            <div class="resume-banner" id="resumeGameBanner" role="region" aria-label="进行中的对局" hidden>
+                <div class="resume-banner__copy">
+                    <span class="resume-banner__tag">进行中</span>
+                    <strong class="resume-banner__title">你有一局进行中的游戏</strong>
+                    <span class="resume-banner__meta" id="resumeGameBannerMeta" aria-live="polite"></span>
+                </div>
+                <div class="resume-banner__actions">
+                    <button type="button" class="resume-banner__btn resume-banner__btn--ghost" id="resumeGameAbandonBtn"><span class="resume-banner__label">放弃</span></button>
+                    <button type="button" class="resume-banner__btn resume-banner__btn--primary" id="resumeGameContinueBtn"><span class="resume-banner__label">继续对局</span></button>
+                </div>
+            </div>
+
             <div class="page">
                 <aside class="art">
                     <div class="frame" data-hub-level="1">
@@ -989,11 +1001,11 @@
                         </div>
                     </div>
                     <div class="result-actions">
-                        <button class="play-again-btn ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="playAgain()"><span class="ctl-label">再来一局</span></button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareImageBtn" data-ctl-kind="secondary" data-state="default" onclick="saveResultShareImage()"><span class="ctl-label">📷 保存分享图</span></button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultShareCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="copyResultShareText()"><span class="ctl-label">📋 复制分享文案</span></button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><span class="ctl-label">查看排行榜</span></button>
-                        <button class="play-again-btn play-again-btn--ghost ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="resetGame()"><span class="ctl-label">返回首页</span></button>
+                        <button type="button" class="play-again-btn result-act result-act--primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="playAgain()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.6 12.4c-.3 4.1-3.6 7-7.6 6.8-3.9-.2-6.9-3.3-6.8-7.2.1-3.8 3.1-6.8 7-6.8 1.9 0 3.5.7 4.7 1.9"/><path d="M17.2 3.6l.5 4.3-4.2.2"/></svg><span class="ctl-label">再来一局</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="resetGame()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.4 11.6L12.1 4l8.5 7.7"/><path d="M5.7 10.4l.2 9.3 12.2.1.1-9.4"/><path d="M10 19.8l.1-5.6 3.9-.1.1 5.8"/></svg><span class="ctl-label">返回首页</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultShareImageBtn" data-ctl-kind="secondary" data-state="default" onclick="saveResultShareImage()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.7 8.2l3.6-.1 1.6-2.4 6.3.1 1.5 2.3 3.5.2.2 10.2-16.5-.1z"/><path d="M12.2 10.2c2.1-.1 3.6 1.4 3.6 3.2 0 1.9-1.6 3.4-3.5 3.3-1.9 0-3.4-1.5-3.3-3.3 0-1.7 1.4-3.1 3.2-3.2z"/></svg><span class="ctl-label">保存图片</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultShareCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="copyResultShareText()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.2 4.6l-3.1.1.2 15.6 10.9-.1.1-3.2"/><path d="M9.4 3.7l9.9.1.1 12.4-10 .1z"/><path d="M12.2 8.2l4.6.1M12.3 11.6l4.4.1"/></svg><span class="ctl-label">复制文案</span></button>
+                        <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.4 4.3l9.4.1c.1 3-.3 6.9-4.6 7.4-4.2-.5-4.9-4.5-4.8-7.5z"/><path d="M7.4 6.1c-2.1-.4-3.3.3-3.1 2.1.3 1.9 1.9 2.7 3.5 2.8M16.8 6.1c2.1-.4 3.3.3 3.1 2.1-.3 1.9-1.9 2.7-3.5 2.8"/><path d="M12.2 11.8l.1 4.2M8.2 19.6l8.3.1M9.4 16.1l5.5.1.4 3.4"/></svg><span class="ctl-label">排行榜</span></button>
                     </div>
                     <p class="result-share-hint" id="resultShareHint" hidden></p>
                 </div>
@@ -1390,6 +1402,7 @@
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup, hideKBPopupSoon, toggleKBPopup } from './js/patterns.js';
         import { initAuth, openAuthModal } from './js/auth.js';
+        import { initResumeBanner } from './js/resume-banner.js';
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
         import { initChromeOverflow } from './js/chrome-overflow.js';
@@ -1498,6 +1511,7 @@
         window.__puzzleStartGame = startGame;
         initPageZoom();
         initChromeOverflow();
+        initResumeBanner();
         initAuth()
           .then(() => initJiuCoin())
           .catch((e) => console.warn('auth init', e));

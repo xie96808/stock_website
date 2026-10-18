@@ -26,7 +26,8 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 10px;
-    flex-wrap: wrap;
+    /* one row, always: the rotating mood line used to wrap on phones and shove the K-line down 28px */
+    flex-wrap: nowrap;
     margin-bottom: 8px;
     font-size: 0.78rem;
 }
@@ -41,7 +42,15 @@
 .game-progress-mood {
     color: var(--ink-soft);
     font-size: 0.76rem;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
 }
+.game-progress-meta > .game-progress-label,
+.game-progress-meta > .stage-subtitle { flex: 0 0 auto; white-space: nowrap; }
 
 /* Mode badge: 残局 vs 模拟盘 at-a-glance */
 .game-progress-head {
@@ -696,12 +705,12 @@
 
     /* Keep Buy / Sell / Hold visible while viewing the K-line (mobile only). */
     .game-screen.active {
-        /* room for fixed 3-up action row + hint + safe area */
-        padding-bottom: calc(118px + env(safe-area-inset-bottom, 0px));
+        /* room for the fixed action bar: js/action-zone-sync.js publishes its real height */
+        padding-bottom: calc(max(var(--action-zone-h, 0px), 112px) + 14px);
     }
 
     .game-screen.active.game-screen--ff-tap {
-        padding-bottom: calc(168px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(max(var(--action-zone-h, 0px), 160px) + 14px);
     }
 
     .action-zone {
@@ -748,6 +757,15 @@
         grid-column: 1 / -1;
     }
 
+    /* 快进 + 反悔 share one row when both are shown (saves ~52px of bar height) */
+    .action-zone:has(#rewindBtn:not([hidden])) #fastForwardBtn:not([hidden]) {
+        grid-column: 1 / 3;
+    }
+    .action-zone:has(#fastForwardBtn:not([hidden])) #rewindBtn:not([hidden]) {
+        grid-column: 3;
+        width: 100% !important;
+    }
+
     /* Shorter chart so sticky bar + progress leave usable K-line viewport */
     .market-stage { min-height: 280px; }
     #kline-chart { min-height: 240px; }
@@ -761,11 +779,11 @@
     .metric-value { font-size: 1.15rem; }
     .board-meta-grid { grid-template-columns: 1fr 1fr; }
     .game-screen.active {
-        padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(max(var(--action-zone-h, 0px), 112px) + 14px);
     }
 
     .game-screen.active.game-screen--ff-tap {
-        padding-bottom: calc(162px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: calc(max(var(--action-zone-h, 0px), 160px) + 14px);
     }
 }
 

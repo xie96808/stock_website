@@ -1521,3 +1521,17 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 @media (prefers-reduced-motion: reduce) {
   .jiu-coin-close-x, .play-again-btn.ctl, .ar-btn.ctl { transition: none !important; }
 }
+
+/* ===== normal-mode audit (A/B): art-skinned controls must always stretch their art to the box =====
+   Legacy component rules (fill-mode.css `.fill-mode-btn.primary{background:…}`, game.css
+   `#holdBtn.is-fast-forwarding{background:…}`) use the `background` shorthand, which resets
+   size/repeat/position to `auto / repeat / 0 0` and clips or tiles the 160×48 / 190×80 shells. */
+.fill-mode-btn.ctl, .action-btn.ctl, .play-again-btn.ctl,
+.rewind-btn-primary.ctl, .rewind-btn-secondary.ctl,
+.jiu-coin-primary.ctl, .jiu-coin-secondary.ctl {
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+/* Controls stay clean: no paper-noise speckle overlay on the trade buttons. */
+.action-btn.ctl::after { content: none !important; display: none !important; }

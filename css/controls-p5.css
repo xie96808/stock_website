@@ -222,3 +222,21 @@ html:not([data-theme="dark"]) :is(
     transition: transform var(--p5-press-ms) linear !important;
   }
 }
+
+/* normal-mode audit (B): `ctl-bar-strip` is a 390×64 single-row strip; stretched over the phone action bar
+   (grows to 140–230px: buttons + hint + 快进 + 反悔) its caps/strokes distort, its transparent margins let the page
+   show through, and the 买入/卖出/观望 buttons end up half outside the frame. The three buttons already carry their
+   own art, so the fixed bar is plain paper with one ink line on top (same as the dark theme). */
+html:not([data-theme="dark"]) .action-zone {
+  border-image: none;
+  border-style: solid;
+  border-color: var(--line);
+  border-width: 1.6px 0 0;
+  background: var(--card);
+  box-shadow: 0 -2px 0 var(--line);
+}
+/* normal-mode audit (C): the chart frame art is 14px wide but border-width stayed ~1px, so the canvas
+   (y-axis price labels on the left, day labels at the bottom) was painted underneath the frame strokes. */
+html:not([data-theme="dark"]) :is(.chart-stage, .chart-container) {
+  border-width: 12px;
+}
