@@ -1,4 +1,5 @@
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
+import { resultVerdict } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
@@ -8,7 +9,10 @@ const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
 const SHARE_SITE_URL = 'https://stockgame.xieyw.top';
 
+let lastVerdict = null;
+
 export function clearShareRankMeta() {
+    lastVerdict = null;
     clearShareMeta();
 }
 
@@ -146,11 +150,26 @@ export async function refreshShareRankMeta() {
     if (!auth || !auth.user || !share.cloudMode || share.saveStatus !== 'saved') {
         return null;
     }
+    const session = getSession();
+    const kind = session && session.gameKind;
     const fillMode = share.fillMode === 'same_close' ? 'same_close' : 'next_open';
+    // Ask the board this game belongs to: its own kind and assist class (反悔局 → undo board).
+    const qs = new URLSearchParams({ fillMode: fillMode });
+    if (kind === 'oneshot' || kind === 'survival') qs.set('gameKind', kind);
+    else if (session && session.assistClass === 'undo') qs.set('assistClass', 'undo');
     try {
-        const { data } = await api('/leaderboard?fillMode=' + encodeURIComponent(fillMode));
+        const { data } = await api('/leaderboard?' + qs.toString());
         const total = Number((data && data.total) || 0);
         const myRank = data && data.myRank;
+        const recent = (data && data.myRecent) || [];
+        const mine = recent.find(function (g) { return g.gameId === share.cloudGameId; }) || null;
+        lastVerdict = resultVerdict(mine, {
+            rank: myRank == null ? null : myRank,
+            total: total,
+            fillMode: fillMode,
+            assistClass: data && data.assistClass,
+            gameKind: data && data.gameKind,
+        });
         if (myRank == null || !(total >= 2)) return null;
         const beat = Math.max(0, Math.min(99, Math.round(((total - myRank) / total) * 100)));
         setShareMeta({ rank: myRank, boardTotal: total, beatPct: beat });
@@ -164,6 +183,12 @@ export function updateShareRankHint() {
     const el = document.getElementById('resultShareHint');
     if (!el) return;
     const share = selectShareView();
+    if (lastVerdict && lastVerdict.kind !== 'best') {
+        // Explicit per-game verdict (recorded-but-not-best / no-trade / 反悔榜 / opted-out).
+        el.hidden = false;
+        el.textContent = lastVerdict.text;
+        return;
+    }
     if (share.shareBeatPct != null && share.shareRank != null) {
         el.hidden = false;
         el.textContent =
@@ -174,6 +199,11 @@ export function updateShareRankHint() {
     if (share.cloudMode && share.saveStatus === 'saving') {
         el.hidden = false;
         el.textContent = '战绩保存后分享图可带超越比例';
+        return;
+    }
+    if (lastVerdict && lastVerdict.kind === 'best') {
+        el.hidden = false;
+        el.textContent = lastVerdict.text;
         return;
     }
     if (share.cloudMode && share.saveStatus === 'saved') {
