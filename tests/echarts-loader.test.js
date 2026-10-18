@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, statSync } from 'node:fs';
 import {
   ECHARTS_CDN_URLS,
+  ECHARTS_LOCAL_URL,
+  ECHARTS_URLS,
   ECHARTS_STATUS,
   ECHARTS_VERSION,
   pickCdnUrl,
@@ -181,4 +184,12 @@ test('markChartLoading / clear / failed DOM helpers', () => {
   assert.equal(kids[0].textContent, '失败');
 
   delete globalThis.document;
+});
+
+test('ENV-01: bundled copy is tried first, CDNs are only fallbacks', () => {
+  assert.equal(ECHARTS_URLS[0], ECHARTS_LOCAL_URL);
+  assert.match(ECHARTS_LOCAL_URL, /\/js\/vendor\/echarts\.min\.js$/);
+  assert.deepEqual(ECHARTS_URLS.slice(1), ECHARTS_CDN_URLS);
+  const file = new URL('../js/vendor/echarts.min.js', import.meta.url);
+  assert.ok(existsSync(file) && statSync(file).size > 500000, 'vendored echarts must ship in the repo');
 });

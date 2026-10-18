@@ -165,7 +165,7 @@
     "resultHasMarkLine": true,
     "markLineFormatter": "开局第1天",
     "resultAxisRich": true,
-    "gameAnim": true,
+    "gameAnim": false,
     "ma5FirstGame": 10,
     "ma5FirstResult": 10
   }

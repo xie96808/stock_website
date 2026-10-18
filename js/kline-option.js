@@ -34,9 +34,21 @@ function pvpAxisBound(value, ratio, toward) {
  */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
+    // Collision stacking (PVP-04): marks are placed left to right. A mark whose horizontal neighbours on the
+    // same side of the candle (within ~4 bars) are already placed starts beyond their outer edge, so
+    // pills/diamonds never sit on top of each other. Shapes stay distinct (mine = pill, opponent = diamond).
+    const BASE_GAP = 16;
+    const STACK_GAP = 3;
+    const NEAR_BARS = 4;
+    const placedSide = { above: [], below: [] };
+    const placed = [];
     for (const mark of Array.isArray(marks) ? marks : []) {
-        const bar = bars.find((item) => item && item.label === mark.label);
-        if (!bar || !mark.kind) continue;
+        const index = bars.findIndex((item) => item && item.label === mark.label);
+        if (index < 0 || !mark.kind) continue;
+        placed.push({ mark, index, bar: bars[index] });
+    }
+    placed.sort((a, b) => a.index - b.index);
+    for (const { mark, index, bar } of placed) {
         const mine = mark.side === 'me';
         const valuation = mark.kind === 'valuation';
         const sell = mark.kind === 'sell';
@@ -60,14 +72,23 @@ function pvpMarkerPoints(bars, marks) {
             bg = mine ? '#3db86a' : '#7c4dff';
         }
         const above = valuation || sell;
+        const size = valuation ? [52, 18] : mine ? [28, 18] : [40, 40];
+        const height = size[1];
+        const side = above ? placedSide.above : placedSide.below;
+        let inner = BASE_GAP;
+        for (const other of side) {
+            if (Math.abs(other.index - index) < NEAR_BARS) inner = Math.max(inner, other.outer + STACK_GAP);
+        }
+        side.push({ index, outer: inner + height });
+        const center = inner + height / 2;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
             symbol: mine || valuation ? 'roundRect' : 'diamond',
-            symbolSize: valuation ? [52, 18] : mine ? [28, 18] : [40, 40],
+            symbolSize: size,
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
-            symbolOffset: valuation ? [0, -22] : mine ? (above ? [0, -26] : [0, 28]) : (above ? [0, -44] : [0, 46]),
+            symbolOffset: [0, above ? -center : center],
             itemStyle: {
                 color: bg,
                 borderColor: valuation ? '#c9a227' : (buy ? (mine ? '#e05252' : '#1e4fc4') : (mine ? '#3db86a' : '#5b2fd6')),
@@ -88,6 +109,68 @@ function pvpMarkerPoints(bars, marks) {
         });
     }
     return points;
+}
+
+/**
+ * PVP-04, pass 2 (pixels). pvpMarkerPoints() already lane-stacks marks by bar index, but vertical room
+ * depends on each bar's price, which only the rendered chart knows. After every render this nudges any mark
+ * that still overlaps an earlier one further out (and flips it to the other side if it would leave the canvas).
+ * It always starts from the pristine offsets in `baseData`, so repeated runs never compound.
+ */
+const relaxState = new WeakMap();
+
+export function relaxPvpMarkers(chart, baseData) {
+    if (!chart || !Array.isArray(baseData) || !baseData.length) return;
+    const state = relaxState.get(chart) || { sig: '' };
+    state.base = baseData;
+    relaxState.set(chart, state);
+    const run = () => {
+        const base = state.base;
+        const height = chart.getHeight ? chart.getHeight() : 0;
+        if (!base || !height) return;
+        const placed = [];
+        const next = [];
+        for (const item of base) {
+            const w = item.symbolSize[0];
+            const h = item.symbolSize[1];
+            let px;
+            try {
+                px = chart.convertToPixel({ xAxisIndex: 0, yAxisIndex: 0 }, item.coord);
+            } catch (e) {
+                px = null;
+            }
+            if (!px || !Number.isFinite(px[0]) || !Number.isFinite(px[1])) { next.push(item); continue; }
+            const baseOffset = item.symbolOffset[1];
+            const tryPlace = (sign) => {
+                let cy = px[1] + sign * Math.abs(baseOffset);
+                for (let i = 0; i < 14; i += 1) {
+                    const hit = placed.find((r) => Math.abs(px[0] - r.cx) < (w + r.w) / 2 - 1 && Math.abs(cy - r.cy) < (h + r.h) / 2 + 1);
+                    if (!hit) break;
+                    cy = sign < 0 ? hit.cy - (h + hit.h) / 2 - 2 : hit.cy + (h + hit.h) / 2 + 2;
+                }
+                return cy;
+            };
+            const sign = baseOffset < 0 ? -1 : 1;
+            let cy = tryPlace(sign);
+            if (cy - h / 2 < 2 || cy + h / 2 > height - 2) {
+                const alt = tryPlace(-sign);
+                if (alt - h / 2 >= 2 && alt + h / 2 <= height - 2) cy = alt;
+            }
+            placed.push({ cx: px[0], cy, w, h });
+            next.push({ ...item, symbolOffset: [0, Math.round(cy - px[1])] });
+        }
+        const sig = next.map((n) => n.symbolOffset[1]).join(',');
+        if (sig === state.sig) return;
+        state.sig = sig;
+        chart.setOption({ series: [{ markPoint: { data: next } }] });
+    };
+    state.run = run;
+    if (!state.bound) {
+        state.bound = true;
+        chart.on('finished', () => { if (state.run) state.run(); });
+    }
+    state.sig = '';
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(run); else run();
 }
 
 /** History categories stay `hN` for mark lookup. The axis does not print that prefix. */
@@ -160,6 +243,13 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
  * @param {boolean} [vm.showDataZoomSlider] - desktop slider; default true for result, false for game
  * @param {boolean} [vm.resetDataZoom=true] - PvP: false keeps the player's zoom; true shows every bar
  */
+// MA legend (5/10/20/30日线) metrics. One fixed set for every width, sized so the four entries stay on a
+// single row inside the narrowest phone chart (~282px at 360 CSS px). Never width-dependent: a legend that
+// reflows would change the chart's top inset and make the plot jump (see the K-line size-stability rules).
+export const LEGEND_FONT_PX = 10;
+export const LEGEND_ITEM_W = 14;
+export const LEGEND_ITEM_GAP = 8;
+
 export function buildKlineOption(vm) {
     const {
         bars,
@@ -404,10 +494,10 @@ export function buildKlineOption(vm) {
             data: ['5日线', '10日线', '20日线', '30日线'],
             top: 0,
             left: 10,
-            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
-            itemWidth: 18,
+            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
+            itemWidth: LEGEND_ITEM_W,
             itemHeight: 2,
-            itemGap: 12
+            itemGap: LEGEND_ITEM_GAP
         };
     } else if (isPvp) {
         legend = {
@@ -440,11 +530,11 @@ export function buildKlineOption(vm) {
             },
             selectedMode: false,
             top: 5,
-            left: 10,
-            textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 11 },
-            itemWidth: 18,
+            left: 8,
+            textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
+            itemWidth: LEGEND_ITEM_W,
             itemHeight: 2,
-            itemGap: 12
+            itemGap: LEGEND_ITEM_GAP
         };
     }
 
@@ -595,14 +685,14 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp && pvpTwoPane
             ? [
-                { left: 40, right: 8, top: 12, bottom: '34%' },
-                { left: 40, right: 8, top: '72%', bottom: 16 }
+                { left: 40, right: 24, top: 12, bottom: '34%' },
+                { left: 40, right: 24, top: '72%', bottom: 16 }
             ]
             : isPvp
             ? [
-                { left: 40, right: 8, top: 26, bottom: '42%' },
-                { left: 40, right: 8, top: '62%', bottom: '24%' },
-                { left: 40, right: 8, top: '80%', bottom: 16 }
+                { left: 40, right: 24, top: 26, bottom: '42%' },
+                { left: 40, right: 24, top: '62%', bottom: '24%' },
+                { left: 40, right: 24, top: '80%', bottom: 16 }
             ]
             : isResult
             ? [
@@ -712,8 +802,11 @@ export function buildKlineOption(vm) {
     };
 
     if (!isResult && !isPvp) {
-        option.animation = true;
-        option.animationDuration = 300;
+        // Audit UI-04: every decision re-ran a 0.7–1.2s tween over the whole chart (looked like jitter).
+        // The live game chart updates in place; only the first paint may animate (never on setOption updates).
+        option.animation = false;
+        option.animationDuration = 0;
+        option.animationDurationUpdate = 0;
     }
 
     return option;

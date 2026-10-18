@@ -2033,3 +2033,45 @@ img.pvp-bot-art[data-bot-art="bot-glitch"] {
   object-position: 50% 100%;
   object-view-box: inset(0% 5.6% 5.6% 5.6%);
 }
+
+/* UI-08 / UI-09 (audit round 2): PvP result top cards and action row.
+   The paper card art draws a ~14px border-image inside the box, so the flat padding of the old
+   .pvp-score-flat put labels/negative signs on the frame. Pad past it; let the name shrink + ellipsize. */
+#pvpResultScreen .pvp-score-row .pvp-score.pvp-score-flat {
+  padding: 1rem 1.05rem 1rem;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+#pvpResultScreen .pvp-score-row .pvp-seat { width: 100%; gap: 0.5rem; margin-bottom: 0.2rem; }
+#pvpResultScreen .pvp-score-row .pvp-seat > div { flex: 1 1 auto; min-width: 0; }
+#pvpResultScreen .pvp-score-row .pvp-seat strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#pvpResultScreen .pvp-score-row .pvp-score-label { margin-top: 0.15rem; }
+@media (max-width: 440px) {
+  #pvpResultScreen .pvp-score-row { gap: 0.45rem; }
+  #pvpResultScreen .pvp-score-row .pvp-score.pvp-score-flat { padding: 0.9rem 0.9rem 0.9rem; }
+  #pvpResultScreen .pvp-score-row .pvp-seat-avatar { width: 38px; height: 38px; }
+  #pvpResultScreen .pvp-score-row .pvp-seat strong { font-size: 1rem; letter-spacing: 0.02em; }
+}
+
+/* Result action row: the two text buttons share one fixed width (not stretched to 554px on desktop,
+   not squeezed on phones); the 保存分享图 icon button keeps its own 56x48 size. */
+#pvpResultScreen .pvp-actions {
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+#pvpResultScreen .pvp-actions .pvp-btn.ctl-primary,
+#pvpResultScreen .pvp-actions .pvp-btn.ctl-secondary {
+  flex: 0 1 auto;
+  width: clamp(6.6rem, 32vw, 9.5rem);
+  min-width: 0;
+  white-space: nowrap;
+}
+#pvpResultScreen .pvp-actions .ctl-share-save { flex: 0 0 auto; }

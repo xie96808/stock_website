@@ -36,6 +36,7 @@ export async function showMyGames() {
           <h2>我的战绩</h2>
         </div>
         <div class="my-games-stats" id="myGamesStats">加载统计…</div>
+        <p class="my-games-stats-note" id="myGamesStatsNote"></p>
         <div class="my-games-filters">
           <label class="my-games-filter-label">成交方式
             <select id="myGamesFillMode" class="my-games-select sketch-select">
@@ -79,6 +80,15 @@ async function loadMyGamesPanel() {
       fetchMyStats(params),
       fetchMyGames({ ...params, limit: 20 }),
     ]);
+    const noteEl = document.getElementById("myGamesStatsNote");
+    if (noteEl) {
+      // Same rule as the leaderboards: only classic games with >=1 trade count (audit LB-04).
+      const scope = fill === "next_open" ? "次日开盘" : fill === "same_close" ? "当日收盘" : "两种成交方式合计";
+      const skipped = Number(stats.excludedZeroTrade || 0);
+      noteEl.textContent =
+        `统计范围：经典局 · ${scope} · 仅计至少交易 1 笔的局（与排行榜同口径）` +
+        (skipped ? `；另有 ${skipped} 局未交易，不计入。` : "。");
+    }
     if (statsEl) {
       if (!stats.count) {
         statsEl.innerHTML = `<div class="stat-card">暂无有效战绩</div>`;

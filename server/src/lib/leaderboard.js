@@ -157,6 +157,15 @@ function publicEntry(row, { includeBusted = false } = {}) {
  * Eligible best-seat SQL fragment (binds: rule, dataset, fill ×1).
  * One row per opted-in active user with at least one eligible settled game.
  */
+/**
+ * Result-level eligibility shared by the best/average CTEs AND the per-row stats (局数/胜率),
+ * so a board row can never count games the ranking itself ignores (audit LB-02).
+ * Zero-trade games stay off boards (product decision).
+ */
+export const BOARD_RESULT_ELIGIBLE_SQL = `r.validity = 'valid'
+      AND r.leaderboard_hidden = 0
+      AND r.trade_count >= 1`;
+
 const BEST_SEATS_CTE = `
   WITH eligible AS (
     SELECT
@@ -179,9 +188,7 @@ const BEST_SEATS_CTE = `
       AND s.rule_version = ?
       AND s.dataset_version = ?
       AND s.fill_mode = ?__ASSIST__
-      AND r.validity = 'valid'
-      AND r.leaderboard_hidden = 0
-      AND r.trade_count >= 1
+      AND ${BOARD_RESULT_ELIGIBLE_SQL}
       AND u.status = 'active'
       AND u.role = 'user'
       AND u.leaderboard_opt_in = 1
@@ -211,9 +218,7 @@ const AVG_SEATS_CTE = `
       AND s.rule_version = ?
       AND s.dataset_version = ?
       AND s.fill_mode = ?__ASSIST__
-      AND r.validity = 'valid'
-      AND r.leaderboard_hidden = 0
-      AND r.trade_count >= 1
+      AND ${BOARD_RESULT_ELIGIBLE_SQL}
       AND u.status = 'active'
       AND u.role = 'user'
       AND u.leaderboard_opt_in = 1
@@ -315,7 +320,7 @@ function loadUserStatsMap(db, userIds, board) {
          AND s.rule_version = ?
          AND s.dataset_version = ?
          AND s.fill_mode = ?${kindAssistSql(board)}
-         AND r.validity = 'valid'
+         AND ${BOARD_RESULT_ELIGIBLE_SQL}
        GROUP BY s.user_id`
     )
     .all(...userIds, ...boardBinds(board));
@@ -459,7 +464,7 @@ function loadUserBoardStats(db, userId, board) {
          AND s.rule_version = ?
          AND s.dataset_version = ?
          AND s.fill_mode = ?${kindAssistSql(board)}
-         AND r.validity = 'valid'`
+         AND ${BOARD_RESULT_ELIGIBLE_SQL}`
     )
     .get(userId, ...boardBinds(board));
   const gameCount = Number(row?.game_count || 0);

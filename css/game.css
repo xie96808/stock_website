@@ -1101,3 +1101,57 @@
     letter-spacing: 0.04em;
     color: var(--mode-ghost-ink, #312e81);
 }
+
+/* ===== audit round 2 (UI-05): 反悔 + cost always on one line ===== */
+.action-btn.rewind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 2px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.action-btn.rewind .rewind-btn-icon { margin-right: 0; flex: 0 0 auto; }
+.action-btn.rewind .rewind-btn-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.action-btn.rewind .jiu-coin-amt { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; flex: 0 0 auto; }
+@media (max-width: 380px) {
+  .action-btn.rewind { font-size: 0.8rem; }
+}
+
+/* ===== audit round 2 (UI-04): desktop chart height must not follow sibling content =====
+   The right column stretches to the left panel; the chart used flex:1, so it grew/shrank whenever
+   波段分析 / hints below changed (509↔562px) while the canvas kept its old size. Fixed, viewport-based height. */
+@media (min-width: 801px) {
+  .market-stage { flex: none; min-height: 0; }
+  .market-stage .chart-stage { flex: none; height: clamp(420px, 58vh, 620px); min-height: 0; }
+  .market-stage #kline-chart { height: 100%; min-height: 0; }
+}
+
+/* (c) Desktop with a short viewport (e.g. 1280x800): the three action buttons used to stack in a 190px column
+   at the very bottom of the left board and fell below the first screen. Lay them out as one row (same grid the
+   phone bar uses) and tighten the board's row gap, so 买入/卖出/观望 stay visible without scrolling.
+   Taller screens (>900px) and phones (<=900px) keep their existing layout. */
+@media (min-width: 901px) and (max-height: 900px) {
+  .asset-board { gap: 6px; }
+  .action-zone {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px 8px;
+    align-items: stretch;
+  }
+  .action-zone .action-btn { width: auto; padding: 12px 6px; letter-spacing: 0.12em; }
+  .action-zone .action-hint,
+  .action-zone .ff-hint,
+  .action-zone #fastForwardBtn,
+  .action-zone #finishBtn,
+  .action-zone #rewindBtn { grid-column: 1 / -1; text-align: center; }
+}

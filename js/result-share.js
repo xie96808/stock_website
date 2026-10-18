@@ -1,3 +1,4 @@
+import { importWithRetry } from './lazy-import.js';
 import { clearShareMeta, setShareMeta, selectShareView, getSession } from './game-session.js';
 import { resultVerdict } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
@@ -282,7 +283,11 @@ function withTimeout(promise, ms, tag) {
 }
 
 async function renderShareSheetCanvas(sheet, bg) {
-    const mod = await withTimeout(import('./vendor/html2canvas.esm.js'), SAVE_LOAD_TIMEOUT_MS, 'load');
+    const mod = await withTimeout(importWithRetry(
+        'html2canvas',
+        function () { return import('./vendor/html2canvas.esm.js'); },
+        function () { return new URL('./vendor/html2canvas.esm.js', import.meta.url).href; }
+    ), SAVE_LOAD_TIMEOUT_MS, 'load');
     const h2c = mod.default;
     return withTimeout(h2c(sheet, {
         backgroundColor: bg || '#f7f1e3',
@@ -401,7 +406,11 @@ export async function saveResultShareImage() {
         const filename = '结算分享_' + safeCode + '.png';
         const bridge = window.StockGameApp;
         const hasBridge = !!(bridge && typeof bridge.saveImage === 'function');
-        const { deliverImage } = await withTimeout(import('./share-image.js'), SAVE_LOAD_TIMEOUT_MS, 'deliver-load');
+        const { deliverImage } = await withTimeout(importWithRetry(
+            'share-image',
+            function () { return import('./share-image.js'); },
+            function () { return new URL('./share-image.js', import.meta.url).href; }
+        ), SAVE_LOAD_TIMEOUT_MS, 'deliver-load');
         const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: buildResultPromoCaption() });
         if (how === 'cancelled') return;
         // In the Android shell, a bridge that did not report "saved" means nothing reached the album

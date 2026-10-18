@@ -263,3 +263,15 @@ test('read selectors expose live session slices without copying identity', () =>
   assert.equal(share.fillMode, 'same_close');
   assert.equal(share.currentStock.code, '600000');
 });
+
+test('NEW-01: selectShareView carries the saved game id, kind and assist class', () => {
+  const view = selectShareView({
+    returnPct: '0.00', totalReturn: 1, fillMode: 'next_open', shareRank: null, shareBeatPct: null,
+    shareBoardTotal: null, cloudMode: true, cloudGameId: 'game-abc', gameKind: 'oneshot', assistClass: 'undo',
+    saveStatus: 'saved', currentStock: null,
+  });
+  assert.equal(view.cloudGameId, 'game-abc');
+  assert.equal(view.gameKind, 'oneshot');
+  assert.equal(view.assistClass, 'undo');
+  assert.equal(selectShareView({ cloudMode: false }).gameKind, null);
+});

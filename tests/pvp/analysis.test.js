@@ -19,15 +19,25 @@ test("divergences keep the three largest gap changes and do not claim a cause", 
   const picked = pickDivergences({
     actionsA: ["buy", "sell", "hold", "buy"],
     actionsB: ["sell", "hold", "buy", "sell"],
-    ppmA: [0, 1, 51, 54, 104],
-    ppmB: [0, 0, 0, 0, 0],
+    // round N is paired with the NEXT day's change: ppm[N+1] - ppm[N]
+    ppmA: [0, 1, 51, 54, 104, 110],
+    ppmB: [0, 0, 0, 0, 0, 0],
   });
-  assert.deepEqual(picked.map((row) => row.round), [2, 4, 3]);
-  assert.deepEqual(picked.map((row) => row.gapChangePpm), [50, 50, 3]);
+  assert.deepEqual(picked.map((row) => row.round), [1, 3, 4]);
+  assert.deepEqual(picked.map((row) => row.gapChangePpm), [50, 50, 6]);
+  // a round whose next day is not revealed yet is skipped (no ppm[N+1])
+  const early = pickDivergences({
+    actionsA: ["buy", "sell"], actionsB: ["hold", "hold"],
+    ppmA: [0, 0, 10], ppmB: [0, 0, 0],
+  });
+  assert.deepEqual(early.map((row) => [row.round, row.gapChangePpm]), [[1, 10]]);
   const text = divergenceText({ round: 2, me: "sell", opponent: "hold", gapChangePpm: 82000 });
   assert.match(text, /不能据此断定是这次操作造成的/);
   assert.equal(text.includes("因为"), false);
   assert.match(text, /\+8\.20 个百分点/);
+  assert.match(text, /第 2 回合/);
+  assert.match(text, /第 3 个交易日开盘成交/);
+  assert.match(divergenceText({ round: 29, me: "buy", opponent: "hold", gapChangePpm: -1000 }), /第 30 个交易日（终局估值）开盘成交.*-0\.10 个百分点/);
 });
 
 test("replay is deterministic, seat 2 flips the gap, and the module stays off the browser analysis", () => {

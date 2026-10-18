@@ -6,7 +6,8 @@
 :root {
   --p5-icon: image-set(url("../assets/controls/ctl-icon-btn-default.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-default@2x.webp?v=20261013s") 2x);
   --p5-icon-press: image-set(url("../assets/controls/ctl-icon-btn-press.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-press@2x.webp?v=20261013s") 2x);
-  --p5-icon-disabled: image-set(url("../assets/controls/ctl-icon-btn-disabled.webp?v=20261013s") 1x, url("../assets/controls/ctl-icon-btn-disabled@2x.webp?v=20261013s") 2x);
+  /* UI-06: hatch-textured disabled art replaced by the clean default art + CSS grey. */
+  --p5-icon-disabled: var(--p5-icon);
   --p5-chart: image-set(url("../assets/controls/ctl-chart-frame.webp?v=20261013s") 1x, url("../assets/controls/ctl-chart-frame@2x.webp?v=20261013s") 2x);
   --p5-popover: image-set(url("../assets/controls/ctl-popover.webp?v=20261013s") 1x, url("../assets/controls/ctl-popover@2x.webp?v=20261013s") 2x);
   --p5-bar: image-set(url("../assets/controls/ctl-bar-strip.webp?v=20261013s") 1x, url("../assets/controls/ctl-bar-strip@2x.webp?v=20261013s") 2x);
@@ -55,7 +56,8 @@ html:not([data-theme="dark"]) .auth-dice:active:not(:disabled) {
 }
 html:not([data-theme="dark"]) .auth-dice:disabled {
   background-image: var(--p5-icon-disabled);
-  opacity: 0.85;
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 
 /* ---------- Chart frames (9-slice 24 → 14px) ---------- */
