@@ -117,7 +117,7 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.series[0].markLine, undefined);
   assert.equal(opt.series[0].barWidth, "76%");
   assert.ok(opt.grid[0].right <= 24 && opt.grid[0].right >= 20); // PVP-04: room for the half-width of the last mark
-  assert.ok(opt.grid[0].left <= 44);
+  assert.ok(opt.grid[0].left <= 56); // room for the rotated y-axis title (see "pvp y-axis names relative price")
   assert.equal(opt.dataZoom[0].start, 0);
   assert.equal(opt.dataZoom[0].end, 100);
   assert.equal(opt.dataZoom[0].maxSpan, 100);
@@ -320,6 +320,12 @@ test("pvp y-axis names relative price so it is not read as a real quote", () => 
   ];
   const opt = buildKlineOption({ mode: "pvp", bars, historyLength: 1, resetDataZoom: true });
   assert.match(String(opt.yAxis[0].name || ""), /相对价/);
+  // The rotated title is centred nameGap px left of the axis line and is ~10px tall: the grid inset must keep
+  // its centre at least 6px inside the canvas, or the canvas edge clips it (seen at 360/390 px).
+  const grids = Array.isArray(opt.grid) ? opt.grid : [opt.grid];
+  const gap = opt.yAxis[0].nameGap;
+  assert.ok(gap >= 32, "title must clear the tick labels");
+  for (const g of grids) assert.ok(g.left - gap >= 6, `grid.left ${g.left} clips y-axis title (gap ${gap})`);
 });
 
 test("pvp chart includes MA legend and MACD panel", () => {
