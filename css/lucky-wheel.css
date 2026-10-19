@@ -1,0 +1,749 @@
+/* 幸运转盘 (lucky wheel) — entry button skin, modal, wheel, result pop-up, jackpot effect.
+ * Art: assets/lucky-wheel/ (no baked text; all labels are CSS/DOM). Sector order + geometry: assets/lucky-wheel/MANIFEST.md.
+ * Asset URLs carry ?v=20261019w (bump together with LW_ASSET_V in js/lucky-wheel-pure.js).
+ * No grain / texture anywhere: flat fills + uniform ink strokes. */
+
+:root {
+  --lw-s0: #8CC5B0;
+  --lw-s1: #E4796A;
+  --lw-s2: #F3DB93;
+  --lw-s3: #AE9FD0;
+  --lw-s4: #8DBBE0;
+  --lw-s5: #F2B83B;
+  --lw-s6: #F0A8B8;
+  --lw-s7: #92B96F;
+  --lw-ink: #3a3530;
+  --lw-label-ink: #26211d;
+  --lw-kraft: #f3ead8;
+  --lw-cinnabar: #e05252;
+  /* ink outline for text on saturated art (no -webkit-text-stroke: it eats the glyph fill in older WebViews) */
+  --lw-outline: -2px 0 0 #26211d, 2px 0 0 #26211d, 0 -2px 0 #26211d, 0 2px 0 #26211d, -1.5px -1.5px 0 #26211d, 1.5px -1.5px 0 #26211d, -1.5px 1.5px 0 #26211d, 1.5px 1.5px 0 #26211d, 2px 3px 0 #26211d;
+}
+
+/* ------------------------------------------------------------------ entry button (top bar) */
+.jiu-coin-daily-btn.is-wheel {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--lw-ink);
+  background: var(--lw-kraft);
+  color: var(--lw-label-ink);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--lw-ink);
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out, background-color 110ms ease-out;
+}
+.jiu-coin-daily-btn.is-wheel:hover:not(:disabled) { background: #fbf3e2; box-shadow: 3px 3px 0 var(--lw-ink); }
+.jiu-coin-daily-btn.is-wheel:active:not(:disabled) { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--lw-ink); }
+.jiu-coin-daily-btn.is-wheel .lw-entry-ico {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  background-image: url("../assets/lucky-wheel/lw-entry-icon-16.webp?v=20261019w");
+  background-image: -webkit-image-set(url("../assets/lucky-wheel/lw-entry-icon-16.webp?v=20261019w") 1x, url("../assets/lucky-wheel/lw-entry-icon-16@2x.webp?v=20261019w") 2x);
+  background-image: image-set(url("../assets/lucky-wheel/lw-entry-icon-16.webp?v=20261019w") 1x, url("../assets/lucky-wheel/lw-entry-icon-16@2x.webp?v=20261019w") 2x);
+}
+.jiu-coin-daily-btn.is-wheel .lw-entry-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lw-cinnabar);
+  border: 1.5px solid var(--lw-ink);
+  display: none;
+}
+.jiu-coin-daily-btn.is-wheel.has-spins .lw-entry-dot { display: block; }
+[data-theme="dark"] .jiu-coin-daily-btn.is-wheel {
+  background: #2a241c;
+  border-color: #c8bca8;
+  color: #f3ead8;
+  box-shadow: 2px 2px 0 #c8bca8;
+}
+[data-theme="dark"] .jiu-coin-daily-btn.is-wheel:hover:not(:disabled) { background: #352d23; }
+[data-theme="dark"] .jiu-coin-daily-btn.is-wheel .lw-entry-ico {
+  background-image: url("../assets/lucky-wheel/lw-entry-icon-16-dark.webp?v=20261019w");
+  background-image: -webkit-image-set(url("../assets/lucky-wheel/lw-entry-icon-16-dark.webp?v=20261019w") 1x, url("../assets/lucky-wheel/lw-entry-icon-16-dark@2x.webp?v=20261019w") 2x);
+  background-image: image-set(url("../assets/lucky-wheel/lw-entry-icon-16-dark.webp?v=20261019w") 1x, url("../assets/lucky-wheel/lw-entry-icon-16-dark@2x.webp?v=20261019w") 2x);
+}
+[data-theme="dark"] .jiu-coin-daily-btn.is-wheel .lw-entry-dot { border-color: #f3ead8; }
+@media (max-width: 640px) {
+  .jiu-coin-daily-btn.is-wheel { gap: 3px; padding-left: 7px; padding-right: 8px; }
+}
+
+/* ------------------------------------------------------------------ modal shell */
+.lw-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ctl-z-modal, 150);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  overflow: hidden;
+  background: rgba(30, 26, 22, 0.74);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.lw-modal[hidden] { display: none !important; }
+.lw-modal.is-open:not(.is-leaving) { animation: ctl-dim-in 180ms ease both; }
+.lw-modal.is-leaving { animation: ctl-dim-out var(--ctl-modal-exit-ms, 200ms) ease-in both; pointer-events: none; }
+.lw-modal.is-open:not(.is-leaving) .lw-dialog {
+  animation: ctl-modal-in var(--ctl-modal-enter-ms, 250ms) var(--ctl-ease-pop, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
+}
+.lw-modal.is-leaving .lw-dialog { animation: ctl-modal-out var(--ctl-modal-exit-ms, 200ms) ease-in both; }
+
+.lw-dialog {
+  --lw-size: clamp(236px, min(380px, calc(100vw - 36px), calc(100vh - 318px)), 400px);
+  --lw-u: calc(var(--lw-size) / 400); /* declared where --lw-size lives (a :root-level calc() would freeze at the root value) */
+  position: relative;
+  width: min(404px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding-top: 4px;
+  font-family: var(--kaiti, "KaiTi", "STKaiti", "Kaiti SC", serif);
+  color: var(--lw-kraft);
+  transform-origin: center center;
+}
+@supports (height: 100dvh) {
+  .lw-dialog { --lw-size: clamp(236px, min(380px, calc(100vw - 36px), calc(100dvh - 318px)), 400px); }
+}
+
+/* fit wrapper (JS scales it down only when the viewport is too small) */
+.lw-fit { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; transform-origin: 50% 50%; }
+
+/* ribbon title */
+.lw-ribbon { position: relative; width: min(360px, 94%); z-index: 3; margin-bottom: calc(var(--lw-u) * 6); }
+.lw-ribbon img { display: block; width: 100%; height: auto; pointer-events: none; }
+.lw-title {
+  position: absolute;
+  left: 27%;
+  right: 27%;
+  top: 0;
+  bottom: 12%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: clamp(20px, 6.2vw, 25px);
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
+  color: var(--lw-kraft);
+  /* ink outline: ribbon text on #e05252 is only 3.2:1 → stroke lifts it to ≥ 7:1 */
+  text-shadow: var(--lw-outline);
+  white-space: nowrap;
+}
+
+/* close X */
+.lw-close {
+  position: absolute;
+  top: -2px;
+  right: 2px;
+  z-index: 6;
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lw-close span {
+  display: block;
+  width: 40px;
+  height: 40px;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-image: url("../assets/lucky-wheel/lw-close-default@2x.webp?v=20261019w");
+  transition: transform 70ms ease-out;
+}
+.lw-close[data-state="press"] span,
+.lw-close:active span {
+  background-image: url("../assets/lucky-wheel/lw-close-press@2x.webp?v=20261019w");
+  transform: translate(1px, 1px);
+}
+.lw-close[aria-disabled="true"] { cursor: not-allowed; opacity: 0.55; }
+
+/* ------------------------------------------------------------------ wheel stage */
+.lw-stage {
+  position: relative;
+  width: var(--lw-size);
+  height: var(--lw-size);
+  margin-top: calc(var(--lw-u) * 30);
+  flex: 0 0 auto;
+  z-index: 2;
+}
+.lw-disc {
+  position: absolute;
+  inset: 5%;
+  border-radius: 50%;
+  transform: rotate(0deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.lw-disc.is-moving { will-change: transform; }
+.lw-fills {
+  position: absolute;
+  inset: 3.33%;
+  border-radius: 50%;
+  background: conic-gradient(from -22.5deg,
+    var(--lw-s0) 0deg 45deg, var(--lw-s1) 45deg 90deg, var(--lw-s2) 90deg 135deg, var(--lw-s3) 135deg 180deg,
+    var(--lw-s4) 180deg 225deg, var(--lw-s5) 225deg 270deg, var(--lw-s6) 270deg 315deg, var(--lw-s7) 315deg 360deg);
+  transition: opacity 220ms ease-out;
+}
+.lw-stage.is-loading .lw-fills { opacity: 0.35; }
+.lw-face, .lw-glow, .lw-rim, .lw-rimlight {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: block;
+}
+.lw-rim { inset: 0; }
+.lw-rimlight { inset: 0; opacity: 0; }
+.lw-glow { opacity: 0; transform-origin: 50% 50%; }
+.lw-flash-pos { position: absolute; inset: 0; pointer-events: none; }
+.lw-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--lw-u) * 230);
+  height: calc(var(--lw-u) * 230);
+  margin-left: calc(var(--lw-u) * -115);
+  margin-top: calc(var(--lw-u) * (-115 - 118));
+  opacity: 0;
+  pointer-events: none;
+}
+.lw-flash img { display: block; width: 100%; height: 100%; }
+
+/* hit-test wedges (invisible; used for pointer → sector verification) */
+.lw-hits { position: absolute; inset: 0; pointer-events: none; }
+.lw-hit {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 50%, 29.29% 0, 70.71% 0);
+  -webkit-clip-path: polygon(50% 50%, 29.29% 0, 70.71% 0);
+  pointer-events: auto;
+  background: transparent;
+}
+
+/* labels: icon near the rim, number radially aligned inside (as in the reference art) */
+.lw-labels { position: absolute; inset: 0; pointer-events: none; }
+.lw-sec { position: absolute; inset: 0; pointer-events: none; transition: opacity 220ms ease-out; }
+.lw-stage.is-loading .lw-sec { opacity: 0; }
+.lw-sec-ico {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--lw-u) * 46);
+  height: calc(var(--lw-u) * 46);
+  margin-left: calc(var(--lw-u) * -23);
+  margin-top: calc(var(--lw-u) * (-138 - 23));
+  object-fit: contain;
+}
+.lw-sec.is-big .lw-sec-ico {
+  width: calc(var(--lw-u) * 60);
+  height: calc(var(--lw-u) * 60);
+  margin-left: calc(var(--lw-u) * -30);
+  margin-top: calc(var(--lw-u) * (-136 - 30));
+}
+.lw-sec-txt {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin-top: calc(var(--lw-u) * (-96 - 15));
+  height: calc(var(--lw-u) * 30);
+  line-height: calc(var(--lw-u) * 30);
+  text-align: center;
+  /* 楷体 (site --kaiti stack), ink #26211d, radially aligned with the disc */
+  font-family: var(--kaiti, "KaiTi", "楷体", "STKaiti", "Kaiti SC", serif);
+  font-weight: 900;
+  font-size: calc(var(--lw-u) * 29);
+  letter-spacing: 0;
+  color: var(--lw-label-ink);
+  font-variant-numeric: tabular-nums;
+}
+.lw-sec.is-long .lw-sec-txt { font-size: calc(var(--lw-u) * 22); }
+.lw-sec.is-big .lw-sec-txt { font-size: calc(var(--lw-u) * 31); letter-spacing: 0.02em; }
+.lw-sec.is-text .lw-sec-txt { font-size: calc(var(--lw-u) * 22); letter-spacing: 0.05em; }
+
+/* win highlight */
+.lw-disc.is-win .lw-glow { animation: lw-glow-pulse 1000ms ease-in-out 2 both; }
+.lw-disc.is-win .lw-flash { animation: lw-flash-pop 700ms ease-out 1 both; }
+@keyframes lw-glow-pulse { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0.85; } }
+@keyframes lw-flash-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  35% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0.0; transform: scale(1.35); }
+}
+.lw-disc.is-win-static .lw-glow { opacity: 0.9; }
+
+/* pointer + hub */
+.lw-pointer {
+  position: absolute;
+  left: calc(var(--lw-u) * 172);
+  top: calc(var(--lw-u) * -35);
+  width: calc(var(--lw-u) * 56);
+  height: calc(var(--lw-u) * 72);
+  transform-origin: 50% 23.6%;
+  z-index: 4;
+  pointer-events: none;
+  will-change: transform;
+}
+.lw-pointer img { display: block; width: 100%; height: 100%; }
+.lw-hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: calc(var(--lw-u) * 96);
+  height: calc(var(--lw-u) * 96);
+  margin-left: calc(var(--lw-u) * -48);
+  margin-top: calc(var(--lw-u) * -48);
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("../assets/lucky-wheel/lw-hub-default@2x.webp?v=20261019w");
+}
+.lw-hub[data-state="press"], .lw-hub:active:not([data-state="disabled"]):not([data-state="loading"]) {
+  background-image: url("../assets/lucky-wheel/lw-hub-press@2x.webp?v=20261019w");
+}
+.lw-hub[data-state="disabled"] { background-image: url("../assets/lucky-wheel/lw-hub-disabled@2x.webp?v=20261019w"); cursor: not-allowed; }
+.lw-hub[data-state="loading"] { background-image: url("../assets/lucky-wheel/lw-hub-spinning@2x.webp?v=20261019w"); cursor: progress; }
+
+/* ------------------------------------------------------------------ below the wheel */
+.lw-free {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  min-width: 160px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-style: solid;
+  border-width: 12px;
+  border-image-source: url("../assets/lucky-wheel/lw-tag@2x.webp?v=20261019w");
+  border-image-slice: 24 fill;
+  border-image-width: 12px;
+  border-image-repeat: stretch;
+  color: var(--lw-label-ink);
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.lw-free-inner { margin: -12px 0; display: inline-flex; align-items: baseline; gap: 1px; white-space: nowrap; }
+.lw-free-n { display: inline-block; min-width: 1ch; text-align: center; font-variant-numeric: tabular-nums; }
+.lw-free.is-bump .lw-free-n { animation: lw-bump 320ms ease-out 1; }
+@keyframes lw-bump { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+.lw-go {
+  position: relative;
+  z-index: 2;
+  margin-top: 10px;
+  width: min(280px, 100%);
+  height: 64px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-image: url("../assets/lucky-wheel/lw-go-default@2x.webp?v=20261019w");
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.lw-go[data-state="press"], .lw-go:active:not([data-state="disabled"]):not([data-state="loading"]) {
+  background-image: url("../assets/lucky-wheel/lw-go-press@2x.webp?v=20261019w");
+}
+.lw-go[data-state="disabled"] { background-image: url("../assets/lucky-wheel/lw-go-disabled@2x.webp?v=20261019w"); cursor: not-allowed; }
+.lw-go[data-state="loading"] { background-image: url("../assets/lucky-wheel/lw-go-loading@2x.webp?v=20261019w"); cursor: progress; }
+.lw-go-label {
+  position: absolute;
+  left: 21.4%;
+  right: 11.4%;
+  top: 0;
+  bottom: 9%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 24px;
+  letter-spacing: 0.12em;
+  text-indent: 0.12em;
+  color: #fff;
+  text-shadow: var(--lw-outline);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.lw-go[data-state="press"] .lw-go-label { transform: translate(1px, 2px); }
+.lw-go[data-state="disabled"] .lw-go-label { color: #ddd2bc; font-size: 22px; }
+.lw-go[data-state="loading"] .lw-go-label { left: 24%; font-size: 22px; }
+.lw-go-label::before { content: none; }
+
+.lw-reset {
+  position: relative;
+  z-index: 2;
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.3;
+  min-height: 17px;
+  text-align: center;
+  color: var(--lw-kraft);
+  text-shadow: 1px 1px 0 var(--lw-label-ink), -1px 1px 0 var(--lw-label-ink);
+}
+.lw-odds-btn {
+  position: relative;
+  z-index: 2;
+  margin-top: 4px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--lw-kraft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-shadow: 1px 1px 0 var(--lw-label-ink), -1px 1px 0 var(--lw-label-ink);
+  cursor: pointer;
+}
+.lw-odds-btn[data-state="press"], .lw-odds-btn:active { opacity: 0.75; }
+
+.lw-odds {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  z-index: 8;
+  box-sizing: border-box;
+  width: min(372px, calc(100% - 20px));
+  margin: 0 auto;
+  max-height: calc(100% - 40px);
+  overflow: auto;
+  padding: 14px 16px 12px;
+  border: 2px solid var(--lw-label-ink);
+  border-radius: 14px;
+  background: var(--lw-kraft);
+  color: var(--lw-label-ink);
+  box-shadow: 3px 3px 0 var(--lw-label-ink);
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 180ms ease-out, transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+  -webkit-overflow-scrolling: touch;
+}
+.lw-odds.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.lw-odds[hidden] { display: none; }
+.lw-odds h3 { margin: 0 0 8px; font-size: 16px; font-weight: 900; }
+.lw-odds ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.lw-odds li { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; min-width: 0; }
+.lw-odds .lw-chip { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--lw-label-ink); }
+.lw-odds .lw-odds-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lw-odds .lw-odds-pct { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.lw-odds p { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; font-weight: 600; }
+.lw-odds-close {
+  margin-top: 10px;
+  width: 100%;
+  min-height: 40px;
+  border: 2px solid var(--lw-label-ink);
+  border-radius: 10px;
+  background: #fff7e6;
+  color: var(--lw-label-ink);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 2px 2px 0 var(--lw-label-ink);
+  cursor: pointer;
+}
+.lw-odds-close:active, .lw-odds-close[data-state="press"] { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--lw-label-ink); }
+
+.lw-error {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  padding: 12px 16px;
+  border: 2px solid var(--lw-label-ink);
+  border-radius: 12px;
+  background: var(--lw-kraft);
+  color: var(--lw-label-ink);
+  box-shadow: 3px 3px 0 var(--lw-label-ink);
+  text-align: center;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.lw-error[hidden] { display: none; }
+.lw-error button {
+  margin-top: 8px;
+  min-height: 36px;
+  padding: 4px 16px;
+  border: 2px solid var(--lw-label-ink);
+  border-radius: 10px;
+  background: #fff7e6;
+  color: var(--lw-label-ink);
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 2px 2px 0 var(--lw-label-ink);
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------ result pop-up */
+.lw-pop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(26, 22, 18, 0.4);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+.lw-pop[hidden] { display: none; }
+.lw-pop.is-open { opacity: 1; }
+.lw-pop.is-leaving { opacity: 0; transition-duration: 160ms; }
+.lw-pop-wrap { position: relative; width: min(320px, calc(100vw - 20px)); margin-top: 34px; }
+.lw-pop.is-jackpot .lw-pop-wrap { margin-top: 96px; }
+.lw-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 380px;
+  border-style: solid;
+  border-width: 78px 56px 44px 56px;
+  border-image-source: url("../assets/lucky-wheel/lw-result-card@2x.webp?v=20261019w");
+  border-image-slice: 156 112 88 112 fill;
+  border-image-width: 78px 56px 44px 56px;
+  border-image-repeat: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  color: var(--lw-label-ink);
+  text-align: center;
+  transform: scale(0.88) translateY(14px);
+  opacity: 0;
+  transition: transform 340ms cubic-bezier(0.2, 1.2, 0.3, 1), opacity 180ms ease-out;
+}
+.lw-pop.is-open .lw-card { transform: none; opacity: 1; }
+.lw-pop.is-leaving .lw-card { transform: scale(0.96) translateY(4px); opacity: 0; transition: transform 160ms ease-in, opacity 160ms ease-in; }
+.lw-card-title {
+  position: absolute;
+  left: -30px;
+  right: -30px;
+  top: -74px;
+  height: 56px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 23px;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+  color: var(--lw-kraft);
+  text-shadow: var(--lw-outline);
+  z-index: 2;
+}
+.lw-jackpot-banner {
+  position: absolute;
+  left: -56px;
+  top: -140px;
+  width: 320px;
+  height: 142px;
+  display: none;
+  z-index: 3;
+  pointer-events: none;
+}
+.lw-pop-wrap { --lw-card-w: 320px; }
+.lw-pop.is-jackpot .lw-jackpot-banner { display: block; }
+.lw-jackpot-banner img { display: block; width: 100%; height: 100%; }
+.lw-jackpot-title {
+  position: absolute;
+  left: 52px;
+  right: 52px;
+  top: 72px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 26px;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  color: #fff3c4;
+  text-shadow: var(--lw-outline);
+  white-space: nowrap;
+}
+.lw-pop.is-jackpot .lw-card-title { display: none; }
+.lw-prize-disc {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  border: 3px solid var(--lw-label-ink);
+  box-shadow: 3px 3px 0 var(--lw-label-ink);
+  background: var(--lw-accent, var(--lw-s0));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+.lw-pop.is-open .lw-prize-disc { animation: lw-prize-pop 520ms cubic-bezier(0.2, 1.3, 0.3, 1) 120ms both; }
+@keyframes lw-prize-pop { 0% { transform: scale(0.4); } 100% { transform: scale(1); } }
+.lw-prize-disc img { width: 88px; height: 88px; object-fit: contain; display: block; }
+.lw-pop.is-jackpot .lw-prize-disc img { width: 100px; height: 100px; }
+.lw-pop-amount {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 900;
+  line-height: 1.05;
+}
+.lw-pop-amount .lw-plus { font-size: 24px; }
+.lw-pop-amount .lw-num { font-size: 46px; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.lw-pop-amount .lw-unit { font-size: 18px; }
+.lw-pop-headline { font-weight: 900; font-size: 20px; line-height: 1.2; }
+.lw-pop-lines { margin: 0; padding: 0 6px; list-style: none; font-size: 13.5px; line-height: 1.5; font-weight: 700; }
+.lw-pop-bal { font-size: 13px; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.lw-pop-actions { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 6px; width: 100%; }
+.lw-pop-primary {
+  width: 200px;
+  height: 46px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-image: url("../assets/lucky-wheel/lw-go-default@2x.webp?v=20261019w");
+  color: #fff;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  text-indent: 0.1em;
+  text-shadow: var(--lw-outline);
+  padding-bottom: 5px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.lw-pop-primary[data-state="press"], .lw-pop-primary:active { background-image: url("../assets/lucky-wheel/lw-go-press@2x.webp?v=20261019w"); }
+.lw-pop-secondary {
+  min-height: 36px;
+  padding: 4px 16px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--lw-label-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.lw-pop-secondary:active, .lw-pop-secondary[data-state="press"] { opacity: 0.6; }
+
+/* jackpot effect */
+.lw-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(512px, 150vw);
+  height: min(512px, 150vw);
+  margin-left: calc(min(512px, 150vw) / -2);
+  margin-top: calc(min(512px, 150vw) / -2);
+  pointer-events: none;
+  display: none;
+  opacity: 0;
+  z-index: -1;
+}
+.lw-rays img { width: 100%; height: 100%; display: block; }
+.lw-pop.is-jackpot .lw-rays { display: block; }
+.lw-pop.is-jackpot.is-open .lw-rays { animation: lw-rays-in 600ms ease-out 80ms both, lw-rays-spin 16s linear infinite; }
+@keyframes lw-rays-in { from { opacity: 0; transform: scale(0.5); } to { opacity: 0.95; transform: scale(1); } }
+@keyframes lw-rays-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.lw-fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 12; }
+.lw-fx[hidden] { display: none; }
+.lw-dialog.is-shake { animation: lw-shake 420ms ease-in-out 1; }
+@keyframes lw-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-5px, 2px); }
+  35% { transform: translate(4px, -3px); }
+  55% { transform: translate(-3px, 2px); }
+  75% { transform: translate(2px, -1px); }
+}
+.lw-stage.is-jackpot-win .lw-rimlight { animation: lw-rimlight-blink 520ms ease-in-out 5 both; }
+@keyframes lw-rimlight-blink { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+.lw-stage.is-jackpot-static .lw-rimlight { opacity: 0.9; }
+
+/* ------------------------------------------------------------------ landscape phones: wheel left, controls right */
+@media (orientation: landscape) and (max-height: 560px) {
+  .lw-dialog { --lw-size: clamp(150px, calc(100vh - 84px), 400px); width: min(100%, 860px); }
+  .lw-fit {
+    display: grid;
+    grid-template-columns: var(--lw-size) minmax(0, 330px);
+    column-gap: 30px;
+    justify-content: center;
+    align-content: center;
+    justify-items: center;
+  }
+  .lw-stage { grid-column: 1; grid-row: 1 / span 5; align-self: center; margin-top: calc(var(--lw-u) * 24); }
+  .lw-ribbon { grid-column: 2; grid-row: 1; width: min(290px, 100%); margin: 0 0 4px; align-self: end; }
+  .lw-free { grid-column: 2; grid-row: 2; margin-top: 6px; }
+  .lw-go { grid-column: 2; grid-row: 3; margin-top: 8px; }
+  .lw-reset { grid-column: 2; grid-row: 4; margin-top: 6px; }
+  .lw-odds-btn { grid-column: 2; grid-row: 5; align-self: start; }
+  .lw-close { top: 0; right: 0; }
+  .lw-pop-wrap { margin-top: 0; }
+}
+
+/* ------------------------------------------------------------------ reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .lw-modal.is-open:not(.is-leaving) { animation: ctl-dim-in 120ms linear both; }
+  .lw-modal.is-open:not(.is-leaving) .lw-dialog { animation: ctl-fade-short 120ms ease both; }
+  .lw-modal.is-leaving, .lw-modal.is-leaving .lw-dialog { animation-duration: 100ms; }
+  .lw-pop, .lw-pop.is-leaving { transition-duration: 100ms; }
+  .lw-card, .lw-pop.is-leaving .lw-card { transition: opacity 120ms linear; transform: none; }
+  .lw-pop.is-open .lw-prize-disc { animation: none; }
+  .lw-pop.is-jackpot.is-open .lw-rays { animation: none; opacity: 0.9; }
+  .lw-disc.is-win .lw-glow { animation: none; opacity: 0.9; }
+  .lw-disc.is-win .lw-flash { animation: none; opacity: 0; }
+  .lw-stage.is-jackpot-win .lw-rimlight { animation: none; opacity: 0.9; }
+  .lw-dialog.is-shake { animation: none; }
+  .lw-free.is-bump .lw-free-n { animation: none; }
+  .lw-odds { transition-duration: 100ms; transform: none; }
+}
