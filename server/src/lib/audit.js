@@ -22,6 +22,10 @@ const BEFORE_AFTER_ALLOW = new Set([
   "drain",
   "value",
   "overridden",
+  "version",
+  "ev",
+  "spins",
+  "expiresDate",
 ]);
 
 function pickAllowed(obj) {

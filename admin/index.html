@@ -45,6 +45,7 @@
       <nav class="tabs" role="tablist" aria-label="后台功能">
         <button type="button" role="tab" class="tab" data-tab="users" aria-selected="true">账号</button>
         <button type="button" role="tab" class="tab" data-tab="coin" aria-selected="false">韭币</button>
+        <button type="button" role="tab" class="tab" data-tab="wheel" aria-selected="false">转盘</button>
         <button type="button" role="tab" class="tab" data-tab="games" aria-selected="false">战绩</button>
         <button type="button" role="tab" class="tab" data-tab="ann" aria-selected="false">公告</button>
         <button type="button" role="tab" class="tab" data-tab="fb" aria-selected="false">反馈<span id="fbUnreadBadge" class="tab-badge hidden" aria-label="未读反馈"></span></button>
@@ -104,6 +105,67 @@
       </div>
       <p class="note">用户列表会显示当前韭币余额；调整需二次验证，写入审计。</p>
 
+      </section>
+
+      <section class="tabpanel" data-panel="wheel" role="tabpanel">
+      <h2>幸运转盘 · 开关</h2>
+      <div class="row">
+        <span id="wheelState" class="tag">加载中…</span>
+        <label class="inline">每日免费次数 <input id="wheelDailyFree" type="number" min="1" max="5" step="1" style="max-width:5rem" /></label>
+        <button type="button" id="wheelDailySave" class="ghost">保存次数</button>
+        <button type="button" id="wheelToggle" class="switch">—</button>
+      </div>
+      <div class="row">
+        <input id="wheelSwReason" class="grow" maxlength="200" placeholder="开关 / 次数改动原因（必填，2–200 字）" />
+      </div>
+      <p class="note left">开启后「每日领取」接口改为 410，玩家改走转盘；关闭后立即恢复原每日领取。需二次验证，写入审计。</p>
+
+      <h2>奖品配置 · 期望值</h2>
+      <div id="wheelEv" class="stats"></div>
+      <div id="wheelWarn" class="note left"></div>
+      <div class="table-wrap"><table class="tbl" id="wheelTable">
+        <thead><tr><th>位置</th><th>类型</th><th>数量</th><th>权重</th><th>概率</th><th>大奖</th></tr></thead>
+        <tbody id="wheelRows"></tbody>
+      </table></div>
+      <div class="row">
+        <label class="inline">券折算韭币 <input id="wheelTicketValue" type="number" min="1" max="500" step="1" value="50" style="max-width:5rem" /></label>
+        <span id="wheelWeightSum" class="tag">权重和 —</span>
+        <button type="button" id="wheelLoadA" class="ghost">载入初始表 A</button>
+        <button type="button" id="wheelReload" class="ghost">放弃修改</button>
+      </div>
+      <div class="row">
+        <input id="wheelCfgReason" class="grow" maxlength="200" placeholder="保存原因（必填，2–200 字）" />
+        <button type="button" id="wheelCfgSave">保存新版本</button>
+      </div>
+      <p class="note left">权重之和必须为 10000；期望值（每个 Asia/Shanghai 日）须在 60–250 之间，超过 150 会提示；每次保存生成不可变的新版本，已发生的转盘记录保留当时版本。</p>
+      <div id="wheelVersions" class="list"></div>
+
+      <h2>发放转盘次数</h2>
+      <div class="row">
+        <input id="wheelGrantUser" placeholder="用户 ID" />
+        <input id="wheelGrantSpins" type="number" min="1" max="50" step="1" placeholder="次数" style="max-width:6rem" />
+        <input id="wheelGrantExpire" placeholder="过期日 YYYY-MM-DD（可空）" />
+        <input id="wheelGrantReason" class="grow" maxlength="200" placeholder="原因（必填）" />
+        <button type="button" id="wheelGrantBtn">发放</button>
+      </div>
+
+      <h2>统计</h2>
+      <div class="row">
+        <select id="wheelStatDays"><option value="7">近 7 天</option><option value="14">近 14 天</option><option value="30">近 30 天</option></select>
+        <button type="button" id="wheelStatRefresh" class="ghost">刷新</button>
+      </div>
+      <div id="wheelStats" class="stats"></div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>日期</th><th>次数</th><th>人数</th><th>发放韭币</th><th>价值合计</th><th>大奖</th><th>券</th><th>再转</th><th>折算</th></tr></thead><tbody id="wheelSeries"></tbody></table></div>
+
+      <h2>转盘记录</h2>
+      <div class="row">
+        <input id="wheelLogUser" placeholder="用户 ID" style="max-width:7rem" />
+        <input id="wheelLogDate" placeholder="日期 YYYY-MM-DD" style="max-width:10rem" />
+        <input id="wheelLogMin" type="number" min="0" step="1" placeholder="价值 ≥" style="max-width:7rem" />
+        <button type="button" id="wheelLogSearch" class="ghost">查询</button>
+      </div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>时间</th><th>用户</th><th>来源</th><th>扇区</th><th>奖品</th><th>版本</th><th>roll</th><th>余额</th></tr></thead><tbody id="wheelLog"></tbody></table></div>
+      <div class="row"><button type="button" id="wheelLogMore" class="ghost hidden">加载更多</button></div>
       </section>
 
       <section class="tabpanel" data-panel="games" role="tabpanel">
