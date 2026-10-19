@@ -200,6 +200,26 @@ html.pm-sheet-open #startScreen {
 }
 
 .pm-mode {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: 100%;
+  min-height: 64px;
+  padding: 0;
+  border: 1px solid rgba(90, 60, 10, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+/* Primary hit row (whole card tap, or inner .pm-mode-hit for daily) */
+.pm-mode-hit,
+button.pm-mode {
   display: grid;
   grid-template-columns: 40px 1fr auto auto;
   align-items: center;
@@ -207,9 +227,9 @@ html.pm-sheet-open #startScreen {
   width: 100%;
   min-height: 64px;
   padding: 10px 10px 10px 12px;
-  border: 1px solid rgba(90, 60, 10, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
@@ -217,11 +237,20 @@ html.pm-sheet-open #startScreen {
   box-shadow: none;
   -webkit-tap-highlight-color: transparent;
 }
-[data-theme="dark"] .pm-mode {
+button.pm-mode {
+  /* classic/oneshot/survival stay as buttons — restore card chrome on the button itself */
+  border: 1px solid rgba(90, 60, 10, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px 10px 10px 12px;
+}
+[data-theme="dark"] .pm-mode,
+[data-theme="dark"] button.pm-mode {
   border-color: rgba(255, 220, 150, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }
-.pm-mode:active {
+.pm-mode-hit:active,
+button.pm-mode:active {
   transform: scale(0.985);
 }
 .pm-mode[hidden] { display: none !important; }
@@ -256,6 +285,7 @@ html.pm-sheet-open #startScreen {
 
 .pm-mode-main {
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -273,6 +303,7 @@ html.pm-sheet-open #startScreen {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 .pm-mode-state {
   font-size: 11px;
@@ -323,19 +354,45 @@ html.pm-sheet-open #startScreen {
   transition: transform 80ms ease, box-shadow 80ms ease;
   pointer-events: none; /* whole row is the tap target */
 }
-.pm-mode:active .pm-mode-go {
+.pm-mode-hit:active .pm-mode-go,
+button.pm-mode:active .pm-mode-go {
   transform: translateY(2px) scale(0.97);
   box-shadow:
     0 1px 0 var(--pm-cta-sh),
     0 4px 10px -6px rgba(230, 46, 46, 0.5);
 }
 
-.pm-daily-board {
-  align-self: flex-end;
-  margin: -2px 2px 2px;
-  min-height: 36px !important;
-  height: 36px !important;
-  font-size: 12px !important;
+/* Low-key 日榜 link under daily meta — 44px tap, no extra row chrome */
+.pm-daily-board-link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin: -2px 0 6px 62px; /* align with .pm-mode-main text (12 + 40 + 10) */
+  padding: 0 8px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.55;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pm-daily-board-link:hover,
+.pm-daily-board-link:focus-visible {
+  opacity: 0.85;
+  background: rgba(90, 60, 10, 0.05);
+}
+[data-theme="dark"] .pm-daily-board-link:hover,
+[data-theme="dark"] .pm-daily-board-link:focus-visible {
+  background: rgba(255, 220, 150, 0.06);
+}
+.pm-daily-board-link[hidden] {
+  display: none !important;
 }
 
 /* Secondary links */
@@ -412,10 +469,19 @@ html.pm-sheet-open #startScreen {
   opacity: 0.4;
   padding: 0 4px;
 }
+.pm-link-copy .pm-link-state,
 .pm-link-state {
-  margin: 0 8px 2px 46px;
+  display: block;
+  margin: 1px 0 0;
+  padding: 0;
   font-size: 11px;
-  opacity: 0.6;
+  font-weight: 500;
+  line-height: 1.3;
+  opacity: 0.55;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 .pm-link-state[hidden] { display: none !important; }
 
@@ -467,7 +533,7 @@ html.pm-sheet-open #startScreen {
 .pm-mode[hidden],
 .pm-link[hidden],
 .pm-link-state[hidden],
-.pm-daily-board[hidden],
+.pm-daily-board-link[hidden],
 #playModesBackdrop[hidden] {
   display: none !important;
 }

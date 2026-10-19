@@ -280,17 +280,19 @@
                                     玩法列表暂时不可用
                                     <button type="button" class="pm-retry" id="playModesRetry">重试</button>
                                 </p>
-                                <button type="button" class="pm-mode pm-mode--daily" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
-                                    <span class="pm-mode-mark pm-mode-mark--daily">日</span>
-                                    <span class="pm-mode-main">
-                                        <span class="pm-mode-name">今日挑战</span>
-                                        <span class="pm-mode-sub" id="dailyChallengeCardMeta">全站同题 · 每日一盘</span>
-                                        <span class="pm-mode-state" id="dailyChallengeCardState" hidden></span>
-                                    </span>
-                                    <span class="pm-mode-cost" aria-label="消耗 50 韭币"><span class="pm-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                    <span class="pm-mode-go" id="dailyChallengeCardCta">开始</span>
-                                </button>
-                                <button type="button" class="hub-board-link pm-daily-board ctl ctl-secondary" id="dailyChallengeBoardBtn" data-ctl-kind="secondary" data-state="default" hidden onclick="onDailyChallengeBoardClick(event)"><span class="ctl-label">查看日榜</span></button>
+                                <div class="pm-mode pm-mode--daily" id="dailyChallengeCard" hidden>
+                                    <button type="button" class="pm-mode-hit" onclick="onDailyChallengeCardClick()" aria-label="今日挑战">
+                                        <span class="pm-mode-mark pm-mode-mark--daily">日</span>
+                                        <span class="pm-mode-main">
+                                            <span class="pm-mode-name">今日挑战</span>
+                                            <span class="pm-mode-sub" id="dailyChallengeCardMeta">全站同题 · 每日一盘</span>
+                                            <span class="pm-mode-state" id="dailyChallengeCardState" hidden></span>
+                                        </span>
+                                        <span class="pm-mode-cost" aria-label="消耗 50 韭币"><span class="pm-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="pm-mode-go" id="dailyChallengeCardCta">开始</span>
+                                    </button>
+                                    <button type="button" class="pm-daily-board-link" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">日榜 ›</button>
+                                </div>
                                 <button type="button" class="pm-mode pm-mode--classic" id="classicModeCard" onclick="startClassicPractice()">
                                     <span class="pm-mode-mark pm-mode-mark--classic">练</span>
                                     <span class="pm-mode-main">
@@ -325,10 +327,10 @@
                                     <span class="pm-link-copy">
                                         <strong>残局挑战<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
                                         <small id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</small>
+                                        <span class="puzzle-chapter-card-state pm-link-state" id="puzzleChapterCardState" hidden></span>
                                     </span>
                                     <span class="pm-link-go" id="puzzleChapterCardCta">›</span>
                                 </button>
-                                <p class="puzzle-chapter-card-state pm-link-state" id="puzzleChapterCardState" hidden></p>
                                 <button type="button" class="pm-link" onclick="showMyGames()">
                                     <span class="pm-link-mark">绩</span>
                                     <span class="pm-link-copy"><strong>我的战绩</strong><small>云端已保存对局</small></span>
