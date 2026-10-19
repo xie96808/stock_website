@@ -9,6 +9,7 @@ import {
     commodityAffordances,
 } from './hindsight-pure.js';
 import { Route, prepareScreen, activateScreen, setRouteHash } from './screen-router.js';
+import { commodityArtHtml } from './emoji-art.js';
 import {
     ensureEcharts,
     markChartLoading,
@@ -537,13 +538,13 @@ function _renderCommodities(earnedAmt) {
     if (!el) return;
     const rows = commodityAffordances(earnedAmt).map((it) =>
         `<div class="archive-commodity-row">` +
-            `<span class="archive-commodity-icon">${it.icon}</span>` +
+            `<span class="archive-commodity-icon">${commodityArtHtml(it.icon)}</span>` +
             `<span class="archive-commodity-text">${it.verb} <strong>${it.n.toLocaleString()}</strong> ${it.name}</span>` +
             `</div>`
     );
     el.innerHTML = rows.length
         ? rows.join('')
-        : `<div class="archive-commodity-row"><span class="archive-commodity-text" style="color:#AAAAAA;font-style:italic">收益较小，暂无等价实物 🌱</span></div>`;
+        : `<div class="archive-commodity-row"><span class="archive-commodity-text" style="color:#AAAAAA;font-style:italic">收益较小，暂无等价实物 ${commodityArtHtml('🌱', { size: 14 })}</span></div>`;
 }
 
 const _QUOTES = [

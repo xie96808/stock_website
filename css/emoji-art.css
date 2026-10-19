@@ -1,0 +1,34 @@
+/* ===== icon-unify P3: drawn art over decorative emoji (js/emoji-art.js) =====
+   The emoji stays in flow as an invisible spacer, so the line box, advance and baseline are untouched.
+   The art is absolutely centred over it and never takes part in layout. */
+.ea-slot {
+  position: relative;
+  display: inline;
+}
+.ea-spacer {
+  visibility: hidden;
+}
+.ea-slot > .ea-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--ea-px, 24px);
+  height: var(--ea-px, 24px);
+  margin-left: calc(var(--ea-px, 24px) / -2);
+  margin-top: calc(var(--ea-px, 24px) / -2);
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.ea-dice { --ea-px: 20px; }
+.ea-apk-phone { --ea-px: 28px; }
+.ea-camera, .ea-clipboard { --ea-px: 16px; }
+.ea-slot > .ea-img--night { display: none; }
+/* Dark art only where the surface is dark in the dark theme (measured): apk download card, hindsight card.
+   Not themed (kraft in both themes): auth dice buttons, camera/clipboard on the ctl-secondary shell. */
+[data-theme="dark"] .ea-slot--themed > .ea-img--day { display: none; }
+[data-theme="dark"] .ea-slot--themed > .ea-img--night { display: block; }
+/* Image failed: show the original emoji again, in the same box. */
+.ea-slot.ea-fallback > .ea-img { display: none !important; }
+.ea-slot.ea-fallback > .ea-spacer { visibility: visible; }
