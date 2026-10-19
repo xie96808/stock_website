@@ -616,8 +616,8 @@ export async function openRewindConfirm() {
     const body = document.getElementById('rewindConfirmBody');
     if (body) {
         body.innerHTML =
-            `<p>消耗 ${amountWithCoinHtml(cost, { size: 16 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
-            `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 16 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 16 })}</p>` +
+            `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
+            `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
             `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
             (!canAfford ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '');
     }
@@ -1032,7 +1032,7 @@ export function updateUI() {
             rewindBtn.disabled = !eligible || busy;
             const label = rewindBtn.querySelector('.rewind-btn-label');
             if (label && !label.dataset.hydrated) {
-                label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 14 })}`;
+                label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 12 })}`;
                 label.dataset.hydrated = '1';
             }
         }
