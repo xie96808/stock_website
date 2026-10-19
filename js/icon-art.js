@@ -63,6 +63,37 @@ export function rewindTicketHtml() {
     + `<img class="rewind-ticket-img" src="${b}.png${v}" srcset="${b}.png${v} 1x, ${b}@2x.png${v} 2x" width="15" height="17" alt="" decoding="async" draggable="false"></picture>`;
 }
 
+/**
+ * 后悔券 as an inline unit icon (「<ticket>×2」). A 1.15em square box (the stub art has more air than the coin), so it sits on
+ * the text line like `.jiu-coin-icon`. Art: ticket-rewind-12 (box ≤13.5px) / ticket-rewind-15x17 (larger), both with a dark
+ * twin that CSS shows only over genuinely dark surfaces (css/jiu-coin.css §icon-unify).
+ */
+export function ticketVariantFor(px) {
+  const n = Number(px) * 1.15; // the box is 1.15em (css/jiu-coin.css)
+  return Number.isFinite(n) && n > 13.5 ? "15x17" : "12";
+}
+export function ticketIconHtml({ size = 14, className = "ticket-icon" } = {}) {
+  const v = ticketVariantFor(size);
+  const [w, h] = v === "12" ? [12, 12] : [15, 17];
+  const pic = (name, cls, extra, picCls) => {
+    const b = `${BASE}${name}`;
+    const q = `?v=${ICON_ART_V}`;
+    return `<picture class="${picCls}"><source type="image/webp" srcset="${b}.webp${q} 1x, ${b}@2x.webp${q} 2x">`
+      + `<img class="${cls}" src="${b}.png${q}" srcset="${b}.png${q} 1x, ${b}@2x.png${q} 2x" width="${w}" height="${h}" alt="" decoding="async" draggable="false"${extra}></picture>`;
+  };
+  return `<span class="${className}" data-ticket-art="${v}" aria-hidden="true">`
+    + pic(`ticket-rewind-${v}`, "ticket-img ticket-img--day", "", "ticket-pic ticket-pic--day")
+    + pic(`ticket-rewind-${v}-dark`, "ticket-img ticket-img--night", ' loading="lazy"', "ticket-pic ticket-pic--night")
+    + `</span>`;
+}
+
+function restoreTicketText(img) {
+  const root = img.closest(".ticket-icon");
+  if (!root || root.classList.contains("is-art-fallback")) return;
+  root.classList.add("is-art-fallback");
+  root.textContent = "券";
+}
+
 function restoreCoinSvg(img) {
   const root = img.closest(".jiu-coin-icon");
   if (!root || root.classList.contains("is-art-fallback")) return;
@@ -87,6 +118,9 @@ function handleArtFailure(img) {
     restoreCoinSvg(img);
   } else if (img.classList.contains("rewind-ticket-img")) {
     restoreRewindGlyph(img);
+  } else if (img.classList.contains("ticket-img")) {
+    if (img.classList.contains("ticket-img--night") && img.offsetParent === null) return;
+    restoreTicketText(img);
   }
 }
 
@@ -96,7 +130,7 @@ export function installIconArtFallback(root = typeof document !== "undefined" ? 
   if (!root || installed) return;
   installed = true;
   root.addEventListener("error", (e) => handleArtFailure(e.target), true);
-  root.querySelectorAll("img.jiu-coin-img, img.rewind-ticket-img").forEach((img) => {
+  root.querySelectorAll("img.jiu-coin-img, img.rewind-ticket-img, img.ticket-img").forEach((img) => {
     if (img.complete && img.naturalWidth === 0) handleArtFailure(img);
   });
 }
@@ -106,7 +140,7 @@ const preloaded = new Set();
 export function preloadIconArt() {
   if (typeof Image === "undefined") return;
   const dpr = typeof window !== "undefined" && window.devicePixelRatio > 1 ? "@2x" : "";
-  for (const n of ["coin-glyph-12", "coin-glyph-12-dark", "coin-glyph-14", "coin-glyph-14-dark", "coin-glyph-16", "ticket-rewind-15x17"]) {
+  for (const n of ["coin-glyph-12", "coin-glyph-12-dark", "coin-glyph-14", "coin-glyph-14-dark", "coin-glyph-16", "ticket-rewind-15x17", "ticket-rewind-12"]) {
     if (preloaded.has(n)) continue;
     preloaded.add(n);
     const im = new Image();

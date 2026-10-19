@@ -1,5 +1,5 @@
 /**
- * 幸运转盘 modal (client). Lazy-loaded from jiu-coin.js when GET /me/jiu-coin carries `wheel.enabled`.
+ * 签到转盘 modal (client). Lazy-loaded from jiu-coin.js when GET /me/jiu-coin carries `wheel.enabled`.
  *
  * - Everything on the wheel (labels, colours' order, odds, free spins) is drawn from GET /me/lucky-wheel.
  * - POST /me/lucky-wheel/spin decides the result; the animation always lands on the server `sector`
@@ -10,6 +10,8 @@ import { api, getAuthState, showToast } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 import * as P from "./lucky-wheel-pure.js";
 import { getRewindTickets, refreshRewindTickets } from "./rewind-tickets.js";
+import { coinIconHtml, ticketIconHtml } from "./icon-art.js";
+import { coinAmountHtml } from "./unit-icons.js";
 
 const V = P.LW_ASSET_V;
 const ASSET_DIR = "assets/lucky-wheel/";
@@ -31,6 +33,8 @@ const S = {
   clock: 0,
   sectorsKey: "",
   preloaded: false,
+  popAt: 0, // performance.now() when the result pop-up opened (backdrop guard)
+  inflight: 0, // GET /me/lucky-wheel requests in flight
 };
 
 /* ------------------------------------------------------------------ helpers */
@@ -48,6 +52,39 @@ const url2x = (name) => `${ASSET_DIR}${name}@2x.webp?v=${V}`;
 function imgHtml(name, cls = "", extra = "") {
   return `<img class="${cls}" src="${url(name)}" srcset="${url2x(name)} 2x" alt="" draggable="false" decoding="async" ${extra}>`;
 }
+/** Effect art (win glow / flash / jackpot rim light) is invisible until a spin lands: keep it off the first-paint path. */
+function lazyImgHtml(name, cls = "") {
+  return `<img class="${cls}" data-lw-src="${url(name)}" data-lw-srcset="${url2x(name)} 2x" alt="" draggable="false" decoding="async">`;
+}
+let effectArtOn = false;
+function loadEffectArt() {
+  if (effectArtOn || !S.root) return;
+  effectArtOn = true;
+  for (const img of S.root.querySelectorAll("img[data-lw-src]")) {
+    img.srcset = img.dataset.lwSrcset;
+    img.src = img.dataset.lwSrc;
+    delete img.dataset.lwSrc;
+    delete img.dataset.lwSrcset;
+  }
+}
+/** After the first-paint art (face, rim, ribbon, pointer, sector icons) has arrived — or a few seconds at most — fetch the effect art. */
+function scheduleEffectArt() {
+  if (effectArtOn || !S.root) return;
+  const core = [...S.root.querySelectorAll(".lw-dialog img:not([data-lw-src])")];
+  const pending = core.filter((i) => !(i.complete && i.naturalWidth > 0));
+  if (!pending.length) return void loadEffectArt();
+  let left = pending.length;
+  const one = () => {
+    left -= 1;
+    if (left <= 0) loadEffectArt();
+  };
+  for (const i of pending) {
+    i.addEventListener("load", one, { once: true });
+    i.addEventListener("error", one, { once: true });
+  }
+  window.setTimeout(loadEffectArt, 6000);
+}
+
 function el(html) {
   const t = document.createElement("template");
   t.innerHTML = html.trim();
@@ -63,6 +100,42 @@ const PRELOAD = [
   "lw-close-press", "lw-glow", "lw-flash", "lw-result-card", "lw-prize-1", "lw-prize-2", "lw-prize-3", "lw-prize-4",
   "lw-prize-5", "lw-prize-ticket-2", "lw-prize-ticket-3", "lw-prize-spin",
 ];
+/* Art the modal shows on first paint. <img> art loads with the (hidden) DOM built by warmLuckyWheel(); CSS backgrounds
+   (go / hub / close / tag, always @2x) are fetched here so the first frame is not an empty pill. */
+const CORE_CSS_ART = ["lw-go-default", "lw-go-loading", "lw-go-disabled", "lw-hub-default", "lw-hub-spinning", "lw-hub-disabled", "lw-close-default", "lw-tag"];
+let coreWarm = false;
+function preloadCoreArt() {
+  if (coreWarm || typeof Image === "undefined") return;
+  coreWarm = true;
+  for (const n of CORE_CSS_ART) {
+    const i = new Image();
+    i.decoding = "async";
+    i.src = url2x(n);
+  }
+}
+
+/**
+ * Background warm-up (called by jiu-coin.js once the 签到幸运转盘 entry is painted, and on hover / touch of the entry):
+ * build the hidden modal so its <img> art starts loading, fetch the CSS-background art, and render `state`
+ * (a GET /me/lucky-wheel payload fetched by the caller) so the first open paints immediately. Idempotent; never opens anything.
+ */
+export function warmLuckyWheel(state) {
+  if (typeof document === "undefined") return;
+  ensureDom();
+  preloadCoreArt();
+  primeLuckyWheel(state);
+}
+
+/** Seed the cached state (only before the first real load and only while idle; openLuckyWheel still refreshes quietly). */
+export function primeLuckyWheel(state) {
+  if (!state?.enabled || S.state || S.phase !== "idle" || !getAuthState().user) return false;
+  ensureDom();
+  S.state = state;
+  renderSectors();
+  scheduleEffectArt();
+  return true;
+}
+
 export function preloadLuckyWheelArt() {
   if (S.preloaded) return;
   S.preloaded = true;
@@ -86,29 +159,27 @@ function ensureDom() {
   if (S.root) return S.root;
   const root = el(`<div class="lw-modal" id="luckyWheelModal" hidden aria-hidden="true">
     <div class="lw-dialog" role="dialog" aria-modal="true" aria-labelledby="lwTitle"><div class="lw-fit" id="lwFit">
-      <div class="lw-ribbon">${imgHtml("lw-ribbon")}<h2 class="lw-title" id="lwTitle">幸运转盘</h2></div>
+      <div class="lw-ribbon">${imgHtml("lw-ribbon")}<h2 class="lw-title" id="lwTitle">签到转盘</h2></div>
       <button type="button" class="lw-close" id="lwClose" aria-label="关闭"><span></span></button>
       <div class="lw-stage is-loading" id="lwStage">
         <div class="lw-disc" id="lwDisc">
           <div class="lw-fills"></div>
           ${imgHtml("lw-face", "lw-face")}
-          ${imgHtml("lw-glow", "lw-glow")}
-          <div class="lw-flash-pos" id="lwFlashPos"><div class="lw-flash">${imgHtml("lw-flash")}</div></div>
+          ${lazyImgHtml("lw-glow", "lw-glow")}
+          <div class="lw-flash-pos" id="lwFlashPos"><div class="lw-flash">${lazyImgHtml("lw-flash")}</div></div>
           <div class="lw-hits" id="lwHits"></div>
           <div class="lw-labels" id="lwLabels"></div>
         </div>
         ${imgHtml("lw-rim", "lw-rim")}
-        ${imgHtml("lw-rim-light", "lw-rimlight")}
+        ${lazyImgHtml("lw-rim-light", "lw-rimlight")}
         <div class="lw-pointer" id="lwPointer">${imgHtml("lw-pointer")}</div>
         <button type="button" class="lw-hub" id="lwHub" data-state="default" aria-label="启动转盘"></button>
         <div class="lw-error" id="lwError" hidden><div id="lwErrorMsg">加载失败</div><button type="button" id="lwRetry">重试</button></div>
       </div>
-      <div class="lw-free" id="lwFree"><span class="lw-free-inner">免费次数：<span class="lw-free-n" id="lwFreeN">–</span>次<span class="lw-free-tk" id="lwFreeTk" hidden><span class="lw-free-sep">·</span>后悔券×<span class="lw-free-tk-n" id="lwFreeTkN">0</span></span></span></div>
+      <div class="lw-free" id="lwFree"><span class="lw-free-inner">免费次数：<span class="lw-free-n" id="lwFreeN">–</span>次<span class="lw-free-tk" id="lwFreeTk" hidden><span class="lw-free-sep">·</span>${ticketIconHtml({ size: 15 })}<span class="u-sr">后悔券</span>×<span class="lw-free-tk-n" id="lwFreeTkN">0</span></span></span></div>
       <button type="button" class="lw-go" id="lwGo" data-state="loading" disabled><span class="lw-go-label" id="lwGoLabel">载入中…</span></button>
       <p class="lw-reset" id="lwReset" aria-live="polite"></p>
-      <button type="button" class="lw-odds-btn" id="lwOddsBtn" aria-expanded="false">概率说明</button>
     </div></div>
-    <div class="lw-odds" id="lwOdds" hidden role="dialog" aria-label="概率说明"></div>
     <div class="lw-pop" id="lwPop" hidden role="dialog" aria-modal="true" aria-labelledby="lwPopTitle"></div>
     <canvas class="lw-fx" id="lwFx" hidden aria-hidden="true"></canvas>
     <div id="lwLive" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)" aria-live="assertive"></div>
@@ -118,7 +189,7 @@ function ensureDom() {
   S.els = {
     dialog: $(".lw-dialog"), fit: $("#lwFit"), stage: $("#lwStage"), disc: $("#lwDisc"), hits: $("#lwHits"), labels: $("#lwLabels"),
     pointer: $("#lwPointer"), hub: $("#lwHub"), go: $("#lwGo"), goLabel: $("#lwGoLabel"), free: $("#lwFree"),
-    freeN: $("#lwFreeN"), freeTk: $("#lwFreeTk"), freeTkN: $("#lwFreeTkN"), reset: $("#lwReset"), close: $("#lwClose"), odds: $("#lwOdds"), oddsBtn: $("#lwOddsBtn"),
+    freeN: $("#lwFreeN"), freeTk: $("#lwFreeTk"), freeTkN: $("#lwFreeTkN"), reset: $("#lwReset"), close: $("#lwClose"),
     pop: $("#lwPop"), err: $("#lwError"), errMsg: $("#lwErrorMsg"), retry: $("#lwRetry"), fx: $("#lwFx"),
     flashPos: $("#lwFlashPos"), live: $("#lwLive"),
   };
@@ -127,7 +198,7 @@ function ensureDom() {
 }
 
 function wire() {
-  const { go, hub, close, oddsBtn, retry, odds, pop } = S.els;
+  const { go, hub, close, retry, pop } = S.els;
   const press = (node, on) => {
     if (!node || node.disabled || node.getAttribute("aria-disabled") === "true") return;
     const st = node.dataset.state;
@@ -139,28 +210,34 @@ function wire() {
       node.dataset.state = node.dataset.prev || "default";
     }
   };
-  for (const node of [go, hub, close, oddsBtn]) {
+  for (const node of [go, hub, close]) {
     node.addEventListener("pointerdown", () => press(node, true));
     for (const ev of ["pointerup", "pointercancel", "pointerleave"]) node.addEventListener(ev, () => press(node, false));
   }
   go.addEventListener("click", onSpinClick);
   hub.addEventListener("click", onSpinClick);
   close.addEventListener("click", () => requestClose());
-  oddsBtn.addEventListener("click", () => toggleOdds());
   retry.addEventListener("click", () => loadState({ force: true }));
-  // backdrop closes only when the press also started on the backdrop (dragging a pressed button off the dialog must not close it)
+  // A tap on the blank backdrop around the wheel panel acts like the close button (pop-up open ⇒ closes the pop-up).
+  // The dialog / fit boxes are transparent, so their own blank area counts as backdrop too. The press must also have
+  // started on the backdrop (dragging a pressed button off the panel must not close it); see backdropMayClose() for when it is ignored.
   let downOnBackdrop = false;
   S.root.addEventListener("pointerdown", (e) => {
-    downOnBackdrop = e.target === S.root;
+    downOnBackdrop = isBackdrop(e.target);
   });
   S.root.addEventListener("click", (e) => {
-    if (e.target === S.root && downOnBackdrop) {
-      if (!odds.hidden && odds.classList.contains("is-open")) toggleOdds(false);
-      else requestClose();
-    }
+    const ok = downOnBackdrop && isBackdrop(e.target);
+    downOnBackdrop = false;
+    if (ok && backdropMayClose()) requestClose();
+  });
+  let downOnPop = false;
+  pop.addEventListener("pointerdown", (e) => {
+    downOnPop = isPopBackdrop(e.target);
   });
   pop.addEventListener("click", (e) => {
-    if (e.target === pop && S.phase === "popup") closePop();
+    const ok = downOnPop && isPopBackdrop(e.target);
+    downOnPop = false;
+    if (ok && S.phase === "popup" && backdropMayClose()) closePop();
   });
   S.root.addEventListener("keydown", onKeydown);
   document.addEventListener("stockgame:auth-changed", () => {
@@ -168,6 +245,13 @@ function wire() {
   });
   window.addEventListener("resize", scheduleFit);
   window.addEventListener("orientationchange", scheduleFit);
+}
+
+const isBackdrop = (t) => t === S.root || t === S.els.dialog || t === S.els.fit;
+const isPopBackdrop = (t) => t === S.els.pop || !!t?.classList?.contains("lw-pop-wrap");
+/** Backdrop taps never interrupt a spin or a pending request, and the pop-up ignores them for its first ~400 ms. */
+function backdropMayClose() {
+  return P.backdropCloseAllowed({ phase: S.phase, inflight: S.inflight, popAgeMs: performance.now() - S.popAt });
 }
 
 /**
@@ -202,12 +286,11 @@ function onKeydown(e) {
   if (e.key === "Escape") {
     e.stopPropagation();
     if (!S.els.pop.hidden && S.phase === "popup") closePop();
-    else if (!S.els.odds.hidden && S.els.odds.classList.contains("is-open")) toggleOdds(false);
     else requestClose();
     return;
   }
   if (e.key !== "Tab") return;
-  const scope = !S.els.pop.hidden ? S.els.pop : !S.els.odds.hidden ? S.els.odds : S.els.dialog;
+  const scope = !S.els.pop.hidden ? S.els.pop : S.els.dialog;
   const nodes = [...scope.querySelectorAll("button:not([disabled])")].filter((n) => n.offsetParent !== null || n === document.activeElement);
   if (!nodes.length) {
     e.preventDefault();
@@ -256,55 +339,8 @@ function renderSectors() {
   }
   // sector colours come from the CSS vars (positions 0..7); expose as inline for robustness
   list.forEach((s) => S.els.stage.style.setProperty(`--lw-s${s.pos}`, P.LW_SECTOR_COLORS[s.pos]));
-  renderOdds();
   // warm the jackpot pack (only when a jackpot sector exists)
   if (list.some((s) => s.isJackpot)) warmFx();
-}
-
-function renderOdds() {
-  const list = sectors();
-  const pct = new Map((S.state?.odds || []).map((o) => [o.pos, o.pct]));
-  const rows = list
-    .map((s) => {
-      const p = pct.get(s.pos);
-      const shown = p == null ? "" : `${Number.isInteger(p) ? p : Math.round(p * 100) / 100}%`;
-      const name = s.kind === "jiu_coin" ? `${s.amount} 韭币${s.isJackpot ? "（大奖）" : ""}` : P.sectorAria(s);
-      return `<li><span class="lw-chip" style="background:${P.LW_SECTOR_COLORS[s.pos]}"></span><span class="lw-odds-name">${esc(name)}</span><span class="lw-odds-pct">${shown}</span></li>`;
-    })
-    .join("");
-  const hasItem = list.some((s) => s.kind === "item");
-  const hasSpin = list.some((s) => s.kind === "spin");
-  const notes = [
-    "每日 0 点（北京时间）刷新免费次数。每次转盘由服务器独立抽取，结果与动画无关，也不受之前结果影响。",
-    hasItem ? "后悔券：放入背包，可在单人局反悔时使用。" : "",
-    hasSpin ? "再转一次：额外获得 1 次转盘机会（每日有上限，超出时折算为韭币）。" : "",
-  ].filter(Boolean);
-  S.els.odds.innerHTML = `<h3>概率说明</h3><ul>${rows}</ul>${notes.map((n) => `<p>${esc(n)}</p>`).join("")}<button type="button" class="lw-odds-close" id="lwOddsClose">知道了</button>`;
-  const c = $("#lwOddsClose");
-  c.addEventListener("pointerdown", () => (c.dataset.state = "press"));
-  for (const ev of ["pointerup", "pointercancel", "pointerleave"]) c.addEventListener(ev, () => (c.dataset.state = "default"));
-  c.addEventListener("click", () => toggleOdds(false));
-}
-
-function toggleOdds(force) {
-  const { odds, oddsBtn } = S.els;
-  const open = force == null ? !odds.classList.contains("is-open") : !!force;
-  if (open) {
-    if (!S.state?.odds) return;
-    odds.hidden = false;
-    void odds.offsetWidth;
-    odds.classList.add("is-open");
-    oddsBtn.setAttribute("aria-expanded", "true");
-    $("#lwOddsClose").focus?.();
-  } else {
-    odds.classList.remove("is-open");
-    oddsBtn.setAttribute("aria-expanded", "false");
-    window.setTimeout(() => {
-      if (!odds.classList.contains("is-open")) odds.hidden = true;
-    }, 200);
-    if (!S.els.pop.hidden) return;
-    try { oddsBtn.focus(); } catch { /* ignore */ }
-  }
 }
 
 function setGo(state, label) {
@@ -359,15 +395,17 @@ function tickClock() {
 
 /* ------------------------------------------------------------------ data */
 
-async function loadState({ force = false, quiet = false } = {}) {
+async function loadState({ force = false, quiet = false, prefetched = null } = {}) {
   const sess = S.session;
   if (!quiet) {
     S.els.err.hidden = true;
     if (!S.state || force) S.els.stage.classList.add("is-loading");
     if (!S.state) setGo("loading", "载入中…");
   }
+  S.inflight += 1;
   try {
-    const { data } = await api("/me/lucky-wheel");
+    // `prefetched`: the GET jiu-coin.js started in parallel with this module's import (same request, no second round trip)
+    const { data } = await (prefetched || api("/me/lucky-wheel"));
     if (sess !== S.session) return null;
     if (!data?.enabled) {
       S.state = null;
@@ -388,6 +426,8 @@ async function loadState({ force = false, quiet = false } = {}) {
       setGo("disabled", "启动转盘");
     }
     return { enabled: null, error: e };
+  } finally {
+    S.inflight -= 1;
   }
 }
 
@@ -463,7 +503,7 @@ async function onSpinClick(e) {
   S.els.close.setAttribute("aria-disabled", "true"); // a spin in flight cannot be abandoned
   const sess = S.session;
   clearWin();
-  toggleOdds(false);
+  loadEffectArt(); // a spin is about to land: the win glow / flash must be there (normally loaded long before)
   setGo("loading", "转盘中…");
   const key = S.pendingKey || (S.pendingKey = P.newIdemKey());
   const reqP = postSpin(key);
@@ -712,10 +752,12 @@ function openPop(res, jackpot) {
   const prizeArt = res.isJackpot ? "lw-prize-5" : art;
   const amountHtml =
     copy.kind === "coin"
-      ? `<div class="lw-pop-amount" id="lwPopAmt"><span class="lw-plus">+</span><span class="lw-num" data-to="${esc(copy.amount)}">${esc(copy.amount)}</span><span class="lw-unit">${copy.unit}</span></div>`
-      : `<div class="lw-pop-headline">${esc(copy.headline)}</div>`;
+      ? `<div class="lw-pop-amount" id="lwPopAmt"><span class="lw-plus">+</span><span class="lw-num" data-to="${esc(copy.amount)}">${esc(copy.amount)}</span><span class="lw-unit">${coinIconHtml({ size: 24 })}<span class="u-sr">${esc(copy.unit)}</span></span></div>`
+      : copy.kind === "ticket" && (!res.prize?.label || res.prize.label === "后悔券")
+        ? `<div class="lw-pop-headline"><span class="u-amt u-ticket-amt"><span class="ticket-icon lw-pop-tk">${imgHtml("item-ticket-24", "ticket-img")}</span><span class="u-sr">后悔券</span><span class="u-ticket-n">×${esc(copy.amount)}</span></span></div>`
+        : `<div class="lw-pop-headline">${esc(copy.headline)}</div>`;
   const bal = Number(res.balance);
-  const balHtml = copy.kind === "coin" && Number.isFinite(bal) ? `<div class="lw-pop-bal">当前余额 ${bal} 韭币</div>` : "";
+  const balHtml = copy.kind === "coin" && Number.isFinite(bal) ? `<div class="lw-pop-bal">当前余额 ${coinAmountHtml(bal, { size: 13 })}</div>` : "";
   const lines = copy.lines.length ? `<ul class="lw-pop-lines">${copy.lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : "";
   pop.className = `lw-pop kind-${copy.kind}${jackpot ? " is-jackpot" : ""}`;
   pop.style.setProperty("--lw-accent", accent);
@@ -748,6 +790,7 @@ function openPop(res, jackpot) {
   }
   pop.hidden = false;
   fitView();
+  S.popAt = performance.now();
   S.phase = "popup";
   S.root.dataset.phase = "popup";
   S.els.close.removeAttribute("aria-disabled");
@@ -935,7 +978,6 @@ function requestClose() {
 
 function closeModal() {
   if (!S.root || S.root.hidden) return Promise.resolve();
-  toggleOdds(false);
   window.clearInterval(S.clock);
   return closeCtlOverlay(S.root).then(() => {
     if (!S.root.hidden) return;
@@ -974,7 +1016,7 @@ if (typeof document !== "undefined") {
   });
 }
 
-export async function openLuckyWheel({ onChange } = {}) {
+export async function openLuckyWheel({ onChange, prefetched = null } = {}) {
   void refreshRewindTickets({ maxAgeMs: 15000 });
   if (onChange) S.hooks.onChange = onChange;
   ensureDom();
@@ -999,8 +1041,11 @@ export async function openLuckyWheel({ onChange } = {}) {
     S.els.reset.textContent = "";
   }
   applyAngle(S.angle);
+  preloadCoreArt();
+  scheduleEffectArt();
   preloadLuckyWheelArt();
-  const loading = loadState({ force: !S.state, quiet: !!S.state });
+  // A cached / primed state renders at once and refreshes quietly; otherwise use the caller's in-flight GET when given.
+  const loading = loadState({ force: !S.state, quiet: !!S.state, prefetched: S.state ? null : prefetched });
   openCtlOverlay(S.root, { focusSelector: "#lwGo:not([disabled]), #lwClose" });
   fitView();
   tickClock();

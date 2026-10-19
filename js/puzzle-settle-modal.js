@@ -9,6 +9,7 @@ import {
 } from './puzzle-settle-copy.js';
 import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
+import { unitIconsHtml } from './unit-icons.js';
 
 function modalEl() {
   return document.getElementById('puzzleSettleModal');
@@ -208,12 +209,12 @@ export function showPuzzleSettleModal(state) {
     if (copy.rewardGranted && copy.rewardAmount != null) {
       rewardEl.hidden = false;
       rewardEl.innerHTML =
-        (copy.rewardLine ? escapeHtml(copy.rewardLine) + ' · ' : '') +
+        (copy.rewardLine ? unitIconsHtml(copy.rewardLine, { size: 16 }) + ' · ' : '') +
         '合计 +' +
         amountWithCoinHtml(copy.rewardAmount, { size: 16 });
     } else if (copy.rewardLine) {
       rewardEl.hidden = false;
-      rewardEl.textContent = copy.rewardLine;
+      rewardEl.innerHTML = unitIconsHtml(copy.rewardLine, { size: 16 });
     } else {
       rewardEl.hidden = true;
       rewardEl.textContent = '';

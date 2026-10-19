@@ -44,6 +44,7 @@ import {
     oneshotAmmoFromActions,
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
+import { unitIconsHtml, coinAmountHtml, ticketAmountHtml } from './unit-icons.js';
 import { getRewindTickets, refreshRewindTickets, setRewindTickets } from './rewind-tickets.js';
 import { rewindButtonMode, defaultPayWith, ticketConfirmCopy, rewindToast } from './rewind-tickets-pure.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
@@ -585,14 +586,14 @@ export async function handleAction(action) {
 
 /**
  * Track R3: label only (the icon slot `.rewind-btn-icon` is owned by the icon-unification work).
- * 0 tickets ⇒ exactly today's markup 「反悔 50◎」; tickets > 0 ⇒ 「反悔 · 券×N」.
+ * 0 tickets ⇒ exactly today's markup 「反悔 50◎」; tickets > 0 ⇒ 「反悔 · <后悔券图标>×N」 (word kept as hidden text).
  */
 function paintRewindLabel(btn = document.getElementById('rewindBtn')) {
     const label = btn?.querySelector('.rewind-btn-label');
     if (!label) return;
     const m = rewindButtonMode(getRewindTickets().tickets);
     if (label.dataset.hydrated === m.key) return;
-    if (m.mode === 'ticket') label.textContent = m.text;
+    if (m.mode === 'ticket') label.innerHTML = `反悔 · ${ticketAmountHtml(getRewindTickets().tickets, { size: 12 })}`;
     else label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 12 })}`;
     label.dataset.hydrated = m.key;
     btn.dataset.payWith = m.mode;
@@ -657,15 +658,15 @@ function renderRewindSheet() {
     if (body) {
         if (ticketMode) {
             body.innerHTML =
-                `<p class="rewind-ticket-copy">${ticketConfirmCopy({ tickets: ctx.tickets, targetDay, board: ctx.board })}</p>` +
-                `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayCoinLink">改用 50 韭币</button></p>`;
+                `<p class="rewind-ticket-copy">${unitIconsHtml(ticketConfirmCopy({ tickets: ctx.tickets, targetDay, board: ctx.board }), { size: 14 })}</p>` +
+                `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayCoinLink">改用 ${coinAmountHtml(50, { size: 14 })}</button></p>`;
         } else {
             body.innerHTML =
                 `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
                 `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
                 `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
                 (!canAfford ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '') +
-                (ctx.tickets > 0 ? `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayTicketLink">改用后悔券（剩 ${ctx.tickets} 张）</button></p>` : '');
+                (ctx.tickets > 0 ? `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayTicketLink">改用 ${ticketAmountHtml(null, { size: 14 })}（剩 ${ctx.tickets} 张）</button></p>` : '');
         }
         const toCoin = document.getElementById('rewindPayCoinLink');
         if (toCoin) toCoin.onclick = () => switchRewindPay('coin');

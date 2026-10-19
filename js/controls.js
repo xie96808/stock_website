@@ -3,6 +3,7 @@
  * P0: setCtlState, shakeError, showStampToast, castbar, overlay open/close.
  * Also: bottom sheets (openCtlSheet/closeCtlSheet) + crisis sheet (showCrisisSheet). P2 visuals are CSS-only.
  */
+import { unitIconsHtml, hasUnitIcons } from "./unit-icons.js";
 
 const CTL_STATES = new Set([
   "default",
@@ -116,7 +117,10 @@ export function showStampToast(message, kind = "error") {
   const toast = document.createElement("div");
   toast.className = `auth-toast ctl-toast ctl-toast--${k} auth-toast--${k}`;
   toast.setAttribute("role", "status");
-  toast.textContent = String(message || "");
+  // 「50 韭币」「后悔券 ×2」 in a toast render as icons (text kept for screen readers); plain strings stay textContent
+  const msg = String(message || "");
+  if (hasUnitIcons(msg)) toast.innerHTML = unitIconsHtml(msg, { size: 14 });
+  else toast.textContent = msg;
   host.appendChild(toast);
   requestAnimationFrame(() => toast.classList.add("show"));
   const hold = 2200;
@@ -435,7 +439,10 @@ export function ctlConfirm(message, { title = "", okLabel = "确定", cancelLabe
   const t = root.querySelector("#ctlConfirmTitle");
   t.textContent = title;
   t.hidden = !title;
-  root.querySelector("#ctlConfirmBody").textContent = String(message ?? "");
+  const body = root.querySelector("#ctlConfirmBody");
+  const msg = String(message ?? "");
+  if (hasUnitIcons(msg)) body.innerHTML = unitIconsHtml(msg, { size: 16 });
+  else body.textContent = msg;
   root.querySelector("#ctlConfirmOk .ctl-label").textContent = okLabel;
   root.querySelector("#ctlConfirmCancel .ctl-label").textContent = cancelLabel;
   const ok = root.querySelector("#ctlConfirmOk");

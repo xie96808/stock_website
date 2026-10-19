@@ -152,6 +152,20 @@ export function coinTier(amount) {
   return 5;
 }
 
+/** Backdrop taps are ignored for this long after the result pop-up opens (a fast double tap must not dismiss it unseen). */
+export const LW_BACKDROP_GUARD_MS = 400;
+
+/**
+ * May a tap on the blank backdrop close the wheel (or its pop-up)? Never while a spin is resolving / animating
+ * (phase loading | spinning), never while a GET /me/lucky-wheel is in flight, and not in the pop-up's first 400 ms.
+ */
+export function backdropCloseAllowed({ phase = "idle", inflight = 0, popAgeMs = Infinity } = {}) {
+  if (phase === "loading" || phase === "spinning") return false;
+  if (Number(inflight) > 0) return false;
+  if (phase === "popup" && !(Number(popAgeMs) >= LW_BACKDROP_GUARD_MS)) return false;
+  return true;
+}
+
 /** Text drawn on a wheel sector from server sector data. */
 export function sectorLabel(view) {
   if (!view) return { text: "", len: 0 };

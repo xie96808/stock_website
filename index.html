@@ -43,6 +43,9 @@
     <link rel="stylesheet" href="css/controls-p4.css">
     <link rel="stylesheet" href="css/controls-p5.css">
     <link rel="stylesheet" href="css/emoji-art.css">
+    <!-- 签到转盘 cold open: fetch the lazy wheel module + its helper early (low priority, not executed until imported). -->
+    <link rel="modulepreload" href="js/lucky-wheel.js">
+    <link rel="modulepreload" href="js/lucky-wheel-pure.js">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -144,7 +147,7 @@
                                 <strong>练习与战绩<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
                                 <p>开始游戏、查看战绩与双模式练习榜，均从这里进入。</p>
                             </span>
-                            <span class="cta cta-fill">进入模拟盘</span>
+                            <span class="cta cta-fill cta-bounce">进入模拟盘</span>
                         </button>
                         <button type="button" class="lane" onclick="showAcademy()">
                             <span class="mark">二</span>

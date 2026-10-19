@@ -82,7 +82,7 @@ test('fingerprint: css/js hashed + refs rewritten, wheel images under assets/ st
     mkdirSync(join(dir, 'css'));
     mkdirSync(join(dir, 'assets'), { recursive: true });
     cpSync(ASSETS, join(dir, 'assets', 'lucky-wheel'), { recursive: true });
-    for (const f of ['lucky-wheel.js', 'lucky-wheel-pure.js']) writeFileSync(join(dir, 'js', f), readFileSync(join(ROOT, 'js', f)));
+    for (const f of ['lucky-wheel.js', 'lucky-wheel-pure.js', 'icon-art.js', 'unit-icons.js']) writeFileSync(join(dir, 'js', f), readFileSync(join(ROOT, 'js', f)));
     // lucky-wheel.js imports auth.js / controls.js: minimal stand-ins keep the graph self-contained
     writeFileSync(join(dir, 'js', 'auth.js'), 'export const api=1,getAuthState=1,showToast=1;\n');
     writeFileSync(join(dir, 'js', 'controls.js'), 'export const openCtlOverlay=1,closeCtlOverlay=1;\n');

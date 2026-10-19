@@ -12,6 +12,7 @@ import {
 import { ctlConfirm } from './controls.js';
 import { formatLevelGoalLines } from './puzzle-goals-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
+import { unitIconsHtml, coinAmountHtml } from './unit-icons.js';
 
 const ENTRY_TIMEOUT_MS = 20000;
 
@@ -101,7 +102,7 @@ export async function refreshPuzzleChapterCard() {
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.textContent = '第一、二章已开放 · 首局免费 · 重开 10 韭币 · 二星 +20 / 三星 +15';
+    if (meta) meta.innerHTML = unitIconsHtml('第一、二章已开放 · 首局免费 · 重开 10 韭币 · 二星 +20 / 三星 +15', { size: 12 });
     if (stateEl) {
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
     }
@@ -299,7 +300,7 @@ function renderLevelList(body, data) {
     .map((lv) => {
       const best = lv.progress?.bestStars || 0;
       const fee = Number(lv.entryFee) || 0;
-      const feeBit = fee > 0 ? `重开 ${fee} 韭币` : '首局免费';
+      const feeBit = fee > 0 ? `重开 ${coinAmountHtml(fee, { size: 12 })}` : '首局免费';
       const granted = lv.firstClearGranted ? '已领二星' : '首通二星 +20';
       const threeBit = lv.threeStarGranted ? '已领三星' : '三星 +15';
       const teaching = lv.teachingBrief
@@ -332,7 +333,7 @@ function renderLevelList(body, data) {
     : '';
   body.innerHTML = `
     <div class="puzzle-list-head">
-      <p>首局免费 · 结算后再开扣 10 韭币 · 无反悔 · 二星首次 +20（本章最多 120）· 三星首次 +15 · 实盘短窗残局</p>
+      <p>首局免费 · 结算后再开扣 ${coinAmountHtml(10, { size: 14 })} · 无反悔 · 二星首次 +20（本章最多 120）· 三星首次 +15 · 实盘短窗残局</p>
       ${weeklyBtn}
     </div>
     <div class="puzzle-level-list">${rows}</div>`;
