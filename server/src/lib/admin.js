@@ -355,7 +355,8 @@ export function searchGames({ q = "", fillMode = "", limit = 20, cursor = null }
     .prepare(
       `SELECT s.id, s.user_id, s.fill_mode, s.finished_at, s.rule_version,
               r.return_ppm, r.trade_count, r.validity, r.leaderboard_hidden,
-              r.moderation_reason, u.username_normalized, u.nickname
+              r.moderation_reason, u.username_normalized, u.nickname,
+              s.undo_count, s.rewind_via, r.assist_class
        FROM game_sessions s
        JOIN game_results r ON r.game_id = s.id
        JOIN users u ON u.id = s.user_id
@@ -379,6 +380,8 @@ export function searchGames({ q = "", fillMode = "", limit = 20, cursor = null }
     validity: r.validity,
     leaderboardHidden: !!r.leaderboard_hidden,
     moderationReason: r.moderation_reason,
+    assistClass: r.assist_class ?? null,
+    rewindPaidWith: (r.undo_count ?? 0) >= 1 ? (r.rewind_via === "ticket" ? "ticket" : "coin") : null,
   }));
   let nextCursor = null;
   if (hasMore) {
