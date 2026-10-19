@@ -35,17 +35,19 @@ test("all referenced art files exist (1x/2x, day and dark where themed)", () => 
     }
   }
   for (const [kind, g] of Object.entries(GIFT_ART)) {
-    for (const f of [kind, ...(g.dark ? [`${kind}-dark`] : [])]) {
+    const stem = g.file || kind;
+    for (const f of [stem, ...(g.dark ? [`${stem}-dark`] : [])]) {
       for (const sfx of [".png", "@2x.png", ".webp", "@2x.webp"]) assert.ok(existsSync(`assets/pvp/gift-${f}${sfx}`), `gift ${f}${sfx}`);
     }
   }
 });
 
-test("all six gifts have art; the four new ones keep the emoji glyph box; fish/leaf unchanged", () => {
+test("all six gifts have day+dark art; the four P3 ones keep the emoji glyph box; fish/leaf keep their layout", () => {
   assert.deepEqual(Object.keys(GIFT_ART).sort(), ["coffee", "fish", "flower", "leaf", "pipe", "tomato"]);
   for (const k of ["flower", "tomato", "pipe", "coffee"]) assert.equal(GIFT_ART[k].keepGlyphBox, true);
-  assert.deepEqual(GIFT_ART.fish, { name: "臭鱼", emoji: "🐟" });
-  assert.deepEqual(GIFT_ART.leaf, { name: "菜叶", emoji: "🥬" });
+  // fish/leaf: redrawn art with -dark variants, but no keepGlyphBox (their shipped picker layout is unchanged).
+  assert.deepEqual(GIFT_ART.fish, { name: "臭鱼", emoji: "🐟", dark: true });
+  assert.deepEqual(GIFT_ART.leaf, { name: "菜叶", emoji: "🥬", dark: true });
 });
 
 test("static markup uses the slots; fallback CSS restores the emoji in the same box", () => {
