@@ -85,7 +85,7 @@ async function refreshSurvivalModeCard() {
   card.hidden = !on;
 }
 
-/** Root home: three primary entries only */
+/** Root home: C2 arcade */
 export function showHome() {
   prepareScreen(Route.HOME);
   const home = document.getElementById("homeLanes");
@@ -97,6 +97,9 @@ export function showHome() {
   setHubMascotLevel(1);
   setRouteHash(Route.HOME);
   refreshResumeBanner().catch(() => {});
+  import("./home-arcade.js")
+    .then((m) => m.refreshHomeArcadeChrome && m.refreshHomeArcadeChrome())
+    .catch(() => {});
 }
 
 /** 模拟盘二级 hub: 玩法入口 / 残局 / 我的战绩 / 练习榜 */

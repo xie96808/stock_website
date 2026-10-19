@@ -1,0 +1,167 @@
+/* Newbie spotlight tutorial — flat controls, 240ms transitions, no grain */
+.sg-tut {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  pointer-events: auto;
+  --sg-tut-ms: 240ms;
+}
+.sg-tut[hidden] {
+  display: none !important;
+}
+.sg-tut__mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(12, 10, 8, 0.55);
+  transition: opacity var(--sg-tut-ms) ease;
+}
+[data-theme="dark"] .sg-tut__mask {
+  background: rgba(0, 0, 0, 0.68);
+}
+.sg-tut.is-leaving .sg-tut__mask {
+  opacity: 0;
+}
+.sg-tut__hole {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(12, 10, 8, 0.55);
+  outline: 2px solid rgba(255, 181, 46, 0.85);
+  outline-offset: 2px;
+  transition:
+    top var(--sg-tut-ms) ease,
+    left var(--sg-tut-ms) ease,
+    width var(--sg-tut-ms) ease,
+    height var(--sg-tut-ms) ease;
+  pointer-events: none;
+  background: transparent;
+}
+[data-theme="dark"] .sg-tut__hole {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.68);
+}
+.sg-tut__hole.is-none {
+  width: 0 !important;
+  height: 0 !important;
+  outline: none;
+  opacity: 0;
+}
+.sg-tut__bubble {
+  position: absolute;
+  z-index: 1;
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+  background: #fffaf0;
+  color: #2a1d0c;
+  border: 1.5px solid rgba(90, 60, 10, 0.18);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.35);
+  transition:
+    top var(--sg-tut-ms) ease,
+    left var(--sg-tut-ms) ease,
+    opacity var(--sg-tut-ms) ease,
+    transform var(--sg-tut-ms) ease;
+}
+[data-theme="dark"] .sg-tut__bubble {
+  background: #1f1a13;
+  color: #fff3dc;
+  border-color: rgba(255, 226, 170, 0.18);
+}
+.sg-tut__copy {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.sg-tut__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sg-tut__step {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.65;
+  font-variant-numeric: tabular-nums;
+}
+.sg-tut__btns {
+  display: flex;
+  gap: 8px;
+}
+.sg-tut__btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(90, 60, 10, 0.2);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.sg-tut__btn:active {
+  transform: scale(0.965);
+}
+.sg-tut__btn--primary {
+  border: 0;
+  background: linear-gradient(180deg, #ff7a2f, #e62e2e);
+  color: #fff;
+  box-shadow: 0 3px 0 #a3161a;
+}
+.sg-tut__btn--primary:active {
+  box-shadow: 0 1px 0 #a3161a;
+}
+.sg-tut__hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  opacity: 0.55;
+}
+@media (max-width: 640px) {
+  .sg-tut__bubble.is-sheet {
+    left: 16px !important;
+    right: 16px;
+    max-width: none;
+    width: auto;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    top: auto !important;
+  }
+  .sg-tut__bubble.is-sheet.is-sheet-top {
+    top: max(12px, env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-tut__mask,
+  .sg-tut__hole,
+  .sg-tut__bubble {
+    transition: none !important;
+  }
+}
+
+/* Replay entry on playModes */
+.tut-replay-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--ink-soft, var(--mute));
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 90ms ease, border-color 180ms ease;
+}
+.tut-replay-link:hover {
+  border-color: var(--ring, #ffb52e);
+}
+.tut-replay-link:active {
+  transform: scale(0.965);
+}
+
+#gameScreen.is-tutorial-lock .action-zone,
+#gameScreen.is-tutorial-lock .dashboard-main {
+  /* overlay captures clicks; keep visual calm */
+}

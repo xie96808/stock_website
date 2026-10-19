@@ -34,6 +34,9 @@ export function hideResumeBanner() {
   const el = $('resumeGameBanner');
   if (el) el.hidden = true;
   setBusy(false);
+  try {
+    document.dispatchEvent(new CustomEvent('stockgame:resume-changed', { detail: { active: false } }));
+  } catch { /* ignore */ }
 }
 
 function paint(active, dayInfo) {
@@ -43,6 +46,9 @@ function paint(active, dayInfo) {
   $('resumeGameBannerMeta').textContent = resumeMetaText(active, dayInfo);
   setBusy(false);
   el.hidden = false;
+  try {
+    document.dispatchEvent(new CustomEvent('stockgame:resume-changed', { detail: { active: true } }));
+  } catch { /* ignore */ }
 }
 
 function setBusy(on, label) {

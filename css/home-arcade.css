@@ -1,0 +1,902 @@
+/* ============================================================
+   HOME ARCADE (C2 r6) — street-machine start screen
+   Decorative only for hero art; controls stay flat (no grain).
+   ============================================================ */
+
+@font-face {
+  font-family: "APNum";
+  src: url("../fonts/roboto-num.woff2") format("woff2");
+  font-weight: 100 900;
+  font-stretch: 75% 100%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "APSans";
+  src: url("../fonts/noto-sc-panel.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+/* Hub L1: full-width arcade; hide notebook art + head */
+#startScreen[data-hub-level="1"] {
+  --ha-glow: rgba(255, 170, 40, 0.55);
+  --ha-ring: #ffb52e;
+  --ha-cta-a: #ff7a2f;
+  --ha-cta-b: #e62e2e;
+  --ha-cta-sh: #a3161a;
+  --ha-pvp: #1e5bd8;
+  --ha-pvp-glow: rgba(30, 91, 216, 0.25);
+  --ha-panel: rgba(255, 255, 255, 0.72);
+  --ha-up: #e62632;
+  --ha-down: #1f9d55;
+  /* Match demo-c2 go width at 390 (366px): container ≤420 adds 10px/side → L1 uses 2px */
+  padding: 20px 2px 28px;
+  background:
+    radial-gradient(60% 50% at 50% 34%, var(--ha-glow), transparent 70%),
+    transparent;
+}
+[data-theme="dark"] #startScreen[data-hub-level="1"] {
+  --ha-glow: rgba(255, 150, 30, 0.3);
+  --ha-ring: #ffbf3c;
+  --ha-pvp: #4c8dff;
+  --ha-pvp-glow: rgba(76, 141, 255, 0.35);
+  --ha-panel: rgba(31, 26, 19, 0.82);
+  --ha-up: #ff5a4f;
+  --ha-down: #3fcf7d;
+}
+
+#startScreen[data-hub-level="1"] .page {
+  display: block;
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+  grid-template-columns: none;
+}
+#startScreen[data-hub-level="1"] .art,
+#startScreen[data-hub-level="1"] .head {
+  display: none !important;
+}
+#startScreen[data-hub-level="1"] .right {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+}
+
+#homeLanes.home-arcade {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+#homeLanes.home-arcade[hidden] {
+  display: none !important;
+}
+
+/* Daily challenge pill */
+.ha-daily {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 6px 0 14px;
+  border-radius: 999px;
+  background: var(--ha-panel);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 4px;
+  color: var(--ink);
+}
+.ha-daily.is-on {
+  display: inline-flex;
+}
+.ha-daily .ha-cd {
+  font-variant-numeric: tabular-nums;
+  color: var(--ha-up);
+  width: 8ch;
+  text-align: left;
+}
+.ha-daily button {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--ink);
+  color: var(--paper, #fff1c9);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.ha-daily button:active {
+  transform: scale(0.965);
+}
+
+/* Hero: K-line → broker panel → mascot */
+.ha-hero {
+  position: relative;
+  flex: none;
+  width: min(960px, calc(100vw - 32px));
+  height: 340px;
+  margin: 8px 0 0;
+  pointer-events: none;
+  user-select: none;
+}
+.ha-kl {
+  position: absolute;
+  left: 130px;
+  right: 250px;
+  top: 0;
+  bottom: 30px;
+  opacity: 0.9;
+}
+.ha-kl svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.ha-kl .up {
+  fill: var(--ha-up);
+  stroke: var(--ha-up);
+}
+.ha-kl .dn {
+  fill: var(--ha-down);
+  stroke: var(--ha-down);
+}
+.ha-kl .wick {
+  stroke-width: 1.3;
+}
+.ha-kl .board {
+  stroke: var(--ha-up);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  fill: none;
+}
+[data-theme="dark"] .ha-kl .up,
+[data-theme="dark"] .ha-kl .board {
+  filter: drop-shadow(0 0 4px rgba(255, 90, 79, 0.55));
+}
+.ha-kl .c {
+  animation: ha-kgrow 0.45s ease both;
+  animation-delay: calc(var(--i) * 18ms);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+@keyframes ha-kgrow {
+  from {
+    opacity: 0;
+    transform: scaleY(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* Broker-style account panel (always white; decorative) */
+.ha-bp {
+  --u: 0.62px;
+  --dnc: #1f9d55;
+  position: absolute;
+  left: 30px;
+  top: 104px;
+  width: calc(var(--u) * 786);
+  height: calc(var(--u) * 336);
+  background: #fff;
+  border-radius: calc(var(--u) * 26);
+  box-shadow:
+    0 30px 60px -30px rgba(90, 50, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  transform: rotate(-4.5deg);
+  transform-origin: left top;
+  font-family: "APSans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #333;
+  -webkit-font-smoothing: antialiased;
+}
+[data-theme="dark"] .ha-bp {
+  box-shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.85);
+}
+.ha-bp-in {
+  position: absolute;
+  left: calc(var(--u) * 22);
+  top: calc(var(--u) * 14);
+  width: calc(var(--u) * 742);
+  height: calc(var(--u) * 310);
+}
+.ha-bp .c {
+  position: absolute;
+  white-space: nowrap;
+}
+.ha-bp .lab {
+  font-size: calc(var(--u) * 30.5);
+  line-height: 1;
+  color: #999;
+  display: flex;
+  align-items: center;
+}
+.ha-bp .vw {
+  display: flex;
+  align-items: baseline;
+  overflow: hidden;
+}
+.ha-bp .val {
+  font-family: "APNum", Roboto, "DIN Alternate", sans-serif;
+  font-size: calc(var(--u) * 34);
+  font-weight: 520;
+  font-stretch: 78%;
+  line-height: 1;
+  color: #333;
+  font-variant-numeric: tabular-nums;
+  display: block;
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ha-bp .val.is-up {
+  color: #e62632;
+}
+.ha-bp .val.is-down {
+  color: var(--dnc);
+}
+.ha-bp .pct {
+  font-family: "APNum", Roboto, sans-serif;
+  font-size: calc(var(--u) * 28);
+  font-weight: 400;
+  font-stretch: 85%;
+  margin-left: calc(var(--u) * 7);
+  flex: none;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ha-bp .pct.is-up {
+  color: #e62632;
+}
+.ha-bp .pct.is-down {
+  color: var(--dnc);
+}
+.ha-bp svg {
+  display: block;
+  color: #9b9b9b;
+  flex: none;
+}
+.ha-bp .bp-chip {
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--u) * 37);
+  padding: 0 calc(var(--u) * 8) 0 calc(var(--u) * 10);
+  margin-left: calc(var(--u) * 7);
+  background: #f5f5f5;
+  color: #ff6a14;
+  font-size: calc(var(--u) * 24);
+  border-radius: calc(var(--u) * 3);
+}
+.ha-bp .bp-chip i {
+  width: 0;
+  height: 0;
+  border-left: calc(var(--u) * 9) solid currentColor;
+  border-top: calc(var(--u) * 6.5) solid transparent;
+  border-bottom: calc(var(--u) * 6.5) solid transparent;
+  margin-left: calc(var(--u) * 3);
+}
+.ha-bp .dot {
+  position: absolute;
+  top: calc(var(--u) * 290);
+  width: calc(var(--u) * 12);
+  height: calc(var(--u) * 12);
+  border-radius: 50%;
+}
+
+.ha-mascot {
+  position: absolute;
+  right: 6px;
+  top: 52px;
+  width: 228px;
+  height: 228px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 6px var(--ha-ring),
+    0 0 0 12px rgba(255, 191, 60, 0.22),
+    0 30px 60px -20px rgba(0, 0, 0, 0.6);
+  animation: ha-float 4s ease-in-out infinite;
+}
+.ha-mascot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 35%;
+  position: absolute;
+  inset: 0;
+}
+.ha-mascot .night-only {
+  display: none;
+}
+[data-theme="dark"] .ha-mascot .day-only {
+  display: none;
+}
+[data-theme="dark"] .ha-mascot .night-only {
+  display: block;
+}
+@keyframes ha-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+#startScreen h1.ha-title {
+  margin: 6px 0 4px;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.1;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+#startScreen h1.ha-title em {
+  font-style: normal;
+  background: linear-gradient(90deg, var(--ha-cta-a), var(--ha-cta-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+#startScreen .ha-sub {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+/* CTA: split pill — static hit targets + bouncing visual (V4 shelf) */
+.ha-go-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 12px;
+  width: min(440px, 100%);
+  margin: 0 auto;
+  /* Reserve shelf (6px) + ~16px air before PvP → shelf-bottom to card ≈ 16px */
+  padding: 0 0 6px;
+  margin-bottom: 16px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* Outer shell: FIXED layout + hit geometry — never transformed by bounce */
+.ha-go-split {
+  display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
+  position: relative;
+  width: min(440px, 100%);
+  max-width: 440px;
+  height: 80px;
+  border-radius: 9999px;
+  /* no overflow:hidden — bounce visual may squash slightly outside; hits stay put */
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Painted arcade face: gradient, shelf, sweep, bounce — pointer-events none */
+.ha-go-visual {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
+  box-shadow:
+    0 6px 0 var(--ha-cta-sh),
+    0 22px 40px -14px rgba(230, 46, 46, 0.75);
+  transform-origin: 50% 100%;
+  transition: transform 90ms ease, box-shadow 90ms ease;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.ha-go-split:has(#homeArcadeGo:active) .ha-go-visual {
+  transform: scale(0.965);
+  box-shadow:
+    0 2px 0 var(--ha-cta-sh),
+    0 10px 20px -10px rgba(230, 46, 46, 0.7);
+}
+
+/* Subtle diagonal sweep on the visual only */
+.ha-go-visual::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: 0;
+  width: 26%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+  animation: ha-shine 3.6s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+@keyframes ha-shine {
+  0%,
+  62% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  78%,
+  100% {
+    transform: translateX(430%) skewX(-18deg);
+  }
+}
+html.is-doc-hidden .ha-go-visual::after {
+  animation-play-state: paused;
+}
+
+/* Static hit targets — no transform from bounce */
+.ha-go {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  cursor: pointer;
+  transform: none !important;
+  animation: none !important;
+}
+.ha-go b {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.ha-go small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.92;
+  margin-top: 4px;
+}
+.ha-go .coin-amt {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ha-go .coin-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+.ha-go .coin-slot img {
+  width: 1.1em;
+  height: 1.1em;
+  display: block;
+  object-fit: contain;
+}
+
+.ha-go-seg {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 48px;
+  min-width: 44px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transform: none !important;
+  animation: none !important;
+  transition: filter 90ms ease, background-color 90ms ease;
+}
+.ha-go-seg::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+}
+.ha-go-seg:active {
+  filter: brightness(0.88);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+.ha-go-seg:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+.ha-go-chev {
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* Guest bounce: visual only — hit targets stay fixed */
+html[data-auth="guest"] .ha-go-visual.ha-bounce {
+  animation: ha-cta-bounce 1.4s cubic-bezier(0.33, 0, 0.3, 1) 0.8s infinite both;
+}
+html[data-auth] .ha-go-split:has(#homeArcadeGo:active) .ha-go-visual.ha-bounce,
+html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
+  animation-play-state: paused;
+}
+@keyframes ha-cta-bounce {
+  0% {
+    transform: scale(1);
+  }
+  9% {
+    transform: scale(1.04, 0.93);
+  }
+  20% {
+    transform: translateY(-3px) scale(0.97, 1.05);
+  }
+  31% {
+    transform: translateY(0) scale(1.02, 0.98);
+  }
+  48%,
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-auth="guest"] .ha-go-visual.ha-bounce,
+  .ha-go-visual::after,
+  .ha-mascot,
+  .ha-kl .c {
+    animation: none !important;
+  }
+}
+
+/* Legacy .ha-modes kept inert if any stray markup remains */
+.ha-modes {
+  display: none !important;
+}
+
+/* PvP ticket */
+.ha-pvp {
+  /* Breathing room owned by .ha-go-row (shelf pad + 16px). Keep 0 here to avoid double gap. */
+  margin-top: 0;
+  width: min(440px, 100%);
+  height: 68px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 10px;
+  border-radius: 20px;
+  border: 2px solid var(--ha-pvp);
+  background: var(--ha-panel);
+  box-shadow: 0 0 0 4px var(--ha-pvp-glow);
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.ha-pvp[hidden] {
+  display: none !important;
+}
+.ha-pvp:active {
+  transform: scale(0.965);
+}
+.ha-pvp .avs {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.ha-pvp .avs img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #efe4cc;
+  border: 2px solid var(--card, #fffaf0);
+  object-fit: cover;
+}
+.ha-pvp .avs i {
+  font-style: italic;
+  font-weight: 900;
+  color: var(--ha-pvp);
+  margin: 0 2px;
+  font-size: 15px;
+}
+.ha-pvp .t {
+  flex: 1;
+  min-width: 0;
+}
+.ha-pvp .t b {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+}
+.ha-pvp .t span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ha-pvp .live {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2fbf5f;
+  box-shadow: 0 0 0 3px rgba(47, 191, 95, 0.2);
+  flex: none;
+}
+.ha-pvp .m {
+  flex: none;
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 14px;
+  background: var(--ha-pvp);
+  color: #fff;
+  font-weight: 900;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+}
+
+/* Secondary cards */
+.ha-secondaries {
+  margin-top: 14px;
+  width: min(440px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ha-scard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-height: 112px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: var(--ha-panel);
+  border: 1px solid var(--line);
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 180ms ease, transform 90ms ease;
+}
+.ha-scard:hover {
+  border-color: var(--ha-ring);
+}
+.ha-scard:active {
+  transform: scale(0.965);
+}
+.ha-scard .ico {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.ha-scard .ico img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.ha-scard .ico .night-only {
+  display: none;
+}
+[data-theme="dark"] .ha-scard .ico .day-only {
+  display: none;
+}
+[data-theme="dark"] .ha-scard .ico .night-only {
+  display: block;
+}
+.ha-scard .meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+.ha-scard b {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.ha-scard .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  line-height: 1;
+}
+.ha-scard .tag .coin-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  flex: none;
+}
+.ha-scard .tag .coin-slot img {
+  width: 1.1em;
+  height: 1.1em;
+  object-fit: contain;
+}
+.ha-scard .tag .coin-slot img.night-only {
+  display: none;
+}
+[data-theme="dark"] .ha-scard .tag .coin-slot img.day-only {
+  display: none;
+}
+[data-theme="dark"] .ha-scard .tag .coin-slot img.night-only {
+  display: block;
+}
+.ha-scard .tag-coin {
+  background: rgba(31, 107, 58, 0.12);
+  color: #1f6b3a;
+}
+.ha-scard .tag-free {
+  background: rgba(47, 191, 95, 0.14);
+  color: #1f9d55;
+}
+[data-theme="dark"] .ha-scard .tag-coin,
+[data-theme="dark"] .ha-scard .tag-free {
+  background: rgba(125, 206, 160, 0.14);
+  color: #7dcea0;
+}
+
+.ha-foot {
+  margin-top: 18px;
+  width: min(520px, 100%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  justify-content: center;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.ha-foot .legal {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .ha-secondaries {
+    margin-top: 12px;
+    gap: 10px;
+  }
+  .ha-scard {
+    min-height: 100px;
+    padding: 14px;
+    border-radius: 14px;
+    gap: 12px;
+  }
+  .ha-scard .ico,
+  .ha-scard .ico img {
+    width: 52px;
+    height: 52px;
+  }
+  .ha-scard b {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ha-hero {
+    width: calc(100vw - 24px);
+    height: 322px;
+  }
+  .ha-kl {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    height: 150px;
+  }
+  .ha-bp {
+    --u: calc((100vw - 44px) / 786);
+    left: 6px;
+    top: 162px;
+    transform: rotate(-3deg);
+  }
+  .ha-mascot {
+    left: 14px;
+    right: auto;
+    top: 2px;
+    width: 138px;
+    height: 138px;
+    box-shadow:
+      0 0 0 5px var(--ha-ring),
+      0 0 0 10px rgba(255, 191, 60, 0.22),
+      0 24px 40px -18px rgba(0, 0, 0, 0.6);
+  }
+  #startScreen h1.ha-title {
+    font-size: 34px;
+  }
+  #startScreen .ha-sub {
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+  .ha-go-split {
+    height: 74px;
+  }
+  .ha-go b {
+    font-size: 28px;
+  }
+  .ha-pvp {
+    height: 64px;
+  }
+  .ha-pvp .t b {
+    font-size: 17px;
+  }
+  .ha-pvp .avs img {
+    width: 36px;
+    height: 36px;
+  }
+  .ha-pvp .m {
+    padding: 0 14px;
+  }
+  .ha-secondaries {
+    width: 100%;
+    gap: 8px;
+  }
+  .ha-scard {
+    min-height: 96px;
+    padding: 12px;
+    gap: 10px;
+  }
+  .ha-scard .ico,
+  .ha-scard .ico img {
+    width: 48px;
+    height: 48px;
+  }
+  .ha-scard b {
+    font-size: 13px;
+    letter-spacing: -0.02em;
+  }
+  .ha-scard .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+  .ha-go-row {
+    flex-direction: column;
+    width: min(440px, 100%);
+    max-width: 100%;
+  }
+  .ha-go-split {
+    width: min(440px, 100%);
+    max-width: 100%;
+    height: 74px;
+    align-self: center;
+  }
+  .ha-go b {
+    font-size: 28px;
+  }
+}
