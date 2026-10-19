@@ -310,6 +310,12 @@ export function getAdminGame(gameId) {
     moderationReason: row.moderation_reason ?? null,
     moderatedBy: row.moderated_by ?? null,
     moderatedAt: row.moderated_at ?? null,
+    gameKind: row.game_kind || "classic",
+    undoCount: row.undo_count ?? 0,
+    assistClass: row.assist_class || null,
+    // Track R2: how the one rewind was paid. null = none / coin (coin when undoCount=1).
+    rewindVia: row.rewind_via ?? null,
+    rewindPaidWith: (row.undo_count ?? 0) >= 1 ? (row.rewind_via === "ticket" ? "ticket" : "coin") : null,
   };
 }
 
@@ -349,7 +355,8 @@ export function searchGames({ q = "", fillMode = "", limit = 20, cursor = null }
     .prepare(
       `SELECT s.id, s.user_id, s.fill_mode, s.finished_at, s.rule_version,
               r.return_ppm, r.trade_count, r.validity, r.leaderboard_hidden,
-              r.moderation_reason, u.username_normalized, u.nickname
+              r.moderation_reason, u.username_normalized, u.nickname,
+              s.undo_count, s.rewind_via, r.assist_class
        FROM game_sessions s
        JOIN game_results r ON r.game_id = s.id
        JOIN users u ON u.id = s.user_id
@@ -373,6 +380,8 @@ export function searchGames({ q = "", fillMode = "", limit = 20, cursor = null }
     validity: r.validity,
     leaderboardHidden: !!r.leaderboard_hidden,
     moderationReason: r.moderation_reason,
+    assistClass: r.assist_class ?? null,
+    rewindPaidWith: (r.undo_count ?? 0) >= 1 ? (r.rewind_via === "ticket" ? "ticket" : "coin") : null,
   }));
   let nextCursor = null;
   if (hasMore) {

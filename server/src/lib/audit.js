@@ -26,6 +26,13 @@ const BEFORE_AFTER_ALLOW = new Set([
   "ev",
   "spins",
   "expiresDate",
+  "itemType",
+  "qty",
+  "delta",
+  "to",
+  "since",
+  "sessions",
+  "results",
 ]);
 
 function pickAllowed(obj) {

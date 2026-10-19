@@ -41,8 +41,8 @@ EVENT_PROTOCOL_ENABLED=1 GAME_REWIND_ENABLED=1 npm --prefix server start
 
 | `assist_class` | 含义 | 展示 |
 |----------------|------|------|
-| `clean` | 未用过反悔（含迁入的旧局） | 纯净 |
-| `undo` | 用过反悔 | 反悔 |
+| `clean` | 未用过反悔（含迁入的旧局），**或用后悔券反悔**（Track R，见下） | 纯净 |
+| `undo` | 用 50 韭币反悔（或开关 `rewindTicketBoard=undo` 时的券反悔） | 反悔 |
 | `legacy` | 历史残留值；迁移后经典未反悔局应已改为 `clean` | （不再单独做「历史练习」分榜） |
 
 经典榜在 `GAME_REWIND` ON 时增加 **纯净 / 反悔 / 总榜** 切换；默认 **纯净 + 最佳**；保留两成交模式与 best/avg。反悔局不进入纯净平均值。
@@ -88,3 +88,13 @@ node scripts/run-tests.mjs
 ## 明确不做
 
 VPS 部署；强制打开 EVENT_PROTOCOL；虚构「原路线最终收益」复盘；每日局 / 残局反悔。旧局迁入纯净已由 `015` 完成（本条相对初版 F03 已收回）。
+
+
+## 后悔券支付（Track R2，2026-10）
+
+- `POST /api/v1/games/:id/rewind` 可选 `payWith`：省略 / `"coin"` = 上文 50 韭币路径，**逐字节不变**（`game-rewind*.integration` 未修改 + `rewind-ticket` golden 测试）；`"ticket"` = 消耗 1 张后悔券。其他值 → `400 INVALID_PAY_WITH`。
+- 券路径：校验顺序同上；无 50 韭币余额预检；同一事务内 `consumeItem(rewind_ticket)`（`user_item_ledger` reason `rewind_use`，ref=局 ID，唯一索引 ⇒ 一局最多一张）→ `undo_count=1`、`rewind_via='ticket'`，**`assist_class` 不变（仍 `clean`，计入普通榜）**，除非功能开关 `rewindTicketBoard='undo'` → 写 `game_commands`（`event_json.paidWith='ticket'`）。不写 `jiu_coin_ledger` / `reward_claims`。
+- 无券 → `409 NO_TICKET`（局不变，不自动改扣韭币）。每局仍只能反悔一次（韭币或券二选一，共用 `undo_count` 守卫）。同幂等键换 `payWith` → `409 IDEMPOTENCY_CONFLICT`。
+- 响应（仅券路径）多 `paidWith:'ticket'`、`ticketsLeft`、`rewindVia:'ticket'`；状态 / 结果 DTO 仅在 `rewind_via` 非空时带 `rewindVia`（本人可见）。
+- `game_sessions.rewind_via`（迁移 028）只是审计事实；**任何榜单 / 统计 SQL 都不读它**（测试 grep 守卫）。
+- 管理：功能开关 `rewindTicketBoard`（clean 默认 / undo，只影响之后的新反悔）、`rewindTicketDailyCap`（每人每日转盘最多得券，默认 4）、`rewindTicketHoldCap`（转盘发券的持有上限，默认 30）；`POST /admin/rewind-tickets/reclassify {to, since?, dryRun, reason}`（二次验证，同时改 `game_sessions` + `game_results`，清榜单缓存，写审计）；`GET /admin/rewind/stats?days=`；`GET/POST /admin/users/:id/items`（发放 / 扣除，不受上限）；战绩详情 `rewindPaidWith`。

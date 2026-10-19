@@ -422,6 +422,7 @@ function renderGames(items) {
       · 用户 #${g.userId} ${escapeHtml(g.nickname)}
       · ${escapeHtml(g.fillMode)} · ppm ${g.returnPpm}
       · ${escapeHtml(g.validity)} · hidden=${g.leaderboardHidden ? 1 : 0}
+      ${g.rewindPaidWith ? `· 反悔方式：${g.rewindPaidWith === "ticket" ? "后悔券" : "韭币"}（${escapeHtml(g.assistClass || "")}）` : ""}
       <button type="button" data-gid="${escapeHtml(g.gameId)}">填入</button>
     </div>`
     )
@@ -1827,7 +1828,7 @@ async function loadWheel() {
   wheelDraftFromActive();
   wheelRenderRows();
   wheelRenderVersions();
-  await Promise.all([loadWheelStats(), wheelSearch()]);
+  await Promise.all([loadWheelStats(), wheelSearch(), loadRewindStats()]);
 }
 
 async function wheelPutSetting(key, value, label) {
@@ -1857,6 +1858,76 @@ $("wheelLoadA").onclick = () => {
   $("wheelTicketValue").value = 50;
   wheelRenderRows();
 };
+function wheelLoadPreset(name) {
+  const t = wheelCfg?.presets?.[name];
+  if (!t) return setMsg($("opsMsg"), "服务器未提供该预设（API 版本过旧）");
+  wheelDraft = t.map((s) => ({ pos: s.pos, kind: s.kind, amount: s.amount ?? 100, item: s.item || "rewind_ticket", qty: s.qty ?? 1, weight: s.weight, jackpot: !!s.jackpot }));
+  $("wheelTicketValue").value = 50;
+  wheelRenderRows();
+  setMsg($("opsMsg"), `已载入表 ${name}（未保存）。检查期望值后填写原因并「保存新版本」才会生效。`, true);
+}
+$("wheelLoadC1").onclick = () => wheelLoadPreset("C1");
+$("wheelLoadC2").onclick = () => wheelLoadPreset("C2");
+
+const ITEM_REASON_LABEL = { wheel_prize: "转盘奖励", rewind_use: "反悔使用", admin_grant: "管理员发放", admin_revoke: "管理员扣除" };
+async function loadUserItems() {
+  const id = Number($("itemUser").value.trim());
+  if (!Number.isInteger(id)) return setMsg($("opsMsg"), "请填写用户 ID");
+  const r = await api(`/admin/users/${id}/items`);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "读取背包失败");
+  const d = r.json.data;
+  $("itemInfo").textContent = d.items.map((i) => `${i.label} ×${i.qty}`).join("　") || "空";
+  $("itemLedger").innerHTML = d.ledger.map((l) => `<tr><td>${escapeHtml(l.createdAt)}</td><td>${l.delta > 0 ? "+" : ""}${l.delta}</td><td>${l.qtyAfter}</td><td>${escapeHtml(ITEM_REASON_LABEL[l.reason] || l.reason)}</td><td>${escapeHtml(l.refType ? `${l.refType}:${l.refId || ""}` : "")}</td></tr>`).join("");
+}
+$("itemLoad").onclick = () => guarded($("itemLoad"), loadUserItems);
+$("itemAdjust").onclick = () => guarded($("itemAdjust"), async () => {
+  const reason = wheelReason("itemReason");
+  if (!reason) return;
+  const id = Number($("itemUser").value.trim());
+  const delta = Number($("itemDelta").value);
+  if (!Number.isInteger(id) || !Number.isInteger(delta) || delta === 0) return setMsg($("opsMsg"), "请填写用户 ID 和非零整数数量");
+  if (!window.confirm(`${delta > 0 ? "发放" : "扣除"} ${Math.abs(delta)} 张后悔券给用户 #${id}？`)) return;
+  const r = await api(`/admin/users/${id}/items`, { method: "POST", csrf: csrfToken, headers: { "Idempotency-Key": newIdemKey() }, body: { itemType: "rewind_ticket", delta, reason } });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "操作失败");
+  setMsg($("opsMsg"), `用户 #${id} 后悔券现为 ${r.json.data.qty} 张`, true);
+  $("itemReason").value = "";
+  await loadUserItems();
+});
+
+async function loadRewindStats() {
+  const r = await api(`/admin/rewind/stats?days=${encodeURIComponent($("rwStatDays").value)}`);
+  if (r.status !== 200) return; // older API: section stays empty
+  const d = r.json.data;
+  const t = d.totals;
+  $("rwStats").innerHTML = `
+    <div class="stat"><b>${t.coinRewinds}</b><span>韭币反悔</span></div>
+    <div class="stat"><b>${t.ticketRewinds}</b><span>券反悔</span></div>
+    <div class="stat"><b>${t.cleanBoardTicketSharePct == null ? "—" : `${t.cleanBoardTicketSharePct}%`}</b><span>普通榜中券局占比（${t.cleanBoardTicketGames}/${t.cleanBoardGames}）</span></div>
+    <div class="stat"><b>${d.tickets.issuedWheel}</b><span>转盘发券</span></div>
+    <div class="stat"><b>${d.tickets.issuedAdmin}</b><span>管理员发券</span></div>
+    <div class="stat"><b>${d.tickets.redeemed}${d.tickets.redeemRatePct == null ? "" : `（${d.tickets.redeemRatePct}%）`}</b><span>已使用</span></div>
+    <div class="stat"><b>${d.tickets.held}</b><span>持有中（${d.tickets.holders} 人）</span></div>`;
+  $("rwWarn").textContent = d.warning ? `⚠ 券局平均收益高于未反悔对局超过 1 个合并标准差（n ≥ ${d.minN}）。可考虑把券局改记反悔榜或降低券的权重。` : `样本 ≥ ${d.minN} 局才判断是否告警。`;
+  $("rwReturns").innerHTML = d.returns.map((x) => `<tr><td>${escapeHtml(`${x.fillMode} / ${String(x.datasetVersion || "").slice(0, 8)}`)}</td><td>${x.ticket.n}</td><td>${x.ticket.meanPct ?? "—"}</td><td>${x.unrewound.n}</td><td>${x.unrewound.meanPct ?? "—"}</td><td>${x.diffPct ?? "—"}${x.warning ? " ⚠" : ""}</td><td>${x.pooledSdPct ?? "—"}</td></tr>`).join("");
+}
+$("rwStatRefresh").onclick = () => guarded($("rwStatRefresh"), loadRewindStats);
+async function rwReclassify(dryRun) {
+  const reason = wheelReason("rwReReason");
+  if (!reason) return;
+  const to = $("rwReTo").value;
+  const since = $("rwReSince").value.trim() || null;
+  if (!dryRun && !window.confirm(`把已有券局移到${to === "undo" ? "反悔榜" : "普通榜"}${since ? `（${since} 起）` : "（全部）"}？会立即影响排行榜。`)) return;
+  const r = await api("/admin/rewind-tickets/reclassify", { method: "POST", csrf: csrfToken, body: { to, since, dryRun, reason } });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "归类失败");
+  const d = r.json.data;
+  setMsg($("opsMsg"), `${dryRun ? "试算" : "已归类"}：对局 ${d.sessions}，成绩 ${d.results}`, true);
+  if (!dryRun) await loadRewindStats();
+}
+$("rwReDry").onclick = () => guarded($("rwReDry"), () => rwReclassify(true));
+$("rwReApply").onclick = () => guarded($("rwReApply"), () => rwReclassify(false));
+
 $("wheelReload").onclick = () => { if (wheelCfg) { wheelDraftFromActive(); wheelRenderRows(); } };
 $("wheelTicketValue").addEventListener("input", wheelAfterEdit);
 $("wheelCfgSave").onclick = () => guarded($("wheelCfgSave"), async () => {

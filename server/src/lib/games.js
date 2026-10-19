@@ -131,6 +131,7 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
     assistClass: row.assist_class || "legacy",
     revision: row.revision ?? 0,
   };
+  if (row.rewind_via) base.rewindVia = row.rewind_via; // Track R2 (absent for coin / no rewind)
   const win = windowFromSessionRow(row);
   if (win) base.window = win;
   if (includeResult && result) {

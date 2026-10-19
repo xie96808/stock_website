@@ -1,5 +1,6 @@
 // ========== RESULT SCREEN ==========
 import { chartRefs } from './state.js';
+import { ticketChip } from './rewind-tickets-pure.js';
 import { getSession, selectSettleView } from './game-session.js';
 import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { buildKlineOption } from './kline-option.js';
@@ -143,6 +144,14 @@ export function endGame() {
             } else {
                 assistEl.hidden = true;
                 assistEl.textContent = '';
+            }
+            // Track R3: owner's result page only — mark a 后悔券 rewind (still on the normal board by default).
+            const chip = ticketChip(view);
+            if (chip && !assistEl.hidden) {
+                const span = document.createElement('span');
+                span.className = 'result-ticket-chip';
+                span.textContent = chip;
+                assistEl.append(' ', span);
             }
         }
     }

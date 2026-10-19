@@ -82,6 +82,8 @@ export const config = {
   /**
    * F03 classic once-per-game rewind + assist boards. Default OFF.
    * When false: rewind API/UI off; classic leaderboard unchanged (no assist filter).
+   * A 50-coin rewind marks the game assist_class='undo'. A 后悔券 rewind (payWith:'ticket') keeps the game's
+   * assist_class (normal board) unless rewindTicketBoard='undo'; it is recorded as game_sessions.rewind_via='ticket'.
    * Rewind only applies to sessions already issued as event-v1 (EVENT_PROTOCOL_ENABLED).
    * Set GAME_REWIND_ENABLED=1 to enable. QA needs both flags for the full path.
    */
@@ -134,6 +136,16 @@ export const config = {
     process.env.LUCKY_WHEEL_ENABLED === "1" || process.env.LUCKY_WHEEL_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
+  /**
+   * 后悔券 (Track R). Which board a NEW ticket rewind lands on: 'clean' (default, Bill Rev 4: the game stays a
+   * normal game; recorded internally as game_sessions.rewind_via='ticket') or 'undo' (same as a 50-coin rewind).
+   * Existing games move only through the admin reclassify action.
+   */
+  rewindTicketBoard: process.env.REWIND_TICKET_BOARD === "undo" ? "undo" : "clean",
+  /** Max 后悔券 a user can win from the wheel per Asia/Shanghai day (excess paid as coins, substituted). */
+  rewindTicketDailyCap: Math.min(20, Math.max(0, envInt("REWIND_TICKET_DAILY_CAP", 4))),
+  /** Max 后悔券 a user may hold before wheel prizes are paid as coins instead. Admin grants ignore it. */
+  rewindTicketHoldCap: Math.min(999, Math.max(1, envInt("REWIND_TICKET_HOLD_CAP", 30))),
   /**
    * Realtime PvP. Default ON. Set PVP_BATTLE_ENABLED=0 to hide the entry and
    * refuse new matches. Recovery of stored matches does not consult this flag.
@@ -213,6 +225,9 @@ export const OVERRIDABLE_KEYS = [
   "ghostDuelEnabled",
   "luckyWheelEnabled",
   "luckyWheelDailyFree",
+  "rewindTicketBoard",
+  "rewindTicketDailyCap",
+  "rewindTicketHoldCap",
   "pvpBattleEnabled",
   "pvpBotsEnabled",
   "pvpMaxActiveMatches",

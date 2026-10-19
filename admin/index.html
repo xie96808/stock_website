@@ -131,6 +131,8 @@
         <label class="inline">券折算韭币 <input id="wheelTicketValue" type="number" min="1" max="500" step="1" value="50" style="max-width:5rem" /></label>
         <span id="wheelWeightSum" class="tag">权重和 —</span>
         <button type="button" id="wheelLoadA" class="ghost">载入初始表 A</button>
+        <button type="button" id="wheelLoadC1" class="ghost">载入表 C1（推荐）</button>
+        <button type="button" id="wheelLoadC2" class="ghost">载入表 C2（少券）</button>
         <button type="button" id="wheelReload" class="ghost">放弃修改</button>
       </div>
       <div class="row">
@@ -156,6 +158,32 @@
       </div>
       <div id="wheelStats" class="stats"></div>
       <div class="table-wrap"><table class="tbl"><thead><tr><th>日期</th><th>次数</th><th>人数</th><th>发放韭币</th><th>价值合计</th><th>大奖</th><th>券</th><th>再转</th><th>折算</th></tr></thead><tbody id="wheelSeries"></tbody></table></div>
+
+      <h2>后悔券 · 背包 / 反悔公平性</h2>
+      <div class="row">
+        <input id="itemUser" placeholder="用户 ID" style="max-width:7rem" />
+        <button type="button" id="itemLoad" class="ghost">查看背包</button>
+        <input id="itemDelta" type="number" min="-50" max="50" step="1" placeholder="±数量" style="max-width:6rem" />
+        <input id="itemReason" class="grow" maxlength="200" placeholder="发放 / 扣除原因（必填）" />
+        <button type="button" id="itemAdjust">发放 / 扣除</button>
+      </div>
+      <div id="itemInfo" class="note left"></div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>时间</th><th>变动</th><th>余量</th><th>原因</th><th>关联</th></tr></thead><tbody id="itemLedger"></tbody></table></div>
+      <div class="row">
+        <select id="rwStatDays"><option value="7">近 7 天</option><option value="30" selected>近 30 天</option><option value="90">近 90 天</option></select>
+        <button type="button" id="rwStatRefresh" class="ghost">刷新反悔统计</button>
+      </div>
+      <div id="rwStats" class="stats"></div>
+      <div id="rwWarn" class="note left"></div>
+      <div class="table-wrap"><table class="tbl"><thead><tr><th>模式 / 数据集</th><th>券局 n</th><th>券局均值%</th><th>未反悔 n</th><th>未反悔均值%</th><th>差</th><th>合并σ</th></tr></thead><tbody id="rwReturns"></tbody></table></div>
+      <p class="note left">券局计入哪个榜由「功能开关 → 后悔券反悔局计入哪个榜」决定（只影响之后的新反悔）。已有券局用下面的重新归类（先试算）。</p>
+      <div class="row">
+        <select id="rwReTo"><option value="undo">券局 → 反悔榜</option><option value="clean">券局 → 普通榜</option></select>
+        <input id="rwReSince" placeholder="起始日 YYYY-MM-DD（可空=全部）" style="max-width:14rem" />
+        <input id="rwReReason" class="grow" maxlength="200" placeholder="原因（必填）" />
+        <button type="button" id="rwReDry" class="ghost">试算</button>
+        <button type="button" id="rwReApply">执行归类</button>
+      </div>
 
       <h2>转盘记录</h2>
       <div class="row">
