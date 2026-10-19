@@ -20,6 +20,7 @@ import {
 } from "../lib/rateLimit.js";
 import { requireUser } from "../middleware/request.js";
 import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
+import { wheelSummary } from "../lib/luckyWheel.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
 } from "../lib/avatars.js";
@@ -118,10 +119,16 @@ router.get("/me", (req, res) => {
 });
 
 router.get("/me/jiu-coin", requireUser, (req, res) => {
-  return ok(res, dailyClaimStatus(req.user.id));
+  // Additive field, only while the flag is ON: flag OFF => payload is byte-for-byte the legacy one.
+  const legacy = dailyClaimStatus(req.user.id);
+  return ok(res, config.luckyWheelEnabled ? { ...legacy, wheel: wheelSummary(req.user.id) } : legacy);
 });
 
 router.post("/me/jiu-coin/daily", requireUser, (req, res) => {
+  // 幸运转盘 replaces 每日领取 only while the flag is ON; flag OFF leaves this handler untouched.
+  if (config.luckyWheelEnabled) {
+    return fail(res, 410, "DAILY_REPLACED_BY_WHEEL", "每日领取已升级为幸运转盘");
+  }
   const result = claimDaily(req.user.id);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);

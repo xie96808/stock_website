@@ -61,6 +61,15 @@ import {
   requireAdmin,
   requireAdminVerified,
 } from "../middleware/admin.js";
+import {
+  adminGetConfig,
+  adminPreviewConfig,
+  adminSaveConfig,
+  adminListSpins,
+  adminStats,
+  adminGrantSpins,
+  adminUserWheel,
+} from "../lib/luckyWheel.js";
 import { openDb } from "../db/connection.js";
 import {
   adminAbortActive,
@@ -201,6 +210,7 @@ router.get("/admin/users/:id/jiu-coin", (req, res) => {
     userId: id,
     balance: data.user.jiuCoinBalance,
     daily: dailyClaimStatus(id),
+    wheel: adminUserWheel(id),
   });
 });
 
@@ -622,6 +632,65 @@ router.put("/admin/feedback/:id/note", requireAdminVerified, (req, res) => {
     actorId: req.user.id,
     requestId: res.locals.requestId,
   }));
+});
+
+/* ---- 幸运转盘 (lucky wheel). Enable switch = PUT /admin/settings/luckyWheelEnabled ---- */
+function wheelResult(res, r, extra = {}) {
+  if (!r.ok) {
+    const body = { error: { code: r.code, message: r.message, ...(r.ev ? { ev: r.ev } : {}) }, requestId: res.locals.requestId };
+    return res.status(r.status || 400).json(body);
+  }
+  const { ok: _ok, status: _status, ...rest } = r;
+  return ok(res, { ...rest, ...extra });
+}
+
+router.get("/admin/lucky-wheel", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return ok(res, adminGetConfig());
+});
+
+router.post("/admin/lucky-wheel/config/preview", (req, res) => {
+  return wheelResult(res, adminPreviewConfig(req.body));
+});
+
+router.put("/admin/lucky-wheel/config", requireAdminVerified, (req, res) => {
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  return wheelResult(
+    res,
+    adminSaveConfig({
+      actorId: req.user.id,
+      input: body,
+      restoreVersion: body.restoreVersion ?? null,
+      reason: body.reason,
+      requestId: res.locals.requestId,
+    })
+  );
+});
+
+router.get("/admin/lucky-wheel/spins", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return wheelResult(res, adminListSpins(req.query || {}));
+});
+
+router.get("/admin/lucky-wheel/stats", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return ok(res, adminStats({ days: req.query?.days }));
+});
+
+router.post("/admin/lucky-wheel/grant", requireAdminVerified, (req, res) => {
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  return wheelResult(
+    res,
+    adminGrantSpins({
+      actorId: req.user.id,
+      userId: body.userId,
+      spins: body.spins,
+      reason: body.reason,
+      expiresDate: body.expiresDate ?? null,
+      opKey: req.get("Idempotency-Key") || body.opKey || null,
+      requestId: res.locals.requestId,
+    })
+  );
 });
 
 export default router;

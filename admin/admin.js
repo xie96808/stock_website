@@ -1668,3 +1668,263 @@ $("shareBtn").onclick = () => loadShares();
 $("shareMoreBtn").onclick = () => loadShares({ more: true });
 
 TAB_LOADERS.content = () => Promise.all([loadContent(), loadDaily()]);
+
+
+/* ================= 幸运转盘 (lucky wheel) ================= */
+const WHEEL_KIND_LABEL = { jiu_coin: "韭币", item: "后悔券", spin: "再转一次" };
+let wheelCfg = null; // last server payload (adminGetConfig)
+let wheelDraft = []; // editable sectors
+let wheelLogCursor = null;
+let wheelPreviewSeq = 0;
+let wheelPreviewTimer = null;
+
+function wheelPrizeText(p) {
+  if (!p) return "—";
+  const sub = p.substituted ? "（折算）" : "";
+  if (p.kind === "jiu_coin") return `${p.amount} 韭币${p.isJackpot ? " 🎰大奖" : ""}${sub}`;
+  if (p.kind === "item") return `${p.label || p.item} ×${p.qty}`;
+  return "再转一次";
+}
+
+function wheelReason(id) {
+  const v = $(id).value.trim();
+  if (v.length < 2 || v.length > 200) {
+    setMsg($("opsMsg"), "请先填写原因（2–200 字）");
+    return null;
+  }
+  return v;
+}
+
+function wheelRenderSwitch() {
+  const on = !!wheelCfg?.settings?.enabled;
+  $("wheelState").textContent = on ? "转盘：已开启（每日领取已停用）" : "转盘：已关闭（沿用每日领取）";
+  $("wheelState").classList.toggle("over", on);
+  $("wheelToggle").textContent = on ? "关闭转盘" : "开启转盘";
+  $("wheelToggle").classList.toggle("on", on);
+  $("wheelDailyFree").value = wheelCfg?.settings?.dailyFree ?? 1;
+}
+
+function wheelDraftFromActive() {
+  const c = wheelCfg.active;
+  wheelDraft = c.sectors.map((s) => ({ pos: s.pos, kind: s.kind, amount: s.amount ?? 100, item: s.item || "rewind_ticket", qty: s.qty ?? 1, weight: s.weight, jackpot: !!s.jackpot }));
+  $("wheelTicketValue").value = c.ticketCoinValue;
+}
+
+function wheelDraftPayload() {
+  return {
+    ticketCoinValue: Number($("wheelTicketValue").value),
+    sectors: wheelDraft.map((d) => {
+      const s = { pos: d.pos, kind: d.kind, weight: Number(d.weight) };
+      if (d.kind === "jiu_coin") s.amount = Number(d.amount);
+      if (d.kind === "item") { s.item = d.item; s.qty = Number(d.qty); }
+      if (d.kind === "spin") s.qty = 1;
+      if (d.jackpot) s.jackpot = true;
+      return s;
+    }),
+  };
+}
+
+function wheelRenderRows() {
+  const items = wheelCfg.constraints.itemsAvailable;
+  $("wheelRows").innerHTML = wheelDraft.map((d, i) => {
+    const kindOpts = Object.entries(WHEEL_KIND_LABEL)
+      .map(([k, l]) => `<option value="${k}"${k === d.kind ? " selected" : ""}${k === "item" && !items ? " disabled" : ""}>${l}${k === "item" && !items ? "（未部署）" : ""}</option>`)
+      .join("");
+    const amt = d.kind === "jiu_coin"
+      ? `<input data-w="amount" data-i="${i}" type="number" min="1" max="${wheelCfg.constraints.coinMax}" step="1" value="${escapeHtml(d.amount)}" style="max-width:6rem" />`
+      : d.kind === "item"
+        ? `<input data-w="qty" data-i="${i}" type="number" min="1" max="${wheelCfg.constraints.itemQtyMax}" step="1" value="${escapeHtml(d.qty)}" style="max-width:6rem" />`
+        : `<span class="dim">×1</span>`;
+    return `<tr>
+      <td>${i}</td>
+      <td><select data-w="kind" data-i="${i}">${kindOpts}</select></td>
+      <td>${amt}</td>
+      <td><input data-w="weight" data-i="${i}" type="number" min="1" max="10000" step="1" value="${escapeHtml(d.weight)}" style="max-width:6rem" /></td>
+      <td class="dim" data-pct="${i}">${(Number(d.weight) / 100).toFixed(1)}%</td>
+      <td><input data-w="jackpot" data-i="${i}" type="checkbox"${d.jackpot ? " checked" : ""} /></td>
+    </tr>`;
+  }).join("");
+  $("wheelRows").querySelectorAll("[data-w]").forEach((el) => {
+    const handler = () => {
+      const d = wheelDraft[Number(el.dataset.i)];
+      const f = el.dataset.w;
+      if (f === "jackpot") d.jackpot = el.checked;
+      else if (f === "kind") { d.kind = el.value; wheelRenderRows(); }
+      else d[f] = el.value;
+      wheelAfterEdit();
+    };
+    el.addEventListener(el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input", handler);
+  });
+  wheelAfterEdit();
+}
+
+function wheelAfterEdit() {
+  const sum = wheelDraft.reduce((a, d) => a + (Number(d.weight) || 0), 0);
+  const tag = $("wheelWeightSum");
+  tag.textContent = `权重和 ${sum} / 10000`;
+  tag.classList.toggle("over", sum !== 10000);
+  wheelDraft.forEach((d, i) => {
+    const c = $("wheelRows").querySelector(`[data-pct="${i}"]`);
+    if (c) c.textContent = `${((Number(d.weight) || 0) / 100).toFixed(1)}%`;
+  });
+  clearTimeout(wheelPreviewTimer);
+  wheelPreviewTimer = setTimeout(wheelPreview, 250);
+}
+
+function wheelRenderEv(ev, extraMsg, warnings) {
+  const c = wheelCfg.constraints;
+  const vs = ev ? (ev.ev - c.legacyDailyEv).toFixed(1) : "—";
+  $("wheelEv").innerHTML = ev
+    ? `<div class="stat"><b>${ev.ev}</b><span>期望值 / 日（允许 ${c.evMin}–${c.evMax}）</span></div>
+       <div class="stat"><b>${vs}</b><span>对比原每日领取 ${c.legacyDailyEv}</span></div>
+       <div class="stat"><b>${ev.evRealistic}</b><span>券按 70% 兑现</span></div>
+       <div class="stat"><b>${ev.sd}</b><span>单次标准差</span></div>
+       <div class="stat"><b>${(ev.pJackpot * 100).toFixed(1)}%</b><span>大奖概率</span></div>
+       <div class="stat"><b>${ev.spinsPerDay}</b><span>每日平均转数</span></div>`
+    : `<div class="stat"><b>—</b><span>期望值</span></div>`;
+  const lines = [];
+  if (extraMsg) lines.push(`<span style="color:var(--accent)">${escapeHtml(extraMsg)}</span>`);
+  for (const w of warnings || []) lines.push(`⚠ ${escapeHtml(w.message)}`);
+  $("wheelWarn").innerHTML = lines.join("<br>");
+}
+
+async function wheelPreview() {
+  if (!wheelCfg) return;
+  const seq = ++wheelPreviewSeq;
+  const r = await api("/admin/lucky-wheel/config/preview", { method: "POST", csrf: csrfToken, body: wheelDraftPayload() });
+  if (seq !== wheelPreviewSeq) return;
+  if (r.status === 200) wheelRenderEv(r.json.data.ev, "", r.json.data.warnings);
+  else wheelRenderEv(r.json?.error?.ev || null, r.json?.error?.message || "配置无效");
+}
+
+function wheelRenderVersions() {
+  const active = wheelCfg.active.version;
+  $("wheelVersions").innerHTML = wheelCfg.versions.map((v) => `<div class="item"><div class="row between">
+      <span>v${v.version}${v.version === active ? " · 当前" : ""} · 期望 ${v.ev} · ${escapeHtml(v.note || "")}</span>
+      <span class="dim">${fmtBeijing(v.createdAt)}${v.createdBy ? ` · #${v.createdBy}` : ""}</span>
+      ${v.version === active ? "" : `<button type="button" class="ghost" data-wheel-restore="${v.version}">恢复为新版本</button>`}
+    </div></div>`).join("");
+  $("wheelVersions").querySelectorAll("[data-wheel-restore]").forEach((b) => {
+    b.onclick = () => guarded(b, async () => {
+      const reason = wheelReason("wheelCfgReason");
+      if (!reason) return;
+      const ver = Number(b.dataset.wheelRestore);
+      if (!window.confirm(`把 v${ver} 的奖品表复制为新的当前版本？对所有玩家立即生效。`)) return;
+      const r = await api("/admin/lucky-wheel/config", { method: "PUT", csrf: csrfToken, body: { restoreVersion: ver, reason } });
+      reauthLost(r);
+      if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "恢复失败");
+      setMsg($("opsMsg"), `已恢复，当前为 v${r.json.data.version}`, true);
+      await loadWheel();
+    });
+  });
+}
+
+async function loadWheel() {
+  const r = await api("/admin/lucky-wheel");
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "读取转盘配置失败");
+  wheelCfg = r.json.data;
+  wheelRenderSwitch();
+  wheelDraftFromActive();
+  wheelRenderRows();
+  wheelRenderVersions();
+  await Promise.all([loadWheelStats(), wheelSearch()]);
+}
+
+async function wheelPutSetting(key, value, label) {
+  const reason = wheelReason("wheelSwReason");
+  if (!reason) return;
+  const r = await api(`/admin/settings/${encodeURIComponent(key)}`, { method: "PUT", csrf: csrfToken, body: { value, reason } });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "保存失败");
+  setMsg($("opsMsg"), `「${label}」已设为 ${value}`, true);
+  settingsCache = null;
+  await loadWheel();
+}
+
+$("wheelToggle").onclick = () => guarded($("wheelToggle"), async () => {
+  const to = !wheelCfg.settings.enabled;
+  if (!window.confirm(to ? "开启幸运转盘？每日领取将停用，玩家改转盘。对所有用户立即生效。" : "关闭幸运转盘并恢复每日领取？对所有用户立即生效。")) return;
+  await wheelPutSetting("luckyWheelEnabled", to, "幸运转盘");
+});
+$("wheelDailySave").onclick = () => guarded($("wheelDailySave"), async () => {
+  const n = Number($("wheelDailyFree").value);
+  if (!Number.isInteger(n) || n < 1 || n > 5) return setMsg($("opsMsg"), "每日免费次数需为 1–5 的整数");
+  await wheelPutSetting("luckyWheelDailyFree", n, "转盘每日免费次数");
+});
+$("wheelLoadA").onclick = () => {
+  if (!wheelCfg) return;
+  wheelDraft = wheelCfg.tableA.map((s) => ({ pos: s.pos, kind: s.kind, amount: s.amount ?? 100, item: "rewind_ticket", qty: 1, weight: s.weight, jackpot: !!s.jackpot }));
+  $("wheelTicketValue").value = 50;
+  wheelRenderRows();
+};
+$("wheelReload").onclick = () => { if (wheelCfg) { wheelDraftFromActive(); wheelRenderRows(); } };
+$("wheelTicketValue").addEventListener("input", wheelAfterEdit);
+$("wheelCfgSave").onclick = () => guarded($("wheelCfgSave"), async () => {
+  const reason = wheelReason("wheelCfgReason");
+  if (!reason) return;
+  const body = { ...wheelDraftPayload(), reason };
+  const pre = await api("/admin/lucky-wheel/config/preview", { method: "POST", csrf: csrfToken, body: wheelDraftPayload() });
+  if (pre.status !== 200) return setMsg($("opsMsg"), pre.json?.error?.message || "配置无效");
+  const warn = (pre.json.data.warnings || []).map((w) => w.message).join("\n");
+  if (!window.confirm(`保存为新版本？期望值 ${pre.json.data.ev.ev}。对所有玩家立即生效。${warn ? `\n\n提示：\n${warn}` : ""}`)) return;
+  const r = await api("/admin/lucky-wheel/config", { method: "PUT", csrf: csrfToken, body });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "保存失败");
+  setMsg($("opsMsg"), `已保存为 v${r.json.data.version}（期望值 ${r.json.data.ev.ev}）`, true);
+  $("wheelCfgReason").value = "";
+  await loadWheel();
+});
+
+$("wheelGrantBtn").onclick = () => guarded($("wheelGrantBtn"), async () => {
+  const reason = wheelReason("wheelGrantReason");
+  if (!reason) return;
+  const userId = Number($("wheelGrantUser").value.trim());
+  const spins = Number($("wheelGrantSpins").value);
+  const expiresDate = $("wheelGrantExpire").value.trim() || null;
+  if (!Number.isInteger(userId) || !Number.isInteger(spins)) return setMsg($("opsMsg"), "请填写有效的用户 ID 和次数");
+  const r = await api("/admin/lucky-wheel/grant", {
+    method: "POST", csrf: csrfToken, headers: { "Idempotency-Key": newIdemKey() }, body: { userId, spins, expiresDate, reason },
+  });
+  reauthLost(r);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "发放失败");
+  setMsg($("opsMsg"), `已向用户 #${userId} 发放 ${spins} 次转盘`, true);
+  $("wheelGrantReason").value = "";
+});
+
+async function loadWheelStats() {
+  const r = await api(`/admin/lucky-wheel/stats?days=${encodeURIComponent($("wheelStatDays").value)}`);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "读取统计失败");
+  const d = r.json.data;
+  const t = d.totals;
+  $("wheelStats").innerHTML = `
+    <div class="stat"><b>${d.today.spins}</b><span>今日转数</span></div>
+    <div class="stat"><b>${t.spins}</b><span>区间转数</span></div>
+    <div class="stat"><b>${t.users}</b><span>区间人数</span></div>
+    <div class="stat"><b>${t.realizedPerDraw ?? "—"}</b><span>实发 / 次（配置 ${t.configuredPerDraw ?? "—"}）</span></div>
+    <div class="stat"><b>${t.realizedPerUserDay ?? "—"}</b><span>人均 / 日（期望 ${d.configuredEv.ev}）</span></div>
+    <div class="stat"><b>${t.driftPct == null ? "—" : `${t.driftPct}%`}${t.driftWarning ? " ⚠" : ""}</b><span>偏差（≥500 次才告警）</span></div>
+    <div class="stat"><b>${t.jackpots}</b><span>大奖</span></div>
+    <div class="stat"><b>${t.substituted}</b><span>折算次数</span></div>`;
+  $("wheelSeries").innerHTML = d.series.slice().reverse().map((x) => `<tr><td>${escapeHtml(x.date)}</td><td>${x.spins}</td><td>${x.users}</td><td>${x.coins}</td><td>${x.coinValue}</td><td>${x.jackpots}</td><td>${x.items}</td><td>${x.spinAgain}</td><td>${x.substituted}</td></tr>`).join("");
+}
+$("wheelStatRefresh").onclick = () => guarded($("wheelStatRefresh"), loadWheelStats);
+$("wheelStatDays").onchange = loadWheelStats;
+
+async function wheelSearch({ more = false } = {}) {
+  const qs = new URLSearchParams({ limit: "30" });
+  if ($("wheelLogUser").value.trim()) qs.set("userId", $("wheelLogUser").value.trim());
+  if ($("wheelLogDate").value.trim()) qs.set("date", $("wheelLogDate").value.trim());
+  if ($("wheelLogMin").value.trim()) qs.set("minValue", $("wheelLogMin").value.trim());
+  if (more && wheelLogCursor) qs.set("cursor", String(wheelLogCursor));
+  const r = await api(`/admin/lucky-wheel/spins?${qs}`);
+  if (r.status !== 200) return setMsg($("opsMsg"), r.json?.error?.message || "读取记录失败");
+  const rows = r.json.data.items.map((x) => `<tr><td>${fmtBeijing(x.at)}</td><td>#${x.userId} ${escapeHtml(x.nickname || x.username || "")}</td><td>${x.source === "credit" ? "补发/再转" : "每日"}</td><td>${x.sector}</td><td>${escapeHtml(wheelPrizeText(x.prize))}</td><td>v${x.configVersion}</td><td>${x.roll}</td><td>${x.balanceAfter}</td></tr>`).join("");
+  if (more) $("wheelLog").insertAdjacentHTML("beforeend", rows);
+  else $("wheelLog").innerHTML = rows || `<tr><td colspan="8" class="dim">暂无记录</td></tr>`;
+  wheelLogCursor = r.json.data.nextCursor;
+  $("wheelLogMore").classList.toggle("hidden", !wheelLogCursor);
+}
+$("wheelLogSearch").onclick = () => guarded($("wheelLogSearch"), () => wheelSearch());
+$("wheelLogMore").onclick = () => guarded($("wheelLogMore"), () => wheelSearch({ more: true }));
+
+TAB_LOADERS.wheel = () => loadWheel();

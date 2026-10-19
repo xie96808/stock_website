@@ -18,6 +18,7 @@ import dailyChallengeRoutes from "./routes/dailyChallenge.js";
 import puzzleRoutes from "./routes/puzzles.js";
 import feedbackRoutes from "./routes/feedback.js";
 import pvpRoutes from "./routes/pvp.js";
+import luckyWheelRoutes from "./routes/luckyWheel.js";
 import { openDb } from "./db/connection.js";
 import { pvpRecoveryError, runBootRecovery } from "./lib/pvp/recovery.js";
 import { getBackupAgeSeconds, readBackupStatus } from "./lib/backup.js";
@@ -104,7 +105,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       return requireCsrf(req, res, next);
     }
     next();
-  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, pvpRoutes, adminRoutes);
+  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, pvpRoutes, luckyWheelRoutes, adminRoutes);
 
   app.use("/api", (req, res) => fail(res, 404, "NOT_FOUND", "接口不存在"));
 

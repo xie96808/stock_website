@@ -18,6 +18,7 @@ const runs = [
   ["node", ["--test", "server/tests/feedback.integration.test.js"]],
   ["node", ["--test", "server/tests/jiu-coin.integration.test.js"]],
   ["node", ["--test", "server/tests/reward-claims.integration.test.js"]],
+  ["node", ["--test", "server/tests/lucky-wheel.integration.test.js"]],
   ["node", ["--test", "tests/result-actions.test.js"]],
   ["node", ["--test", "tests/resume-meta.test.js"]],
   ["node", ["--test", "tests/lazy-import.test.js"]],

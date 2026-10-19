@@ -174,6 +174,20 @@ export function checkRegisterLimits(ip) {
   return { limited: false };
 }
 
+/** Lucky wheel spin attempts: per user + per IP per minute (replays count too). */
+export function checkWheelSpinLimits(userId, ip) {
+  const cfg = config.rateLimit;
+  const user = consumeRateLimit(`wheel:u:${userId}`, cfg.wheelSpinPerUserMinute, cfg.wheelSpinMinuteMs);
+  if (!user.ok) {
+    return { limited: true, retryAfterSec: user.retryAfterSec, message: "转得太快了，请稍后再试" };
+  }
+  const byIp = consumeRateLimit(`wheel:ip:${ip}`, cfg.wheelSpinPerIpMinute, cfg.wheelSpinMinuteMs);
+  if (!byIp.ok) {
+    return { limited: true, retryAfterSec: byIp.retryAfterSec, message: "此网络转盘请求过于频繁，请稍后再试" };
+  }
+  return { limited: false };
+}
+
 /** Create-game: per user minute + day. */
 export function checkCreateGameLimits(userId) {
   const cfg = config.rateLimit;
