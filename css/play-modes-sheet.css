@@ -162,25 +162,76 @@ html.pm-sheet-open body {
 }
 
 /* ============================================================
-   .lane--compact — hybrid: original paper/seal/ribbon/CTA paint,
-   compact row (cost + small 「开始」). Paint stays in start.css.
+   .lane--compact — dense (~76–88px single-note @390).
+   Small corner ribbons (≥10px, full text) clipped to top-right;
+   seal / copy / cost+开始 vertically centered; actions at right
+   edge (12–14px), below the ribbon band.
    ============================================================ */
 
 .start-screen #playModes .lane.lane--compact {
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-areas: "mark copy actions";
-  align-items: center;
+  align-items: center; /* vertical center seal, copy, actions */
   column-gap: 8px;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
+  /* Kill notebook ruling in the empty band (opaque fill, no paper lines) */
+  background-color: var(--card, #f7f0e2) !important;
+  background-image: none !important;
+  isolation: isolate;
+}
+.start-screen #playModes .lane.lane--compact::before,
+.start-screen #playModes .lane.lane--compact::after {
+  background-image: none !important;
+}
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact {
+  background-color: var(--card, #242018) !important;
+}
+/* Restore mode tint as an opaque overlay on top of solid card */
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--challenge) 16%, var(--card)) 0%,
+    color-mix(in srgb, var(--challenge) 5%, var(--card)) 55%,
+    var(--card) 100%
+  ) !important;
+}
+.start-screen #playModes .lane.lane--compact.classic-mode-lane {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--mode-classic, #2a2418) 14%, var(--card)) 0%,
+    color-mix(in srgb, var(--mode-classic, #2a2418) 5%, var(--card)) 55%,
+    var(--card) 100%
+  ) !important;
+}
+.start-screen #playModes .lane.lane--compact.oneshot-mode-lane {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--mode-oneshot) 18%, var(--card)) 0%,
+    color-mix(in srgb, var(--mode-oneshot) 6%, var(--card)) 55%,
+    var(--card) 100%
+  ) !important;
+}
+.start-screen #playModes .lane.lane--compact.survival-mode-lane {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--mode-survival) 16%, var(--card)) 0%,
+    color-mix(in srgb, var(--mode-survival) 5%, var(--card)) 55%,
+    var(--card) 100%
+  ) !important;
 }
 
-/* Primary modes: tall enough that rotated ribbon AABB clears 「开始」 */
-.start-screen #playModes .lane.lane--compact:not(.lane--compact-link) {
-  min-height: 136px;
-  padding: 58px 48px 12px 10px;
+/* Single-note modes — ~76–88px @390.
+   Extra top padding shifts seal/copy/actions down together so the
+   shared midline sits below the ribbon clip (no empty top band). */
+.start-screen #playModes .lane.lane--compact:not(.lane--compact-link):not(.daily-challenge-lane) {
+  min-height: 82px;
+  height: auto;
+  padding: 22px 13px 6px 10px; /* 12–14px right; top clears ribbon */
 }
+
 .start-screen #playModes .lane.lane--compact .mark {
   grid-area: mark;
   align-self: center;
@@ -193,12 +244,10 @@ html.pm-sheet-open body {
   grid-area: copy;
   align-self: center;
   min-width: 0;
-  padding-right: 6px;
+  padding-right: 4px;
   z-index: 2;
 }
-.start-screen #playModes .lane.lane--compact .copy small {
-  display: none; /* ribbon carries the label */
-}
+.start-screen #playModes .lane.lane--compact .copy small { display: none; }
 .start-screen #playModes .lane.lane--compact .copy strong {
   display: block;
   font-size: 1.02rem;
@@ -219,9 +268,18 @@ html.pm-sheet-open body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.start-screen #playModes .lane.lane--compact .lane-note-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 2px;
+  min-width: 0;
+}
 .start-screen #playModes .lane.lane--compact .copy .lane-note-sub,
 .start-screen #playModes .lane.lane--compact .daily-challenge-card-state {
-  margin-top: 1px;
+  margin: 0;
   font-size: 0.68rem;
   line-height: 1.3;
   color: var(--mute);
@@ -234,7 +292,8 @@ html.pm-sheet-open body {
   display: none !important;
 }
 
-/* Cost + 「开始」 cluster — vertically centered as a unit, under ribbon */
+/* Cost + 「开始」 — right edge, same midline as seal/copy (card
+   padding-top already clears the ribbon diagonal). */
 .start-screen #playModes .lane.lane--compact .lane-actions {
   grid-area: actions;
   display: inline-flex;
@@ -243,7 +302,10 @@ html.pm-sheet-open body {
   justify-content: flex-end;
   gap: 6px;
   z-index: 3;
-  align-self: end;
+  align-self: center;
+  margin-top: 0;
+  padding-top: 0;
+  box-sizing: border-box;
 }
 .start-screen #playModes .lane.lane--compact .lane-cost {
   display: inline-flex;
@@ -252,11 +314,11 @@ html.pm-sheet-open body {
   justify-content: center;
   gap: 2px;
   flex-shrink: 0;
-  height: 44px;
+  height: 40px;
   margin: 0;
   padding: 0;
   font-family: var(--kaiti, serif);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   line-height: 1;
@@ -277,12 +339,12 @@ html.pm-sheet-open body {
 .start-screen #playModes .lane.lane--compact .cta {
   min-width: 44px;
   width: auto;
-  height: 44px;
-  min-height: 44px;
-  padding: 0 12px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 11px;
   box-sizing: border-box;
-  font-size: 0.92rem;
-  letter-spacing: 0.18em;
+  font-size: 0.88rem;
+  letter-spacing: 0.14em;
   transition: transform 80ms ease, box-shadow 80ms ease, filter 80ms ease;
 }
 .start-screen #playModes .lane.lane--compact .daily-challenge-cta,
@@ -290,89 +352,72 @@ html.pm-sheet-open body {
 .start-screen #playModes .lane.lane--compact .oneshot-mode-cta,
 .start-screen #playModes .lane.lane--compact .survival-mode-cta {
   min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  font-size: 0.92rem;
-  letter-spacing: 0.18em;
-  padding: 0 12px;
+  height: 40px;
+  min-height: 40px;
+  font-size: 0.88rem;
+  letter-spacing: 0.14em;
+  padding: 0 11px;
 }
-.start-screen #playModes .lane.lane--compact:active .cta,
-.start-screen #playModes .lane.lane--compact .lane-compact-hit:active .cta {
+.start-screen #playModes .lane.lane--compact:active .cta {
   transform: translate(1px, 1px) scale(0.97);
   filter: brightness(0.96);
   transition-duration: 80ms;
 }
 
-/* Ribbons — original L3 size; corner free of the button */
+/* Ribbon: small corner clip; glyphs stay inside; actions clear below. */
 .start-screen #playModes .lane.lane--compact .lane-ribbon-clip {
-  z-index: 1;
+  position: absolute;
+  inset: auto;
+  top: 0;
+  right: 0;
+  width: 72px;
+  height: 26px;
   overflow: hidden;
-  border-radius: inherit;
+  border-radius: 0 18px 0 0;
   pointer-events: none;
+  z-index: 1;
 }
 .start-screen #playModes .lane.lane--compact .classic-mode-ribbon,
 .start-screen #playModes .lane.lane--compact .oneshot-mode-ribbon,
 .start-screen #playModes .lane.lane--compact .survival-mode-ribbon,
 .start-screen #playModes .lane.lane--compact .daily-challenge-ribbon {
-  top: 9px;
-  right: -18px;
-  padding: 3px 36px;
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  top: 3px;
+  right: -16px;
+  padding: 1px 16px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   transform: rotate(32deg);
   white-space: nowrap;
   overflow: visible;
+  line-height: 1.1;
 }
 
-/* Daily shell */
+/* Daily: taller for 剩余 + inline 日榜 */
 .start-screen #playModes .lane.lane--compact.daily-challenge-lane {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  min-height: 0;
-  padding: 62px 48px 10px 10px; /* extra top so ribbon AABB clears taller daily CTA row */
+  min-height: 90px;
+  padding: 20px 13px 8px 10px;
+  cursor: pointer;
+}
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane .lane-ribbon-clip {
+  border-radius: 0 16px 0 0;
+}
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane.is-disabled {
   cursor: default;
 }
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane .lane-compact-hit {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas: "mark copy actions";
-  align-items: center;
-  column-gap: 8px;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  appearance: none;
-  min-height: 56px;
-}
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane .lane-compact-hit .lane-actions {
-  align-self: end;
-}
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane.is-disabled .lane-compact-hit {
-  pointer-events: none;
-  opacity: 0.85;
-}
 .start-screen #playModes .lane.lane--compact .lane-board-mini {
-  align-self: flex-start;
-  margin: 4px 0 0 42px;
-  padding: 4px 10px;
-  min-height: 28px;
-  border: 1.4px solid var(--line);
-  border-radius: 8px 12px 7px 10px;
-  background: var(--card, #fff8e8);
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 2px 8px;
+  min-height: 24px;
+  border: 1.3px solid var(--line);
+  border-radius: 7px 10px 6px 9px;
+  background: color-mix(in srgb, var(--card) 92%, #fff);
   color: var(--ink);
   font: inherit;
   font-family: var(--kaiti, serif);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   box-shadow: 1px 1px 0 var(--line);
   cursor: pointer;
   appearance: none;
@@ -387,12 +432,13 @@ html.pm-sheet-open body {
   display: none !important;
 }
 
-/* Quiet chevrons for 残/绩/榜 */
+/* Quiet chevrons */
 .start-screen #playModes .lane.lane--compact.lane--compact-link {
   min-height: 48px;
   padding: 8px 8px 8px 10px;
   grid-template-columns: auto 1fr auto;
   grid-template-areas: "mark copy actions";
+  background-image: none !important;
 }
 .start-screen #playModes .lane.lane--compact.lane--compact-link .copy strong {
   font-size: 0.98rem;
@@ -401,12 +447,12 @@ html.pm-sheet-open body {
 .start-screen #playModes .lane.lane--compact.lane--compact-link .cta.lane-chevron {
   grid-area: actions;
   align-self: center;
+  margin-top: 0;
   min-width: 44px;
   width: 44px;
   height: 44px;
   min-height: 44px;
   padding: 0;
-  margin: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -511,25 +557,16 @@ html.pm-sheet-open body {
   #playModes #playModesList.lanes { gap: 8px; }
   .start-screen #playModes .lane.lane--compact:not(.lane--compact-link) {
     padding-left: 8px;
-    padding-right: 44px;
-  }
-  .start-screen #playModes .lane.lane--compact.daily-challenge-lane {
-    padding-right: 44px;
+    padding-right: 12px;
+    /* keep asymmetric top/bottom from base compact rules */
   }
   .start-screen #playModes .lane.lane--compact .copy strong {
     font-size: 0.96rem;
     letter-spacing: 0.08em;
   }
-  .start-screen #playModes .lane.lane--compact .cta {
-    padding: 0 10px;
-    letter-spacing: 0.14em;
-  }
-  .start-screen #playModes .lane.lane--compact .lane-board-mini {
-    margin-left: 40px;
-  }
 }
 @media (min-width: 801px) {
   .start-screen #playModes :is(.daily-challenge-lane, .classic-mode-lane, .oneshot-mode-lane, .survival-mode-lane).lane--compact {
-    padding-right: 48px;
+    padding-right: 14px;
   }
 }

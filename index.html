@@ -280,21 +280,21 @@
                             </p>
                             <!-- Shared .lane cards + .lane--compact modifier (sheet only) -->
                             <div class="lanes sim-hub-lanes play-modes-lanes" id="playModesList" aria-busy="true">
-                                <div class="lane lane--compact daily-challenge-lane" id="dailyChallengeCard" hidden>
+                                <div class="lane lane--compact daily-challenge-lane" id="dailyChallengeCard" hidden role="button" tabindex="0" onclick="onDailyChallengeCardClick()">
                                     <span class="lane-ribbon-clip" aria-hidden="true"><span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span></span>
-                                    <button type="button" class="lane-compact-hit" id="dailyChallengeHit" onclick="onDailyChallengeCardClick()" aria-label="今日挑战">
-                                        <span class="mark daily-challenge-mark">日</span>
-                                        <span class="copy">
-                                            <strong>今日挑战</strong>
-                                            <p class="lane-note" id="dailyChallengeCardMeta">每日一盘</p>
-                                            <p class="daily-challenge-card-state lane-note-sub" id="dailyChallengeCardState">加载中…</p>
-                                        </span>
-                                        <span class="lane-actions">
-                                            <span class="lane-cost" aria-label="消耗 50 韭币"><span class="lane-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                            <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
-                                        </span>
-                                    </button>
-                                    <button type="button" class="lane-board-mini" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                                    <span class="mark daily-challenge-mark">日</span>
+                                    <span class="copy">
+                                        <strong>今日挑战</strong>
+                                        <p class="lane-note" id="dailyChallengeCardMeta">每日一盘</p>
+                                        <p class="lane-note-row">
+                                            <span class="daily-challenge-card-state lane-note-sub" id="dailyChallengeCardState">加载中…</span>
+                                            <button type="button" class="lane-board-mini" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                                        </p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 50 韭币"><span class="lane-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
+                                    </span>
                                 </div>
                                 <button type="button" class="lane lane--compact classic-mode-lane" id="classicModeCard" onclick="startClassicPractice()">
                                     <span class="lane-ribbon-clip" aria-hidden="true"><span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span></span>
