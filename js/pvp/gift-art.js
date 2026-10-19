@@ -2,7 +2,7 @@
  * Hand-drawn gift art (绘图bot). Kinds without art keep their emoji.
  * assets/ stays unhashed in release builds, so the ?v= token busts caches.
  */
-const ART_V = "20261019f";
+const ART_V = "20261019g";
 export const GIFT_ART = Object.freeze({
   // dark: has a -dark variant (light-brown outline) used while the page is in the dark theme, where the picker
   // buttons, the page under the throw and the notice stage are dark. All six gifts have one.
@@ -12,7 +12,7 @@ export const GIFT_ART = Object.freeze({
   // layout (plain picture in the glyph slot); only their art (redrawn, same 96 canvas) and dark selection changed.
   flower: { name: "花花", emoji: "🌸", keepGlyphBox: true, dark: true },
   tomato: { name: "番茄", emoji: "🍅", keepGlyphBox: true, dark: true },
-  pipe: { name: "烟斗", emoji: "💨", keepGlyphBox: true, dark: true },
+  pipe: { name: "烟斗", emoji: "💨", keepGlyphBox: true, dark: true, file: "pipe-lg" },
   coffee: { name: "咖啡", emoji: "☕", keepGlyphBox: true, dark: true },
   fish: { name: "臭鱼", emoji: "🐟", dark: true },
   leaf: { name: "菜叶", emoji: "🥬", dark: true },
