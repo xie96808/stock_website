@@ -6,7 +6,8 @@
 import { api, getAuthState } from "./auth.js";
 import { normalizeItems, inventoryLine } from "./rewind-tickets-pure.js";
 
-const st = { tickets: 0, board: "clean", known: false, at: 0, inflight: null, userId: null };
+const st = { tickets: 0, board: "clean", known: false, at: 0, inflight: null, userId: null, failedAt: 0 };
+const MISSING_BACKOFF_MS = 10 * 60 * 1000; // older API without /me/items: ask again at most every 10 min
 
 export function getRewindTickets() {
   return { tickets: st.tickets, board: st.board, known: st.known };
@@ -46,16 +47,19 @@ export async function refreshRewindTickets({ maxAgeMs = 0 } = {}) {
     return getRewindTickets();
   }
   if (uid === st.userId && st.known && Date.now() - st.at < maxAgeMs) return getRewindTickets();
+  // 404 (API not upgraded yet): don't re-ask on every UI refresh; explicit refreshes (maxAgeMs 0) still go through.
+  if (maxAgeMs > 0 && uid === st.userId && st.failedAt && Date.now() - st.failedAt < MISSING_BACKOFF_MS) return getRewindTickets();
   if (st.inflight) return st.inflight;
   st.inflight = (async () => {
     try {
       const { data } = await api("/me/items");
       const n = normalizeItems(data);
       const changed = n.tickets !== st.tickets || n.board !== st.board || !st.known || st.userId !== uid;
-      Object.assign(st, n, { at: Date.now(), userId: uid });
+      Object.assign(st, n, { at: Date.now(), userId: uid, failedAt: 0 });
       if (changed) emit();
-    } catch {
+    } catch (e) {
       // 404 on an older API / offline: keep whatever we had (0 by default ⇒ legacy UI)
+      if (e?.status === 404) Object.assign(st, { failedAt: Date.now(), userId: uid });
     } finally {
       st.inflight = null;
     }
@@ -67,6 +71,7 @@ export async function refreshRewindTickets({ maxAgeMs = 0 } = {}) {
 if (typeof document !== "undefined") document.addEventListener("stockgame:auth-changed", () => {
   st.known = false;
   st.at = 0;
+  st.failedAt = 0;
   void refreshRewindTickets();
 });
 
