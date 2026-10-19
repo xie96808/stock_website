@@ -44,6 +44,8 @@ import {
     oneshotAmmoFromActions,
 } from './game-play-usecase.js';
 import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
+import { getRewindTickets, refreshRewindTickets, setRewindTickets } from './rewind-tickets.js';
+import { rewindButtonMode, defaultPayWith, ticketConfirmCopy, rewindToast } from './rewind-tickets-pure.js';
 import { getAuthState, showToast, refreshMe } from './auth.js';
 import { shakeError, openCtlSheet, closeCtlSheet } from './controls.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
@@ -581,6 +583,25 @@ export async function handleAction(action) {
     applyLocalAction(action);
 }
 
+/**
+ * Track R3: label only (the icon slot `.rewind-btn-icon` is owned by the icon-unification work).
+ * 0 tickets ⇒ exactly today's markup 「反悔 50◎」; tickets > 0 ⇒ 「反悔 · 券×N」.
+ */
+function paintRewindLabel(btn = document.getElementById('rewindBtn')) {
+    const label = btn?.querySelector('.rewind-btn-label');
+    if (!label) return;
+    const m = rewindButtonMode(getRewindTickets().tickets);
+    if (label.dataset.hydrated === m.key) return;
+    if (m.mode === 'ticket') label.textContent = m.text;
+    else label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 12 })}`;
+    label.dataset.hydrated = m.key;
+    btn.dataset.payWith = m.mode;
+    btn.setAttribute('aria-label', m.mode === 'ticket' ? `反悔，可用后悔券 ${getRewindTickets().tickets} 张` : '反悔');
+}
+if (typeof document !== 'undefined') {
+    document.addEventListener('stockgame:items-changed', () => paintRewindLabel());
+}
+
 function setActionControlsLocked(locked) {
     ['buyBtn', 'sellBtn', 'holdBtn', 'finishBtn', 'rewindBtn', 'fastForwardBtn'].forEach((id) => {
         const el = document.getElementById(id);
@@ -600,6 +621,9 @@ async function ensureRewindFeatures() {
     return rewindFeatures;
 }
 
+let rewindPayWith = 'coin';
+let rewindSheetCtx = null;
+
 export async function openRewindConfirm() {
     const session = getSession();
     const feats = await ensureRewindFeatures();
@@ -610,21 +634,55 @@ export async function openRewindConfirm() {
         balance: Number(auth.user?.jiuCoinBalance ?? 0),
         cost: 50,
     });
-    const { cost, balance: bal, after, targetDay, canAfford } = preview;
+    // Track R3: a 后悔券 is the default payment when the player holds one (older API ⇒ 0 ⇒ today's sheet).
+    const tk = await refreshRewindTickets({ maxAgeMs: 4000 });
+    const nextPay = defaultPayWith(tk.tickets);
+    if (nextPay !== rewindPayWith) rewindIdempotencyKey = null;
+    rewindPayWith = nextPay;
+    rewindSheetCtx = { preview, tickets: tk.tickets, board: tk.board };
 
     ensureRewindModal();
-    const body = document.getElementById('rewindConfirmBody');
-    if (body) {
-        body.innerHTML =
-            `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
-            `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
-            `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
-            (!canAfford ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '');
-    }
-    const confirmBtn = document.getElementById('rewindConfirmBtn');
-    if (confirmBtn) confirmBtn.disabled = !canAfford;
+    renderRewindSheet();
     const modal = document.getElementById('rewindConfirmModal');
     if (modal) openCtlSheet(modal, { focusSelector: '#rewindCancelBtn' });
+}
+
+function renderRewindSheet() {
+    const ctx = rewindSheetCtx;
+    if (!ctx) return;
+    const { cost, balance: bal, after, targetDay, canAfford } = ctx.preview;
+    const body = document.getElementById('rewindConfirmBody');
+    const confirmBtn = document.getElementById('rewindConfirmBtn');
+    const ticketMode = rewindPayWith === 'ticket' && ctx.tickets > 0;
+    if (body) {
+        if (ticketMode) {
+            body.innerHTML =
+                `<p class="rewind-ticket-copy">${ticketConfirmCopy({ tickets: ctx.tickets, targetDay, board: ctx.board })}</p>` +
+                `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayCoinLink">改用 50 韭币</button></p>`;
+        } else {
+            body.innerHTML =
+                `<p>消耗 ${amountWithCoinHtml(cost, { size: 14 })}，回到上一决策日。本局将记为反悔结果，每局限一次。</p>` +
+                `<p class="rewind-balance">当前余额 ${amountWithCoinHtml(bal, { size: 14 })} → 扣费后 ${amountWithCoinHtml(Math.max(after, 0), { size: 14 })}</p>` +
+                `<p class="rewind-target">目标决策日：第 ${targetDay} 日</p>` +
+                (!canAfford ? `<p class="rewind-warn">韭币不足，无法反悔</p>` : '') +
+                (ctx.tickets > 0 ? `<p class="rewind-alt"><button type="button" class="rewind-pay-link" id="rewindPayTicketLink">改用后悔券（剩 ${ctx.tickets} 张）</button></p>` : '');
+        }
+        const toCoin = document.getElementById('rewindPayCoinLink');
+        if (toCoin) toCoin.onclick = () => switchRewindPay('coin');
+        const toTicket = document.getElementById('rewindPayTicketLink');
+        if (toTicket) toTicket.onclick = () => switchRewindPay('ticket');
+    }
+    if (confirmBtn) {
+        confirmBtn.disabled = ticketMode ? false : !canAfford;
+        confirmBtn.dataset.payWith = ticketMode ? 'ticket' : 'coin';
+    }
+}
+
+function switchRewindPay(payWith) {
+    if (getSession().rewindBusy || payWith === rewindPayWith) return;
+    rewindPayWith = payWith;
+    rewindIdempotencyKey = null; // a different payWith is a different command
+    renderRewindSheet();
 }
 
 function closeRewindConfirm() {
@@ -662,6 +720,7 @@ export async function confirmRewind() {
     const session = getSession();
     if (session.rewindBusy) return;
     const confirmBtn = document.getElementById('rewindConfirmBtn');
+    const payWith = rewindPayWith === 'ticket' && (rewindSheetCtx?.tickets ?? 0) > 0 ? 'ticket' : 'coin';
     if (!rewindIdempotencyKey) {
         rewindIdempotencyKey =
             (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
@@ -673,6 +732,7 @@ export async function confirmRewind() {
     try {
         const { data } = await rewindCloudGame(session.revision ?? 0, {
             idempotencyKey: rewindIdempotencyKey,
+            ...(payWith === 'ticket' ? { payWith: 'ticket' } : {}),
         });
         const applied = applyRewindServerResult(data, { bars: getGameBars() });
         if (!applied.ok) {
@@ -687,9 +747,10 @@ export async function confirmRewind() {
             const auth = getAuthState();
             if (auth.user) auth.user.jiuCoinBalance = applied.balanceAfter;
         }
+        if (applied.paidWith === 'ticket' && applied.ticketsLeft != null) setRewindTickets(applied.ticketsLeft);
         await refreshJiuCoinStatus().catch(() => {});
         await refreshMe().catch(() => {});
-        showToast('已回到上一决策日（本局记为反悔）', 'success');
+        showToast(rewindToast(applied.paidWith), 'success');
         closeRewindConfirm();
         rewindIdempotencyKey = null;
     } catch (e) {
@@ -697,6 +758,14 @@ export async function confirmRewind() {
             const ok = await resyncCloudGameFromServer();
             showToast(ok ? '状态已重新同步，请再试' : (e.message || '反悔失败'), ok ? 'success' : 'error');
             rewindIdempotencyKey = null;
+        } else if (e.code === 'NO_TICKET') {
+            // Ticket gone (used in another tab): offer the coin option in the same sheet, no silent fallback.
+            rewindIdempotencyKey = null;
+            setRewindTickets(0);
+            if (rewindSheetCtx) rewindSheetCtx.tickets = 0;
+            rewindPayWith = 'coin';
+            renderRewindSheet();
+            showToast('后悔券已用完，可改用 50 韭币反悔', 'error');
         } else {
             showToast(e.message || '反悔失败', 'error');
             if (e.code === 'INSUFFICIENT_FUNDS' || e.status === 402) {
@@ -711,6 +780,7 @@ export async function confirmRewind() {
         patchSession({ rewindBusy: false });
         setActionControlsLocked(false);
         updateUI();
+        if (confirmBtn && !document.getElementById('rewindConfirmModal')?.hidden) renderRewindSheet();
     }
 }
 
@@ -1030,11 +1100,8 @@ export function updateUI() {
             rewindBtn.hidden = !eligible;
             rewindBtn.dataset.eligible = eligible ? '1' : '';
             rewindBtn.disabled = !eligible || busy;
-            const label = rewindBtn.querySelector('.rewind-btn-label');
-            if (label && !label.dataset.hydrated) {
-                label.innerHTML = `反悔 ${amountWithCoinHtml(50, { size: 12 })}`;
-                label.dataset.hydrated = '1';
-            }
+            paintRewindLabel(rewindBtn);
+            if (eligible) void refreshRewindTickets({ maxAgeMs: 30000 });
         }
     })();
 

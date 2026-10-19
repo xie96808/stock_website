@@ -747,3 +747,9 @@
   .lw-free.is-bump .lw-free-n { animation: none; }
   .lw-odds { transition-duration: 100ms; transform: none; }
 }
+
+/* Track R3: 后悔券 count inside the free-spins tag */
+.lw-free-tk { display: inline-flex; align-items: baseline; gap: 1px; }
+.lw-free-tk[hidden] { display: none; }
+.lw-free-sep { margin: 0 6px; opacity: 0.6; }
+.lw-free-tk-n { font-variant-numeric: tabular-nums; }
