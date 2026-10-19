@@ -249,16 +249,28 @@ export function syncHomeGoLabel() {
   b.dataset.resume = resume ? "1" : "0";
 }
 
+/**
+ * 开一局 → always classic practice (fill-mode modal).
+ * Only when an in-progress game is surfaced (resume banner → label 继续对局)
+ * do we resume that exact cloud game (classic / daily / …).
+ * Never route to L3 playModes / 今日挑战 from this button.
+ */
 function onGoClick() {
   const b = goBtn();
-  if (b && b.dataset.resume === "1") {
+  const banner = $("resumeGameBanner");
+  const resume = !!(b && b.dataset.resume === "1" && banner && !banner.hidden);
+  if (resume) {
     const cont = $("resumeGameContinueBtn");
     if (cont) {
       cont.click();
       return;
     }
   }
-  if (typeof window.startClassicPractice === "function") window.startClassicPractice();
+  if (typeof window.startClassicPractice === "function") {
+    window.startClassicPractice();
+    return;
+  }
+  if (typeof window.startGame === "function") window.startGame();
 }
 
 function wireClicks() {

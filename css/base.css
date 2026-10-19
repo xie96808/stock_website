@@ -304,8 +304,8 @@ body {
 /* ===== Top-left chrome: 纸/墨 + page zoom ===== */
 .top-left-chrome {
     position: fixed;
-    top: 10px;
-    left: 14px;
+    top: max(10px, env(safe-area-inset-top, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
     /* Below modals (auth/announcements/jiu/rewind ≥80) so overlays block chrome clicks */
     z-index: 45;
     display: flex;

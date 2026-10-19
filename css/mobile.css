@@ -2,12 +2,12 @@
 
 /* --- Safe top offset under fixed 纸墨 / 缩放 / 公告 / 登录 --- */
 :root {
-  --mobile-chrome-top: 52px;
+  --mobile-chrome-top: calc(52px + env(safe-area-inset-top, 0px));
 }
 
 @media (max-width: 640px) {
   :root {
-    --mobile-chrome-top: 56px;
+    --mobile-chrome-top: calc(56px + env(safe-area-inset-top, 0px));
   }
 
   .container {
@@ -158,7 +158,7 @@
 
 @media (max-width: 420px) {
   :root {
-    --mobile-chrome-top: 52px;
+    --mobile-chrome-top: calc(52px + env(safe-area-inset-top, 0px));
   }
 
   .container {

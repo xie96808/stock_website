@@ -29,11 +29,23 @@
   --ha-panel: rgba(255, 255, 255, 0.72);
   --ha-up: #e62632;
   --ha-down: #1f9d55;
-  /* Match demo-c2 go width at 390 (366px): container ≤420 adds 10px/side → L1 uses 2px */
-  padding: 20px 2px 28px;
+  /* Clear fixed ⋯/公告/登录 chrome + Android status-bar inset. Daily pill + hero share this flow. */
+  --ha-chrome-clearance: 52px;
+  margin-top: 0;
+  padding: calc(10px + env(safe-area-inset-top, 0px) + var(--ha-chrome-clearance)) 2px 28px;
   background:
     radial-gradient(60% 50% at 50% 34%, var(--ha-glow), transparent 70%),
     transparent;
+}
+@media (max-width: 640px) {
+  #startScreen[data-hub-level="1"] {
+    --ha-chrome-clearance: 56px;
+  }
+}
+@media (max-width: 420px) {
+  #startScreen[data-hub-level="1"] {
+    --ha-chrome-clearance: 52px;
+  }
 }
 [data-theme="dark"] #startScreen[data-hub-level="1"] {
   --ha-glow: rgba(255, 150, 30, 0.3);
@@ -90,7 +102,10 @@
   border: 1px solid var(--line);
   font-size: 13px;
   font-weight: 700;
-  margin-top: 4px;
+  margin: 0 0 8px;
+  position: relative;
+  z-index: 1;
+  flex: none;
   color: var(--ink);
 }
 .ha-daily.is-on {
@@ -223,22 +238,28 @@
 }
 .ha-bp .vw {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  overflow: hidden;
+  align-content: flex-start;
+  column-gap: calc(var(--u) * 7);
+  row-gap: calc(var(--u) * 4);
+  overflow: visible;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .ha-bp .val {
   font-family: "APNum", Roboto, "DIN Alternate", sans-serif;
-  font-size: calc(var(--u) * 34);
+  font-size: clamp(9px, calc(var(--u) * 34), calc(var(--u) * 34));
   font-weight: 520;
   font-stretch: 78%;
-  line-height: 1;
+  line-height: 1.05;
   color: #333;
   font-variant-numeric: tabular-nums;
   display: block;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 .ha-bp .val.is-up {
   color: #e62632;
@@ -248,12 +269,12 @@
 }
 .ha-bp .pct {
   font-family: "APNum", Roboto, sans-serif;
-  font-size: calc(var(--u) * 28);
+  font-size: clamp(8px, calc(var(--u) * 28), calc(var(--u) * 28));
   font-weight: 400;
   font-stretch: 85%;
-  margin-left: calc(var(--u) * 7);
-  flex: none;
-  line-height: 1;
+  margin-left: 0;
+  flex: 0 0 auto;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
 .ha-bp .pct.is-up {
@@ -660,28 +681,34 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
   place-items: center;
 }
 
-/* Secondary cards */
+/* Secondary cards — quieter than 开一局 / PvP; pair ~82% of pill width */
 .ha-secondaries {
   margin-top: 14px;
-  width: min(440px, 100%);
+  width: min(360px, 82%);
+  max-width: 360px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
+  justify-self: center;
+  align-self: center;
 }
 .ha-scard {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 14px;
-  min-height: 112px;
-  padding: 16px 18px;
-  border-radius: 16px;
+  gap: 10px;
+  min-height: 72px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
   background: var(--ha-panel);
   border: 1px solid var(--line);
   text-align: left;
   color: var(--ink);
   cursor: pointer;
   transition: border-color 180ms ease, transform 90ms ease;
+  /* ≥44px tap even when visually compact */
+  touch-action: manipulation;
 }
 .ha-scard:hover {
   border-color: var(--ha-ring);
@@ -690,15 +717,15 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
   transform: scale(0.965);
 }
 .ha-scard .ico {
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   flex: none;
   display: grid;
   place-items: center;
 }
 .ha-scard .ico img {
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
 }
 .ha-scard .ico .night-only {
@@ -714,12 +741,12 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 .ha-scard b {
   display: block;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
   text-wrap: balance;
@@ -727,11 +754,11 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
 .ha-scard .tag {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-style: normal;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
-  padding: 3px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
   line-height: 1;
 }
@@ -790,21 +817,22 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
 @media (max-width: 900px) {
   .ha-secondaries {
     margin-top: 12px;
-    gap: 10px;
+    gap: 8px;
+    width: min(340px, 84%);
   }
   .ha-scard {
-    min-height: 100px;
-    padding: 14px;
-    border-radius: 14px;
-    gap: 12px;
+    min-height: 68px;
+    padding: 10px 11px;
+    border-radius: 13px;
+    gap: 9px;
   }
   .ha-scard .ico,
   .ha-scard .ico img {
-    width: 52px;
-    height: 52px;
+    width: 38px;
+    height: 38px;
   }
   .ha-scard b {
-    font-size: 15px;
+    font-size: 12.5px;
   }
 }
 
@@ -821,10 +849,16 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
     height: 150px;
   }
   .ha-bp {
-    --u: calc((100vw - 44px) / 786);
+    /* Slightly tighter than full bleed so 当日参考盈亏 fits under WebView text zoom */
+    --u: calc((100vw - 56px) / 786);
     left: 6px;
     top: 162px;
     transform: rotate(-3deg);
+  }
+  @media (max-width: 360px) {
+    .ha-bp {
+      --u: calc((100vw - 64px) / 786);
+    }
   }
   .ha-mascot {
     left: 14px;
@@ -864,26 +898,27 @@ html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
     padding: 0 14px;
   }
   .ha-secondaries {
-    width: 100%;
-    gap: 8px;
+    width: min(300px, 84%);
+    max-width: 84%;
+    gap: 7px;
   }
   .ha-scard {
-    min-height: 96px;
-    padding: 12px;
-    gap: 10px;
+    min-height: 64px;
+    padding: 9px 10px;
+    gap: 8px;
   }
   .ha-scard .ico,
   .ha-scard .ico img {
-    width: 48px;
-    height: 48px;
+    width: 34px;
+    height: 34px;
   }
   .ha-scard b {
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: -0.02em;
   }
   .ha-scard .tag {
-    font-size: 10px;
-    padding: 2px 7px;
+    font-size: 9.5px;
+    padding: 2px 6px;
   }
   .ha-go-row {
     flex-direction: column;
