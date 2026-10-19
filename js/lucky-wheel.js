@@ -127,11 +127,12 @@ const POP_IMG_ART = [
 const POP_CSS_ART = ["lw-result-card", "lw-go-default", "lw-go-press"];
 const POP_COIN_V = 24; // coinIconHtml({ size: 24 }) in the pop-up amount
 const artCache = new Map(); // url -> HTMLImageElement (kept referenced so the decode is not dropped)
-function warmImg(src, srcset = "") {
+function warmImg(src, srcset = "", priority = "") {
   const key = srcset || src;
   if (artCache.has(key) || typeof Image === "undefined") return artCache.get(key);
   const i = new Image();
   i.decoding = "async";
+  if (priority) i.fetchPriority = priority;
   if (srcset) i.srcset = srcset;
   i.src = src;
   artCache.set(key, i);
@@ -148,14 +149,16 @@ function popWantsNightCoin() {
   probe.remove();
   return on;
 }
+/* Tiny and needed by every pop-up: requested first (before the hidden modal's own <img> art) at high priority, so a
+   slow / HTTP/1.1 link does not leave them queued behind the wheel face until the pop-up opens. */
 function preloadPopIcons() {
   const day = coinArtSrcset(POP_COIN_V);
-  warmImg(day.src, day.srcset);
+  warmImg(day.src, day.srcset, "high");
+  warmImg(url("item-ticket-24"), `${url2x("item-ticket-24")} 2x`, "high");
   if (popWantsNightCoin()) {
     const n = coinArtSrcset(POP_COIN_V, { night: true });
-    warmImg(n.src, n.srcset);
+    warmImg(n.src, n.srcset, "high");
   }
-  warmImg(url("item-ticket-24"), `${url2x("item-ticket-24")} 2x`);
 }
 let popArtOn = false;
 function preloadPopArt() {
@@ -210,6 +213,7 @@ const remaining = () => Number(S.state?.freeSpins?.total ?? 0);
 
 function ensureDom() {
   if (S.root) return S.root;
+  preloadPopIcons(); // ahead of the modal's own <img> art (night coin re-checked once the pop-up exists)
   const root = el(`<div class="lw-modal" id="luckyWheelModal" hidden aria-hidden="true">
     <div class="lw-dialog" role="dialog" aria-modal="true" aria-labelledby="lwTitle"><div class="lw-fit" id="lwFit">
       <div class="lw-ribbon">${imgHtml("lw-ribbon")}<h2 class="lw-title" id="lwTitle">签到转盘</h2></div>
@@ -800,6 +804,7 @@ function guardPopIcons(pop) {
     const imgs = [...slot.querySelectorAll("img")];
     const shown = imgs.filter((i) => getComputedStyle(i.closest("picture") || i).display !== "none");
     const ready = () => shown.length > 0 && shown.every((i) => i.complete && i.naturalWidth > 0);
+    slot.dataset.lwGuard = "1"; // icon-art.js's global error fallback leaves this slot to us (keeps the fixed box)
     if (ready()) continue;
     const isCoin = slot.classList.contains("jiu-coin-icon");
     slot.classList.add("lw-icon-pending");
@@ -809,7 +814,7 @@ function guardPopIcons(pop) {
       slot.classList.remove("lw-icon-pending");
       slot.querySelector(".lw-icon-fb")?.remove();
     };
-    for (const i of shown) i.addEventListener("load", done, { once: true });
+    for (const i of shown) i.addEventListener("load", done, { once: true }); // on "error" the fallback simply stays
   }
 }
 

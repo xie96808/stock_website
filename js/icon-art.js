@@ -119,6 +119,7 @@ function restoreRewindGlyph(img) {
 
 function handleArtFailure(img) {
   if (!(img instanceof HTMLImageElement)) return;
+  if (img.closest("[data-lw-guard]")) return; // the wheel pop-up keeps its own fallback in a fixed box (lucky-wheel.js guardPopIcons)
   // The lazy dark twin may be skipped/blocked while the day art is fine: only react to the VISIBLE image.
   if (img.classList.contains("jiu-coin-img")) {
     if (img.classList.contains("jiu-coin-img--night") && img.offsetParent === null) return;
