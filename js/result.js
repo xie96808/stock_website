@@ -31,6 +31,7 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+import { unitIconsHtml, ticketAmountHtml, escapeHtml as escapeChipHtml } from './unit-icons.js';
 
 onThemeChange((theme) => {
     applyChartTheme(chartRefs.resultChart, theme);
@@ -64,7 +65,7 @@ function paintPuzzleGradeHero({ stars, pending, reward }) {
         if (pending) {
             verdictEl.textContent = '正在保存进度…';
         } else if (reward?.grantedThisTime) {
-            verdictEl.textContent = `首通奖励 +${reward.amount} 韭币`;
+            verdictEl.innerHTML = unitIconsHtml(`首通奖励 +${reward.amount} 韭币`, { size: 16 });
         } else if (reward?.alreadyClaimed) {
             verdictEl.textContent = '本关首通韭币已领过';
         } else if (stars != null && stars < 2) {
@@ -150,7 +151,8 @@ export function endGame() {
             if (chip && !assistEl.hidden) {
                 const span = document.createElement('span');
                 span.className = 'result-ticket-chip';
-                span.textContent = chip;
+                // 「用过<后悔券图标>」; the word stays as visually hidden text
+                span.innerHTML = escapeChipHtml(chip).replace('后悔券', ticketAmountHtml(null, { size: 12 }));
                 assistEl.append(' ', span);
             }
         }

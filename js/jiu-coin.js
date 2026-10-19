@@ -71,12 +71,93 @@ function paintWheelEntry(btn) {
     short.className = "jiu-daily-short";
     btn.append(full, short);
   }
-  full.textContent = "幸运转盘";
-  short.textContent = "转盘";
+  full.textContent = WHEEL_ENTRY_LABEL;
+  // ≤640px: the same name on two short lines inside the old box (css/lucky-wheel.css), so no neighbour moves
+  if (!short.querySelector(".lw-entry-l2")) short.innerHTML = '<span class="lw-entry-l1">签到</span><span class="lw-entry-l2">幸运转盘</span>';
   const has = wheelRemaining == null ? false : wheelRemaining > 0;
   btn.classList.toggle("has-spins", has);
-  btn.title = has ? `幸运转盘 · 今日还有 ${wheelRemaining} 次免费机会` : "幸运转盘";
+  btn.title = has ? `${WHEEL_ENTRY_LABEL} · 今日还有 ${wheelRemaining} 次免费机会` : WHEEL_ENTRY_LABEL;
   btn.setAttribute("aria-label", btn.title);
+  scheduleWheelWarm(btn);
+}
+
+/* ---- cold-open performance: warm the wheel in the background once the entry is painted ----
+ * After the entry shows (logged in, wheel mode) we wait for an idle moment, then: import lucky-wheel.js (+ its helper, both also
+ * <link rel="modulepreload">ed in index.html), GET /me/lucky-wheel, and hand the state to the module, which builds the hidden
+ * modal so its art loads. Hover / pointerdown / touchstart on the entry starts the same warm-up at once. A click that beats the
+ * warm-up still overlaps the state GET with the module import (openWheelFromEntry). */
+const WHEEL_ENTRY_LABEL = "签到幸运转盘";
+const WHEEL_STATE_FRESH_MS = 20000;
+let wheelModP = null;
+let wheelPrefetch = null; // { promise, at, uid }
+let wheelWarmed = null; // user id the warm-up ran for
+let wheelWarmTimer = 0;
+
+function loadWheelModule() {
+  if (!wheelModP) {
+    wheelModP = importWithRetry(
+      "lucky-wheel",
+      () => import("./lucky-wheel.js"),
+      () => new URL("./lucky-wheel.js", import.meta.url).href
+    ).catch((e) => {
+      wheelModP = null;
+      throw e;
+    });
+  }
+  return wheelModP;
+}
+
+/** GET /me/lucky-wheel, shared between the warm-up and the click (reused while fresh). */
+function prefetchWheelState() {
+  const uid = getAuthState()?.user?.id ?? null;
+  if (!uid) return null;
+  if (wheelPrefetch && wheelPrefetch.uid === uid && Date.now() - wheelPrefetch.at < WHEEL_STATE_FRESH_MS) return wheelPrefetch.promise;
+  const entry = { at: Date.now(), uid, promise: api("/me/lucky-wheel") };
+  entry.promise.catch(() => {
+    if (wheelPrefetch === entry) wheelPrefetch = null;
+  });
+  wheelPrefetch = entry;
+  return entry.promise;
+}
+
+function warmWheel() {
+  const uid = getAuthState()?.user?.id ?? null;
+  if (!wheelMode || !uid || wheelWarmed === uid) return;
+  wheelWarmed = uid;
+  const stateP = prefetchWheelState();
+  loadWheelModule()
+    .then(async (mod) => {
+      mod.warmLuckyWheel?.(null);
+      const r = await stateP;
+      if (wheelWarmed === uid) mod.primeLuckyWheel?.(r?.data);
+    })
+    .catch(() => {
+      if (wheelWarmed === uid) wheelWarmed = null; // try again on the next hover / paint
+    });
+}
+
+function scheduleWheelWarm(btn) {
+  if (!btn.dataset.lwWarmWired) {
+    btn.dataset.lwWarmWired = "1";
+    const now = () => {
+      if (wheelMode) warmWheel();
+    };
+    btn.addEventListener("pointerenter", now, { passive: true });
+    btn.addEventListener("pointerdown", now, { passive: true });
+    btn.addEventListener("touchstart", now, { passive: true });
+    btn.addEventListener("focus", now, { passive: true });
+  }
+  const uid = getAuthState()?.user?.id ?? null;
+  if (!uid || wheelWarmed === uid || wheelWarmTimer) return;
+  const run = () => {
+    wheelWarmTimer = 0;
+    warmWheel();
+  };
+  // after the entry has painted: next frame, then an idle slot (bounded so it still happens on a busy page)
+  wheelWarmTimer = window.setTimeout(() => {
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 2000 });
+    else run();
+  }, 120);
 }
 
 function setWheelMode(on, remaining) {
@@ -108,12 +189,11 @@ async function openWheelFromEntry() {
   if (wheelOpening) return;
   wheelOpening = true;
   try {
-    const mod = await importWithRetry(
-      "lucky-wheel",
-      () => import("./lucky-wheel.js"),
-      () => new URL("./lucky-wheel.js", import.meta.url).href
-    );
-    const r = await mod.openLuckyWheel({ onChange: onWheelChange });
+    // the state GET runs in parallel with the module import (both may already be warm)
+    const prefetched = prefetchWheelState();
+    const mod = await loadWheelModule();
+    const r = await mod.openLuckyWheel({ onChange: onWheelChange, prefetched });
+    wheelPrefetch = null; // spins change the state; the next open uses the module's own copy + a quiet refresh
     if (r && r.enabled === false) {
       // server says the wheel is off (flag flipped): fall back to the legacy daily claim flow
       setWheelMode(false);

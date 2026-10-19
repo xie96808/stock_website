@@ -5,6 +5,7 @@
  */
 import { api, getAuthState } from "./auth.js";
 import { normalizeItems, inventoryLine } from "./rewind-tickets-pure.js";
+import { unitIconsHtml } from "./unit-icons.js";
 
 const st = { tickets: 0, board: "clean", known: false, at: 0, inflight: null, userId: null };
 
@@ -17,7 +18,9 @@ function paintAccountLine() {
   const el = document.getElementById("authItemsLine");
   if (!el) return;
   el.hidden = !st.known;
-  el.textContent = st.known ? `道具：${inventoryLine(st.tickets)}` : "";
+  // 「道具：<后悔券图标>×N」 (the word stays as visually hidden text)
+  if (st.known) el.innerHTML = unitIconsHtml(`道具：${inventoryLine(st.tickets)}`, { size: 14 });
+  else el.textContent = "";
 }
 
 function emit() {

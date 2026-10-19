@@ -354,6 +354,62 @@
     box-shadow: 1px 1px 0 var(--line);
 }
 
+/* 「进入模拟盘」 attention bounce (砍一刀-style squash & stretch + a soft shine sweep, then a rest).
+   Transform / opacity only on the CTA (an inner element of the lane button) and its ::before — no layout shift,
+   no texture. Paused while the lane is pressed (its ≤120 ms translate feedback is untouched), while the tab is
+   hidden (html.is-doc-hidden, set in js/home-ia.js), and replaced by nothing under prefers-reduced-motion. */
+.start-screen .cta-bounce {
+    overflow: hidden;
+    transform-origin: 50% 100%;
+    animation: cta-bounce 1.4s cubic-bezier(0.33, 0, 0.3, 1) 0.6s infinite both;
+    will-change: transform;
+    backface-visibility: hidden;
+}
+.start-screen .cta-bounce::before {
+    content: "";
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 38%;
+    pointer-events: none;
+    background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
+    transform: translateX(-120%) skewX(-18deg);
+    opacity: 0;
+    animation: cta-shine 2.8s ease-in-out 0.6s infinite both;
+}
+[data-theme="dark"] .start-screen .cta-bounce::before {
+    background: linear-gradient(100deg, rgba(255, 244, 220, 0) 0%, rgba(255, 244, 220, 0.28) 50%, rgba(255, 244, 220, 0) 100%);
+}
+@keyframes cta-bounce {
+    0%   { transform: scale(1, 1); }
+    9%   { transform: scale(1.07, 0.9); }
+    20%  { transform: translateY(-3px) scale(0.95, 1.07); }
+    31%  { transform: translateY(0) scale(1.04, 0.96); }
+    40%  { transform: scale(0.99, 1.015); }
+    48%, 100% { transform: scale(1, 1); }
+}
+@keyframes cta-shine {
+    0%, 52% { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+    54%     { opacity: 1; }
+    72%     { transform: translateX(330%) skewX(-18deg); opacity: 1; }
+    74%, 100% { transform: translateX(330%) skewX(-18deg); opacity: 0; }
+}
+.start-screen .lane:active .cta-bounce,
+.start-screen .lane:active .cta-bounce::before,
+html.is-doc-hidden .start-screen .cta-bounce,
+html.is-doc-hidden .start-screen .cta-bounce::before {
+    animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+    .start-screen .cta-bounce,
+    .start-screen .cta-bounce::before {
+        animation: none;
+        will-change: auto;
+    }
+    .start-screen .cta-bounce::before { display: none; }
+}
+
 @media (max-width: 800px) {
     .start-screen {
         min-height: auto;

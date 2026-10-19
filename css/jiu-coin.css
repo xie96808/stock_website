@@ -344,3 +344,57 @@
   #pvpReadyCopy,
   #pvpResultMeMeta
 ) .jiu-coin-pic--night { display: block !important; }
+
+/* ===== wheel-polish: 后悔券 as an inline unit icon + shared unit-icon helpers (js/unit-icons.js) =====
+   `.ticket-icon` mirrors `.jiu-coin-icon`: a 1.15em square box the art only fills (object-fit keeps the 15×17 stub's ratio).
+   The words stay in the DOM as `.u-sr` (visually hidden, out of flow) so screen readers / innerText still say 韭币 / 后悔券. */
+.u-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.ticket-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 1.15em;
+  height: 1.15em;
+  margin: -0.1em 0; /* paints 1.15em, takes 0.95em of line height (like the coin box), so no line or button grows */
+  overflow: hidden;
+}
+.ticket-icon > .ticket-pic { display: block; width: 100%; height: 100%; }
+.ticket-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.ticket-icon.is-art-fallback { width: auto; height: auto; font-size: 0.85em; line-height: 1; }
+.u-ticket-amt {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+.u-ticket-n { font-variant-numeric: tabular-nums; }
+.u-amt { white-space: nowrap; }
+.ticket-pic--night { display: none !important; }
+[data-theme="dark"] :is(
+  #leaderboardAssistNote,
+  .result-ticket-chip
+) .ticket-pic--day { display: none; }
+[data-theme="dark"] :is(
+  #leaderboardAssistNote,
+  .result-ticket-chip
+) .ticket-pic--night { display: block !important; }

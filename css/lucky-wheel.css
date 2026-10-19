@@ -72,6 +72,26 @@
 [data-theme="dark"] .jiu-coin-daily-btn.is-wheel .lw-entry-dot { border-color: #f3ead8; }
 @media (max-width: 640px) {
   .jiu-coin-daily-btn.is-wheel { gap: 3px; padding-left: 7px; padding-right: 8px; }
+  /* 签到幸运转盘 on two short lines in exactly the old content width (16px icon + 3px gap + 「转盘」 at 12px = 43px),
+     so the balance chip and 公告 do not move. The wheel glyph steps aside here; the name says what it is. */
+  .jiu-coin-daily-btn.is-wheel .lw-entry-ico { display: none; }
+  .jiu-coin-daily-btn.is-wheel .jiu-daily-short {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 43px;
+    height: 16px; /* the old row height (16px glyph); the two lines overflow into the padding, so the button keeps its height */
+    overflow: visible;
+    font-size: 9.5px;
+    line-height: 0.98;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  .jiu-coin-daily-btn.is-wheel .lw-entry-l1,
+  .jiu-coin-daily-btn.is-wheel .lw-entry-l2 { display: block; }
+  /* light kraft frame has a heavier bottom edge: lift the two lines off it (paint only) */
+  html:not([data-theme="dark"]) .jiu-coin-daily-btn.is-wheel .jiu-daily-short { transform: translateY(-1px); }
 }
 
 /* ------------------------------------------------------------------ modal shell */
@@ -360,6 +380,7 @@
 
 .lw-go {
   position: relative;
+  left: 2px;
   z-index: 2;
   margin-top: 10px;
   width: min(280px, 100%);
@@ -380,17 +401,21 @@
 }
 .lw-go[data-state="disabled"] { background-image: url("../assets/lucky-wheel/lw-go-disabled@2x.webp?v=20261019w"); cursor: not-allowed; }
 .lw-go[data-state="loading"] { background-image: url("../assets/lucky-wheel/lw-go-loading@2x.webp?v=20261019w"); cursor: progress; }
+/* The label box spans the art's pill body — (4,4)–(272,58) of the 280×64 canvas (the 3px hard shadow sits right/below) —
+   so 启动转盘 / 明日再来 are centred on the body, and `left: 2px` on .lw-go puts the body centre (x 138) on the box centre,
+   i.e. on the wheel's axis. Every state shares this box, font size and baseline; loading only starts after the spinner. */
 .lw-go-label {
   position: absolute;
-  left: 21.4%;
-  right: 11.4%;
-  top: 0;
-  bottom: 9%;
+  left: 1.43%;
+  right: 2.86%;
+  top: 6.25%;
+  bottom: 9.38%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 900;
   font-size: 24px;
+  line-height: 1;
   letter-spacing: 0.12em;
   text-indent: 0.12em;
   color: #fff;
@@ -398,9 +423,9 @@
   white-space: nowrap;
   pointer-events: none;
 }
-.lw-go[data-state="press"] .lw-go-label { transform: translate(1px, 2px); }
-.lw-go[data-state="disabled"] .lw-go-label { color: #ddd2bc; font-size: 22px; }
-.lw-go[data-state="loading"] .lw-go-label { left: 24%; font-size: 22px; }
+.lw-go[data-state="press"] .lw-go-label { transform: translate(2px, 2px); }
+.lw-go[data-state="disabled"] .lw-go-label { color: #ddd2bc; }
+.lw-go[data-state="loading"] .lw-go-label { left: 22.1%; font-size: 22px; }
 .lw-go-label::before { content: none; }
 
 .lw-reset {
@@ -414,73 +439,6 @@
   color: var(--lw-kraft);
   text-shadow: 1px 1px 0 var(--lw-label-ink), -1px 1px 0 var(--lw-label-ink);
 }
-.lw-odds-btn {
-  position: relative;
-  z-index: 2;
-  margin-top: 4px;
-  min-height: 36px;
-  padding: 6px 14px;
-  border: 0;
-  background: transparent;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--lw-kraft);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-shadow: 1px 1px 0 var(--lw-label-ink), -1px 1px 0 var(--lw-label-ink);
-  cursor: pointer;
-}
-.lw-odds-btn[data-state="press"], .lw-odds-btn:active { opacity: 0.75; }
-
-.lw-odds {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 12px;
-  z-index: 8;
-  box-sizing: border-box;
-  width: min(372px, calc(100% - 20px));
-  margin: 0 auto;
-  max-height: calc(100% - 40px);
-  overflow: auto;
-  padding: 14px 16px 12px;
-  border: 2px solid var(--lw-label-ink);
-  border-radius: 14px;
-  background: var(--lw-kraft);
-  color: var(--lw-label-ink);
-  box-shadow: 3px 3px 0 var(--lw-label-ink);
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 180ms ease-out, transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  pointer-events: none;
-  -webkit-overflow-scrolling: touch;
-}
-.lw-odds.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.lw-odds[hidden] { display: none; }
-.lw-odds h3 { margin: 0 0 8px; font-size: 16px; font-weight: 900; }
-.lw-odds ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
-.lw-odds li { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; min-width: 0; }
-.lw-odds .lw-chip { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--lw-label-ink); }
-.lw-odds .lw-odds-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lw-odds .lw-odds-pct { flex: 0 0 auto; font-variant-numeric: tabular-nums; }
-.lw-odds p { margin: 10px 0 0; font-size: 12.5px; line-height: 1.5; font-weight: 600; }
-.lw-odds-close {
-  margin-top: 10px;
-  width: 100%;
-  min-height: 40px;
-  border: 2px solid var(--lw-label-ink);
-  border-radius: 10px;
-  background: #fff7e6;
-  color: var(--lw-label-ink);
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 15px;
-  box-shadow: 2px 2px 0 var(--lw-label-ink);
-  cursor: pointer;
-}
-.lw-odds-close:active, .lw-odds-close[data-state="press"] { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--lw-label-ink); }
-
 .lw-error {
   position: absolute;
   left: 50%;
@@ -635,6 +593,12 @@
 .lw-pop-amount .lw-plus { font-size: 24px; }
 .lw-pop-amount .lw-num { font-size: 46px; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
 .lw-pop-amount .lw-unit { font-size: 18px; }
+/* wheel-polish: units as icons — the coin after the big number, the ticket in the 「<ticket>×N」 headline */
+.lw-pop-amount .lw-unit { display: inline-flex; }
+.lw-pop-amount .lw-unit .jiu-coin-icon { width: 1.4em; height: 1.4em; }
+.lw-pop-headline .u-ticket-amt { gap: 3px; }
+.lw-pop-headline .lw-pop-tk { width: 1.3em; height: 1.3em; }
+.lw-free-tk .ticket-icon { align-self: center; }
 .lw-pop-headline { font-weight: 900; font-size: 20px; line-height: 1.2; }
 .lw-pop-lines { margin: 0; padding: 0 6px; list-style: none; font-size: 13.5px; line-height: 1.5; font-weight: 700; }
 .lw-pop-bal { font-size: 13px; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
@@ -721,12 +685,11 @@
     align-content: center;
     justify-items: center;
   }
-  .lw-stage { grid-column: 1; grid-row: 1 / span 5; align-self: center; margin-top: calc(var(--lw-u) * 24); }
+  .lw-stage { grid-column: 1; grid-row: 1 / span 4; align-self: center; margin-top: calc(var(--lw-u) * 24); }
   .lw-ribbon { grid-column: 2; grid-row: 1; width: min(290px, 100%); margin: 0 0 4px; align-self: end; }
   .lw-free { grid-column: 2; grid-row: 2; margin-top: 6px; }
   .lw-go { grid-column: 2; grid-row: 3; margin-top: 8px; }
   .lw-reset { grid-column: 2; grid-row: 4; margin-top: 6px; }
-  .lw-odds-btn { grid-column: 2; grid-row: 5; align-self: start; }
   .lw-close { top: 0; right: 0; }
   .lw-pop-wrap { margin-top: 0; }
 }
@@ -745,7 +708,6 @@
   .lw-stage.is-jackpot-win .lw-rimlight { animation: none; opacity: 0.9; }
   .lw-dialog.is-shake { animation: none; }
   .lw-free.is-bump .lw-free-n { animation: none; }
-  .lw-odds { transition-duration: 100ms; transform: none; }
 }
 
 /* Track R3: 后悔券 count inside the free-spins tag */

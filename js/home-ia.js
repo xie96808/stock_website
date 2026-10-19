@@ -213,3 +213,10 @@ export function initHomeIaRouting() {
     applyHomeHashRoute(h);
   }
 }
+
+/* 「进入模拟盘」 bounce (css/start.css .cta-bounce) stops while the tab is hidden. */
+if (typeof document !== "undefined" && document.documentElement) {
+  const syncDocHidden = () => document.documentElement.classList.toggle("is-doc-hidden", !!document.hidden);
+  document.addEventListener("visibilitychange", syncDocHidden);
+  syncDocHidden();
+}
