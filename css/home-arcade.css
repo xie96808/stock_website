@@ -361,8 +361,14 @@
   gap: 10px 12px;
   width: min(440px, 100%);
   margin: 0 auto;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
 }
 .ha-go {
+  /* V3 Glossy: top sheen + warm glow; no hard shelf / outer frame */
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
@@ -373,10 +379,14 @@
   border: 0;
   border-radius: 9999px;
   color: #fff;
-  background: linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 42%, transparent 52%),
+    linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
   box-shadow:
-    0 6px 0 var(--ha-cta-sh),
-    0 22px 40px -14px rgba(230, 46, 46, 0.75);
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 14px 36px -10px rgba(230, 46, 46, 0.65),
+    0 0 28px rgba(255, 122, 47, 0.32);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -397,8 +407,9 @@
   gap: 4px;
   font-size: 13px;
   font-weight: 700;
-  opacity: 0.92;
+  opacity: 0.95;
   margin-top: 4px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 .ha-go .coin-amt {
   display: inline-flex;
@@ -424,26 +435,28 @@
 .ha-go:active {
   transform: scale(0.965);
   box-shadow:
-    0 2px 0 var(--ha-cta-sh),
-    0 10px 20px -10px rgba(230, 46, 46, 0.7);
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 8px 22px -10px rgba(230, 46, 46, 0.6),
+    0 0 16px rgba(255, 122, 47, 0.28);
 }
 .ha-go::after {
   content: "";
   position: absolute;
-  top: -30%;
-  bottom: -30%;
+  top: -40%;
+  bottom: -40%;
   left: 0;
-  width: 30%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-  transform: translateX(-150%) skewX(-18deg);
-  animation: ha-shine 2.8s ease-in-out 1s infinite;
+  width: 28%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+  animation: ha-shine 3.2s ease-in-out 1s infinite;
+  pointer-events: none;
 }
 @keyframes ha-shine {
   0%,
-  55% {
-    transform: translateX(-150%) skewX(-18deg);
+  60% {
+    transform: translateX(-160%) skewX(-18deg);
   }
-  80%,
+  78%,
   100% {
     transform: translateX(420%) skewX(-18deg);
   }
