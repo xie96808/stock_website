@@ -426,7 +426,7 @@ const restoreA = () => {
   assert.ok(r.ok, JSON.stringify(r));
 };
 
-test("spin again: grants a same-day credit, capped at 5 draws/day (then pays 60 coins, substituted)", async () => {
+test("spin again: grants a same-day credit, capped at 5 draws/day (then pays the table minimum coin prize, substituted)", async () => {
   const u = await mkUser("lwagain");
   const tbl = coinTable([90, 300, 50, 150, 70, 888, 110, 200], [1800, 700, 1400, 1400, 1300, 100, 1600, 1700]);
   tbl[4] = { pos: 4, kind: "spin", qty: 1, weight: 1300 };
@@ -443,7 +443,7 @@ test("spin again: grants a same-day credit, capped at 5 draws/day (then pays 60 
     assert.equal(r1.data.balance, bal0, "no coins for a spin-again");
     assert.equal(r1.data.freeSpins.total, 1, "bonus spin is available immediately");
     assert.equal(ledgerWheel(u.user.id).length, 0);
-    // chain: draws 2,3,4 are spin-again too; draw 5 would exceed the cap => substituted 60 coins
+    // chain: draws 2,3,4 are spin-again too; draw 5 would exceed the cap => substituted min coin prize (50 here)
     for (let i = 0; i < 3; i++) {
       const r = W.spinWheel(u.user.id, { idemKey: `agkey-${u.user.id}-${++n}`, rng: () => spinRoll });
       assert.equal(r.data.prize.kind, "spin", `draw ${i + 2}`);
@@ -451,11 +451,13 @@ test("spin again: grants a same-day credit, capped at 5 draws/day (then pays 60 
     const last = W.spinWheel(u.user.id, { idemKey: `agkey-${u.user.id}-${++n}`, rng: () => spinRoll });
     assert.equal(last.status, 200);
     assert.equal(last.data.prize.kind, "jiu_coin");
-    assert.equal(last.data.prize.amount, W.SPIN_CAP_SUBSTITUTE_COINS);
+    assert.equal(last.data.prize.amount, W.spinCapCoins(tbl));
+    assert.equal(last.data.prize.amount, 50);
+    assert.equal(last.data.prize.substituteReason, "spin_cap");
     assert.equal(last.data.prize.substituted, true);
     assert.equal(last.data.sector, 4);
     assert.equal(db().prepare(`SELECT COUNT(*) c FROM lucky_wheel_spins WHERE user_id=?`).get(u.user.id).c, 5);
-    assert.equal(getJiuCoinBalance(u.user.id), bal0 + 60);
+    assert.equal(getJiuCoinBalance(u.user.id), bal0 + 50);
     assert.equal(W.spinWheel(u.user.id, { idemKey: `agkey-${u.user.id}-more`, rng: () => 0 }).error.code, "NO_SPINS_LEFT");
     assert.equal(ledgerSum(u.user.id), getJiuCoinBalance(u.user.id));
   } finally {
