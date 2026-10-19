@@ -2075,3 +2075,16 @@ img.pvp-bot-art[data-bot-art="bot-glitch"] {
   white-space: nowrap;
 }
 #pvpResultScreen .pvp-actions .ctl-share-save { flex: 0 0 auto; }
+
+/* icon-unify P3: flower/tomato/pipe/coffee keep the emoji as an invisible spacer (same glyph box as before)
+   and overlay the drawn art, or the emoji fallback if the art fails. See js/pvp/gift-art.js keepGlyphBox. */
+.pvp-gift-glyph--overlay { position: relative; }
+.pvp-gift-glyph--overlay > .pvp-gift-spacer { visibility: hidden; }
+.pvp-gift-glyph--overlay > .pvp-gift-img-wrap,
+.pvp-gift-glyph--overlay > .pvp-gift-img-fallback {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
