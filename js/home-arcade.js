@@ -25,6 +25,11 @@ function goBtn() {
   return $("homeArcadeGo");
 }
 
+/** Split shell (pill + 玩法选择 seg); bounce applies here so both halves move together. */
+function goSplit() {
+  return $("homeArcadeGoSplit") || goBtn();
+}
+
 function setAuthDataset(mode) {
   const root = document.documentElement;
   if (mode === "guest" || mode === "user" || mode === "pending") {
@@ -37,7 +42,7 @@ function setAuthDataset(mode) {
  * pending/user: no bounce (avoids flash while auth settles).
  */
 export function setHomeCtaBounce(on) {
-  const b = goBtn();
+  const b = goSplit();
   if (!b) return;
   clearTimeout(stopBounceTimer);
   if (on) {
@@ -80,7 +85,7 @@ function applyAuthChrome() {
     setHomeCtaBounce(false);
   } else {
     // pending: no bounce, mark pending so CSS does not animate
-    const b = goBtn();
+    const b = goSplit();
     if (b) b.classList.remove("ha-bounce");
     setAuthDataset("pending");
   }
@@ -256,7 +261,9 @@ function wireClicks() {
   if (go) go.addEventListener("click", onGoClick);
   const modes = $("homeArcadeModes");
   if (modes) {
-    modes.addEventListener("click", () => {
+    modes.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
       if (typeof window.showPlayModes === "function") window.showPlayModes();
     });
   }

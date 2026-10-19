@@ -172,11 +172,17 @@
                         <h1 class="ha-title">这把，换<em>你来操盘</em></h1>
                         <p class="ha-sub">一段行情，考验你的真本事</p>
                         <div class="ha-go-row">
-                            <button type="button" class="ha-go" id="homeArcadeGo" aria-label="开一局">
-                                <b data-ha-go-title>开一局</b>
-                                <small data-ha-go-sub>单人模拟盘 · <span class="coin-amt" aria-label="20 韭币">20<span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span></small>
-                            </button>
-                            <button type="button" class="ha-modes" id="homeArcadeModes" aria-label="玩法选择">玩法选择</button>
+                            <div class="ha-go-split" id="homeArcadeGoSplit">
+                                <button type="button" class="ha-go" id="homeArcadeGo" aria-label="开一局">
+                                    <b data-ha-go-title>开一局</b>
+                                    <small data-ha-go-sub>单人模拟盘 · <span class="coin-amt" aria-label="20 韭币">20<span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span></small>
+                                </button>
+                                <button type="button" class="ha-go-seg" id="homeArcadeModes" aria-label="玩法选择" title="玩法选择">
+                                    <svg class="ha-go-chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                                        <path d="M6.2 9.2 L12 15 l5.8-5.8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                         <button type="button" class="ha-pvp" id="homeArcadePvp" hidden>
                             <span class="avs"><img src="images/og-mascot-day.jpg" alt=""><i>VS</i><img src="assets/pvp/bot-b-256.webp" alt=""></span>

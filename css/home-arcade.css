@@ -352,7 +352,7 @@
   font-size: 16px;
 }
 
-/* CTA row: 开一局 + 玩法选择 — match demo-c2 r6 pill (not full-bleed, no flex-grow) */
+/* CTA: split pill (开一局 + 玩法选择 ▾) — V4 arcade shelf, no outer frame */
 .ha-go-row {
   display: flex;
   flex-wrap: wrap;
@@ -367,34 +367,54 @@
   border-radius: 0;
   padding: 0;
 }
-.ha-go {
-  /* V3 Glossy: top sheen + warm glow; no hard shelf / outer frame */
-  position: relative;
-  overflow: hidden;
-  flex: 0 0 auto;
+
+/* Shell carries shelf + glow; children fill without their own shelf */
+.ha-go-split {
+  display: flex;
+  align-items: stretch;
   box-sizing: border-box;
   width: min(440px, 100%);
   max-width: 440px;
   height: 80px;
-  border: 0;
   border-radius: 9999px;
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 42%, transparent 52%),
-    linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 14px 36px -10px rgba(230, 46, 46, 0.65),
-    0 0 28px rgba(255, 122, 47, 0.32);
+    0 6px 0 var(--ha-cta-sh),
+    0 22px 40px -14px rgba(230, 46, 46, 0.75);
+  transform-origin: 50% 100%;
+  transition: transform 90ms ease, box-shadow 90ms ease;
+  position: relative;
+}
+.ha-go-split:has(#homeArcadeGo:active) {
+  transform: scale(0.965);
+  box-shadow:
+    0 2px 0 var(--ha-cta-sh),
+    0 10px 20px -10px rgba(230, 46, 46, 0.7);
+}
+
+.ha-go {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  color: #fff;
+  background: transparent;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   line-height: 1.1;
   cursor: pointer;
-  transform-origin: 50% 100%;
-  transition: transform 90ms ease, box-shadow 90ms ease;
+  /* press feedback lives on .ha-go-split:has(:active) */
+  transition: none;
 }
 .ha-go b {
   font-size: 30px;
@@ -407,9 +427,8 @@
   gap: 4px;
   font-size: 13px;
   font-weight: 700;
-  opacity: 0.95;
+  opacity: 0.92;
   margin-top: 4px;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
 }
 .ha-go .coin-amt {
   display: inline-flex;
@@ -432,43 +451,81 @@
   display: block;
   object-fit: contain;
 }
-.ha-go:active {
-  transform: scale(0.965);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    0 8px 22px -10px rgba(230, 46, 46, 0.6),
-    0 0 16px rgba(255, 122, 47, 0.28);
-}
-.ha-go::after {
+
+/* Subtle diagonal sweep (low opacity); paused when page hidden */
+.ha-go-split::after {
   content: "";
   position: absolute;
   top: -40%;
   bottom: -40%;
   left: 0;
-  width: 28%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  width: 26%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.22), transparent);
   transform: translateX(-160%) skewX(-18deg);
-  animation: ha-shine 3.2s ease-in-out 1s infinite;
+  animation: ha-shine 3.6s ease-in-out 1.2s infinite;
   pointer-events: none;
+  z-index: 2;
 }
 @keyframes ha-shine {
   0%,
-  60% {
+  62% {
     transform: translateX(-160%) skewX(-18deg);
   }
-  78%,
+  80%,
   100% {
-    transform: translateX(420%) skewX(-18deg);
+    transform: translateX(430%) skewX(-18deg);
   }
 }
+html.is-doc-hidden .ha-go-split::after {
+  animation-play-state: paused;
+}
 
-/* Bounce only for guests */
-html[data-auth="guest"] .ha-go.ha-bounce {
+/* Right segment: 玩法选择 (does not start a game) */
+.ha-go-seg {
+  position: relative;
+  flex: 0 0 48px;
+  min-width: 44px;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  transition: filter 90ms ease, background-color 90ms ease;
+}
+.ha-go-seg::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.42);
+  pointer-events: none;
+}
+.ha-go-seg:active {
+  filter: brightness(0.88);
+  background-color: rgba(0, 0, 0, 0.1);
+}
+.ha-go-seg:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -4px;
+}
+.ha-go-chev {
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* Guest bounce: whole split moves together */
+html[data-auth="guest"] .ha-go-split.ha-bounce {
   animation: ha-cta-bounce 1.4s cubic-bezier(0.33, 0, 0.3, 1) 0.8s infinite both;
 }
-html[data-auth] .ha-go.ha-bounce:active,
-html[data-auth].is-doc-hidden .ha-go.ha-bounce,
-html.is-doc-hidden .ha-go::after {
+html[data-auth] .ha-go-split.ha-bounce:has(#homeArcadeGo:active),
+html[data-auth].is-doc-hidden .ha-go-split.ha-bounce {
   animation-play-state: paused;
 }
 @keyframes ha-cta-bounce {
@@ -490,32 +547,17 @@ html.is-doc-hidden .ha-go::after {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-auth="guest"] .ha-go.ha-bounce,
-  .ha-go::after,
+  html[data-auth="guest"] .ha-go-split.ha-bounce,
+  .ha-go-split::after,
   .ha-mascot,
   .ha-kl .c {
     animation: none !important;
   }
 }
 
+/* Legacy .ha-modes kept inert if any stray markup remains */
 .ha-modes {
-  flex: 0 0 auto;
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--ha-panel);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 90ms ease, border-color 180ms ease;
-}
-.ha-modes:hover {
-  border-color: var(--ha-ring);
-}
-.ha-modes:active {
-  transform: scale(0.965);
+  display: none !important;
 }
 
 /* PvP ticket */
@@ -784,7 +826,7 @@ html.is-doc-hidden .ha-go::after {
     font-size: 14px;
     margin-bottom: 16px;
   }
-  .ha-go {
+  .ha-go-split {
     height: 74px;
   }
   .ha-go b {
@@ -830,16 +872,13 @@ html.is-doc-hidden .ha-go::after {
     width: min(440px, 100%);
     max-width: 100%;
   }
-  .ha-go {
+  .ha-go-split {
     width: min(440px, 100%);
     max-width: 100%;
     height: 74px;
-    flex: 0 0 auto;
     align-self: center;
   }
-  .ha-modes {
-    width: auto;
-    min-width: 7.5em;
-    align-self: center;
+  .ha-go b {
+    font-size: 28px;
   }
 }
