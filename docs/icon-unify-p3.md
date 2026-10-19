@@ -5,3 +5,9 @@
 * Dark art (`.ea-slot--themed`) is used only where the surface is dark in the dark theme (APK card, hindsight card).
 * PNG only, no `<picture>`, so html2canvas can capture it. It skips `display:none`, so it captures the theme-matching art.
 * Gifts: `GIFT_ART` gains flower/tomato/pipe/coffee (`assets/pvp/gift-*`). These four keep the emoji glyph box (`keepGlyphBox`: invisible spacer + overlaid art) and use the `-dark` art in the dark theme (swapped on theme toggle). fish/leaf are unchanged.
+
+## Gifts follow-up: redrawn 臭鱼 / 菜叶, optional bigger pipe
+
+- `assets/pvp/gift-fish*` and `gift-leaf*` are replaced in place with 绘图bot's redraw (same 96/192 canvas, area-matched to flower/tomato/coffee; MANIFEST §2b). New `-dark` variants are added.
+- In `GIFT_ART`, fish/leaf now have `dark: true`, so they use the same theme swap as the four P3 gifts. They still have no `keepGlyphBox`, so their picker layout is exactly what shipped. `ART_V` is bumped to `20261019f` because the fish/leaf file names didn't change.
+- `GIFT_ART[kind].file` (optional) picks a different asset stem. `assets/pvp/gift-pipe-lg*` (47% more visible area, with a `-dark` version) is included but **not active**. To switch, set `pipe: { …, file: "pipe-lg" }`. The picker box doesn't change, because pipe keeps its emoji spacer.
