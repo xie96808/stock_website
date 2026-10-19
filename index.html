@@ -232,7 +232,7 @@
                         </div>
                     </div>
 
-                    <!-- Scheme A: 模拟盘二级 hub — row1 玩法入口, row2 残局 -->
+                    <!-- L2 simHub retired (SIM-PAGES-SYNC); hidden. Entries: home + playModes sheet. -->
                     <div class="lanes sim-hub-lanes" id="simHub" hidden>
                         <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
                         <button type="button" class="lane lane-playmodes" id="playModesEntryCard" onclick="showPlayModes()">
@@ -253,81 +253,113 @@
                             </span>
                             <span class="cta cta-fill">进入对战</span>
                         </button>
-                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
-                            <span class="mark">残</span>
-                            <span class="copy">
-                                <small>残局挑战</small>
-                                <strong>章节闯关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
-                                <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
-                            </span>
-                            <span class="cta cta-wash" id="puzzleChapterCardCta">选择章节</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showMyGames()">
-                            <span class="mark">绩</span>
-                            <span class="copy">
-                                <small>云端战绩</small>
-                                <strong>我的战绩</strong>
-                                <p>登录后查看已保存对局与基础统计。</p>
-                            </span>
-                            <span class="cta cta-wash">查看战绩</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showLeaderboard()">
-                            <span class="mark">榜</span>
-                            <span class="copy">
-                                <small>练习榜</small>
-                                <strong>双模式练习榜</strong>
-                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
-                            </span>
-                            <span class="cta cta-wash">查看榜单</span>
-                        </button>
+                        <!-- L2 cards moved to playModes sheet -->
+
                     </div>
 
-                    <!-- L3 玩法选择（与二级同构 lanes） -->
-                    <div class="lanes sim-hub-lanes play-modes-lanes" id="playModes" hidden>
-                        <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
-                        <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
-                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span></span>
-                            <span class="mark daily-challenge-mark">日</span>
-                            <span class="copy">
-                                <small>全站同题挑战</small>
-                                <strong>今日挑战<span class="jiu-price-badge jiu-price-paid" data-jiu-price="50" aria-label="消耗 50 韭币"></span></strong>
-                                <p id="dailyChallengeCardMeta">用完全相同的个股进行游戏！考验你的操作</p>
-                                <p class="daily-challenge-card-state" id="dailyChallengeCardState">加载中…</p>
-                            </span>
-                            <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始今日挑战</span>
-                        </button>
-                        <button type="button" class="hub-board-link ctl ctl-secondary" id="dailyChallengeBoardBtn" data-ctl-kind="secondary" data-state="default" hidden onclick="onDailyChallengeBoardClick(event)"><span class="ctl-label">查看日榜</span></button>
-                        <button type="button" class="lane classic-mode-lane" onclick="startClassicPractice()">
-                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span></span>
-                            <span class="mark classic-mode-mark">练</span>
-                            <span class="copy">
-                                <small>经典练习</small>
-                                <strong>三十日随机盘<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
-                                <p>登录后开云端对局：随机三十日 K 线，选择成交方式，终局揭晓身份。</p>
-                            </span>
-                            <span class="cta cta-fill classic-mode-cta">开始经典练习</span>
-                        </button>
-                        <button type="button" class="lane oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
-                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="oneshot-mode-ribbon" aria-hidden="true">一击</span></span>
-                            <span class="mark oneshot-mode-mark">梭</span>
-                            <span class="copy">
-                                <small>一把梭</small>
-                                <strong>只买一次 · 只卖一次<span class="jiu-price-badge jiu-price-paid" data-jiu-price="30" aria-label="消耗 30 韭币"></span></strong>
-                                <p>三十个交易日里各限一买一卖，观望不限。纯择时，不可反悔。</p>
-                            </span>
-                            <span class="cta cta-fill oneshot-mode-cta">开始一把梭</span>
-                        </button>
-                        <button type="button" class="lane survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
-                            <span class="lane-ribbon-clip" aria-hidden="true"><span class="survival-mode-ribbon" aria-hidden="true">风险</span></span>
-                            <span class="mark survival-mode-mark">生</span>
-                            <span class="copy">
-                                <small>活过三十日</small>
-                                <strong>爆仓线 −20%<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
-                                <p>买卖不限，相对开局净值触及 −20% 立即强制结束。活穿三十日即胜利。</p>
-                            </span>
-                            <span class="cta cta-fill survival-mode-cta">开始生存模式</span>
-                        </button>
+                    <!-- L3 playModes: sheet shell + original L3 lane cards (shared start.css) -->
+                    <div id="playModesBackdrop" class="pm-backdrop" hidden aria-hidden="true"></div>
+                    <div class="pm-sheet" id="playModes" hidden role="dialog" aria-modal="true" aria-labelledby="playModesTitle">
+                        <div class="pm-sheet-grab" id="playModesGrab" aria-hidden="true">
+                            <span class="pm-sheet-handle"></span>
+                        </div>
+                        <header class="pm-sheet-head">
+                            <h2 class="pm-sheet-title" id="playModesTitle">选择玩法</h2>
+                            <button type="button" class="pm-sheet-close" id="playModesClose" aria-label="关闭">×</button>
+                        </header>
+                        <div class="pm-sheet-body" id="playModesBody">
+                            <div class="pm-skel" id="playModesSkel" aria-hidden="true">
+                                <div class="pm-skel-row"></div>
+                                <div class="pm-skel-row"></div>
+                                <div class="pm-skel-row"></div>
+                                <div class="pm-skel-row"></div>
+                            </div>
+                            <p class="pm-modes-error" id="playModesError" hidden>
+                                玩法列表暂时不可用
+                                <button type="button" class="pm-retry" id="playModesRetry">重试</button>
+                            </p>
+                            <!-- Shared .lane cards + .lane--compact modifier (sheet only) -->
+                            <div class="lanes sim-hub-lanes play-modes-lanes" id="playModesList" aria-busy="true">
+                                <div class="lane lane--compact daily-challenge-lane" id="dailyChallengeCard" hidden role="button" tabindex="0" onclick="onDailyChallengeCardClick()">
+                                    <span class="lane-ribbon-clip" aria-hidden="true"><span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span></span>
+                                    <span class="mark daily-challenge-mark">日</span>
+                                    <span class="copy">
+                                        <strong>今日挑战</strong>
+                                        <p class="lane-note" id="dailyChallengeCardMeta">每日一盘</p>
+                                        <p class="lane-note-row">
+                                            <span class="daily-challenge-card-state lane-note-sub" id="dailyChallengeCardState">加载中…</span>
+                                            <button type="button" class="lane-board-mini" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
+                                        </p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 50 韭币"><span class="lane-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
+                                    </span>
+                                </div>
+                                <button type="button" class="lane lane--compact classic-mode-lane" id="classicModeCard" onclick="startClassicPractice()">
+                                    <span class="lane-ribbon-clip" aria-hidden="true"><span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span></span>
+                                    <span class="mark classic-mode-mark">练</span>
+                                    <span class="copy">
+                                        <strong>经典练习</strong>
+                                        <p class="lane-note">三十日随机盘</p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill classic-mode-cta">开始</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="lane lane--compact oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
+                                    <span class="lane-ribbon-clip" aria-hidden="true"><span class="oneshot-mode-ribbon" aria-hidden="true">一击</span></span>
+                                    <span class="mark oneshot-mode-mark">梭</span>
+                                    <span class="copy">
+                                        <strong>一把梭</strong>
+                                        <p class="lane-note">只买一次 · 只卖一次</p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 30 韭币"><span class="lane-cost-n">30</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill oneshot-mode-cta">开始</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="lane lane--compact survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
+                                    <span class="lane-ribbon-clip" aria-hidden="true"><span class="survival-mode-ribbon" aria-hidden="true">风险</span></span>
+                                    <span class="mark survival-mode-mark">生</span>
+                                    <span class="copy">
+                                        <strong>生存模式</strong>
+                                        <p class="lane-note">爆仓线 −20%</p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill survival-mode-cta">开始</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="lane lane--compact lane--compact-link puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
+                                    <span class="mark">残</span>
+                                    <span class="copy">
+                                        <strong>残局挑战</strong>
+                                        <p class="lane-note" id="puzzleChapterCardMeta">短窗口 · 星级首通</p>
+                                        <p class="puzzle-chapter-card-state lane-note-sub" id="puzzleChapterCardState" hidden></p>
+                                    </span>
+                                    <span class="cta lane-chevron" id="puzzleChapterCardCta" aria-hidden="true">›</span>
+                                </button>
+                                <button type="button" class="lane lane--compact lane--compact-link" id="myGamesModeCard" onclick="showMyGames()">
+                                    <span class="mark">绩</span>
+                                    <span class="copy">
+                                        <strong>我的战绩</strong>
+                                        <p class="lane-note">云端已保存对局</p>
+                                    </span>
+                                    <span class="cta lane-chevron" aria-hidden="true">›</span>
+                                </button>
+                                <button type="button" class="lane lane--compact lane--compact-link" id="leaderboardModeCard" onclick="showLeaderboard()">
+                                    <span class="mark">榜</span>
+                                    <span class="copy">
+                                        <strong>练习榜</strong>
+                                        <p class="lane-note">次日开盘 / 当日收盘</p>
+                                    </span>
+                                    <span class="cta lane-chevron" aria-hidden="true">›</span>
+                                </button>
+                            </div>
+                            <div class="pm-sheet-foot" id="playModesFoot"></div>
+                        </div>
                     </div>
 
                     <!-- L3 残局章节选择（与玩法三级同构） -->
@@ -505,7 +537,7 @@
             <div class="pvp-wrap">
                 <div class="pvp-head pvp-hub-head">
                     <div class="pvp-hub-back-row">
-                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
+                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回首页</button>
                     </div>
                     <div class="pvp-title-block pvp-hub-title">
                         <p class="pvp-kicker pvp-hub-kicker">在线对弈</p>
@@ -1584,7 +1616,7 @@
         })();
         // Single hashchange owner (Phase 1) — home/sim/academy/hindsight/leaderboard
         registerHashRoute(Route.HOME, () => showHome());
-        registerHashRoute(Route.SIM, () => showSimHub({ updateHash: false }));
+        registerHashRoute(Route.SIM, () => showHome()); // L2 retired → homepage
         registerHashRoute(Route.ACADEMY, () => showAcademy({ updateHash: false }));
         registerHashRoute(Route.HINDSIGHT, () => showHindsight({ updateHash: false }));
         registerHashRoute(Route.LEADERBOARD, () => { showLeaderboard(); });

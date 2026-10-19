@@ -111,10 +111,15 @@ function challengeCost(d) {
 
 function syncCardBadge(cost) {
   const badge = document.querySelector('#dailyChallengeCard .jiu-price-badge');
-  if (!badge) return;
-  badge.setAttribute('data-jiu-price', String(cost));
-  badge.setAttribute('aria-label', `消耗 ${cost} 韭币`);
-  badge.innerHTML = amountWithCoinHtml(cost, { size: 12 });
+  if (badge) {
+    badge.setAttribute('data-jiu-price', String(cost));
+    badge.setAttribute('aria-label', `消耗 ${cost} 韭币`);
+    badge.innerHTML = amountWithCoinHtml(cost, { size: 12 });
+  }
+  const laneCost = document.querySelector('#dailyChallengeCard .lane-cost');
+  const n = document.querySelector('#dailyChallengeCard .lane-cost-n');
+  if (laneCost) laneCost.setAttribute('aria-label', `消耗 ${cost} 韭币`);
+  if (n) n.textContent = String(cost);
 }
 
 export async function refreshDailyChallengeCard() {
@@ -146,32 +151,49 @@ export async function refreshDailyChallengeCard() {
   const d = statusCache;
   const cost = challengeCost(d);
   syncCardBadge(cost);
+  // Compact sheet note: short line; remaining / status on sub-line
   if (meta) {
-    meta.textContent = MARKETING_LINE;
+    meta.textContent = '每日一盘';
   }
 
   if (!d.ready) {
     card.classList.add('is-disabled');
-    if (stateEl) stateEl.textContent = d.message || '今日挑战准备中';
-    if (ctaEl) ctaEl.textContent = '稍后再来';
+    if (stateEl) {
+      stateEl.hidden = false;
+      stateEl.textContent = d.message || '今日挑战准备中';
+    }
+    if (ctaEl) ctaEl.textContent = '稍候';
     return;
   }
   card.classList.remove('is-disabled');
 
   if (d.activeGame) {
-    if (stateEl) stateEl.textContent = '进行中 · 可继续（不扣币）';
-    if (ctaEl) ctaEl.textContent = '继续挑战';
+    if (stateEl) {
+      stateEl.hidden = false;
+      stateEl.textContent = '进行中 · 可继续';
+    }
+    if (ctaEl) ctaEl.textContent = '继续';
   } else if (d.attempt && (d.attempt.status === 'settled' || d.attempt.status === 'settle_late')) {
     const ppm = d.attempt.returnPpm;
     const pct = ppm == null ? '—' : (ppm / 10000).toFixed(2) + '%';
-    if (stateEl) stateEl.textContent = `已结算 · 收益 ${pct}`;
-    if (ctaEl) ctaEl.textContent = '查看结果';
+    if (stateEl) {
+      stateEl.hidden = false;
+      stateEl.textContent = `已结算 · ${pct}`;
+    }
+    if (ctaEl) ctaEl.textContent = '查看';
   } else if (d.remainingChance === 0) {
-    if (stateEl) stateEl.textContent = '今日机会已用完';
-    if (ctaEl) ctaEl.textContent = '查看结果';
+    if (stateEl) {
+      stateEl.hidden = false;
+      stateEl.textContent = '今日机会已用完';
+    }
+    if (ctaEl) ctaEl.textContent = '查看';
   } else {
-    if (stateEl) stateEl.textContent = '剩余正式机会 1 次 · 无反悔';
-    if (ctaEl) ctaEl.textContent = '开始今日挑战';
+    const left = d.remainingChance == null ? 1 : d.remainingChance;
+    if (stateEl) {
+      stateEl.hidden = false;
+      stateEl.textContent = `剩余 ${left} 次 · 无反悔`;
+    }
+    if (ctaEl) ctaEl.textContent = '开始';
   }
 }
 
@@ -350,12 +372,12 @@ async function runFreshDailyStart() {
     const game = await createOrResumeDaily();
     if (mustAwaitPackBeforeEnter(game)) {
       await packPromise;
-      setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+      setFillProgress(packReady() ? 88 : 92, '进入对局…');
     } else {
       packPromise.catch((err) => {
         console.warn('pack load (non-blocking, daily)', err);
       });
-      setFillProgress(88, '进入模拟盘…');
+      setFillProgress(88, '进入对局…');
     }
     await refreshMe().catch(() => {});
     await startCloudFromMeta(game);

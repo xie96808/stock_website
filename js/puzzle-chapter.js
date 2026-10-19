@@ -102,9 +102,10 @@ export async function refreshPuzzleChapterCard() {
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.innerHTML = unitIconsHtml('第一、二章已开放 · 首局免费 · 重开 10 韭币 · 二星 +20 / 三星 +15', { size: 12 });
+    if (meta) meta.textContent = '短窗口 · 星级首通';
     if (stateEl) {
-      stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
+      stateEl.hidden = false;
+      stateEl.textContent = `进度 ${summary.cleared}/${summary.total} · 星 ${summary.starsEarned}/${summary.starsMax}`;
     }
   } catch {
     if (stateEl) stateEl.textContent = '残局加载失败';

@@ -524,7 +524,7 @@ async function refresh() {
   if (!showing) return;
   if (summary.data?.disabledReason === "对战未开放") {
     leavePvpLobby();
-    if (typeof window.showSimHub === "function") window.showSimHub();
+    if (typeof window.showHome === "function") window.showHome();
     return;
   }
   acceptingNew = summary.data?.acceptingNew !== false;
@@ -593,7 +593,7 @@ function wireLobby() {
   wired = true;
   document.getElementById("pvpLobbyBack")?.addEventListener("click", () => {
     leavePvpLobby();
-    if (typeof window.showSimHub === "function") window.showSimHub();
+    if (typeof window.showHome === "function") window.showHome();
   });
   document.getElementById("pvpLobbyLogin")?.addEventListener("click", () => openAuthModal("login"));
   document.getElementById("pvpLobbyModes")?.addEventListener("click", () => {
@@ -639,7 +639,7 @@ export async function showPvpLobby({ instant = false } = {}) {
   if (!showing) return;
   if (!on) {
     showing = false;
-    if (typeof window.showSimHub === "function") window.showSimHub();
+    if (typeof window.showHome === "function") window.showHome();
     return;
   }
   await whenAuthReady();
@@ -659,7 +659,7 @@ export async function showPvpLobby({ instant = false } = {}) {
 export async function openPvpHash(matchId) {
   const on = await pvpEnabled();
   if (!on) {
-    if (typeof window.showSimHub === "function") window.showSimHub();
+    if (typeof window.showHome === "function") window.showHome();
     return;
   }
   const result = await loadChunk(() => import("./result.js"));

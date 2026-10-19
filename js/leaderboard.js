@@ -443,7 +443,7 @@ export function hideLeaderboard() {
   const screen = document.getElementById("leaderboardScreen");
   if (screen) setBusy(screen, false);
   deactivateScreen(Route.LEADERBOARD);
-  // Return to 模拟盘 hub (Scheme A); keep /#/sim deep link
+  // Return to homepage (L2 retired)
   if (typeof window.restoreSimShell === "function") {
     window.restoreSimShell();
     return;

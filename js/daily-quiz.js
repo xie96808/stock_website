@@ -410,7 +410,7 @@ export function goSimFromDailyQuizResult() {
   const modal = resultModalEl();
   if (modal) modal.hidden = true;
   if (typeof window.hideAcademy === 'function') window.hideAcademy();
-  if (typeof window.showSimHub === 'function') window.showSimHub();
+  if (typeof window.showHome === 'function') window.showHome();
 }
 
 function escapeHtml(s) {
