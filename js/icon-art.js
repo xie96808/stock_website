@@ -31,6 +31,13 @@ function pictureHtml(name, px, cls, extra = "", picCls = "") {
     + `<img class="${cls}" src="${b}.png${v}" srcset="${b}.png${v} 1x, ${b}@2x.png${v} 2x" width="${px}" height="${px}" alt="" decoding="async" draggable="false"${extra}></picture>`;
 }
 
+/** The webp candidates a `coinIconHtml()` <picture> picks from (same URLs, so a `new Image()` preload is a cache hit). */
+export function coinArtSrcset(variant, { night = false } = {}) {
+  const b = `${BASE}coin-glyph-${variant}${night ? "-dark" : ""}`;
+  const v = `?v=${ICON_ART_V}`;
+  return { src: `${b}.webp${v}`, srcset: `${b}.webp${v} 1x, ${b}@2x.webp${v} 2x` };
+}
+
 /** The original 24-unit inline glyph (kept verbatim as the no-art fallback; tinted by currentColor). */
 export function coinSvgHtml({ size = 18 } = {}) {
   const s = Number(size) || 18;

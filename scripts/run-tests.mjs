@@ -24,6 +24,7 @@ const runs = [
   ["node", ["--test", "tests/lazy-import.test.js"]],
   ["node", ["--test", "tests/rewind-tickets.test.js"]],
   ["node", ["--test", "tests/wheel-polish.test.js"]],
+  ["node", ["--test", "tests/wheel-pop-art.test.js"]],
   ["node", ["--test", "server/tests/quiz-rewards.integration.test.js"]],
   ["node", ["--test", "server/tests/daily-challenge.integration.test.js"]],
   ["node", ["--test", "server/tests/event-protocol-off.integration.test.js"]],

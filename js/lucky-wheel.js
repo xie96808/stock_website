@@ -10,7 +10,7 @@ import { api, getAuthState, showToast } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 import * as P from "./lucky-wheel-pure.js";
 import { getRewindTickets, refreshRewindTickets } from "./rewind-tickets.js";
-import { coinIconHtml, ticketIconHtml } from "./icon-art.js";
+import { coinArtSrcset, coinIconHtml, coinSvgHtml, ticketIconHtml } from "./icon-art.js";
 import { coinAmountHtml } from "./unit-icons.js";
 
 const V = P.LW_ASSET_V;
@@ -58,6 +58,7 @@ function lazyImgHtml(name, cls = "") {
 }
 let effectArtOn = false;
 function loadEffectArt() {
+  preloadPopArt();
   if (effectArtOn || !S.root) return;
   effectArtOn = true;
   for (const img of S.root.querySelectorAll("img[data-lw-src]")) {
@@ -112,6 +113,58 @@ function preloadCoreArt() {
     i.decoding = "async";
     i.src = url2x(n);
   }
+  preloadPopIcons();
+}
+
+/* Prize pop-up art. The unit icons (24px coin, big ticket: ~3 KB) ride with the core art; the larger pop-up / 888 art
+   (prize discs, card frame, rays, banner, coin-burst atlas + confetti: ~130 KB @2x) follows the effect art, i.e. once
+   the first-paint art is in (≤6 s), and is forced on every spin click, so it is cached long before a pop-up opens
+   (the spin itself animates for several seconds). openPop() still guards the icon slots (fixed box + inline fallback). */
+const POP_IMG_ART = [
+  "lw-prize-1", "lw-prize-2", "lw-prize-3", "lw-prize-4", "lw-prize-5", "lw-prize-ticket-2", "lw-prize-ticket-3", "lw-prize-spin",
+  "lw-jackpot-rays", "lw-popup-jackpot-banner",
+];
+const POP_CSS_ART = ["lw-result-card", "lw-go-default", "lw-go-press"];
+const POP_COIN_V = 24; // coinIconHtml({ size: 24 }) in the pop-up amount
+const artCache = new Map(); // url -> HTMLImageElement (kept referenced so the decode is not dropped)
+function warmImg(src, srcset = "") {
+  const key = srcset || src;
+  if (artCache.has(key) || typeof Image === "undefined") return artCache.get(key);
+  const i = new Image();
+  i.decoding = "async";
+  if (srcset) i.srcset = srcset;
+  i.src = src;
+  artCache.set(key, i);
+  return i;
+}
+/** Does the pop-up show the night coin art in the current theme? (css/jiu-coin.css decides; the paper card is a day surface today.) */
+function popWantsNightCoin() {
+  const pop = S.els?.pop;
+  if (!pop || typeof getComputedStyle !== "function") return false;
+  const probe = el(`<span class="lw-pop-amount" style="position:absolute"><span class="lw-unit">${coinIconHtml({ size: POP_COIN_V })}</span></span>`);
+  pop.appendChild(probe);
+  const night = probe.querySelector(".jiu-coin-pic--night");
+  const on = !!night && getComputedStyle(night).display !== "none";
+  probe.remove();
+  return on;
+}
+function preloadPopIcons() {
+  const day = coinArtSrcset(POP_COIN_V);
+  warmImg(day.src, day.srcset);
+  if (popWantsNightCoin()) {
+    const n = coinArtSrcset(POP_COIN_V, { night: true });
+    warmImg(n.src, n.srcset);
+  }
+  warmImg(url("item-ticket-24"), `${url2x("item-ticket-24")} 2x`);
+}
+let popArtOn = false;
+function preloadPopArt() {
+  preloadPopIcons(); // idempotent per URL; re-checks the theme's coin variant
+  if (popArtOn) return;
+  popArtOn = true;
+  for (const n of POP_IMG_ART) warmImg(url(n), `${url2x(n)} 2x`);
+  for (const n of POP_CSS_ART) warmImg(url2x(n));
+  warmFx();
 }
 
 /**
@@ -737,6 +790,29 @@ function settle(res) {
 
 /* ------------------------------------------------------------------ result pop-up (§4.10 (2)) */
 
+/**
+ * Unit-icon slots in the pop-up have a fixed box (css/lucky-wheel.css). If the art is not decoded yet when the pop-up
+ * opens (it is preloaded with the core art, so this is a slow-network edge case), show the inline SVG coin / 🎟️ in the
+ * same box and swap to the art the moment it arrives, so the slot is never empty and nothing shifts.
+ */
+function guardPopIcons(pop) {
+  for (const slot of pop.querySelectorAll(".lw-unit .jiu-coin-icon, .lw-pop-tk, .lw-pop-bal .jiu-coin-icon")) {
+    const imgs = [...slot.querySelectorAll("img")];
+    const shown = imgs.filter((i) => getComputedStyle(i.closest("picture") || i).display !== "none");
+    const ready = () => shown.length > 0 && shown.every((i) => i.complete && i.naturalWidth > 0);
+    if (ready()) continue;
+    const isCoin = slot.classList.contains("jiu-coin-icon");
+    slot.classList.add("lw-icon-pending");
+    slot.insertAdjacentHTML("beforeend", `<span class="lw-icon-fb" aria-hidden="true">${isCoin ? coinSvgHtml({ size: 24 }) : "🎟️"}</span>`);
+    const done = () => {
+      if (!ready()) return;
+      slot.classList.remove("lw-icon-pending");
+      slot.querySelector(".lw-icon-fb")?.remove();
+    };
+    for (const i of shown) i.addEventListener("load", done, { once: true });
+  }
+}
+
 function openPop(res, jackpot) {
   const { pop } = S.els;
   const secList = sectors();
@@ -782,6 +858,7 @@ function openPop(res, jackpot) {
     </div>`;
   if (!res.isJackpot) $(".lw-jackpot-banner", pop).remove();
   if (!res.isJackpot) $(".lw-rays", pop).remove();
+  guardPopIcons(pop);
   S.els.live.textContent = copy.announce;
   for (const b of pop.querySelectorAll("button")) {
     b.addEventListener("pointerdown", () => (b.dataset.state = "press"));

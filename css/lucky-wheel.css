@@ -599,6 +599,12 @@
 .lw-pop-headline .u-ticket-amt { gap: 3px; }
 .lw-pop-headline .lw-pop-tk { width: 1.3em; height: 1.3em; }
 .lw-free-tk .ticket-icon { align-self: center; }
+/* Pop-up unit-icon slots: fixed boxes (no shift while the art loads) + inline fallback until it has decoded (lucky-wheel.js guardPopIcons). */
+.lw-pop .lw-unit .jiu-coin-icon, .lw-pop .lw-pop-tk, .lw-pop-bal .jiu-coin-icon { position: relative; flex: none; }
+.lw-icon-pending > picture, .lw-icon-pending > img { visibility: hidden; }
+.lw-icon-fb { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; pointer-events: none; }
+.lw-icon-fb svg { display: block; width: 100%; height: 100%; color: #2f8a5b; }
+.lw-pop-tk .lw-icon-fb { font-size: 0.8em; }
 .lw-pop-headline { font-weight: 900; font-size: 20px; line-height: 1.2; }
 .lw-pop-lines { margin: 0; padding: 0 6px; list-style: none; font-size: 13.5px; line-height: 1.5; font-weight: 700; }
 .lw-pop-bal { font-size: 13px; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
