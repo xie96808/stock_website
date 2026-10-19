@@ -64,6 +64,7 @@ import {
     clearChartLoading,
     markChartFailed,
 } from './echarts-loader.js';
+import { maybeOfferClassicTutorial, isTutorialBlocking } from './tutorial.js';
 
 // Theme owner notifies; game view rethemes its kline chart only.
 onThemeChange((theme) => {
@@ -166,6 +167,16 @@ export async function startGame(options = {}) {
         applyCloudResume(resumeActions);
     } else if (seeded.cloudMode) {
         persistCurrentCloudDraft();
+    }
+
+    // Newbie spotlight: only fresh classic opens (not resume), logged-in, not yet done.
+    try {
+        maybeOfferClassicTutorial({
+            isResume: !!(resumeActions && resumeActions.length),
+            gameKind: seeded.gameKind || seeded.cloud?.gameKind || 'classic',
+        });
+    } catch (e) {
+        console.warn('tutorial', e);
     }
 }
 
@@ -508,6 +519,7 @@ function bindFastForwardControls() {
 }
 
 export async function handleAction(action) {
+    if (isTutorialBlocking()) return;
     const session = getSession();
     const guard = validatePlayAction(session, action);
     if (!guard.ok) {
@@ -787,6 +799,7 @@ export async function confirmRewind() {
 
 /** Last day only: settle with valuation (not a fake sell). */
 export function finishSettle() {
+    if (isTutorialBlocking()) return;
     stopFastForward();
     const bars = getGameBars();
     const result = settleLocalSession({ bars });

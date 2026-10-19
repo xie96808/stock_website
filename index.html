@@ -1457,6 +1457,7 @@
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
         import { initHomeArcade, refreshHomeArcadeChrome } from './js/home-arcade.js';
+        import { initTutorialUi } from './js/tutorial.js';
         import { applyApkDownloadEntry, applyAppUpdateEntry } from './js/apk-download.js';
         import {
           refreshDailyChallengeFlag,
@@ -1558,6 +1559,7 @@
         initChromeOverflow();
         initResumeBanner();
         initHomeArcade();
+        initTutorialUi();
         initAuth()
           .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); })
           .catch((e) => console.warn('auth init', e));
