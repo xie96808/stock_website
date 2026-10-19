@@ -1,5 +1,6 @@
 /** 韭币 client: balance chrome + daily claim beside auth chip */
 import { api, getAuthState, showToast, selectIsAuthenticated } from "./auth.js";
+import { importWithRetry } from "./lazy-import.js";
 
 /** Shared coin SVG markup (auth chrome, price badges, modals). */
 export function coinIconHtml({ size = 18, className = "jiu-coin-icon" } = {}) {
@@ -20,6 +21,120 @@ export function amountWithCoinHtml(amount, { size = 12 } = {}) {
 }
 
 let claimBusy = false;
+
+/* ---- 幸运转盘 entry (replaces the 每日领取 button in place while the server flag is ON) ----
+ * `wheelMode` is true only when GET /me/jiu-coin returned `wheel.enabled`; an API without the field keeps the legacy flow.
+ * A one-bit localStorage hint avoids a 每日领取→幸运转盘 flash on reload; the next status response corrects it. */
+const WHEEL_HINT_KEY = "stockgame.lw.entry";
+function readWheelHint() {
+  try {
+    return window.localStorage.getItem(WHEEL_HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeWheelHint(on) {
+  try {
+    if (on) window.localStorage.setItem(WHEEL_HINT_KEY, "1");
+    else window.localStorage.removeItem(WHEEL_HINT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+let wheelMode = readWheelHint();
+let wheelRemaining = null;
+let wheelOpening = false;
+
+function paintWheelEntry(btn) {
+  if (!btn) return;
+  const on = wheelMode;
+  btn.classList.toggle("is-wheel", on);
+  if (!on) {
+    btn.querySelectorAll(".lw-entry-ico, .lw-entry-dot").forEach((n) => n.remove());
+    btn.classList.remove("has-spins");
+    btn.title = "每日领取韭币";
+    btn.setAttribute("aria-label", "每日领取韭币");
+    return;
+  }
+  btn.disabled = false;
+  btn.classList.remove("is-claimed");
+  if (!btn.querySelector(".lw-entry-ico")) {
+    const ico = document.createElement("span");
+    ico.className = "lw-entry-ico";
+    ico.setAttribute("aria-hidden", "true");
+    btn.insertBefore(ico, btn.firstChild);
+  }
+  if (!btn.querySelector(".lw-entry-dot")) {
+    const dot = document.createElement("i");
+    dot.className = "lw-entry-dot";
+    dot.setAttribute("aria-hidden", "true");
+    btn.appendChild(dot);
+  }
+  let full = btn.querySelector(".jiu-daily-full");
+  let short = btn.querySelector(".jiu-daily-short");
+  if (!full || !short) {
+    full = document.createElement("span");
+    full.className = "jiu-daily-full";
+    short = document.createElement("span");
+    short.className = "jiu-daily-short";
+    btn.append(full, short);
+  }
+  full.textContent = "幸运转盘";
+  short.textContent = "转盘";
+  const has = wheelRemaining == null ? false : wheelRemaining > 0;
+  btn.classList.toggle("has-spins", has);
+  btn.title = has ? `幸运转盘 · 今日还有 ${wheelRemaining} 次免费机会` : "幸运转盘";
+  btn.setAttribute("aria-label", btn.title);
+}
+
+function setWheelMode(on, remaining) {
+  wheelMode = !!on;
+  wheelRemaining = on && Number.isFinite(Number(remaining)) ? Number(remaining) : null;
+  writeWheelHint(wheelMode);
+  paintWheelEntry(document.getElementById("jiuCoinDailyBtn"));
+}
+
+function onWheelChange(info) {
+  if (!info) return;
+  if (info.disabled) {
+    setWheelMode(false);
+    refreshJiuCoinStatus();
+    return;
+  }
+  if (info.freeSpins && Number.isFinite(Number(info.freeSpins.total))) {
+    wheelRemaining = Number(info.freeSpins.total);
+    paintWheelEntry(document.getElementById("jiuCoinDailyBtn"));
+  }
+  const auth = getAuthState();
+  if (auth.user && Number.isFinite(Number(info.balance))) {
+    auth.user.jiuCoinBalance = info.balance;
+    renderJiuCoinChrome();
+  }
+}
+
+async function openWheelFromEntry() {
+  if (wheelOpening) return;
+  wheelOpening = true;
+  try {
+    const mod = await importWithRetry(
+      "lucky-wheel",
+      () => import("./lucky-wheel.js"),
+      () => new URL("./lucky-wheel.js", import.meta.url).href
+    );
+    const r = await mod.openLuckyWheel({ onChange: onWheelChange });
+    if (r && r.enabled === false) {
+      // server says the wheel is off (flag flipped): fall back to the legacy daily claim flow
+      setWheelMode(false);
+      await refreshJiuCoinStatus();
+      const btn = document.getElementById("jiuCoinDailyBtn");
+      if (btn && !isAlreadyClaimedBtn(btn)) openDailyConfirmModal();
+    }
+  } catch (e) {
+    showToast("转盘加载失败，请检查网络后重试", "error");
+  } finally {
+    wheelOpening = false;
+  }
+}
 
 function el(html) {
   const t = document.createElement("template");
@@ -74,6 +189,7 @@ function ensureCoinDom() {
 
     const btn = document.getElementById("jiuCoinDailyBtn");
     if (btn) btn.addEventListener("click", onDailyClaimClick);
+    paintWheelEntry(btn);
   }
   ensureModals();
   return wrap;
@@ -202,7 +318,7 @@ export function renderJiuCoinChrome() {
   wrap.hidden = !logged;
   if (!logged) {
     balEl.textContent = "0";
-    if (btn) {
+    if (btn && !wheelMode) {
       btn.disabled = false;
       setDailyBtnLabel(btn, "idle");
       btn.classList.remove("is-claimed");
@@ -225,7 +341,10 @@ export async function refreshJiuCoinStatus() {
     if (auth.user) auth.user.jiuCoinBalance = data.balance;
     renderJiuCoinChrome();
     const btn = document.getElementById("jiuCoinDailyBtn");
-    if (btn) {
+    const wheel = data.wheel && data.wheel.enabled ? data.wheel : null;
+    // `wheel` absent/disabled → legacy 每日领取 flow below (also restores the button after the flag is turned off)
+    if (wheel || wheelMode) setWheelMode(!!wheel, wheel?.freeSpins?.total);
+    if (btn && !wheel) {
       if (data.claimedToday) {
         btn.disabled = true;
         setDailyBtnLabel(btn, "claimed");
@@ -247,6 +366,10 @@ function onDailyClaimClick() {
   if (claimBusy) return;
   const auth = getAuthState();
   if (!auth.user) return;
+  if (wheelMode) {
+    openWheelFromEntry();
+    return;
+  }
   const btn = document.getElementById("jiuCoinDailyBtn");
   if (isAlreadyClaimedBtn(btn)) return;
   openDailyConfirmModal();
@@ -284,6 +407,12 @@ async function onDailyClaimConfirm() {
     }
     openSuccessModal(data.amount);
   } catch (e) {
+    if (e?.status === 410 || e?.code === "DAILY_REPLACED_BY_WHEEL") {
+      // the server switched 每日领取 to the lucky wheel while this page was open
+      showToast("每日领取已升级为幸运转盘", "info");
+      await refreshJiuCoinStatus();
+      return;
+    }
     const msg = e?.message || "领取失败";
     showToast(msg, "error");
     if (e?.code === "ALREADY_CLAIMED_TODAY" || /已领取/.test(msg)) {
@@ -315,4 +444,7 @@ export function initJiuCoin() {
   document.addEventListener("stockgame:auth-changed", () => {
     refreshJiuCoinStatus();
   });
+  // initAuth() has already settled by now (its auth-changed event fired before this listener existed), so ask once:
+  // the server tells us whether the entry is the lucky wheel (`wheel`) or the legacy 每日领取 (and whether it was claimed).
+  if (getAuthState().user) refreshJiuCoinStatus();
 }
