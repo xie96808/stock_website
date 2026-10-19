@@ -101,6 +101,14 @@ export function attachDeferredStart(startGame, gameState) {
     setProgress(4, '准备中…');
   }
 
+  function kindLabel(kind) {
+    if (kind === 'daily') return '今日挑战';
+    if (kind === 'oneshot') return '一把梭';
+    if (kind === 'survival') return '生存模式';
+    if (kind === 'puzzle') return '残局';
+    return '经典练习';
+  }
+
   function showConflictView(meta) {
     const choose = choosePane();
     const loading = loadingPane();
@@ -112,16 +120,40 @@ export function attachDeferredStart(startGame, gameState) {
     if (title) title.textContent = '已有云端对局';
     const modal = modalEl();
     if (modal) modal.classList.remove('is-loading');
+    const activeKind = (meta && meta.gameKind) || 'classic';
+    const wantKind = pendingGameKind || 'classic';
     const detail = document.getElementById('fillModeConflictDetail');
     if (detail) {
-      const fillLabel = meta && meta.fillMode === 'same_close' ? '当日收盘成交' : '次日开盘成交';
+      const kindBit = kindLabel(activeKind);
+      const fillLabel =
+        activeKind === 'daily'
+          ? ''
+          : (meta && meta.fillMode === 'same_close' ? '当日收盘成交' : '次日开盘成交');
       const stockBit = meta && (meta.stockName || meta.stockCode)
         ? (' · ' + (meta.stockName || '') + (meta.stockCode ? '（' + meta.stockCode + '）' : ''))
         : '';
       const draftBit = meta && meta.draftDay
         ? ('本机进度：已决策 ' + meta.decided + ' 日，将从第 ' + meta.draftDay + ' 日继续')
         : '本机暂无未提交进度（将从第 1 日继续同一云端题目）';
-      detail.textContent = fillLabel + stockBit + '。' + draftBit + '。跨设备不保证同步未提交动作。';
+      const mismatch =
+        activeKind !== wantKind
+          ? ('当前活动局是「' + kindBit + '」，与本次要开的「' + kindLabel(wantKind) + '」不同。继续会回到原局；重新开始会放弃原局再开' + kindLabel(wantKind) + '。')
+          : '';
+      detail.textContent =
+        ('玩法：' + kindBit + (fillLabel ? ' · ' + fillLabel : '') + stockBit + '。' + draftBit + '。') +
+        (mismatch ? mismatch : '跨设备不保证同步未提交动作。');
+    }
+    const contBtn = document.getElementById('fillModeContinueBtn');
+    const restartBtn = document.getElementById('fillModeRestartBtn');
+    const contLabel = contBtn && contBtn.querySelector('.ctl-label');
+    const restartLabel = restartBtn && restartBtn.querySelector('.ctl-label');
+    if (contLabel) {
+      contLabel.textContent =
+        activeKind !== wantKind ? ('继续' + kindLabel(activeKind)) : '继续游戏';
+    }
+    if (restartLabel) {
+      restartLabel.textContent =
+        activeKind !== wantKind ? ('放弃并开' + kindLabel(wantKind)) : '重新开始';
     }
   }
 
@@ -308,6 +340,7 @@ export function attachDeferredStart(startGame, gameState) {
               stockCode: active.stockCode,
               decided: decided,
               draftDay: decided ? decided + 1 : 0,
+              gameKind: active.gameKind || 'classic',
             });
 
             if (choice === 'cancel') {

@@ -1,6 +1,6 @@
 
 /* ===== Stage 2 auth chrome ===== */
-.auth-chip{position:fixed;top:14px;right:14px;z-index:40;display:flex;align-items:center;gap:8px}
+.auth-chip{position:fixed;top:max(14px, env(safe-area-inset-top, 0px));right:max(14px, env(safe-area-inset-right, 0px));z-index:40;display:flex;align-items:center;gap:8px}
 .auth-login-btn,.auth-user-btn,.auth-primary,.auth-secondary,.auth-danger,.auth-dice{
   font:inherit;cursor:pointer;border:1.5px solid var(--ink,#2a2a2a);background:var(--paper,#f7f1e6);
   color:var(--ink,#2a2a2a);
@@ -45,8 +45,8 @@
 .auth-secondary{margin-top:6px}
 @media (max-width:640px){
   .auth-chip{
-    top:8px;
-    right:8px;
+    top:max(8px, env(safe-area-inset-top, 0px));
+    right:max(8px, env(safe-area-inset-right, 0px));
     left:auto;
     max-width:min(72vw, calc(100vw - 7.5rem));
     flex-wrap:wrap;

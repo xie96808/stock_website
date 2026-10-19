@@ -167,10 +167,10 @@ export function showPuzzleChapters() {
 
 /**
  * Restore start UI after leaving game / LB / my-games.
- * Prefers 模拟盘 hub because those flows live under it.
+ * Homepage (C2 arcade) is now the main entry — do not dump users on the old L2 hub.
  */
 export function restoreSimShell() {
-  showSimHub({ updateHash: true });
+  showHome();
 }
 
 function openAcademyRoute() {
