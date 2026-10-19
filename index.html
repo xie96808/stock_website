@@ -285,13 +285,14 @@
                                     <button type="button" class="lane-compact-hit" id="dailyChallengeHit" onclick="onDailyChallengeCardClick()" aria-label="今日挑战">
                                         <span class="mark daily-challenge-mark">日</span>
                                         <span class="copy">
-                                            <small>全站同题</small>
                                             <strong>今日挑战</strong>
-                                            <p class="lane-note" id="dailyChallengeCardMeta">全站同题 · 每日一盘</p>
+                                            <p class="lane-note" id="dailyChallengeCardMeta">每日一盘</p>
                                             <p class="daily-challenge-card-state lane-note-sub" id="dailyChallengeCardState">加载中…</p>
                                         </span>
-                                        <span class="lane-cost" aria-label="消耗 50 韭币"><span class="lane-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                        <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
+                                        <span class="lane-actions">
+                                            <span class="lane-cost" aria-label="消耗 50 韭币"><span class="lane-cost-n">50</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                            <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
+                                        </span>
                                     </button>
                                     <button type="button" class="lane-board-mini" id="dailyChallengeBoardBtn" hidden onclick="onDailyChallengeBoardClick(event)">查看日榜</button>
                                 </div>
@@ -299,34 +300,37 @@
                                     <span class="lane-ribbon-clip" aria-hidden="true"><span class="classic-mode-ribbon" aria-hidden="true">纸墨练习</span></span>
                                     <span class="mark classic-mode-mark">练</span>
                                     <span class="copy">
-                                        <small>纸墨</small>
                                         <strong>经典练习</strong>
                                         <p class="lane-note">三十日随机盘</p>
                                     </span>
-                                    <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                    <span class="cta cta-fill classic-mode-cta">开始</span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill classic-mode-cta">开始</span>
+                                    </span>
                                 </button>
                                 <button type="button" class="lane lane--compact oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
                                     <span class="lane-ribbon-clip" aria-hidden="true"><span class="oneshot-mode-ribbon" aria-hidden="true">一击</span></span>
                                     <span class="mark oneshot-mode-mark">梭</span>
                                     <span class="copy">
-                                        <small>一击</small>
                                         <strong>一把梭</strong>
                                         <p class="lane-note">只买一次 · 只卖一次</p>
                                     </span>
-                                    <span class="lane-cost" aria-label="消耗 30 韭币"><span class="lane-cost-n">30</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                    <span class="cta cta-fill oneshot-mode-cta">开始</span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 30 韭币"><span class="lane-cost-n">30</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill oneshot-mode-cta">开始</span>
+                                    </span>
                                 </button>
                                 <button type="button" class="lane lane--compact survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
                                     <span class="lane-ribbon-clip" aria-hidden="true"><span class="survival-mode-ribbon" aria-hidden="true">风险</span></span>
                                     <span class="mark survival-mode-mark">生</span>
                                     <span class="copy">
-                                        <small>风险</small>
                                         <strong>生存模式</strong>
                                         <p class="lane-note">爆仓线 −20%</p>
                                     </span>
-                                    <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
-                                    <span class="cta cta-fill survival-mode-cta">开始</span>
+                                    <span class="lane-actions">
+                                        <span class="lane-cost" aria-label="消耗 20 韭币"><span class="lane-cost-n">20</span><span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span>
+                                        <span class="cta cta-fill survival-mode-cta">开始</span>
+                                    </span>
                                 </button>
                                 <button type="button" class="lane lane--compact lane--compact-link puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
                                     <span class="mark">残</span>
@@ -335,7 +339,7 @@
                                         <p class="lane-note" id="puzzleChapterCardMeta">短窗口 · 星级首通</p>
                                         <p class="puzzle-chapter-card-state lane-note-sub" id="puzzleChapterCardState" hidden></p>
                                     </span>
-                                    <span class="cta cta-wash" id="puzzleChapterCardCta">›</span>
+                                    <span class="cta lane-chevron" id="puzzleChapterCardCta" aria-hidden="true">›</span>
                                 </button>
                                 <button type="button" class="lane lane--compact lane--compact-link" id="myGamesModeCard" onclick="showMyGames()">
                                     <span class="mark">绩</span>
@@ -343,7 +347,7 @@
                                         <strong>我的战绩</strong>
                                         <p class="lane-note">云端已保存对局</p>
                                     </span>
-                                    <span class="cta cta-wash">›</span>
+                                    <span class="cta lane-chevron" aria-hidden="true">›</span>
                                 </button>
                                 <button type="button" class="lane lane--compact lane--compact-link" id="leaderboardModeCard" onclick="showLeaderboard()">
                                     <span class="mark">榜</span>
@@ -351,7 +355,7 @@
                                         <strong>练习榜</strong>
                                         <p class="lane-note">次日开盘 / 当日收盘</p>
                                     </span>
-                                    <span class="cta cta-wash">›</span>
+                                    <span class="cta lane-chevron" aria-hidden="true">›</span>
                                 </button>
                             </div>
                             <div class="pm-sheet-foot" id="playModesFoot"></div>

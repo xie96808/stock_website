@@ -153,7 +153,7 @@ export async function refreshDailyChallengeCard() {
   syncCardBadge(cost);
   // Compact sheet note: short line; remaining / status on sub-line
   if (meta) {
-    meta.textContent = '全站同题 · 每日一盘';
+    meta.textContent = '每日一盘';
   }
 
   if (!d.ready) {
