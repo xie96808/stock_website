@@ -167,6 +167,21 @@ export function sectorAria(view) {
   return "再转一次";
 }
 
+/** Track R: why a drawn item / spin sector paid coins instead (server `prize.substituteReason`). */
+export function substituteLine(reason, drawnKind = null) {
+  switch (reason) {
+    case "ticket_daily_cap": return "今日后悔券已达上限，已折算为韭币";
+    case "ticket_hold_cap": return "后悔券持有已达上限，已折算为韭币";
+    case "spin_cap": return "今日再转次数已达上限，已折算为韭币";
+    case "rewind_disabled":
+    case "items_unavailable": return "道具暂时无法发放，已折算为韭币";
+    default:
+      if (drawnKind === "spin") return "今日再转次数已达上限，已折算为韭币";
+      if (drawnKind === "item") return "道具暂时无法发放，已折算为韭币";
+      return "奖品已折算为韭币";
+  }
+}
+
 /**
  * Pop-up copy for a server prize (§4.10 (2)). Everything comes from the response; nothing is inferred
  * except presentation. kind ∈ coin | ticket | spin; extra lines carry the substituted / replay notes.
@@ -175,11 +190,7 @@ export function prizeCopy(prize, { isJackpot = false, replayed = false, freeSpin
   const p = prize || {};
   const jackpot = !!isJackpot;
   const lines = [];
-  if (p.substituted && p.kind === "jiu_coin") {
-    if (drawnKind === "spin") lines.push("今日再转次数已达上限，已折算为韭币");
-    else if (drawnKind === "item") lines.push("道具暂时无法发放，已折算为韭币");
-    else lines.push("奖品已折算为韭币");
-  }
+  if (p.substituted && p.kind === "jiu_coin") lines.push(substituteLine(p.substituteReason, p.drawnKind || drawnKind));
   if (replayed) lines.push("这是你上一次转盘的结果");
   if (p.kind === "jiu_coin") {
     return {

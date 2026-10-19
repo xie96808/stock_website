@@ -883,6 +883,34 @@
   font-size: 0.85rem;
   opacity: 0.85;
 }
+/* Track R3: 后悔券 chip on the result page + confirm-sheet payment switch */
+.result-ticket-chip {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #8a5a00;
+  background: rgba(240, 180, 41, 0.18);
+  border: 1px solid rgba(240, 180, 41, 0.55);
+  vertical-align: 1px;
+}
+[data-theme="dark"] .result-ticket-chip {
+  color: #f5cd6b;
+  background: rgba(240, 180, 41, 0.14);
+}
+.rewind-alt { margin: 0.5rem 0 0; }
+.rewind-pay-link {
+  background: none;
+  border: 0;
+  padding: 0.25rem 0;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--accent, #c0392b);
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* R6: non-blocking ECharts loading / failure fallback */
 #kline-chart[data-chart-pending],

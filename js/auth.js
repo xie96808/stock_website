@@ -326,6 +326,7 @@ function ensureAuthDom() {
           <label class="auth-nick-field">个性签名
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
+          <p class="auth-items-line" id="authItemsLine" hidden></p>
           <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
           <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
           <hr>

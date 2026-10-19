@@ -48,6 +48,7 @@ export const SESSION_KEYS = Object.freeze([
   'rewindBusy',
   'decisionBusy',
   'assistClass',
+  'rewindVia',
   'undoCount',
   'revision',
   'protocolVersion',
@@ -139,6 +140,7 @@ export function buildFreshSessionFields({
     revision: 0,
     undoCount: 0,
     assistClass: null,
+    rewindVia: null,
     rewindBusy: false,
     decisionBusy: false,
   };
@@ -301,6 +303,7 @@ export function selectSettleView(s = getSession()) {
     cloudGameId: s.cloudGameId,
     saveStatus: s.saveStatus,
     assistClass: s.assistClass,
+    rewindVia: s.rewindVia || null,
     undoCount: s.undoCount,
     puzzleResult: s.puzzleResult || null,
     puzzleLevelKey: s.puzzleLevelKey || null,

@@ -1,5 +1,6 @@
 /** Stage 4: dual-mode + dual-metric public leaderboard (perf: per-panel cache + prefetch) */
 import { getAuthState, openAuthModal, api } from "./auth.js";
+import { getRewindTickets } from "./rewind-tickets.js";
 import {
   Route,
   prepareScreen,
@@ -99,7 +100,18 @@ function retLabel(metric) {
   return metric === "average" ? "平均收益" : "收益率";
 }
 
+/** Track R3: 后悔券 rewinds keep a game on the 纯净 board (rewindTicketBoard 'clean'), so say so there. */
+function syncAssistNote() {
+  const el = document.getElementById("leaderboardAssistNote");
+  if (!el) return;
+  const t = getRewindTickets();
+  const show = activeGameKind === "classic" && gameRewindEnabled && activeAssist === "clean" && t.known && t.board === "clean";
+  el.hidden = !show;
+  el.textContent = show ? "纯净榜含使用后悔券的对局（后悔券回退一次，仍按普通对局计入）。" : "";
+}
+
 function syncMetricNote(metric) {
+  syncAssistNote();
   const note = document.getElementById("leaderboardMetricNote");
   if (!note) return;
   if (activeGameKind === "survival" && metric === "best") {
@@ -375,6 +387,7 @@ export async function showLeaderboard(preferred) {
         <ol class="leaderboard-list" id="leaderboardList"></ol>
         <p class="leaderboard-note">公开仅展示昵称与头像，不含登录名。收益按内部精度排序，显示四舍五入后可能相同。</p>
         <p class="leaderboard-note leaderboard-metric-note" id="leaderboardMetricNote" hidden></p>
+        <p class="leaderboard-note leaderboard-assist-note" id="leaderboardAssistNote" hidden></p>
       </div>`;
     document.querySelector(".container")?.appendChild(screen);
     screen.querySelector("#leaderboardBackBtn").onclick = hideLeaderboard;

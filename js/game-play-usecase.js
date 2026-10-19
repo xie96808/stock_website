@@ -225,6 +225,7 @@ export function applyServerDecisionState(state, { bars, session = getSession() }
     revision: state.revision ?? session.revision ?? 0,
     undoCount: state.undoCount ?? session.undoCount ?? 0,
     assistClass: state.assistClass ?? session.assistClass,
+    rewindVia: state.rewindVia ?? session.rewindVia ?? null,
     protocolVersion: state.protocolVersion || session.protocolVersion,
   };
 
@@ -494,6 +495,7 @@ export function sessionPatchFromCloudFinish(data, { isPuzzle = false } = {}) {
   if (data.busted != null) savedPatch.busted = !!data.busted;
   if (data.assistClass) savedPatch.assistClass = data.assistClass;
   if (data.undoCount != null) savedPatch.undoCount = data.undoCount;
+  if (data.rewindVia) savedPatch.rewindVia = data.rewindVia;
   if (isPuzzle) {
     savedPatch.puzzleResult = data;
     if (data.levelKey) savedPatch.puzzleLevelKey = data.levelKey;
@@ -618,6 +620,7 @@ export function seedClassicFromPack(cloud, catalog) {
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,
     assistClass: cloud.assistClass || null,
+    rewindVia: cloud.rewindVia || null,
     currentStock,
     historyLength: historyDays,
     gameKline: currentStock.kline.slice(
@@ -750,12 +753,19 @@ export function applyRewindServerResult(data, { bars, session = getSession() } =
   if (!data || typeof data !== 'object') return { ok: false };
   const applied = applyServerDecisionState(data, { bars, session });
   if (!applied.ok) return { ok: false };
+  // Track R3: a 后悔券 rewind keeps the game's board (server says assistClass 'clean'); never invent 'undo'.
   patchSession({
     undoCount: data.undoCount ?? 1,
-    assistClass: data.assistClass || 'undo',
+    assistClass: data.assistClass || session.assistClass || null,
+    rewindVia: data.rewindVia || (data.paidWith === 'ticket' ? 'ticket' : session.rewindVia || null),
     revision: data.revision ?? getSession().revision,
   });
-  return { ok: true, balanceAfter: data.balanceAfter };
+  return {
+    ok: true,
+    balanceAfter: data.balanceAfter,
+    paidWith: data.paidWith === 'ticket' ? 'ticket' : 'coin',
+    ticketsLeft: Number.isInteger(data.ticketsLeft) ? data.ticketsLeft : null,
+  };
 }
 
 // ─── Create / abandon / settle→persist (orchestration; HTTP injected) ────────
