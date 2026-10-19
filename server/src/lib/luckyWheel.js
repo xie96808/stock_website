@@ -12,6 +12,7 @@ import { challengeNow } from "./dailyChallenge.js";
 import { shanghaiYmd, getJiuCoinBalance } from "./jiuCoin.js";
 import { grantRewardClaim } from "./rewardClaims.js";
 import { writeAuditLog } from "./audit.js";
+import { ITEM_TYPES } from "./userItems.js";
 
 export const WHEEL_SECTORS = 8;
 export const WEIGHT_TOTAL = 10000;
@@ -30,9 +31,7 @@ export const TICKET_REALISTIC_RATE = 0.7;
 export const WHEEL_REASON = "lucky_wheel";
 export const ADMIN_GRANT_MAX = 50;
 
-export const ITEM_TYPES = Object.freeze({
-  rewind_ticket: Object.freeze({ label: "后悔券" }),
-});
+export { ITEM_TYPES };
 
 /** Table A — coin-only launch table. Keep identical to the seed row in migration 026 (test-enforced). */
 export const TABLE_A = Object.freeze([
@@ -58,6 +57,30 @@ export const TABLE_B = Object.freeze([
   { pos: 7, kind: "jiu_coin", amount: 888, weight: 100, jackpot: true },
 ]);
 
+/**
+ * Table C (Bill, 2026-10-19): 58 · 后悔券×2 · 后悔券×3 · 再转一次 · 150 · 200 · 300 · 888 (1%).
+ * Order alternates coin / non-coin around the rim; the jackpot keeps the gold position 5.
+ *   pos: 0=58  1=券×2  2=150  3=再转一次  4=200  5=888★  6=券×3  7=300
+ * NOT seeded: activate with an admin config save (「载入表 C」) or scripts/activate-wheel-table.mjs after Bill approves.
+ * Option C1 (recommended) and C2 (fewer tickets) differ only in weights.
+ */
+function tableC(w) {
+  return Object.freeze([
+    { pos: 0, kind: "jiu_coin", amount: 58, weight: w[0] },
+    { pos: 1, kind: "item", item: "rewind_ticket", qty: 2, weight: w[1] },
+    { pos: 2, kind: "jiu_coin", amount: 150, weight: w[2] },
+    { pos: 3, kind: "spin", qty: 1, weight: w[3] },
+    { pos: 4, kind: "jiu_coin", amount: 200, weight: w[4] },
+    { pos: 5, kind: "jiu_coin", amount: 888, weight: w[5], jackpot: true },
+    { pos: 6, kind: "item", item: "rewind_ticket", qty: 3, weight: w[6] },
+    { pos: 7, kind: "jiu_coin", amount: 300, weight: w[7] },
+  ]);
+}
+export const TABLE_C1 = tableC([3600, 1500, 1600, 1000, 1000, 100, 500, 700]);
+export const TABLE_C2 = tableC([3800, 1000, 2000, 800, 1300, 100, 300, 700]);
+export const TABLE_C = TABLE_C1;
+export const WHEEL_TABLES = Object.freeze({ A: TABLE_A, B: TABLE_B, C1: TABLE_C1, C2: TABLE_C2 });
+
 /* ------------------------------------------------------------------ item plug-in (Track R) */
 
 let itemGranter = null;
@@ -70,6 +93,22 @@ export function registerItemGranter(fn) {
 }
 export function itemsAvailable() {
   return typeof itemGranter === "function";
+}
+
+/** Coins paid when a 再转一次 lands at the daily draw cap: the table's smallest coin prize (Table C: 58). */
+export function spinCapCoins(sectors) {
+  const coins = (sectors || []).filter((s) => s.kind === "jiu_coin").map((s) => s.amount);
+  return coins.length ? Math.min(...coins) : SPIN_CAP_SUBSTITUTE_COINS;
+}
+
+/** 后悔券 already won from the wheel on this Asia/Shanghai day (for rewindTicketDailyCap). */
+export function ticketsWonOn(db, userId, ymd) {
+  return db
+    .prepare(
+      `SELECT COALESCE(SUM(prize_qty), 0) AS q FROM lucky_wheel_spins
+       WHERE user_id = ? AND spin_date = ? AND prize_kind = 'item' AND prize_item = 'rewind_ticket'`
+    )
+    .get(userId, ymd).q;
 }
 
 /* ------------------------------------------------------------------ config math / validation */
@@ -332,6 +371,7 @@ export function adminGetConfig({ db = openDb() } = {}) {
       itemTypes: Object.entries(ITEM_TYPES).map(([type, v]) => ({ type, label: v.label })),
     },
     tableA: TABLE_A,
+    presets: { C1: TABLE_C1, C2: TABLE_C2 },
   };
 }
 
@@ -477,6 +517,10 @@ function prizeFromRow(row) {
     substituted: !!row.substituted,
     isJackpot: !!row.is_jackpot,
   };
+  if (row.substituted) {
+    p.drawnKind = row.drawn_kind;
+    if (row.substitute_reason) p.substituteReason = row.substitute_reason;
+  }
   if (row.prize_kind === "jiu_coin") p.amount = row.prize_qty;
   if (row.prize_kind === "item") {
     p.item = row.prize_item;
@@ -576,21 +620,29 @@ export function spinWheel(userId, { idemKey, rng = defaultRng, now = challengeNo
         prizeQty = coins;
         substituted = 1;
       };
+      let subReason = null;
       if (sector.kind === "item") {
         const rewindOk = sector.item !== "rewind_ticket" || config.gameRewindEnabled;
         let granted = null;
-        if (itemsAvailable() && rewindOk) {
+        if (!itemsAvailable()) subReason = "items_unavailable";
+        else if (!rewindOk) subReason = "rewind_disabled";
+        else if (sector.item === "rewind_ticket" && ticketsWonOn(db, userId, ymd) + sector.qty > config.rewindTicketDailyCap) {
+          subReason = "ticket_daily_cap";
+        } else {
           granted = itemGranter(db, { userId, item: sector.item, qty: sector.qty, spinId });
+          if (granted?.overflow) subReason = granted.reason || "ticket_hold_cap";
         }
         if (granted && !granted.overflow && granted.ledgerId != null) {
           prizeItem = sector.item;
           itemLedgerId = granted.ledgerId;
         } else {
           subCoins(sector.qty * cfg.ticketCoinValue);
+          subReason = subReason || "items_unavailable";
         }
       } else if (sector.kind === "spin") {
         if (state.spinsToday + 1 >= MAX_SPINS_PER_DAY) {
-          subCoins(SPIN_CAP_SUBSTITUTE_COINS);
+          subCoins(spinCapCoins(cfg.sectors));
+          subReason = "spin_cap";
         } else {
           const g = db
             .prepare(
@@ -625,13 +677,13 @@ export function spinWheel(userId, { idemKey, rng = defaultRng, now = challengeNo
           `INSERT INTO lucky_wheel_spins (
             spin_id, user_id, idem_key, spin_date, source, slot, credit_grant_id, config_version, sector, roll,
             drawn_kind, prize_kind, prize_item, prize_qty, coin_value, substituted, is_jackpot,
-            ledger_id, item_ledger_id, bonus_grant_id, balance_after
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+            ledger_id, item_ledger_id, bonus_grant_id, balance_after, substitute_reason
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           spinId, userId, idemKey, ymd, source, slot, creditGrantId, cfg.version, sector.pos, roll,
           sector.kind, prizeKind, prizeItem, prizeQty, coinValue, substituted, isJackpot,
-          ledgerId, itemLedgerId, bonusGrantId, balanceAfter
+          ledgerId, itemLedgerId, bonusGrantId, balanceAfter, substituted ? subReason : null
         );
       return { rowId: Number(info.lastInsertRowid) };
     });

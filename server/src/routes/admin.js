@@ -71,6 +71,8 @@ import {
   adminUserWheel,
 } from "../lib/luckyWheel.js";
 import { openDb } from "../db/connection.js";
+import { adminAdjustItems, adminUserItems } from "../lib/userItems.js";
+import { adminReclassifyTicketGames, adminRewindStats } from "../lib/rewindAdmin.js";
 import {
   adminAbortActive,
   adminAbortPreview,
@@ -691,6 +693,54 @@ router.post("/admin/lucky-wheel/grant", requireAdminVerified, (req, res) => {
       requestId: res.locals.requestId,
     })
   );
+});
+
+/* ---- Track R: 后悔券 inventory, ticket-rewind board switch, fairness stats ---- */
+router.get("/admin/users/:id/items", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  res.setHeader("Cache-Control", "no-store");
+  const r = adminUserItems(id);
+  if (!r) return fail(res, 404, "NOT_FOUND", "用户不存在");
+  return ok(res, r);
+});
+
+router.post("/admin/users/:id/items", requireAdminVerified, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return fail(res, 400, "INVALID_ID", "用户 ID 无效");
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  return wheelResult(
+    res,
+    adminAdjustItems({
+      actorId: req.user.id,
+      userId: id,
+      itemType: body.itemType || "rewind_ticket",
+      delta: body.delta,
+      reason: body.reason,
+      opKey: req.get("Idempotency-Key") || body.opKey || null,
+      requestId: res.locals.requestId,
+    })
+  );
+});
+
+router.post("/admin/rewind-tickets/reclassify", requireAdminVerified, (req, res) => {
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  return wheelResult(
+    res,
+    adminReclassifyTicketGames({
+      actorId: req.user.id,
+      to: body.to,
+      since: body.since ?? null,
+      dryRun: body.dryRun === true,
+      reason: body.reason,
+      requestId: res.locals.requestId,
+    })
+  );
+});
+
+router.get("/admin/rewind/stats", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return ok(res, adminRewindStats({ days: req.query?.days }));
 });
 
 export default router;

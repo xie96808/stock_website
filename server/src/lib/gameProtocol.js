@@ -221,6 +221,7 @@ export function buildStateDto(row) {
     canRewind: sessionCanRewind(row),
     rewindCost: JIU_COIN_GAME_REWIND_COST,
   };
+  if (row.rewind_via) dto.rewindVia = row.rewind_via; // Track R2 (absent for coin / no rewind)
 
   if (protocolVersion === PROTOCOL_EVENT_V1) {
     try {

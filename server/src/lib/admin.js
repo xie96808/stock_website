@@ -310,6 +310,12 @@ export function getAdminGame(gameId) {
     moderationReason: row.moderation_reason ?? null,
     moderatedBy: row.moderated_by ?? null,
     moderatedAt: row.moderated_at ?? null,
+    gameKind: row.game_kind || "classic",
+    undoCount: row.undo_count ?? 0,
+    assistClass: row.assist_class || null,
+    // Track R2: how the one rewind was paid. null = none / coin (coin when undoCount=1).
+    rewindVia: row.rewind_via ?? null,
+    rewindPaidWith: (row.undo_count ?? 0) >= 1 ? (row.rewind_via === "ticket" ? "ticket" : "coin") : null,
   };
 }
 
