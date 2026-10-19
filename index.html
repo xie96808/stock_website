@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="css/controls.css">
     <link rel="stylesheet" href="css/controls-p4.css">
     <link rel="stylesheet" href="css/controls-p5.css">
+    <link rel="stylesheet" href="css/emoji-art.css">
     <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
@@ -166,7 +167,7 @@
                         <!-- Android APK download / iOS add-to-home hint (home hub only) -->
                         <div class="apk-download-entry" id="apkDownloadEntry" hidden>
                             <a class="apk-download-link" id="apkDownloadLink" href="/download/stockgame.apk" download>
-                                <span class="apk-download-icon" aria-hidden="true">📱</span>
+                                <span class="apk-download-icon" aria-hidden="true"><span class="ea-slot ea-slot--themed ea-apk-phone" data-ea="apk-phone"><span class="ea-spacer">📱</span><img class="ea-img ea-img--day" src="assets/icon-unify/apk-phone-28.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false"><img class="ea-img ea-img--night" src="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28-dark@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false" loading="lazy"></span></span>
                                 <span class="apk-download-copy">
                                     <strong>下载安卓 App</strong>
                                     <small>侧载安装，打开即进本站</small>
@@ -1278,8 +1279,8 @@
 
                 <!-- 底部操作栏 -->
                 <div class="ar-actions">
-                    <button class="ar-btn ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="hindsightShare()"><span class="ctl-label">📷 生成分享图</span></button>
-                    <button class="ar-btn ctl ctl-secondary" id="hindsightCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="hindsightCopy()"><span class="ctl-label">📋 复制文案</span></button>
+                    <button class="ar-btn ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="hindsightShare()"><span class="ctl-label"><span class="ea-slot ea-camera" data-ea="camera"><span class="ea-spacer">📷</span><img class="ea-img ea-img--day" src="assets/icon-unify/icon-camera-16.png?v=20261019p3" srcset="assets/icon-unify/icon-camera-16.png?v=20261019p3 1x, assets/icon-unify/icon-camera-16@2x.png?v=20261019p3 2x" width="16" height="16" alt="" decoding="async" draggable="false"></span> 生成分享图</span></button>
+                    <button class="ar-btn ctl ctl-secondary" id="hindsightCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="hindsightCopy()"><span class="ctl-label"><span class="ea-slot ea-clipboard" data-ea="clipboard"><span class="ea-spacer">📋</span><img class="ea-img ea-img--day" src="assets/icon-unify/icon-clipboard-16.png?v=20261019p3" srcset="assets/icon-unify/icon-clipboard-16.png?v=20261019p3 1x, assets/icon-unify/icon-clipboard-16@2x.png?v=20261019p3 2x" width="16" height="16" alt="" decoding="async" draggable="false"></span> 复制文案</span></button>
                     <button class="ar-btn ar-btn-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="hindsightReset()"><span class="ctl-label">↩ 再来一只</span></button>
                 </div>
 

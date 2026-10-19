@@ -10,6 +10,7 @@ import {
 import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
 import { installAvatarFallback } from "./avatar-fallback.js";
+import { emojiArtHtml } from "./emoji-art.js";
 
 installAvatarFallback();
 
@@ -293,7 +294,7 @@ function ensureAuthDom() {
             <label class="auth-nick-field">昵称（可选）
               <input name="nickname" id="registerNickname" maxlength="16" placeholder="掷骰生成或自填">
             </label>
-            <button type="button" class="auth-dice" id="registerNickDice" title="随机昵称">🎲</button>
+            <button type="button" class="auth-dice" id="registerNickDice" title="随机昵称">${emojiArtHtml("dice")}</button>
           </div>
           <div class="avatar-picker">
             <label class="avatar-preview-btn" id="registerAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="registerAvatarFile">
@@ -301,7 +302,7 @@ function ensureAuthDom() {
             </label>
             <input type="file" id="registerAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
             <div class="avatar-actions">
-              <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
+              <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">${emojiArtHtml("dice")}</button>
             </div>
           </div>
           <label class="auth-check"><input type="checkbox" name="terms" required> 我已阅读并同意服务条款</label>
@@ -314,14 +315,14 @@ function ensureAuthDom() {
             </label>
             <input type="file" id="settingsAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
             <div class="avatar-actions">
-              <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">🎲</button>
+              <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">${emojiArtHtml("dice")}</button>
             </div>
           </div>
           <div class="auth-nick-row">
             <label class="auth-nick-field">昵称
               <input id="settingsNickname" maxlength="16">
             </label>
-            <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">🎲</button>
+            <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">${emojiArtHtml("dice")}</button>
           </div>
           <label class="auth-nick-field">个性签名
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">

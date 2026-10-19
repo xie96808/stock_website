@@ -4,6 +4,10 @@
  */
 const ART_V = "20261013g";
 export const GIFT_ART = Object.freeze({
+  flower: { name: "花花", emoji: "🌸" },
+  tomato: { name: "番茄", emoji: "🍅" },
+  pipe: { name: "烟斗", emoji: "💨" },
+  coffee: { name: "咖啡", emoji: "☕" },
   fish: { name: "臭鱼", emoji: "🐟" },
   leaf: { name: "菜叶", emoji: "🥬" },
 });
