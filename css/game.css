@@ -1155,3 +1155,30 @@
   .action-zone #finishBtn,
   .action-zone #rewindBtn { grid-column: 1 / -1; text-align: center; }
 }
+
+/* ===== icon-unify: 后悔券 stub replaces the ↩ glyph in #rewindBtn =====
+   The slot keeps the old glyph box (15.17×16.72 at the 15.2px button font = .998em × 1.1em) so the label x and the
+   button width are unchanged. Light art only: the button is a kraft surface in both themes. */
+.action-btn.rewind .rewind-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 0.998em;
+  height: 1.1em;
+  overflow: visible;
+}
+.action-btn.rewind .rewind-btn-icon picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.action-btn.rewind .rewind-ticket-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}

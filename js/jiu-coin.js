@@ -1,18 +1,10 @@
 /** 韭币 client: balance chrome + daily claim beside auth chip */
 import { api, getAuthState, showToast, selectIsAuthenticated } from "./auth.js";
 import { importWithRetry } from "./lazy-import.js";
+import { coinIconHtml, installIconArtFallback, preloadIconArt } from "./icon-art.js";
 
-/** Shared coin SVG markup (auth chrome, price badges, modals). */
-export function coinIconHtml({ size = 18, className = "jiu-coin-icon" } = {}) {
-  const s = Number(size) || 18;
-  return `<svg class="${className}" viewBox="0 0 24 24" width="${s}" height="${s}" aria-hidden="true" focusable="false">
-  <circle cx="12" cy="12" r="10" fill="currentColor" opacity=".18"/>
-  <circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
-  <circle cx="12" cy="12" r="5.2" fill="none" stroke="currentColor" stroke-width="1.2"/>
-  <path d="M12 7.2v9.6M9.2 9.4c.7-1 2-1.5 2.8-1.5 1.6 0 2.7 1 2.7 2.3 0 1.5-1.3 2.2-2.7 2.6-1.5.4-2.7 1-2.7 2.5 0 1.4 1.2 2.4 3 2.4 1 0 2-.4 2.7-1.2"
-    fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-}
+/** Shared coin markup (auth chrome, price badges, modals): drawn art in the old 0.95em box, SVG fallback. */
+export { coinIconHtml };
 
 /** Number + coin icon (icon after amount). */
 export function amountWithCoinHtml(amount, { size = 12 } = {}) {
@@ -178,7 +170,7 @@ function ensureCoinDom() {
       <span class="jiu-coin-balance" title="韭币余额" aria-live="polite">
         <span class="jiu-coin-amt">
           <span id="jiuCoinBalanceVal" class="jiu-price-num">0</span>
-          ${coinIconHtml({ size: 14 })}
+          ${coinIconHtml({ size: 12 })}
         </span>
       </span>
       <button type="button" class="jiu-coin-daily-btn" id="jiuCoinDailyBtn" title="每日领取韭币" aria-label="每日领取韭币"><span class="jiu-daily-full">每日领取</span><span class="jiu-daily-short">领取</span></button>
@@ -437,6 +429,8 @@ async function onDailyClaimConfirm() {
 }
 
 export function initJiuCoin() {
+  installIconArtFallback();
+  preloadIconArt();
   hydratePriceBadges();
   hydrateInlineCoinIcons();
   ensureCoinDom();

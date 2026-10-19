@@ -509,7 +509,7 @@ function renderState(state) {
   const balance = state.balance == null ? "—" : escapeHtml(state.balance);
   const balanceNode = balanceEl || document.getElementById("pvpLobbyBalance");
   if (balanceNode) {
-    balanceNode.innerHTML = `余额 <span class="jiu-coin-amt"><span class="jiu-price-num">${balance}</span>${coinIconHtml({ size: 14 })}</span>`;
+    balanceNode.innerHTML = `余额 <span class="jiu-coin-amt"><span class="jiu-price-num">${balance}</span>${coinIconHtml({ size: 12 })}</span>`;
     balanceNode.setAttribute("aria-label", `余额 ${state.balance ?? "—"} 韭币`);
   }
   const active = document.getElementById("pvpActiveMatch");
