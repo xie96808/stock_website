@@ -147,8 +147,13 @@ function wire() {
   close.addEventListener("click", () => requestClose());
   oddsBtn.addEventListener("click", () => toggleOdds());
   retry.addEventListener("click", () => loadState({ force: true }));
+  // backdrop closes only when the press also started on the backdrop (dragging a pressed button off the dialog must not close it)
+  let downOnBackdrop = false;
+  S.root.addEventListener("pointerdown", (e) => {
+    downOnBackdrop = e.target === S.root;
+  });
   S.root.addEventListener("click", (e) => {
-    if (e.target === S.root) {
+    if (e.target === S.root && downOnBackdrop) {
       if (!odds.hidden && odds.classList.contains("is-open")) toggleOdds(false);
       else requestClose();
     }
