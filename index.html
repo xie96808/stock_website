@@ -232,7 +232,7 @@
                         </div>
                     </div>
 
-                    <!-- Scheme A: 模拟盘二级 hub — row1 玩法入口, row2 残局 -->
+                    <!-- L2 simHub retired (SIM-PAGES-SYNC); hidden. Entries: home + playModes sheet. -->
                     <div class="lanes sim-hub-lanes" id="simHub" hidden>
                         <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
                         <button type="button" class="lane lane-playmodes" id="playModesEntryCard" onclick="showPlayModes()">
@@ -253,39 +253,17 @@
                             </span>
                             <span class="cta cta-fill">进入对战</span>
                         </button>
-                        <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
-                            <span class="mark">残</span>
-                            <span class="copy">
-                                <small>残局挑战</small>
-                                <strong>章节闯关<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</p>
-                                <p class="puzzle-chapter-card-state" id="puzzleChapterCardState">加载中…</p>
-                            </span>
-                            <span class="cta cta-wash" id="puzzleChapterCardCta">选择章节</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showMyGames()">
-                            <span class="mark">绩</span>
-                            <span class="copy">
-                                <small>云端战绩</small>
-                                <strong>我的战绩</strong>
-                                <p>登录后查看已保存对局与基础统计。</p>
-                            </span>
-                            <span class="cta cta-wash">查看战绩</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showLeaderboard()">
-                            <span class="mark">榜</span>
-                            <span class="copy">
-                                <small>练习榜</small>
-                                <strong>双模式练习榜</strong>
-                                <p>次日开盘 / 当日收盘分榜；游客可看，登录并开启参与后显示名次。</p>
-                            </span>
-                            <span class="cta cta-wash">查看榜单</span>
-                        </button>
+                        <!-- L2 cards moved to playModes sheet -->
+
                     </div>
 
-                    <!-- L3 玩法选择（与二级同构 lanes） -->
-                    <div class="lanes sim-hub-lanes play-modes-lanes" id="playModes" hidden>
-                        <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                    <!-- L3 playModes: direction-C light sheet (SIM-PAGES-SYNC) -->
+                    <div id="playModesBackdrop" class="pm-backdrop" hidden onclick="showHome()" aria-hidden="true"></div>
+                    <div class="lanes sim-hub-lanes play-modes-lanes pm-sheet" id="playModes" hidden role="dialog" aria-modal="true" aria-label="玩法选择">
+                        <div class="pm-sheet-handle" aria-hidden="true"></div>
+                        <button type="button" class="hub-back pm-sheet-back" onclick="showHome()">← 返回首页</button>
+                        <p class="pm-sheet-title">选择玩法</p>
+
                         <button type="button" class="lane daily-challenge-lane" id="dailyChallengeCard" hidden onclick="onDailyChallengeCardClick()">
                             <span class="lane-ribbon-clip" aria-hidden="true"><span class="daily-challenge-ribbon" aria-hidden="true">每日同题</span></span>
                             <span class="mark daily-challenge-mark">日</span>
@@ -328,6 +306,28 @@
                             </span>
                             <span class="cta cta-fill survival-mode-cta">开始生存模式</span>
                         </button>
+
+                        <div class="pm-sheet-more" aria-label="更多入口">
+                            <button type="button" class="pm-link" id="puzzleChapterCard" hidden onclick="onPuzzleChapterCardClick()">
+                                <span class="pm-link-mark">残</span>
+                                <span class="pm-link-copy">
+                                    <strong>残局挑战<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
+                                    <small id="puzzleChapterCardMeta">短窗口 · 初始持仓 · 星级首通</small>
+                                </span>
+                                <span class="pm-link-go" id="puzzleChapterCardCta">›</span>
+                            </button>
+                            <p class="puzzle-chapter-card-state pm-link-state" id="puzzleChapterCardState">加载中…</p>
+                            <button type="button" class="pm-link" onclick="showMyGames()">
+                                <span class="pm-link-mark">绩</span>
+                                <span class="pm-link-copy"><strong>我的战绩</strong><small>云端已保存对局</small></span>
+                                <span class="pm-link-go">›</span>
+                            </button>
+                            <button type="button" class="pm-link" onclick="showLeaderboard()">
+                                <span class="pm-link-mark">榜</span>
+                                <span class="pm-link-copy"><strong>练习榜</strong><small>次日开盘 / 当日收盘</small></span>
+                                <span class="pm-link-go">›</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- L3 残局章节选择（与玩法三级同构） -->
@@ -505,7 +505,7 @@
             <div class="pvp-wrap">
                 <div class="pvp-head pvp-hub-head">
                     <div class="pvp-hub-back-row">
-                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回模拟盘</button>
+                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回首页</button>
                     </div>
                     <div class="pvp-title-block pvp-hub-title">
                         <p class="pvp-kicker pvp-hub-kicker">在线对弈</p>
@@ -1584,7 +1584,7 @@
         })();
         // Single hashchange owner (Phase 1) — home/sim/academy/hindsight/leaderboard
         registerHashRoute(Route.HOME, () => showHome());
-        registerHashRoute(Route.SIM, () => showSimHub({ updateHash: false }));
+        registerHashRoute(Route.SIM, () => showHome()); // L2 retired → homepage
         registerHashRoute(Route.ACADEMY, () => showAcademy({ updateHash: false }));
         registerHashRoute(Route.HINDSIGHT, () => showHindsight({ updateHash: false }));
         registerHashRoute(Route.LEADERBOARD, () => { showLeaderboard(); });

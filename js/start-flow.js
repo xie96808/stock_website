@@ -393,10 +393,10 @@ export function attachDeferredStart(startGame, gameState) {
         packPromiseEnsure.catch(function (err) {
           console.warn('pack load (non-blocking)', err);
         });
-        await animateTo(88, '进入模拟盘…', 80);
+        await animateTo(88, '进入对局…', 80);
       }
 
-      setProgress(94, '进入模拟盘…');
+      setProgress(94, '进入对局…');
       if (cloud) {
         try {
           await refreshMe();

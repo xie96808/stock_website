@@ -1,4 +1,4 @@
-/** Homepage IA Scheme A: root + 模拟盘二级 hub + 三级玩法/残局章节选择 */
+/** Homepage IA: sole L1 entry; L2 retired; L3 playModes = direction-C sheet */
 
 import { loadChunk } from "./chunk-reload.js";
 import {
@@ -31,7 +31,12 @@ function puzzleChaptersEl() {
 
 function hidePlayModesPanel() {
   const modes = playModesEl();
-  if (modes) modes.hidden = true;
+  if (modes) {
+    modes.hidden = true;
+    modes.classList.remove("pm-sheet-open");
+  }
+  const bd = document.getElementById("playModesBackdrop");
+  if (bd) bd.hidden = true;
 }
 
 function hidePuzzleChaptersPanel() {
@@ -102,41 +107,35 @@ export function showHome() {
     .catch(() => {});
 }
 
-/** 模拟盘二级 hub: 玩法入口 / 残局 / 我的战绩 / 练习榜 */
+/**
+ * L2 simHub retired (SIM-PAGES-SYNC): homepage is the sole entry.
+ * Deep links and legacy callers redirect to home. Extra cards (残局/战绩/榜)
+ * now live under the playModes sheet.
+ */
 export function showSimHub(opts = {}) {
-  const { updateHash = true } = opts;
-  prepareScreen(Route.SIM);
-  const home = document.getElementById("homeLanes");
-  const hub = document.getElementById("simHub");
-  if (home) home.hidden = true;
-  if (hub) hub.hidden = false;
-  hidePlayModesPanel();
-  hidePuzzleChaptersPanel();
-  setHubMascotLevel(2);
-  if (updateHash) setRouteHash(Route.SIM);
-  refreshResumeBanner().catch(() => {});
-  // Intent to play: warm pack immediately (don't wait for Start / idle timer).
-  prefetchStocksPack(gameState);
-  refreshPuzzleChapterFlag()
-    .then(() => refreshPuzzleChapterCard())
-    .catch(() => {});
-  loadChunk(() => import("./pvp/lobby.js"))
-    .then((mod) => mod.refreshPvpEntry())
-    .catch(() => {});
+  void opts;
+  showHome();
 }
 
-/** 三级玩法选择：今日挑战 / 经典 / 一把梭 / 生存（hash 仍为 sim） */
+/**
+ * Light mode picker (direction C sheet): 今日挑战 / 经典 / 一把梭 / 生存
+ * + 残局 / 战绩 / 榜. Back → homepage. Hash stays home (no L2).
+ */
 export function showPlayModes() {
-  prepareScreen(Route.SIM);
+  prepareScreen(Route.HOME);
   const home = document.getElementById("homeLanes");
   const hub = document.getElementById("simHub");
   const modes = playModesEl();
-  if (home) home.hidden = true;
+  if (home) home.hidden = false; // keep arcade under the sheet dimmer
   if (hub) hub.hidden = true;
   hidePuzzleChaptersPanel();
-  if (modes) modes.hidden = false;
-  setHubMascotLevel(3);
-  setRouteHash(Route.SIM);
+  if (modes) {
+    modes.hidden = false;
+    modes.classList.add("pm-sheet-open");
+  }
+  document.getElementById("playModesBackdrop")?.removeAttribute("hidden");
+  setHubMascotLevel(1);
+  setRouteHash(Route.HOME);
   refreshResumeBanner().catch(() => {});
   prefetchStocksPack(gameState);
   refreshDailyChallengeFlag()
@@ -145,11 +144,14 @@ export function showPlayModes() {
   refreshGhostDuelFlag().catch(() => {});
   refreshOneshotModeCard().catch(() => {});
   refreshSurvivalModeCard().catch(() => {});
+  refreshPuzzleChapterFlag()
+    .then(() => refreshPuzzleChapterCard())
+    .catch(() => {});
 }
 
 /** 三级残局章节选择：第一～四章已开放（hash 仍为 sim） */
 export function showPuzzleChapters() {
-  prepareScreen(Route.SIM);
+  prepareScreen(Route.HOME);
   const home = document.getElementById("homeLanes");
   const hub = document.getElementById("simHub");
   const chapters = puzzleChaptersEl();
@@ -158,7 +160,7 @@ export function showPuzzleChapters() {
   hidePlayModesPanel();
   if (chapters) chapters.hidden = false;
   setHubMascotLevel(3);
-  setRouteHash(Route.SIM);
+  setRouteHash(Route.HOME);
   prefetchStocksPack(gameState);
   refreshPuzzleChapterFlag()
     .then(() => refreshPuzzleChapterCard())
@@ -185,7 +187,8 @@ function openHindsightRoute() {
 export function applyHomeHashRoute(hash = parseRouteHash()) {
   if (hash === "leaderboard") return; // leaderboard owns this via registerHashRoute
   if (hash === "sim") {
-    showSimHub({ updateHash: false });
+    // Retired L2: deep link #/sim lands on homepage.
+    showHome();
     return;
   }
   if (hash === "knowledge" || hash === "academy") {

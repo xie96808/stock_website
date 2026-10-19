@@ -350,12 +350,12 @@ async function runFreshDailyStart() {
     const game = await createOrResumeDaily();
     if (mustAwaitPackBeforeEnter(game)) {
       await packPromise;
-      setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+      setFillProgress(packReady() ? 88 : 92, '进入对局…');
     } else {
       packPromise.catch((err) => {
         console.warn('pack load (non-blocking, daily)', err);
       });
-      setFillProgress(88, '进入模拟盘…');
+      setFillProgress(88, '进入对局…');
     }
     await refreshMe().catch(() => {});
     await startCloudFromMeta(game);

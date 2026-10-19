@@ -1,0 +1,254 @@
+/* ============================================================
+   Play-modes sheet (SIM-PAGES-SYNC · direction C)
+   Light paper card over the C2 homepage — not the old L2 notebook.
+   ============================================================ */
+
+.pm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(42, 29, 12, 0.38);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+[data-theme="dark"] .pm-backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+#playModes.pm-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 56;
+  width: min(440px, calc(100vw - 20px));
+  max-height: min(78vh, 720px);
+  overflow: auto;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px 16px;
+  border-radius: 22px 22px 18px 18px;
+  border: 1px solid rgba(90, 60, 10, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 28%),
+    #fff6df;
+  box-shadow:
+    0 18px 48px -12px rgba(42, 29, 12, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  text-align: left;
+}
+[data-theme="dark"] #playModes.pm-sheet {
+  border-color: rgba(255, 220, 150, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 200, 100, 0.08), transparent 30%),
+    #241e16;
+  box-shadow: 0 18px 48px -10px rgba(0, 0, 0, 0.65);
+}
+#playModes.pm-sheet[hidden] {
+  display: none !important;
+}
+
+.pm-sheet-handle {
+  align-self: center;
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(90, 60, 10, 0.22);
+  margin: 2px 0 4px;
+}
+[data-theme="dark"] .pm-sheet-handle {
+  background: rgba(255, 220, 150, 0.22);
+}
+
+.pm-sheet-title {
+  margin: 0 4px 4px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: rgba(42, 29, 12, 0.55);
+}
+[data-theme="dark"] .pm-sheet-title {
+  color: rgba(243, 230, 200, 0.55);
+}
+
+#playModes.pm-sheet .hub-back.pm-sheet-back {
+  align-self: flex-start;
+  margin: 0 0 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+/* Compact mode cards inside the sheet */
+#playModes.pm-sheet > .lane {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(90, 60, 10, 0.12);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: none;
+  min-height: 0;
+  padding: 10px 12px;
+  gap: 10px;
+}
+[data-theme="dark"] #playModes.pm-sheet > .lane {
+  border-color: rgba(255, 220, 150, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+#playModes.pm-sheet > .lane .copy p {
+  display: none; /* keep sheet light — title + CTA enough */
+}
+#playModes.pm-sheet > .lane .copy small {
+  font-size: 11px;
+}
+#playModes.pm-sheet > .lane .copy strong {
+  font-size: 14px;
+}
+#playModes.pm-sheet > .lane .mark {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+}
+#playModes.pm-sheet > .lane .cta {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+/* Daily stays emphasized but smaller than home 开一局 */
+#playModes.pm-sheet > .lane.daily-challenge-lane {
+  border-color: rgba(230, 46, 46, 0.28);
+  background: linear-gradient(180deg, rgba(255, 122, 47, 0.12), rgba(255, 255, 255, 0.5));
+}
+[data-theme="dark"] #playModes.pm-sheet > .lane.daily-challenge-lane {
+  background: linear-gradient(180deg, rgba(255, 122, 47, 0.16), rgba(255, 255, 255, 0.03));
+}
+
+#playModes.pm-sheet .hub-board-link {
+  align-self: flex-end;
+  margin: -2px 2px 4px;
+}
+
+/* Migrated L2 links */
+.pm-sheet-more {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(90, 60, 10, 0.14);
+}
+[data-theme="dark"] .pm-sheet-more {
+  border-top-color: rgba(255, 220, 150, 0.12);
+}
+.pm-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  min-height: 44px;
+}
+.pm-link:hover,
+.pm-link:focus-visible {
+  background: rgba(90, 60, 10, 0.06);
+}
+[data-theme="dark"] .pm-link:hover,
+[data-theme="dark"] .pm-link:focus-visible {
+  background: rgba(255, 220, 150, 0.06);
+}
+.pm-link-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(90, 60, 10, 0.08);
+}
+[data-theme="dark"] .pm-link-mark {
+  background: rgba(255, 220, 150, 0.1);
+}
+.pm-link-copy {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.pm-link-copy strong {
+  font-size: 13px;
+  font-weight: 800;
+}
+.pm-link-copy small {
+  font-size: 11px;
+  opacity: 0.65;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-link-go {
+  flex: 0 0 auto;
+  font-size: 18px;
+  opacity: 0.45;
+  padding: 0 4px;
+}
+.pm-link-state {
+  margin: -2px 8px 4px 46px;
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+/* Puzzle chapters L3: same paper card language */
+.puzzle-chapters-lanes {
+  max-width: min(440px, calc(100vw - 20px));
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 18px;
+  padding: 12px !important;
+  border: 1px solid rgba(90, 60, 10, 0.14);
+  background: #fff6df;
+  box-shadow: 0 12px 36px -14px rgba(42, 29, 12, 0.35);
+}
+[data-theme="dark"] .puzzle-chapters-lanes {
+  background: #241e16;
+  border-color: rgba(255, 220, 150, 0.12);
+}
+
+/* Hide retired L2 hub if anything forces it visible */
+#simHub.sim-hub-lanes {
+  /* still functional if forced, but visually quieter */
+}
+
+/* Tutorial replay sits under the back row */
+#playModes.pm-sheet .tut-replay-link {
+  align-self: flex-start;
+  margin: 0 4px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.75;
+  cursor: pointer;
+  padding: 4px 2px;
+  min-height: 44px;
+}

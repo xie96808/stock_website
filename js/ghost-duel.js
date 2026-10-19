@@ -179,12 +179,12 @@ async function runFreshGhostStart({ ghostGameId, random = false } = {}) {
     const game = await createOrResumeGhost(chosen?.gameId || ghostGameId || null);
     if (mustAwaitPackBeforeEnter(game)) {
       await packPromise;
-      setFillProgress(packReady() ? 88 : 92, '进入模拟盘…');
+      setFillProgress(packReady() ? 88 : 92, '进入对局…');
     } else {
       packPromise.catch((err) => {
         console.warn('pack load (non-blocking, ghost)', err);
       });
-      setFillProgress(88, '进入模拟盘…');
+      setFillProgress(88, '进入对局…');
     }
     await refreshMe().catch(() => {});
     if (typeof window.hideDailyChallengeBoard === 'function') {

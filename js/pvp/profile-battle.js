@@ -319,7 +319,7 @@ function renderBlocks(data) {
 export async function showPvpHistory() {
   const on = await pvpEnabled();
   if (!on) {
-    if (typeof window.showSimHub === "function") window.showSimHub();
+    if (typeof window.showHome === "function") window.showHome();
     return;
   }
   const auth = await whenAuthReady();
