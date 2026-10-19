@@ -147,7 +147,7 @@ export function attachDeferredStart(startGame, gameState) {
     const cost = pendingGameKind === 'oneshot' ? 30 : 20; // survival also 20
     note.innerHTML =
       '云端对局每次新建消耗 ' +
-      amountWithCoinHtml(cost, { size: 14 }) +
+      amountWithCoinHtml(cost, { size: 12 }) +
       '；继续未完成对局不扣费。放弃不退款。';
   }
 

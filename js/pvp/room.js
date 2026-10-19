@@ -17,7 +17,7 @@ import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "
 import { rankTitleWithIcon } from "./profile-battle.js";
 
 function stake(amount) {
-  return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 14 })}</span>`;
+  return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 16 })}</span>`;
 }
 
 function readyCopyFrom(economy) {

@@ -306,3 +306,41 @@
     padding: 5px 6px;
   }
 }
+
+/* ===== icon-unify: drawn 韭币 art inside the unchanged 0.95em box =====
+   The box is `.jiu-coin-icon` above (width/height .95em, overflow hidden, flex:none) — the art only FILLS it.
+   Light art is the default everywhere. Dark art (cream sticker, light-brown outline) is opt-in ONLY over
+   genuinely dark surfaces in the dark theme (listed below). Kraft surfaces in dark theme (modals/cards,
+   rewind button + confirm, fill-mode / confirm dialogs, rank card) keep the light art — do not add them here. */
+.jiu-coin-icon > .jiu-coin-pic,
+.jiu-coin-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.jiu-coin-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  image-rendering: auto;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.jiu-coin-pic--night { display: none !important; }
+[data-theme="dark"] :is(
+  .jiu-coin-balance,
+  .jiu-price-badge,
+  .academy-zone-card,
+  .pvp-rules,
+  #pvpReadyCopy,
+  #pvpResultMeMeta
+) .jiu-coin-pic--day { display: none; }
+[data-theme="dark"] :is(
+  .jiu-coin-balance,
+  .jiu-price-badge,
+  .academy-zone-card,
+  .pvp-rules,
+  #pvpReadyCopy,
+  #pvpResultMeMeta
+) .jiu-coin-pic--night { display: block !important; }

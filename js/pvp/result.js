@@ -253,7 +253,7 @@ function ensureSparks() {
 }
 
 function coinPhrase(delta) {
-  const icon = coinIconHtml({ size: 14 });
+  const icon = coinIconHtml({ size: 12 });
   if (delta == null || !Number.isFinite(Number(delta))) {
     return `<span class="jiu-coin-amt" aria-label="韭币未知">—${icon}</span>`;
   }
