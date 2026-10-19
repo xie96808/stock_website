@@ -2,18 +2,20 @@
  * Hand-drawn gift art (绘图bot). Kinds without art keep their emoji.
  * assets/ stays unhashed in release builds, so the ?v= token busts caches.
  */
-const ART_V = "20261013g";
+const ART_V = "20261019g";
 export const GIFT_ART = Object.freeze({
   // dark: has a -dark variant (light-brown outline) used while the page is in the dark theme, where the picker
-  // buttons, the page under the throw and the notice stage are dark. fish/leaf have no dark art (unchanged).
+  // buttons, the page under the throw and the notice stage are dark. All six gifts have one.
+  // file: asset stem under assets/pvp/ when it differs from the kind (gift-<file>[-dark][@2x].webp|png).
   // keepGlyphBox: the picker keeps the emoji as an invisible spacer and overlays the art, so these four
-  // buttons keep exactly the box they had with the emoji (P3 layout contract). fish/leaf keep their shipped layout.
+  // buttons keep exactly the box they had with the emoji (P3 layout contract). fish/leaf keep their shipped
+  // layout (plain picture in the glyph slot); only their art (redrawn, same 96 canvas) and dark selection changed.
   flower: { name: "花花", emoji: "🌸", keepGlyphBox: true, dark: true },
   tomato: { name: "番茄", emoji: "🍅", keepGlyphBox: true, dark: true },
-  pipe: { name: "烟斗", emoji: "💨", keepGlyphBox: true, dark: true },
+  pipe: { name: "烟斗", emoji: "💨", keepGlyphBox: true, dark: true, file: "pipe-lg" },
   coffee: { name: "咖啡", emoji: "☕", keepGlyphBox: true, dark: true },
-  fish: { name: "臭鱼", emoji: "🐟" },
-  leaf: { name: "菜叶", emoji: "🥬" },
+  fish: { name: "臭鱼", emoji: "🐟", dark: true },
+  leaf: { name: "菜叶", emoji: "🥬", dark: true },
 });
 
 export function hasGiftArt(kind) {
@@ -24,8 +26,13 @@ function isDarkTheme() {
   return typeof document !== "undefined" && document.documentElement?.getAttribute("data-theme") === "dark";
 }
 
+function giftArtBase(kind, dark) {
+  const art = GIFT_ART[kind];
+  return `assets/pvp/gift-${(art && art.file) || kind}${dark ? "-dark" : ""}`;
+}
+
 function setGiftSources(picture, kind, dark) {
-  const base = `assets/pvp/gift-${kind}${dark ? "-dark" : ""}`;
+  const base = giftArtBase(kind, dark);
   const webp = picture.querySelector("source");
   const img = picture.querySelector("img");
   if (webp) webp.srcset = `${base}.webp?v=${ART_V} 1x, ${base}@2x.webp?v=${ART_V} 2x`;
@@ -54,7 +61,7 @@ export function giftArtNode(kind, { size = 48, className = "pvp-gift-img" } = {}
   const art = GIFT_ART[kind];
   if (!art) return null;
   const dark = !!art.dark && isDarkTheme();
-  const base = `assets/pvp/gift-${kind}${dark ? "-dark" : ""}`;
+  const base = giftArtBase(kind, dark);
   const picture = document.createElement("picture");
   picture.className = `${className}-wrap`;
   const webp = document.createElement("source");
