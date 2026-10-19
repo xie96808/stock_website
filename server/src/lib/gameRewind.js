@@ -18,6 +18,7 @@ import {
 import { deductRewardClaim } from "./rewardClaims.js";
 import { JIU_COIN_GAME_REWIND_COST, getJiuCoinBalance } from "./jiuCoin.js";
 import { buildStateDto } from "./gameProtocol.js";
+import { consumeItem, getItemQty, ItemError } from "./userItems.js";
 
 export const REWIND_COST = JIU_COIN_GAME_REWIND_COST;
 export const REWIND_REASON = "game_rewind";
@@ -64,10 +65,23 @@ function rewindResponse({ state, balanceBefore, balanceAfter, revokedAction, res
 
 /**
  * POST /games/:id/rewind
- * Body: { expectedRevision }
+ * Body: { expectedRevision, payWith? }  payWith omitted | 'coin' => 50 韭币 (unchanged path) ; 'ticket' => 1 后悔券.
  * Header: Idempotency-Key
  */
 export function rewindGame(userId, gameId, body, commandKey) {
+  const payWith = body?.payWith;
+  if (payWith === undefined || payWith === null || payWith === "coin") {
+    return rewindGameCoin(userId, gameId, body, commandKey);
+  }
+  if (payWith === "ticket") return rewindGameTicket(userId, gameId, body, commandKey);
+  if (!config.gameRewindEnabled) {
+    return { error: { status: 403, code: "GAME_REWIND_DISABLED", message: "反悔功能未启用" } };
+  }
+  return { error: { status: 400, code: "INVALID_PAY_WITH", message: "payWith 只能是 coin 或 ticket" } };
+}
+
+/** Today's 50-coin rewind. Kept byte-identical (golden test + unmodified game-rewind tests). */
+function rewindGameCoin(userId, gameId, body, commandKey) {
   if (!config.gameRewindEnabled) {
     return {
       error: {
@@ -465,4 +479,195 @@ export function canRewindSession(row, { flagEnabled = config.gameRewindEnabled }
   if (actions.length < 1) return false;
   if (actions.length > DECISION_DAYS) return false;
   return true;
+}
+
+/* ------------------------------------------------------------------ Track R2: pay with a 后悔券 */
+
+export const TICKET_ITEM = "rewind_ticket";
+
+function rwErr(status, code, message, details) {
+  return { error: { status, code, message, ...(details ? { details } : {}) } };
+}
+
+/**
+ * Ticket path. Same validation order as the coin path; then, in ONE transaction:
+ * consume 1 ticket (ledger reason rewind_use, ref = game; unique => one per game) → UPDATE session
+ * (undo_count=1, rewind_via='ticket', assist_class unchanged unless rewindTicketBoard='undo') → game_commands row.
+ * Any failure rolls back the ticket. No coin ledger / reward_claims row is written. No 50-coin pre-check.
+ */
+function rewindGameTicket(userId, gameId, body, commandKey) {
+  if (!config.gameRewindEnabled) return rwErr(403, "GAME_REWIND_DISABLED", "反悔功能未启用");
+  if (!commandKey || typeof commandKey !== "string" || commandKey.length < 8 || commandKey.length > 128) {
+    return rwErr(400, "INVALID_IDEMPOTENCY_KEY", "Idempotency-Key 必填（8-128）");
+  }
+  const expectedRevision = body?.expectedRevision;
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    return rwErr(400, "INVALID_REVISION", "expectedRevision 必须是非负整数");
+  }
+  const payloadHash = hashPayload({ expectedRevision, rewind: true, payWith: "ticket" });
+  const db = openDb();
+
+  const existingCmd = db.prepare(`SELECT * FROM game_commands WHERE game_id = ? AND command_key = ?`).get(gameId, commandKey);
+  if (existingCmd) {
+    if (existingCmd.payload_hash !== payloadHash) {
+      return rwErr(409, "IDEMPOTENCY_CONFLICT", "同一幂等键不能用于不同反悔负载");
+    }
+    if (existingCmd.response_json) {
+      try {
+        return { status: 200, data: JSON.parse(existingCmd.response_json) };
+      } catch {
+        /* fall through */
+      }
+    }
+  }
+
+  let row = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+  if (!row || row.user_id !== userId) return rwErr(404, "NOT_FOUND", "对局不存在");
+  row = expireIfNeeded(db, row);
+  if (row.status === "expired") return rwErr(410, "GAME_EXPIRED", "对局已过期");
+  if (row.status !== "active") return rwErr(409, "GAME_NOT_ACTIVE", "对局不在进行中，无法反悔");
+  if (row.protocol_version !== PROTOCOL_EVENT_V1) {
+    return rwErr(409, "PROTOCOL_UNSUPPORTED", "仅新协议经典局支持反悔", { protocolVersion: row.protocol_version });
+  }
+  const kind = row.game_kind || GAME_KIND_CLASSIC;
+  if (kind === GAME_KIND_ONESHOT) return rwErr(409, "REWIND_NOT_ALLOWED", "一把梭模式不可反悔", { gameKind: row.game_kind });
+  if (kind === GAME_KIND_SURVIVAL) return rwErr(409, "REWIND_NOT_ALLOWED", "生存模式不可反悔", { gameKind: row.game_kind });
+  if (kind !== GAME_KIND_CLASSIC) return rwErr(409, "GAME_KIND_UNSUPPORTED", "仅经典随机局支持反悔", { gameKind: row.game_kind });
+  if ((row.undo_count ?? 0) >= 1) return rwErr(409, "REWIND_ALREADY_USED", "本局已使用过反悔");
+  if (row.revision !== expectedRevision) {
+    return rwErr(409, "REVISION_CONFLICT", "revision 不匹配，请重新拉取状态", { expected: expectedRevision, actual: row.revision });
+  }
+  const prevActions = parseActionsJson(row.canonical_actions_json);
+  if (prevActions.length < 1) return rwErr(409, "NO_DECISION_TO_REWIND", "至少需要一条已提交决策才能反悔");
+  const revokedAction = prevActions[prevActions.length - 1];
+  const nextActions = prevActions.slice(0, -1);
+  const restoredDecisionDay = nextActions.length + 1;
+  const snapshot = JSON.parse(row.snapshot_json);
+  if (nextActions.length > 0) {
+    const replay = replayGame({ fillMode: row.fill_mode, bars: snapshot.bars, actions: nextActions, finish: false });
+    if (!replay.ok) {
+      return rwErr(422, "INVALID_ACTION_SEQUENCE", replay.message || "回放失败，无法反悔", { day: replay.day, position: replay.position });
+    }
+  }
+  if (getItemQty(db, userId, TICKET_ITEM) < 1) {
+    return rwErr(409, "NO_TICKET", "没有后悔券", { tickets: 0 });
+  }
+
+  const toUndo = config.rewindTicketBoard === "undo";
+  const revisionBefore = row.revision;
+  const revisionAfter = revisionBefore + 1;
+  const commandId = crypto.randomUUID();
+  const eventJson = JSON.stringify({
+    type: "rewind",
+    revokedAction,
+    restoredDecisionDay,
+    actionCountBefore: prevActions.length,
+    actionCountAfter: nextActions.length,
+    paidWith: "ticket",
+  });
+
+  try {
+    const tx = db.transaction(() => {
+      const fresh = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+      if (!fresh || fresh.user_id !== userId) throw Object.assign(new Error("NOT_FOUND"), { code: "NOT_FOUND" });
+      if (fresh.status !== "active") throw Object.assign(new Error("GAME_NOT_ACTIVE"), { code: "GAME_NOT_ACTIVE" });
+      if (fresh.revision !== expectedRevision) {
+        throw Object.assign(new Error("REVISION_CONFLICT"), { code: "REVISION_CONFLICT", actual: fresh.revision });
+      }
+      if ((fresh.undo_count ?? 0) >= 1) throw Object.assign(new Error("REWIND_ALREADY_USED"), { code: "REWIND_ALREADY_USED" });
+      if (Date.parse(fresh.expires_at) <= challengeNow().getTime()) {
+        db.prepare(`UPDATE game_sessions SET status = 'expired' WHERE id = ?`).run(gameId);
+        throw Object.assign(new Error("GAME_EXPIRED"), { code: "GAME_EXPIRED" });
+      }
+      const again = db.prepare(`SELECT * FROM game_commands WHERE game_id = ? AND command_key = ?`).get(gameId, commandKey);
+      if (again?.response_json) throw Object.assign(new Error("IDEMPOTENCY_HIT"), { code: "IDEMPOTENCY_HIT", row: again });
+
+      const balance = getJiuCoinBalance(userId, db);
+      let used;
+      try {
+        used = consumeItem(db, {
+          userId,
+          itemType: TICKET_ITEM,
+          qty: 1,
+          reason: "rewind_use",
+          refType: "game",
+          refId: gameId,
+          meta: { restoredDecisionDay, revisionBefore, revisionAfter },
+        });
+      } catch (e) {
+        if (e instanceof ItemError && e.code === "NO_ITEM") throw Object.assign(new Error("NO_TICKET"), { code: "NO_TICKET" });
+        throw e;
+      }
+      if (used.unchanged) {
+        // A ticket was already spent on this game (only possible via a lost command row): never spend twice.
+        throw Object.assign(new Error("REWIND_ALREADY_USED"), { code: "REWIND_ALREADY_USED" });
+      }
+
+      const upd = toUndo
+        ? db
+            .prepare(
+              `UPDATE game_sessions SET revision = ?, canonical_actions_json = ?, undo_count = 1, rewind_via = 'ticket', assist_class = ?
+               WHERE id = ? AND status = 'active' AND revision = ? AND undo_count = 0`
+            )
+            .run(revisionAfter, JSON.stringify(nextActions), ASSIST_UNDO, gameId, expectedRevision)
+        : db
+            .prepare(
+              `UPDATE game_sessions SET revision = ?, canonical_actions_json = ?, undo_count = 1, rewind_via = 'ticket'
+               WHERE id = ? AND status = 'active' AND revision = ? AND undo_count = 0`
+            )
+            .run(revisionAfter, JSON.stringify(nextActions), gameId, expectedRevision);
+      if (upd.changes !== 1) {
+        throw Object.assign(new Error("REVISION_CONFLICT"), {
+          code: "REVISION_CONFLICT",
+          actual: db.prepare(`SELECT revision FROM game_sessions WHERE id = ?`).get(gameId)?.revision,
+        });
+      }
+
+      const stateRow = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
+      const responseData = {
+        ...rewindResponse({
+          state: buildStateDto(stateRow),
+          balanceBefore: balance,
+          balanceAfter: balance,
+          revokedAction,
+          restoredDecisionDay,
+          unchanged: false,
+        }),
+        paidWith: "ticket",
+        ticketsLeft: used.qtyAfter,
+      };
+      db.prepare(
+        `INSERT INTO game_commands (
+          id, game_id, command_key, payload_hash, type,
+          revision_before, revision_after, event_json, response_json
+        ) VALUES (?, ?, ?, ?, 'rewind', ?, ?, ?, ?)`
+      ).run(commandId, gameId, commandKey, payloadHash, revisionBefore, revisionAfter, eventJson, JSON.stringify(responseData));
+      return responseData;
+    });
+    return { status: 200, data: tx() };
+  } catch (e) {
+    if (e.code === "IDEMPOTENCY_HIT" && e.row?.response_json) {
+      try {
+        return { status: 200, data: JSON.parse(e.row.response_json) };
+      } catch {
+        /* ignore */
+      }
+    }
+    if (e.code === "REVISION_CONFLICT") {
+      return rwErr(409, "REVISION_CONFLICT", "revision 不匹配，请重新拉取状态", { expected: expectedRevision, actual: e.actual });
+    }
+    if (e.code === "GAME_NOT_ACTIVE") return rwErr(409, "GAME_NOT_ACTIVE", "对局不在进行中，无法反悔");
+    if (e.code === "REWIND_ALREADY_USED") return rwErr(409, "REWIND_ALREADY_USED", "本局已使用过反悔");
+    if (e.code === "GAME_EXPIRED") return rwErr(410, "GAME_EXPIRED", "对局已过期");
+    if (e.code === "NOT_FOUND") return rwErr(404, "NOT_FOUND", "对局不存在");
+    if (e.code === "NO_TICKET") return rwErr(409, "NO_TICKET", "没有后悔券", { tickets: 0 });
+    if (String(e.message || "").includes("UNIQUE")) {
+      const again = db.prepare(`SELECT * FROM game_commands WHERE game_id = ? AND command_key = ?`).get(gameId, commandKey);
+      if (again && again.payload_hash === payloadHash && again.response_json) {
+        return { status: 200, data: JSON.parse(again.response_json) };
+      }
+      return rwErr(409, "IDEMPOTENCY_CONFLICT", "幂等冲突");
+    }
+    throw e;
+  }
 }
