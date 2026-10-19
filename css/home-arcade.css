@@ -352,7 +352,7 @@
   font-size: 16px;
 }
 
-/* CTA: split pill (开一局 + 玩法选择 ▾) — V4 arcade shelf, no outer frame */
+/* CTA: split pill — static hit targets + bouncing visual (V4 shelf) */
 .ha-go-row {
   display: flex;
   flex-wrap: wrap;
@@ -361,41 +361,85 @@
   gap: 10px 12px;
   width: min(440px, 100%);
   margin: 0 auto;
+  /* Reserve shelf (6px) + ~16px air before PvP → shelf-bottom to card ≈ 16px */
+  padding: 0 0 6px;
+  margin-bottom: 16px;
   background: none;
   border: 0;
   box-shadow: none;
   border-radius: 0;
-  padding: 0;
 }
 
-/* Shell carries shelf + glow; children fill without their own shelf */
+/* Outer shell: FIXED layout + hit geometry — never transformed by bounce */
 .ha-go-split {
   display: flex;
   align-items: stretch;
   box-sizing: border-box;
+  position: relative;
   width: min(440px, 100%);
   max-width: 440px;
   height: 80px;
   border-radius: 9999px;
-  overflow: hidden;
+  /* no overflow:hidden — bounce visual may squash slightly outside; hits stay put */
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Painted arcade face: gradient, shelf, sweep, bounce — pointer-events none */
+.ha-go-visual {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
   background: linear-gradient(180deg, var(--ha-cta-a), var(--ha-cta-b));
   box-shadow:
     0 6px 0 var(--ha-cta-sh),
     0 22px 40px -14px rgba(230, 46, 46, 0.75);
   transform-origin: 50% 100%;
   transition: transform 90ms ease, box-shadow 90ms ease;
-  position: relative;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
 }
-.ha-go-split:has(#homeArcadeGo:active) {
+.ha-go-split:has(#homeArcadeGo:active) .ha-go-visual {
   transform: scale(0.965);
   box-shadow:
     0 2px 0 var(--ha-cta-sh),
     0 10px 20px -10px rgba(230, 46, 46, 0.7);
 }
 
+/* Subtle diagonal sweep on the visual only */
+.ha-go-visual::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: 0;
+  width: 26%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+  animation: ha-shine 3.6s ease-in-out 1.2s infinite;
+  pointer-events: none;
+}
+@keyframes ha-shine {
+  0%,
+  62% {
+    transform: translateX(-160%) skewX(-18deg);
+  }
+  78%,
+  100% {
+    transform: translateX(430%) skewX(-18deg);
+  }
+}
+html.is-doc-hidden .ha-go-visual::after {
+  animation-play-state: paused;
+}
+
+/* Static hit targets — no transform from bounce */
 .ha-go {
   position: relative;
-  overflow: hidden;
+  z-index: 1;
+  overflow: visible;
   flex: 1 1 auto;
   box-sizing: border-box;
   width: auto;
@@ -413,8 +457,8 @@
   justify-content: center;
   line-height: 1.1;
   cursor: pointer;
-  /* press feedback lives on .ha-go-split:has(:active) */
-  transition: none;
+  transform: none !important;
+  animation: none !important;
 }
 .ha-go b {
   font-size: 30px;
@@ -452,37 +496,9 @@
   object-fit: contain;
 }
 
-/* Subtle diagonal sweep (low opacity); paused when page hidden */
-.ha-go-split::after {
-  content: "";
-  position: absolute;
-  top: -40%;
-  bottom: -40%;
-  left: 0;
-  width: 26%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.22), transparent);
-  transform: translateX(-160%) skewX(-18deg);
-  animation: ha-shine 3.6s ease-in-out 1.2s infinite;
-  pointer-events: none;
-  z-index: 2;
-}
-@keyframes ha-shine {
-  0%,
-  62% {
-    transform: translateX(-160%) skewX(-18deg);
-  }
-  80%,
-  100% {
-    transform: translateX(430%) skewX(-18deg);
-  }
-}
-html.is-doc-hidden .ha-go-split::after {
-  animation-play-state: paused;
-}
-
-/* Right segment: 玩法选择 (does not start a game) */
 .ha-go-seg {
   position: relative;
+  z-index: 1;
   flex: 0 0 48px;
   min-width: 44px;
   height: 100%;
@@ -494,7 +510,8 @@ html.is-doc-hidden .ha-go-split::after {
   cursor: pointer;
   display: grid;
   place-items: center;
-  z-index: 3;
+  transform: none !important;
+  animation: none !important;
   transition: filter 90ms ease, background-color 90ms ease;
 }
 .ha-go-seg::before {
@@ -520,12 +537,12 @@ html.is-doc-hidden .ha-go-split::after {
   filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
 }
 
-/* Guest bounce: whole split moves together */
-html[data-auth="guest"] .ha-go-split.ha-bounce {
+/* Guest bounce: visual only — hit targets stay fixed */
+html[data-auth="guest"] .ha-go-visual.ha-bounce {
   animation: ha-cta-bounce 1.4s cubic-bezier(0.33, 0, 0.3, 1) 0.8s infinite both;
 }
-html[data-auth] .ha-go-split.ha-bounce:has(#homeArcadeGo:active),
-html[data-auth].is-doc-hidden .ha-go-split.ha-bounce {
+html[data-auth] .ha-go-split:has(#homeArcadeGo:active) .ha-go-visual.ha-bounce,
+html[data-auth].is-doc-hidden .ha-go-visual.ha-bounce {
   animation-play-state: paused;
 }
 @keyframes ha-cta-bounce {
@@ -547,8 +564,8 @@ html[data-auth].is-doc-hidden .ha-go-split.ha-bounce {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  html[data-auth="guest"] .ha-go-split.ha-bounce,
-  .ha-go-split::after,
+  html[data-auth="guest"] .ha-go-visual.ha-bounce,
+  .ha-go-visual::after,
   .ha-mascot,
   .ha-kl .c {
     animation: none !important;
@@ -562,7 +579,8 @@ html[data-auth].is-doc-hidden .ha-go-split.ha-bounce {
 
 /* PvP ticket */
 .ha-pvp {
-  margin-top: 16px;
+  /* Breathing room owned by .ha-go-row (shelf pad + 16px). Keep 0 here to avoid double gap. */
+  margin-top: 0;
   width: min(440px, 100%);
   height: 68px;
   display: flex;

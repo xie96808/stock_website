@@ -25,9 +25,14 @@ function goBtn() {
   return $("homeArcadeGo");
 }
 
-/** Split shell (pill + 玩法选择 seg); bounce applies here so both halves move together. */
+/** Split shell (layout + hit targets). */
 function goSplit() {
   return $("homeArcadeGoSplit") || goBtn();
+}
+
+/** Painted face that bounces — hit targets stay static. */
+function goVisual() {
+  return $("homeArcadeGoVisual") || goSplit();
 }
 
 function setAuthDataset(mode) {
@@ -42,7 +47,7 @@ function setAuthDataset(mode) {
  * pending/user: no bounce (avoids flash while auth settles).
  */
 export function setHomeCtaBounce(on) {
-  const b = goSplit();
+  const b = goVisual();
   if (!b) return;
   clearTimeout(stopBounceTimer);
   if (on) {
@@ -85,7 +90,7 @@ function applyAuthChrome() {
     setHomeCtaBounce(false);
   } else {
     // pending: no bounce, mark pending so CSS does not animate
-    const b = goSplit();
+    const b = goVisual();
     if (b) b.classList.remove("ha-bounce");
     setAuthDataset("pending");
   }
