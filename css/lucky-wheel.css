@@ -250,34 +250,35 @@
   width: calc(var(--lw-u) * 46);
   height: calc(var(--lw-u) * 46);
   margin-left: calc(var(--lw-u) * -23);
-  margin-top: calc(var(--lw-u) * (-128 - 23));
+  margin-top: calc(var(--lw-u) * (-138 - 23));
   object-fit: contain;
 }
 .lw-sec.is-big .lw-sec-ico {
   width: calc(var(--lw-u) * 60);
   height: calc(var(--lw-u) * 60);
   margin-left: calc(var(--lw-u) * -30);
-  margin-top: calc(var(--lw-u) * (-128 - 30));
+  margin-top: calc(var(--lw-u) * (-136 - 30));
 }
 .lw-sec-txt {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
-  margin-top: calc(var(--lw-u) * (-88 - 12));
-  height: calc(var(--lw-u) * 24);
-  line-height: calc(var(--lw-u) * 24);
+  margin-top: calc(var(--lw-u) * (-96 - 15));
+  height: calc(var(--lw-u) * 30);
+  line-height: calc(var(--lw-u) * 30);
   text-align: center;
-  font-family: inherit;
+  /* 楷体 (site --kaiti stack), ink #26211d, radially aligned with the disc */
+  font-family: var(--kaiti, "KaiTi", "楷体", "STKaiti", "Kaiti SC", serif);
   font-weight: 900;
-  font-size: calc(var(--lw-u) * 23);
+  font-size: calc(var(--lw-u) * 29);
   letter-spacing: 0;
   color: var(--lw-label-ink);
   font-variant-numeric: tabular-nums;
 }
-.lw-sec.is-long .lw-sec-txt { font-size: calc(var(--lw-u) * 18); }
-.lw-sec.is-big .lw-sec-txt { font-size: calc(var(--lw-u) * 25); letter-spacing: 0.02em; }
-.lw-sec.is-text .lw-sec-txt { font-size: calc(var(--lw-u) * 19); letter-spacing: 0.05em; }
+.lw-sec.is-long .lw-sec-txt { font-size: calc(var(--lw-u) * 22); }
+.lw-sec.is-big .lw-sec-txt { font-size: calc(var(--lw-u) * 31); letter-spacing: 0.02em; }
+.lw-sec.is-text .lw-sec-txt { font-size: calc(var(--lw-u) * 22); letter-spacing: 0.05em; }
 
 /* win highlight */
 .lw-disc.is-win .lw-glow { animation: lw-glow-pulse 1000ms ease-in-out 2 both; }
