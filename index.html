@@ -138,51 +138,90 @@
                             <p class="sub">用真实 A 股数据，重走每一次错过的行情</p>
                         </div>
                     </div>
-                    <!-- Scheme A: root home — three primary entries only -->
-                    <div class="lanes" id="homeLanes">
-                        <button type="button" class="lane" onclick="showSimHub()">
-                            <span class="mark">一</span>
-                            <span class="copy">
-                                <small>模拟盘</small>
-                                <strong>练习与战绩<span class="jiu-price-badge jiu-price-paid" data-jiu-price="20" aria-label="消耗 20 韭币"></span></strong>
-                                <p>开始游戏、查看战绩与双模式练习榜，均从这里进入。</p>
-                            </span>
-                            <span class="cta cta-fill cta-bounce">进入模拟盘</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showAcademy()">
-                            <span class="mark">二</span>
-                            <span class="copy">
-                                <small>知识馆</small>
-                                <strong>韭菜修炼基地<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p>每日答题赚韭币；形态与题库免费练。</p>
-                            </span>
-                            <span class="cta cta-wash">进入基地</span>
-                        </button>
-                        <button type="button" class="lane" onclick="showHindsight()">
-                            <span class="mark">三</span>
-                            <span class="copy">
-                                <small>悔棋局</small>
-                                <strong>当初买了该多好<span class="jiu-price-badge jiu-price-free" data-jiu-price="0" aria-label="免费"></span></strong>
-                                <p>输入股票与区间，回溯最优买卖点，对照错过的那笔收益。</p>
-                            </span>
-                            <span class="cta cta-wash">立即回溯</span>
-                        </button>
-                        <!-- Android APK download / iOS add-to-home hint (home hub only) -->
-                        <div class="apk-download-entry" id="apkDownloadEntry" hidden>
-                            <a class="apk-download-link" id="apkDownloadLink" href="/download/stockgame.apk" download>
-                                <span class="apk-download-icon" aria-hidden="true"><span class="ea-slot ea-slot--themed ea-apk-phone" data-ea="apk-phone"><span class="ea-spacer">📱</span><img class="ea-img ea-img--day" src="assets/icon-unify/apk-phone-28.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false"><img class="ea-img ea-img--night" src="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28-dark@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false" loading="lazy"></span></span>
-                                <span class="apk-download-copy">
-                                    <strong>下载安卓 App</strong>
-                                    <small>侧载安装，打开即进本站</small>
-                                </span>
-                            </a>
-                            <p class="apk-download-tip" id="apkDownloadTip">首次安装需允许「安装未知来源应用」</p>
-                            <p class="apk-ios-hint" id="apkIosHint" hidden>苹果用户：用 Safari 打开本站，点分享 → 添加到主屏幕</p>
+                    <!-- C2 arcade home (r6) -->
+                    <div class="lanes home-arcade" id="homeLanes">
+                        <div class="ha-daily" id="homeArcadeDaily" hidden>
+                            今日挑战 · 刷新 <span class="ha-cd" aria-live="polite">--:--:--</span>
+                            <button type="button">去挑战</button>
                         </div>
-                        <!-- Android shell only (bridge exposes checkUpdate) -->
-                        <div class="app-update-entry" id="appUpdateEntry" hidden>
-                            <button type="button" class="app-update-btn" id="appUpdateBtn">检查更新</button>
-                            <small class="app-update-version" id="appUpdateVersion"></small>
+                        <div class="ha-hero" aria-hidden="true">
+                            <div class="ha-kl" id="homeArcadeKl"></div>
+                            <div class="ha-bp" id="homeArcadePanel">
+                                <div class="ha-bp-in">
+                                    <div class="c lab" style="left:calc(var(--u)*6);top:calc(var(--u)*22)">总资产<svg viewBox="0 0 34 25" style="width:calc(var(--u)*34);height:calc(var(--u)*25);margin-left:calc(var(--u)*13)" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M1.6 12.5C5.5 5.2 10.8 1.6 17 1.6s11.5 3.6 15.4 10.9C28.5 19.8 23.2 23.4 17 23.4S5.5 19.8 1.6 12.5z"/><circle cx="17" cy="12.5" r="5.4"/></svg></div>
+                                    <div class="c lab" style="left:calc(var(--u)*245);top:calc(var(--u)*22)">浮动盈亏</div>
+                                    <div class="c lab" style="left:calc(var(--u)*483.5);top:calc(var(--u)*22)">当日参考盈亏<svg viewBox="0 0 27 27" style="width:calc(var(--u)*27);height:calc(var(--u)*27);margin-left:calc(var(--u)*11)" fill="none" stroke="currentColor" stroke-width="2.1"><circle cx="13.5" cy="13.5" r="12.3"/><path d="M13.5 11.2v8.6" stroke-linecap="round"/><circle cx="13.5" cy="7.4" r="1.5" fill="currentColor" stroke="none"/></svg></div>
+                                    <div class="c vw" style="left:calc(var(--u)*6);top:calc(var(--u)*74);width:calc(var(--u)*232)"><span class="val num" data-num="total"></span></div>
+                                    <div class="c vw" style="left:calc(var(--u)*245);top:calc(var(--u)*74);width:calc(var(--u)*232)"><span class="val num" data-num="float"></span></div>
+                                    <div class="c vw" style="left:calc(var(--u)*483.5);top:calc(var(--u)*74);width:calc(var(--u)*270)"><span class="val num" data-num="day"></span><span class="pct num" data-num="dayPct"></span></div>
+                                    <div class="c lab" style="left:calc(var(--u)*6);top:calc(var(--u)*175)">总市值</div>
+                                    <div class="c lab" style="left:calc(var(--u)*245);top:calc(var(--u)*175)">可用<span class="bp-chip">逆回购<i></i></span></div>
+                                    <div class="c lab" style="left:calc(var(--u)*483.5);top:calc(var(--u)*175)">可取<span class="bp-chip">转账<i></i></span></div>
+                                    <div class="c vw" style="left:calc(var(--u)*6);top:calc(var(--u)*229);width:calc(var(--u)*232)"><span class="val num" data-num="mv"></span></div>
+                                    <div class="c vw" style="left:calc(var(--u)*245);top:calc(var(--u)*229);width:calc(var(--u)*232)"><span class="val num" data-num="avail"></span></div>
+                                    <div class="c vw" style="left:calc(var(--u)*483.5);top:calc(var(--u)*229);width:calc(var(--u)*270)"><span class="val num" data-num="draw"></span></div>
+                                    <span class="dot" style="left:calc(var(--u)*344);background:#fa1430"></span>
+                                    <span class="dot" style="left:calc(var(--u)*370);background:#e0e0e0"></span>
+                                </div>
+                            </div>
+                            <div class="ha-mascot">
+                                <img class="day-only" src="images/mascot-l1-day.jpg" alt="">
+                                <img class="night-only" src="images/mascot-l1-night.jpg" alt="">
+                            </div>
+                        </div>
+                        <h1 class="ha-title">这把，换<em>你来操盘</em></h1>
+                        <p class="ha-sub">一段行情，考验你的真本事</p>
+                        <div class="ha-go-row">
+                            <button type="button" class="ha-go" id="homeArcadeGo" aria-label="开一局">
+                                <b data-ha-go-title>开一局</b>
+                                <small data-ha-go-sub>单人模拟盘 · <span class="coin-amt" aria-label="20 韭币">20<span class="coin-slot" aria-hidden="true"><img src="assets/icon-unify/coin-glyph-16.png" srcset="assets/icon-unify/coin-glyph-16.png 1x, assets/icon-unify/coin-glyph-16@2x.png 2x" width="14" height="14" alt="" decoding="async"></span></span></small>
+                            </button>
+                            <button type="button" class="ha-modes" id="homeArcadeModes" aria-label="玩法选择">玩法选择</button>
+                        </div>
+                        <button type="button" class="ha-pvp" id="homeArcadePvp" hidden>
+                            <span class="avs"><img src="images/og-mascot-day.jpg" alt=""><i>VS</i><img src="assets/pvp/bot-b-256.webp" alt=""></span>
+                            <span class="t"><b>双人对战</b><span><i class="live"></i>匹配对手 · 可约战</span></span>
+                            <span class="m">匹配 ›</span>
+                        </button>
+                        <div class="ha-secondaries" aria-label="更多">
+                            <button type="button" class="ha-scard" id="homeArcadeLearn">
+                                <span class="ico" aria-hidden="true">
+                                    <img class="day-only" src="assets/home-redesign/home-card-learn.png" srcset="assets/home-redesign/home-card-learn.png 1x, assets/home-redesign/home-card-learn@2x.png 2x" alt="">
+                                    <img class="night-only" src="assets/home-redesign/home-card-learn-dark.png" srcset="assets/home-redesign/home-card-learn-dark.png 1x, assets/home-redesign/home-card-learn-dark@2x.png 2x" alt="">
+                                </span>
+                                <span class="meta">
+                                    <b>知识学习</b>
+                                    <em class="tag tag-coin" aria-label="赚韭币">赚<span class="coin-slot" aria-hidden="true"><img class="day-only" src="assets/icon-unify/coin-glyph-12.png" srcset="assets/icon-unify/coin-glyph-12.png 1x, assets/icon-unify/coin-glyph-12@2x.png 2x" width="12" height="12" alt="" decoding="async"><img class="night-only" src="assets/icon-unify/coin-glyph-12-dark.png" srcset="assets/icon-unify/coin-glyph-12-dark.png 1x, assets/icon-unify/coin-glyph-12-dark@2x.png 2x" width="12" height="12" alt="" decoding="async"></span></em>
+                                </span>
+                            </button>
+                            <button type="button" class="ha-scard" id="homeArcadeHindsight">
+                                <span class="ico" aria-hidden="true">
+                                    <img class="day-only" src="assets/home-redesign/home-card-hindsight.png" srcset="assets/home-redesign/home-card-hindsight.png 1x, assets/home-redesign/home-card-hindsight@2x.png 2x" alt="">
+                                    <img class="night-only" src="assets/home-redesign/home-card-hindsight-dark.png" srcset="assets/home-redesign/home-card-hindsight-dark.png 1x, assets/home-redesign/home-card-hindsight-dark@2x.png 2x" alt="">
+                                </span>
+                                <span class="meta">
+                                    <b>假如买了该多好</b>
+                                    <em class="tag tag-free">免费</em>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="ha-foot">
+                            <div class="apk-download-entry" id="apkDownloadEntry" hidden>
+                                <a class="apk-download-link" id="apkDownloadLink" href="/download/stockgame.apk" download>
+                                    <span class="apk-download-icon" aria-hidden="true"><span class="ea-slot ea-slot--themed ea-apk-phone" data-ea="apk-phone"><span class="ea-spacer">📱</span><img class="ea-img ea-img--day" src="assets/icon-unify/apk-phone-28.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false"><img class="ea-img ea-img--night" src="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3" srcset="assets/icon-unify/apk-phone-28-dark.png?v=20261019p3 1x, assets/icon-unify/apk-phone-28-dark@2x.png?v=20261019p3 2x" width="28" height="28" alt="" decoding="async" draggable="false" loading="lazy"></span></span>
+                                    <span class="apk-download-copy">
+                                        <strong>下载安卓 App</strong>
+                                        <small>侧载安装，打开即进本站</small>
+                                    </span>
+                                </a>
+                                <p class="apk-download-tip" id="apkDownloadTip">首次安装需允许「安装未知来源应用」</p>
+                                <p class="apk-ios-hint" id="apkIosHint" hidden>苹果用户：用 Safari 打开本站，点分享 → 添加到主屏幕</p>
+                            </div>
+                            <div class="app-update-entry" id="appUpdateEntry" hidden>
+                                <button type="button" class="app-update-btn" id="appUpdateBtn">检查更新</button>
+                                <small class="app-update-version" id="appUpdateVersion"></small>
+                            </div>
+                            <span class="legal">历史行情模拟游戏，非实盘交易</span>
                         </div>
                     </div>
 
@@ -1417,6 +1456,7 @@
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
+        import { initHomeArcade, refreshHomeArcadeChrome } from './js/home-arcade.js';
         import { applyApkDownloadEntry, applyAppUpdateEntry } from './js/apk-download.js';
         import {
           refreshDailyChallengeFlag,
@@ -1517,8 +1557,9 @@
         initPageZoom();
         initChromeOverflow();
         initResumeBanner();
+        initHomeArcade();
         initAuth()
-          .then(() => initJiuCoin())
+          .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); })
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }

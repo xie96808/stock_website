@@ -240,3 +240,96 @@
 [data-theme="dark"] .fill-mode-btn.danger:hover:not(:disabled) {
     background: rgba(240, 120, 120, 0.14);
 }
+
+
+/* ---- C2 arcade fill-mode restyle (behaviour unchanged) ---- */
+.fill-mode-dialog {
+  border-radius: 20px;
+  border: 1px solid rgba(90, 60, 10, 0.16);
+  background: rgba(255, 250, 240, 0.98);
+  box-shadow: 0 22px 48px -18px rgba(90, 50, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 1.25rem 1.3rem 1.1rem;
+}
+[data-theme="dark"] .fill-mode-dialog {
+  background: rgba(31, 26, 19, 0.97);
+  border-color: rgba(255, 226, 170, 0.14);
+  box-shadow: 0 22px 48px -14px rgba(0, 0, 0, 0.65);
+}
+.fill-mode-dialog-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.35rem;
+}
+.fill-mode-dialog-sub {
+  color: var(--muted, #7a6542);
+  font-size: 0.88rem;
+}
+.fill-mode-picker {
+  margin: 0.85rem 0 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fill-mode-option {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(90, 60, 10, 0.16);
+  background: rgba(255, 255, 255, 0.72);
+  transition: border-color 180ms ease, transform 90ms ease, box-shadow 180ms ease;
+  gap: 0.7rem;
+}
+[data-theme="dark"] .fill-mode-option {
+  background: rgba(40, 34, 26, 0.82);
+  border-color: rgba(255, 226, 170, 0.16);
+}
+.fill-mode-option:has(input:checked) {
+  border-color: #e62e2e;
+  box-shadow: 0 0 0 3px rgba(230, 46, 46, 0.18);
+}
+.fill-mode-option:active {
+  transform: scale(0.98);
+}
+.fill-mode-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+.fill-mode-btn.primary {
+  background: linear-gradient(180deg, #ff7a2f, #e62e2e);
+  border: 0;
+  color: #fff;
+  font-weight: 800;
+  border-radius: 999px;
+  box-shadow: 0 4px 0 #a3161a;
+  min-height: 44px;
+  padding: 0 22px;
+  transition: transform 90ms ease, box-shadow 90ms ease;
+}
+.fill-mode-btn.primary:active {
+  transform: scale(0.965);
+  box-shadow: 0 2px 0 #a3161a;
+}
+.fill-mode-btn.ghost {
+  border-radius: 999px;
+  min-height: 44px;
+  padding: 0 18px;
+  font-weight: 700;
+  transition: transform 90ms ease;
+}
+.fill-mode-btn.ghost:active {
+  transform: scale(0.965);
+}
+.fill-mode-backdrop {
+  background: rgba(18, 16, 12, 0.52);
+  backdrop-filter: blur(3px);
+}
+.fill-load-shell {
+  border-radius: 14px;
+  padding: 0.85rem 0.2rem 0.4rem;
+}
