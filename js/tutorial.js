@@ -186,6 +186,19 @@ function place() {
   stepEl.textContent = `${step + 1} / ${STEPS.length}`;
   nextBtn.textContent = step >= STEPS.length - 1 ? "开始" : "下一步";
 
+  // Scroll primary target into view so mobile sticky/offscreen modules get a real hole.
+  const scrollSel = (spec.union && spec.union[0]) || (spec.selectors && spec.selectors[0]);
+  if (scrollSel) {
+    const el = document.querySelector(scrollSel);
+    if (el && typeof el.scrollIntoView === "function") {
+      try {
+        el.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" in document.documentElement.style ? "instant" : "auto" });
+      } catch {
+        el.scrollIntoView(true);
+      }
+    }
+  }
+
   const rect = resolveTarget(spec);
   const vw = window.innerWidth;
   const vh = window.innerHeight;
@@ -197,14 +210,11 @@ function place() {
     hole.style.left = "0px";
     hole.style.width = "0px";
     hole.style.height = "0px";
-    bubble.classList.toggle("is-sheet", narrow);
-    if (narrow) {
-      bubble.style.left = "";
-      bubble.style.top = "";
-    } else {
-      bubble.style.left = `${Math.max(16, (vw - 320) / 2)}px`;
-      bubble.style.top = `${Math.max(80, vh * 0.38)}px`;
-    }
+    bubble.classList.remove("is-sheet", "is-sheet-top");
+    bubble.style.left = `${Math.max(16, (vw - 320) / 2)}px`;
+    bubble.style.top = `${Math.max(80, vh * 0.36)}px`;
+    bubble.style.bottom = "";
+    bubble.style.width = "";
     return;
   }
 
@@ -218,24 +228,61 @@ function place() {
   hole.style.width = `${w}px`;
   hole.style.height = `${h}px`;
 
-  bubble.classList.toggle("is-sheet", narrow);
+  // Measure bubble natural size (temporarily un-sheeted).
+  bubble.classList.remove("is-sheet", "is-sheet-top");
+  bubble.style.bottom = "";
+  bubble.style.width = `${Math.min(340, vw - 32)}px`;
+  bubble.style.left = "0px";
+  bubble.style.top = "0px";
+  const bh = bubble.offsetHeight || 130;
+  const bw = Math.min(340, vw - 32);
+  const holeMidY = t + h / 2;
+  const preferAbove = holeMidY > vh * 0.45;
+
   if (narrow) {
+    // Dock bubble to the opposite end from the hole so it never covers the module.
+    bubble.classList.add("is-sheet");
+    bubble.style.width = "";
     bubble.style.left = "";
-    bubble.style.top = "";
+    if (preferAbove) {
+      bubble.classList.add("is-sheet-top");
+      bubble.style.top = "";
+      bubble.style.bottom = "";
+    } else {
+      bubble.classList.remove("is-sheet-top");
+      bubble.style.top = "";
+      bubble.style.bottom = "";
+    }
     return;
   }
-  const bw = Math.min(340, vw - 32);
+
   let left = l + w / 2 - bw / 2;
   left = Math.max(16, Math.min(vw - bw - 16, left));
-  const below = t + h + 12;
-  const above = t - 12;
-  const bh = bubble.offsetHeight || 120;
-  let top = below + bh < vh - 16 ? below : Math.max(16, above - bh);
-  if (top + bh > vh - 16) top = Math.max(16, vh - bh - 16);
+  let top;
+  if (preferAbove) {
+    top = Math.max(16, t - 12 - bh);
+    if (top + bh > t - 4) {
+      // not enough room above — try below
+      top = Math.min(vh - bh - 16, t + h + 12);
+    }
+  } else {
+    top = t + h + 12;
+    if (top + bh > vh - 16) {
+      top = Math.max(16, t - 12 - bh);
+    }
+  }
+  // Final clamp + overlap avoidance: if still intersecting hole, push fully above or below.
+  const overlaps = !(top + bh <= t + 2 || top >= t + h - 2);
+  if (overlaps) {
+    if (t > bh + 24) top = t - 12 - bh;
+    else top = Math.min(vh - bh - 16, t + h + 12);
+  }
   bubble.style.left = `${left}px`;
   bubble.style.top = `${top}px`;
   bubble.style.width = `${bw}px`;
+  bubble.style.bottom = "";
 }
+
 
 function lockGame(on) {
   const screen = document.getElementById("gameScreen");
@@ -261,6 +308,7 @@ function next() {
   }
   step += 1;
   place();
+  requestAnimationFrame(() => place());
 }
 
 function finish(markDone) {
@@ -311,6 +359,7 @@ export function startTutorial() {
   root.hidden = false;
   root.classList.remove("is-leaving");
   place();
+  requestAnimationFrame(() => place());
   window.addEventListener("resize", place);
   window.addEventListener("orientationchange", place);
   if (typeof ResizeObserver !== "undefined") {

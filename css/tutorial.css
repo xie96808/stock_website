@@ -125,6 +125,10 @@
     bottom: max(16px, env(safe-area-inset-bottom));
     top: auto !important;
   }
+  .sg-tut__bubble.is-sheet.is-sheet-top {
+    top: max(12px, env(safe-area-inset-top)) !important;
+    bottom: auto !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .sg-tut__mask,
