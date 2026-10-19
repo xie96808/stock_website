@@ -390,9 +390,8 @@ export function initTutorialUi() {
     btn.className = "tut-replay-link";
     btn.textContent = "再看新手教程";
     btn.addEventListener("click", onReplayTutorialClick);
-    const back = modes.querySelector(".hub-back");
-    if (back && back.nextSibling) modes.insertBefore(btn, back.nextSibling);
-    else modes.prepend(btn);
+    const foot = document.getElementById("playModesFoot") || modes;
+    foot.appendChild(btn);
   }
   // settings panel hook (optional)
   const settings = document.getElementById("authSettingsPanel");

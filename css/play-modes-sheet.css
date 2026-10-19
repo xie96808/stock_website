@@ -1,148 +1,350 @@
 /* ============================================================
-   Play-modes sheet (SIM-PAGES-SYNC · direction C)
-   Light paper card over the C2 homepage — not the old L2 notebook.
+   Play-modes sheet — direction C, V4 compact CTAs (no grain)
    ============================================================ */
+
+:root {
+  --pm-cta-a: #ff7a2f;
+  --pm-cta-b: #e62e2e;
+  --pm-cta-sh: #a3161a;
+}
 
 .pm-backdrop {
   position: fixed;
   inset: 0;
   z-index: 55;
-  background: rgba(42, 29, 12, 0.38);
+  background: rgba(42, 29, 12, 0.4);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
+  touch-action: none;
 }
 [data-theme="dark"] .pm-backdrop {
   background: rgba(0, 0, 0, 0.55);
 }
 
+html.pm-sheet-open,
+html.pm-sheet-open body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+html.pm-sheet-open #startScreen {
+  overscroll-behavior: none;
+}
+
 #playModes.pm-sheet {
   position: fixed;
   left: 50%;
-  bottom: max(12px, env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
+  bottom: 0;
+  transform: translateX(-50%) translateY(0);
   z-index: 56;
-  width: min(440px, calc(100vw - 20px));
-  max-height: min(78vh, 720px);
-  overflow: auto;
+  width: min(440px, 100vw);
+  max-height: min(82vh, 720px);
   display: flex !important;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: 0;
   margin: 0;
-  padding: 10px 12px 16px;
-  border-radius: 22px 22px 18px 18px;
-  border: 1px solid rgba(90, 60, 10, 0.16);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 28%),
-    #fff6df;
-  box-shadow:
-    0 18px 48px -12px rgba(42, 29, 12, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  padding: 0 0 max(10px, env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  border: 1px solid rgba(90, 60, 10, 0.14);
+  border-bottom: 0;
+  background: #fff8e8;
+  box-shadow: 0 -12px 40px -10px rgba(42, 29, 12, 0.35);
   text-align: left;
+  overflow: hidden;
+  transition: transform 220ms ease;
 }
 [data-theme="dark"] #playModes.pm-sheet {
-  border-color: rgba(255, 220, 150, 0.14);
-  background:
-    linear-gradient(180deg, rgba(255, 200, 100, 0.08), transparent 30%),
-    #241e16;
-  box-shadow: 0 18px 48px -10px rgba(0, 0, 0, 0.65);
+  border-color: rgba(255, 220, 150, 0.12);
+  background: #1f1b15;
+  box-shadow: 0 -12px 40px -8px rgba(0, 0, 0, 0.65);
 }
 #playModes.pm-sheet[hidden] {
   display: none !important;
 }
+#playModes.pm-sheet.is-dragging {
+  transition: none;
+}
 
+.pm-sheet-grab {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+  cursor: grab;
+  touch-action: none;
+}
 .pm-sheet-handle {
-  align-self: center;
-  width: 42px;
+  width: 40px;
   height: 4px;
   border-radius: 999px;
   background: rgba(90, 60, 10, 0.22);
-  margin: 2px 0 4px;
 }
 [data-theme="dark"] .pm-sheet-handle {
   background: rgba(255, 220, 150, 0.22);
 }
 
-.pm-sheet-title {
-  margin: 0 4px 4px;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: rgba(42, 29, 12, 0.55);
+.pm-sheet-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 8px 10px 16px;
+  border-bottom: 1px solid rgba(90, 60, 10, 0.08);
 }
-[data-theme="dark"] .pm-sheet-title {
-  color: rgba(243, 230, 200, 0.55);
+[data-theme="dark"] .pm-sheet-head {
+  border-bottom-color: rgba(255, 220, 150, 0.08);
+}
+.pm-sheet-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: inherit;
+}
+.pm-sheet-close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  opacity: 0.7;
+}
+.pm-sheet-close:hover,
+.pm-sheet-close:focus-visible {
+  opacity: 1;
+  background: rgba(90, 60, 10, 0.06);
+}
+[data-theme="dark"] .pm-sheet-close:hover,
+[data-theme="dark"] .pm-sheet-close:focus-visible {
+  background: rgba(255, 220, 150, 0.08);
 }
 
-#playModes.pm-sheet .hub-back.pm-sheet-back {
-  align-self: flex-start;
-  margin: 0 0 2px;
+.pm-sheet-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 12px 8px;
+  touch-action: pan-y;
+}
+
+/* ---- Mode rows ---- */
+.pm-modes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pm-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pm-skel[hidden] { display: none !important; }
+.pm-skel-row {
+  height: 64px;
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    rgba(90, 60, 10, 0.06) 0%,
+    rgba(90, 60, 10, 0.12) 50%,
+    rgba(90, 60, 10, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: pm-skel 1.2s ease-in-out infinite;
+}
+[data-theme="dark"] .pm-skel-row {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 220, 150, 0.05) 0%,
+    rgba(255, 220, 150, 0.12) 50%,
+    rgba(255, 220, 150, 0.05) 100%
+  );
+  background-size: 200% 100%;
+}
+@keyframes pm-skel {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.pm-modes-error {
+  margin: 4px 2px;
+  font-size: 12.5px;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pm-retry {
   border: 0;
   background: transparent;
   color: inherit;
+  font: inherit;
   font-weight: 700;
-  font-size: 13px;
-  padding: 6px 4px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
+  min-height: 44px;
+  padding: 0 6px;
+  opacity: 0.85;
 }
 
-/* Compact mode cards inside the sheet */
-#playModes.pm-sheet > .lane {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  border-radius: 14px;
-  border: 1px solid rgba(90, 60, 10, 0.12);
-  background: rgba(255, 255, 255, 0.55);
-  box-shadow: none;
-  min-height: 0;
-  padding: 10px 12px;
+.pm-mode {
+  display: grid;
+  grid-template-columns: 40px 1fr auto auto;
+  align-items: center;
   gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 10px 10px 12px;
+  border: 1px solid rgba(90, 60, 10, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
 }
-[data-theme="dark"] #playModes.pm-sheet > .lane {
+[data-theme="dark"] .pm-mode {
   border-color: rgba(255, 220, 150, 0.12);
   background: rgba(255, 255, 255, 0.04);
 }
-#playModes.pm-sheet > .lane .copy p {
-  display: none; /* keep sheet light — title + CTA enough */
+.pm-mode:active {
+  transform: scale(0.985);
 }
-#playModes.pm-sheet > .lane .copy small {
-  font-size: 11px;
-}
-#playModes.pm-sheet > .lane .copy strong {
-  font-size: 14px;
-}
-#playModes.pm-sheet > .lane .mark {
-  width: 36px;
-  height: 36px;
-  font-size: 14px;
-}
-#playModes.pm-sheet > .lane .cta {
-  font-size: 12px;
-  padding: 6px 10px;
-}
+.pm-mode[hidden] { display: none !important; }
 
-/* Daily stays emphasized but smaller than home 开一局 */
-#playModes.pm-sheet > .lane.daily-challenge-lane {
+.pm-mode--daily {
   border-color: rgba(230, 46, 46, 0.28);
-  background: linear-gradient(180deg, rgba(255, 122, 47, 0.12), rgba(255, 255, 255, 0.5));
+  background: linear-gradient(180deg, rgba(255, 122, 47, 0.14), rgba(255, 255, 255, 0.7));
 }
-[data-theme="dark"] #playModes.pm-sheet > .lane.daily-challenge-lane {
-  background: linear-gradient(180deg, rgba(255, 122, 47, 0.16), rgba(255, 255, 255, 0.03));
+[data-theme="dark"] .pm-mode--daily {
+  background: linear-gradient(180deg, rgba(255, 122, 47, 0.18), rgba(255, 255, 255, 0.03));
 }
 
-#playModes.pm-sheet .hub-board-link {
+.pm-mode-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 900;
+  background: rgba(90, 60, 10, 0.08);
+  flex-shrink: 0;
+}
+.pm-mode-mark--daily { background: rgba(230, 46, 46, 0.14); color: #c42820; }
+.pm-mode-mark--classic { background: rgba(255, 122, 47, 0.16); color: #c45a12; }
+.pm-mode-mark--oneshot { background: rgba(30, 91, 216, 0.12); color: #1e5bd8; }
+.pm-mode-mark--survival { background: rgba(31, 157, 85, 0.14); color: #1a7a42; }
+[data-theme="dark"] .pm-mode-mark--daily { color: #ff8a7a; }
+[data-theme="dark"] .pm-mode-mark--classic { color: #ffb06a; }
+[data-theme="dark"] .pm-mode-mark--oneshot { color: #7aafff; }
+[data-theme="dark"] .pm-mode-mark--survival { color: #5ee09a; }
+
+.pm-mode-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pm-mode-name {
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+.pm-mode-sub {
+  font-size: 11.5px;
+  opacity: 0.62;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pm-mode-state {
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.pm-mode-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  font-size: 13px;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.pm-mode-cost .coin-slot {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+}
+.pm-mode-cost .coin-slot img {
+  width: 14px;
+  height: 14px;
+  display: block;
+  object-fit: contain;
+}
+
+/* Compact V4 orange-red start chip — shelf + press compress (no grain) */
+.pm-mode-go {
+  flex-shrink: 0;
+  min-width: 52px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  background: linear-gradient(180deg, var(--pm-cta-a), var(--pm-cta-b));
+  box-shadow:
+    0 4px 0 var(--pm-cta-sh),
+    0 8px 16px -8px rgba(230, 46, 46, 0.55);
+  transform-origin: 50% 100%;
+  transition: transform 80ms ease, box-shadow 80ms ease;
+  pointer-events: none; /* whole row is the tap target */
+}
+.pm-mode:active .pm-mode-go {
+  transform: translateY(2px) scale(0.97);
+  box-shadow:
+    0 1px 0 var(--pm-cta-sh),
+    0 4px 10px -6px rgba(230, 46, 46, 0.5);
+}
+
+.pm-daily-board {
   align-self: flex-end;
-  margin: -2px 2px 4px;
+  margin: -2px 2px 2px;
+  min-height: 36px !important;
+  height: 36px !important;
+  font-size: 12px !important;
 }
 
-/* Migrated L2 links */
+/* Secondary links */
 .pm-sheet-more {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
-  padding-top: 8px;
+  gap: 2px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed rgba(90, 60, 10, 0.14);
 }
 [data-theme="dark"] .pm-sheet-more {
@@ -171,6 +373,7 @@
 [data-theme="dark"] .pm-link:focus-visible {
   background: rgba(255, 220, 150, 0.06);
 }
+.pm-link[hidden] { display: none !important; }
 .pm-link-mark {
   flex: 0 0 auto;
   width: 28px;
@@ -206,16 +409,40 @@
 .pm-link-go {
   flex: 0 0 auto;
   font-size: 18px;
-  opacity: 0.45;
+  opacity: 0.4;
   padding: 0 4px;
 }
 .pm-link-state {
-  margin: -2px 8px 4px 46px;
+  margin: 0 8px 2px 46px;
   font-size: 11px;
-  opacity: 0.65;
+  opacity: 0.6;
+}
+.pm-link-state[hidden] { display: none !important; }
+
+.pm-sheet-foot {
+  margin-top: 8px;
+  padding: 4px 4px 2px;
+  display: flex;
+  justify-content: center;
+}
+#playModes .tut-replay-link {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 10px 8px;
+  min-height: 44px;
+}
+#playModes .tut-replay-link:hover {
+  opacity: 0.8;
 }
 
-/* Puzzle chapters L3: same paper card language */
+/* Puzzle chapters: light paper card */
 .puzzle-chapters-lanes {
   max-width: min(440px, calc(100vw - 20px));
   margin-left: auto;
@@ -231,24 +458,16 @@
   border-color: rgba(255, 220, 150, 0.12);
 }
 
-/* Hide retired L2 hub if anything forces it visible */
-#simHub.sim-hub-lanes {
-  /* still functional if forced, but visually quieter */
-}
+/* Kill old lane CTA grain inside sheet if any leftover */
+#playModes .cta::after { display: none !important; }
 
-/* Tutorial replay sits under the back row */
-#playModes.pm-sheet .tut-replay-link {
-  align-self: flex-start;
-  margin: 0 4px 6px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  opacity: 0.75;
-  cursor: pointer;
-  padding: 4px 2px;
-  min-height: 44px;
+/* Explicit [hidden] beat — author display:flex would otherwise fight UA in some engines */
+.pm-modes-error[hidden],
+.pm-skel[hidden],
+.pm-mode[hidden],
+.pm-link[hidden],
+.pm-link-state[hidden],
+.pm-daily-board[hidden],
+#playModesBackdrop[hidden] {
+  display: none !important;
 }

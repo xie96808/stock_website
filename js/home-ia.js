@@ -33,10 +33,16 @@ function hidePlayModesPanel() {
   const modes = playModesEl();
   if (modes) {
     modes.hidden = true;
-    modes.classList.remove("pm-sheet-open");
+    modes.classList.remove("pm-sheet-open", "is-dragging");
+    modes.style.transform = "";
   }
   const bd = document.getElementById("playModesBackdrop");
-  if (bd) bd.hidden = true;
+  if (bd) {
+    bd.hidden = true;
+    bd.setAttribute("aria-hidden", "true");
+  }
+  document.documentElement.classList.remove("pm-sheet-open");
+  teardownPlayModesSheetChrome();
 }
 
 function hidePuzzleChaptersPanel() {
@@ -44,9 +50,192 @@ function hidePuzzleChaptersPanel() {
   if (chapters) chapters.hidden = true;
 }
 
+let playModesChromeBound = false;
+let playModesPopState = null;
+let playModesTouch = null;
+
+function closePlayModesSheet() {
+  const owned = !!(history.state && history.state.pmSheet);
+  hidePlayModesPanel();
+  // Restore home chrome without relying on showHome's hash churn first
+  const home = document.getElementById("homeLanes");
+  const hub = document.getElementById("simHub");
+  if (home) home.hidden = false;
+  if (hub) hub.hidden = true;
+  hidePuzzleChaptersPanel();
+  setHubMascotLevel(1);
+  setRouteHash(Route.HOME);
+  refreshResumeBanner().catch(() => {});
+  import("./home-arcade.js")
+    .then((m) => m.refreshHomeArcadeChrome && m.refreshHomeArcadeChrome())
+    .catch(() => {});
+  if (owned) {
+    try {
+      history.back();
+    } catch { /* ignore */ }
+  }
+}
+
+function setPlayModesLoading(isLoading) {
+  const list = document.getElementById("playModesList");
+  const skel = document.getElementById("playModesSkel");
+  if (list) list.setAttribute("aria-busy", isLoading ? "true" : "false");
+  if (skel) skel.hidden = !isLoading;
+  // Hide live mode rows under the skeleton so we never flash a lone classic
+  // or a dangling 加载中 line while flags are in flight.
+  for (const id of [
+    "dailyChallengeCard",
+    "dailyChallengeBoardBtn",
+    "classicModeCard",
+    "oneshotModeCard",
+    "survivalModeCard",
+  ]) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (isLoading) {
+      el.dataset.pmWasHidden = el.hidden ? "1" : "0";
+      el.hidden = true;
+    }
+  }
+}
+
+function setPlayModesError(show) {
+  const err = document.getElementById("playModesError");
+  if (err) err.hidden = !show;
+}
+
+function revealClassicMode() {
+  const classic = document.getElementById("classicModeCard");
+  if (classic) classic.hidden = false;
+}
+
+async function refreshPlayModesFlags() {
+  setPlayModesError(false);
+  setPlayModesLoading(true);
+
+  let features = null;
+  try {
+    const res = await fetch("/api/v1/config", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const json = await res.json().catch(() => ({}));
+    features = json?.data?.features || null;
+    if (!res.ok || !features) throw new Error("config");
+  } catch {
+    setPlayModesLoading(false);
+    setPlayModesError(true);
+    revealClassicMode();
+    const daily = document.getElementById("dailyChallengeCard");
+    const board = document.getElementById("dailyChallengeBoardBtn");
+    const oneshot = document.getElementById("oneshotModeCard");
+    const survival = document.getElementById("survivalModeCard");
+    if (daily) daily.hidden = true;
+    if (board) board.hidden = true;
+    if (oneshot) oneshot.hidden = true;
+    if (survival) survival.hidden = true;
+    return false;
+  }
+
+  setPlayModesLoading(false);
+  revealClassicMode();
+
+  try {
+    await refreshDailyChallengeFlag();
+    await refreshDailyChallengeCard();
+  } catch { /* card stays hidden if flag off */ }
+
+  const oneshot = document.getElementById("oneshotModeCard");
+  if (oneshot) oneshot.hidden = !features.oneshotMode;
+  const survival = document.getElementById("survivalModeCard");
+  if (survival) survival.hidden = !features.survivalMode;
+
+  try {
+    await refreshGhostDuelFlag();
+  } catch { /* ignore */ }
+  try {
+    await refreshPuzzleChapterFlag();
+    await refreshPuzzleChapterCard();
+  } catch { /* ignore */ }
+
+  return true;
+}
+
+function bindPlayModesSheetChrome() {
+  if (playModesChromeBound) return;
+  playModesChromeBound = true;
+
+  const bd = document.getElementById("playModesBackdrop");
+  const closeBtn = document.getElementById("playModesClose");
+  const retry = document.getElementById("playModesRetry");
+  const grab = document.getElementById("playModesGrab");
+  const sheet = playModesEl();
+
+  bd?.addEventListener("click", (ev) => {
+    // Only the dimmed area — ignore if a child somehow receives it
+    if (ev.target === bd) closePlayModesSheet();
+  });
+  closeBtn?.addEventListener("click", closePlayModesSheet);
+  retry?.addEventListener("click", () => {
+    refreshPlayModesFlags().catch(() => {});
+  });
+
+  // Android / browser back → close sheet (push a sentinel history entry)
+  playModesPopState = () => {
+    const m = playModesEl();
+    if (m && !m.hidden) {
+      // History already popped — just tear down the sheet
+      hidePlayModesPanel();
+      const home = document.getElementById("homeLanes");
+      if (home) home.hidden = false;
+      setHubMascotLevel(1);
+      setRouteHash(Route.HOME);
+      refreshResumeBanner().catch(() => {});
+    }
+  };
+  window.addEventListener("popstate", playModesPopState);
+
+  // Swipe-down on grab handle to dismiss
+  if (grab && sheet) {
+    const onStart = (ev) => {
+      const t = ev.touches ? ev.touches[0] : ev;
+      playModesTouch = { y0: t.clientY, dy: 0 };
+      sheet.classList.add("is-dragging");
+    };
+    const onMove = (ev) => {
+      if (!playModesTouch) return;
+      const t = ev.touches ? ev.touches[0] : ev;
+      playModesTouch.dy = Math.max(0, t.clientY - playModesTouch.y0);
+      sheet.style.transform = `translateX(-50%) translateY(${playModesTouch.dy}px)`;
+      if (ev.cancelable) ev.preventDefault();
+    };
+    const onEnd = () => {
+      if (!playModesTouch) return;
+      const dy = playModesTouch.dy;
+      playModesTouch = null;
+      sheet.classList.remove("is-dragging");
+      if (dy > 96) {
+        sheet.style.transform = "";
+        closePlayModesSheet();
+      } else {
+        sheet.style.transform = "";
+      }
+    };
+    grab.addEventListener("touchstart", onStart, { passive: true });
+    grab.addEventListener("touchmove", onMove, { passive: false });
+    grab.addEventListener("touchend", onEnd);
+    grab.addEventListener("touchcancel", onEnd);
+  }
+}
+
+function teardownPlayModesSheetChrome() {
+  // Keep listeners (idempotent bind); only clear drag state
+  playModesTouch = null;
+}
+
 /**
  * Swap start-screen mascot art by hub depth.
- * 1 = home, 2 = simHub, 3 = playModes | puzzleChapters
+ * 1 = home, 2 = simHub (retired), 3 = puzzleChapters
  */
 export function setHubMascotLevel(level) {
   const n = Math.max(1, Math.min(3, Number(level) || 1));
@@ -119,37 +308,41 @@ export function showSimHub(opts = {}) {
 
 /**
  * Light mode picker (direction C sheet): 今日挑战 / 经典 / 一把梭 / 生存
- * + 残局 / 战绩 / 榜. Back → homepage. Hash stays home (no L2).
+ * + 残局 / 战绩 / 榜. Close × / backdrop / swipe / Android back → homepage.
  */
 export function showPlayModes() {
   prepareScreen(Route.HOME);
   const home = document.getElementById("homeLanes");
   const hub = document.getElementById("simHub");
   const modes = playModesEl();
-  if (home) home.hidden = false; // keep arcade under the sheet dimmer
+  if (home) home.hidden = false;
   if (hub) hub.hidden = true;
   hidePuzzleChaptersPanel();
   if (modes) {
     modes.hidden = false;
     modes.classList.add("pm-sheet-open");
+    modes.style.transform = "";
   }
-  document.getElementById("playModesBackdrop")?.removeAttribute("hidden");
+  const bd = document.getElementById("playModesBackdrop");
+  if (bd) {
+    bd.hidden = false;
+    bd.setAttribute("aria-hidden", "false");
+  }
+  document.documentElement.classList.add("pm-sheet-open");
   setHubMascotLevel(1);
   setRouteHash(Route.HOME);
   refreshResumeBanner().catch(() => {});
   prefetchStocksPack(gameState);
-  refreshDailyChallengeFlag()
-    .then(() => refreshDailyChallengeCard())
-    .catch(() => {});
-  refreshGhostDuelFlag().catch(() => {});
-  refreshOneshotModeCard().catch(() => {});
-  refreshSurvivalModeCard().catch(() => {});
-  refreshPuzzleChapterFlag()
-    .then(() => refreshPuzzleChapterCard())
-    .catch(() => {});
+  bindPlayModesSheetChrome();
+  // History sentinel so Android back closes the sheet first
+  try {
+    if (!history.state || !history.state.pmSheet) {
+      history.pushState({ pmSheet: true }, "");
+    }
+  } catch { /* ignore */ }
+  refreshPlayModesFlags().catch(() => {});
 }
 
-/** 三级残局章节选择：第一～四章已开放（hash 仍为 sim） */
 export function showPuzzleChapters() {
   prepareScreen(Route.HOME);
   const home = document.getElementById("homeLanes");
