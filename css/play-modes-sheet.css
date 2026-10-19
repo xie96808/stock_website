@@ -1,12 +1,8 @@
 /* ============================================================
-   Play-modes sheet — direction C, V4 compact CTAs (no grain)
+   Play-modes SHEET SHELL only (SIM-PAGES-SYNC)
+   Mode cards reuse .lane / .cta from start.css unchanged —
+   do not restyle seals, ribbons, or start buttons here.
    ============================================================ */
-
-:root {
-  --pm-cta-a: #ff7a2f;
-  --pm-cta-b: #e62e2e;
-  --pm-cta-sh: #a3161a;
-}
 
 .pm-backdrop {
   position: fixed;
@@ -27,9 +23,6 @@ html.pm-sheet-open body {
   overscroll-behavior: none;
   touch-action: none;
 }
-html.pm-sheet-open #startScreen {
-  overscroll-behavior: none;
-}
 
 #playModes.pm-sheet {
   position: fixed;
@@ -37,27 +30,40 @@ html.pm-sheet-open #startScreen {
   bottom: 0;
   transform: translateX(-50%) translateY(0);
   z-index: 56;
-  width: min(440px, 100vw);
-  max-height: min(82vh, 720px);
+  width: min(520px, 100vw);
+  max-height: min(86vh, 820px);
   display: flex !important;
   flex-direction: column;
-  align-items: stretch;
-  gap: 0;
   margin: 0;
   padding: 0 0 max(10px, env(safe-area-inset-bottom, 0px));
   border-radius: 20px 20px 0 0;
   border: 1px solid rgba(90, 60, 10, 0.14);
   border-bottom: 0;
-  background: #fff8e8;
+  background: var(--paper, #fff8e8);
+  background-color: #fff8e8;
   box-shadow: 0 -12px 40px -10px rgba(42, 29, 12, 0.35);
-  text-align: left;
   overflow: hidden;
   transition: transform 220ms ease;
 }
 [data-theme="dark"] #playModes.pm-sheet {
   border-color: rgba(255, 220, 150, 0.12);
-  background: #1f1b15;
+  background-color: #1f1b15;
   box-shadow: 0 -12px 40px -8px rgba(0, 0, 0, 0.65);
+}
+@media (min-width: 900px) {
+  /* Desktop: centered modal sheet */
+  #playModes.pm-sheet {
+    top: 50%;
+    bottom: auto;
+    width: min(560px, calc(100vw - 48px));
+    max-height: min(84vh, 780px);
+    border-radius: 20px;
+    border: 1px solid rgba(90, 60, 10, 0.14);
+    transform: translate(-50%, -50%);
+  }
+  #playModes.pm-sheet.is-dragging {
+    /* swipe-down still uses translateY on top of centered transform via inline style */
+  }
 }
 #playModes.pm-sheet[hidden] {
   display: none !important;
@@ -125,10 +131,6 @@ html.pm-sheet-open #startScreen {
   opacity: 1;
   background: rgba(90, 60, 10, 0.06);
 }
-[data-theme="dark"] .pm-sheet-close:hover,
-[data-theme="dark"] .pm-sheet-close:focus-visible {
-  background: rgba(255, 220, 150, 0.08);
-}
 
 .pm-sheet-body {
   flex: 1 1 auto;
@@ -139,21 +141,40 @@ html.pm-sheet-open #startScreen {
   touch-action: pan-y;
 }
 
-/* ---- Mode rows ---- */
-.pm-modes {
+/* Inner list: original lanes layout, constrained to sheet width */
+#playModes #playModesList.lanes {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
+#playModes #playModesList .lane {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#playModes #playModesList .hub-board-link {
+  align-self: flex-end;
+}
+
+/* Skeleton / error (flags loading) */
 .pm-skel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 .pm-skel[hidden] { display: none !important; }
 .pm-skel-row {
-  height: 64px;
-  border-radius: 14px;
+  height: 88px;
+  border-radius: 16px;
   background: linear-gradient(
     90deg,
     rgba(90, 60, 10, 0.06) 0%,
@@ -176,15 +197,15 @@ html.pm-sheet-open #startScreen {
   0% { background-position: 100% 0; }
   100% { background-position: -100% 0; }
 }
-
 .pm-modes-error {
-  margin: 4px 2px;
+  margin: 4px 2px 10px;
   font-size: 12.5px;
   opacity: 0.7;
   display: flex;
   align-items: center;
   gap: 10px;
 }
+.pm-modes-error[hidden] { display: none !important; }
 .pm-retry {
   border: 0;
   background: transparent;
@@ -196,294 +217,7 @@ html.pm-sheet-open #startScreen {
   cursor: pointer;
   min-height: 44px;
   padding: 0 6px;
-  opacity: 0.85;
 }
-
-.pm-mode {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0;
-  width: 100%;
-  min-height: 64px;
-  padding: 0;
-  border: 1px solid rgba(90, 60, 10, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  box-shadow: none;
-  -webkit-tap-highlight-color: transparent;
-  overflow: hidden;
-}
-/* Primary hit row (whole card tap, or inner .pm-mode-hit for daily) */
-.pm-mode-hit,
-button.pm-mode {
-  display: grid;
-  grid-template-columns: 40px 1fr auto auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 64px;
-  padding: 10px 10px 10px 12px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: none;
-  -webkit-tap-highlight-color: transparent;
-}
-button.pm-mode {
-  /* classic/oneshot/survival stay as buttons — restore card chrome on the button itself */
-  border: 1px solid rgba(90, 60, 10, 0.12);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  padding: 10px 10px 10px 12px;
-}
-[data-theme="dark"] .pm-mode,
-[data-theme="dark"] button.pm-mode {
-  border-color: rgba(255, 220, 150, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-}
-.pm-mode-hit:active,
-button.pm-mode:active {
-  transform: scale(0.985);
-}
-.pm-mode[hidden] { display: none !important; }
-
-.pm-mode--daily {
-  border-color: rgba(230, 46, 46, 0.28);
-  background: linear-gradient(180deg, rgba(255, 122, 47, 0.14), rgba(255, 255, 255, 0.7));
-}
-[data-theme="dark"] .pm-mode--daily {
-  background: linear-gradient(180deg, rgba(255, 122, 47, 0.18), rgba(255, 255, 255, 0.03));
-}
-
-.pm-mode-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-size: 15px;
-  font-weight: 900;
-  background: rgba(90, 60, 10, 0.08);
-  flex-shrink: 0;
-}
-.pm-mode-mark--daily { background: rgba(230, 46, 46, 0.14); color: #c42820; }
-.pm-mode-mark--classic { background: rgba(255, 122, 47, 0.16); color: #c45a12; }
-.pm-mode-mark--oneshot { background: rgba(30, 91, 216, 0.12); color: #1e5bd8; }
-.pm-mode-mark--survival { background: rgba(31, 157, 85, 0.14); color: #1a7a42; }
-[data-theme="dark"] .pm-mode-mark--daily { color: #ff8a7a; }
-[data-theme="dark"] .pm-mode-mark--classic { color: #ffb06a; }
-[data-theme="dark"] .pm-mode-mark--oneshot { color: #7aafff; }
-[data-theme="dark"] .pm-mode-mark--survival { color: #5ee09a; }
-
-.pm-mode-main {
-  min-width: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.pm-mode-name {
-  font-size: 14.5px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-}
-.pm-mode-sub {
-  font-size: 11.5px;
-  opacity: 0.62;
-  line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-.pm-mode-state {
-  font-size: 11px;
-  opacity: 0.55;
-}
-
-.pm-mode-cost {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  font-size: 13px;
-  opacity: 0.9;
-  white-space: nowrap;
-}
-.pm-mode-cost .coin-slot {
-  display: inline-flex;
-  width: 14px;
-  height: 14px;
-}
-.pm-mode-cost .coin-slot img {
-  width: 14px;
-  height: 14px;
-  display: block;
-  object-fit: contain;
-}
-
-/* Compact V4 orange-red start chip — shelf + press compress (no grain) */
-.pm-mode-go {
-  flex-shrink: 0;
-  min-width: 52px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
-  background: linear-gradient(180deg, var(--pm-cta-a), var(--pm-cta-b));
-  box-shadow:
-    0 4px 0 var(--pm-cta-sh),
-    0 8px 16px -8px rgba(230, 46, 46, 0.55);
-  transform-origin: 50% 100%;
-  transition: transform 80ms ease, box-shadow 80ms ease;
-  pointer-events: none; /* whole row is the tap target */
-}
-.pm-mode-hit:active .pm-mode-go,
-button.pm-mode:active .pm-mode-go {
-  transform: translateY(2px) scale(0.97);
-  box-shadow:
-    0 1px 0 var(--pm-cta-sh),
-    0 4px 10px -6px rgba(230, 46, 46, 0.5);
-}
-
-/* Low-key 日榜 link under daily meta — 44px tap, no extra row chrome */
-.pm-daily-board-link {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  margin: -2px 0 6px 62px; /* align with .pm-mode-main text (12 + 40 + 10) */
-  padding: 0 8px;
-  min-height: 44px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  opacity: 0.55;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.pm-daily-board-link:hover,
-.pm-daily-board-link:focus-visible {
-  opacity: 0.85;
-  background: rgba(90, 60, 10, 0.05);
-}
-[data-theme="dark"] .pm-daily-board-link:hover,
-[data-theme="dark"] .pm-daily-board-link:focus-visible {
-  background: rgba(255, 220, 150, 0.06);
-}
-.pm-daily-board-link[hidden] {
-  display: none !important;
-}
-
-/* Secondary links */
-.pm-sheet-more {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(90, 60, 10, 0.14);
-}
-[data-theme="dark"] .pm-sheet-more {
-  border-top-color: rgba(255, 220, 150, 0.12);
-}
-.pm-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 8px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  min-height: 44px;
-}
-.pm-link:hover,
-.pm-link:focus-visible {
-  background: rgba(90, 60, 10, 0.06);
-}
-[data-theme="dark"] .pm-link:hover,
-[data-theme="dark"] .pm-link:focus-visible {
-  background: rgba(255, 220, 150, 0.06);
-}
-.pm-link[hidden] { display: none !important; }
-.pm-link-mark {
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 800;
-  background: rgba(90, 60, 10, 0.08);
-}
-[data-theme="dark"] .pm-link-mark {
-  background: rgba(255, 220, 150, 0.1);
-}
-.pm-link-copy {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-.pm-link-copy strong {
-  font-size: 13px;
-  font-weight: 800;
-}
-.pm-link-copy small {
-  font-size: 11px;
-  opacity: 0.65;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.pm-link-go {
-  flex: 0 0 auto;
-  font-size: 18px;
-  opacity: 0.4;
-  padding: 0 4px;
-}
-.pm-link-copy .pm-link-state,
-.pm-link-state {
-  display: block;
-  margin: 1px 0 0;
-  padding: 0;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.3;
-  opacity: 0.55;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
-.pm-link-state[hidden] { display: none !important; }
 
 .pm-sheet-foot {
   margin-top: 8px;
@@ -504,36 +238,12 @@ button.pm-mode:active .pm-mode-go {
   padding: 10px 8px;
   min-height: 44px;
 }
-#playModes .tut-replay-link:hover {
-  opacity: 0.8;
-}
+#playModes .tut-replay-link:hover { opacity: 0.8; }
 
-/* Puzzle chapters: light paper card */
-.puzzle-chapters-lanes {
-  max-width: min(440px, calc(100vw - 20px));
-  margin-left: auto;
-  margin-right: auto;
-  border-radius: 18px;
-  padding: 12px !important;
-  border: 1px solid rgba(90, 60, 10, 0.14);
-  background: #fff6df;
-  box-shadow: 0 12px 36px -14px rgba(42, 29, 12, 0.35);
-}
-[data-theme="dark"] .puzzle-chapters-lanes {
-  background: #241e16;
-  border-color: rgba(255, 220, 150, 0.12);
-}
+#playModesBackdrop[hidden] { display: none !important; }
 
-/* Kill old lane CTA grain inside sheet if any leftover */
-#playModes .cta::after { display: none !important; }
-
-/* Explicit [hidden] beat — author display:flex would otherwise fight UA in some engines */
-.pm-modes-error[hidden],
-.pm-skel[hidden],
-.pm-mode[hidden],
-.pm-link[hidden],
-.pm-link-state[hidden],
-.pm-daily-board-link[hidden],
-#playModesBackdrop[hidden] {
-  display: none !important;
+/* Narrow / zoom: keep original cards readable inside sheet */
+@media (max-width: 430px) {
+  .pm-sheet-body { padding: 8px 10px 6px; }
+  #playModes #playModesList.lanes { gap: 10px; }
 }

@@ -75,8 +75,6 @@ export async function refreshPuzzleChapterCard() {
   if (!card) return;
   if (!puzzleEnabled) {
     card.hidden = true;
-    const st = document.getElementById('puzzleChapterCardState');
-    if (st) { st.hidden = true; st.textContent = ''; }
     return;
   }
   card.hidden = false;
@@ -106,7 +104,6 @@ export async function refreshPuzzleChapterCard() {
     const summary = chapterProgressSummary(chapterCache);
     if (meta) meta.innerHTML = unitIconsHtml('第一、二章已开放 · 首局免费 · 重开 10 韭币 · 二星 +20 / 三星 +15', { size: 12 });
     if (stateEl) {
-      stateEl.hidden = false;
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} 达二星 · 星 ${summary.starsEarned}/${summary.starsMax} · 已领 ${chapterCache.reward?.grantedCount || 0} 次首通`;
     }
   } catch {

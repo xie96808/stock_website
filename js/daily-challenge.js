@@ -111,33 +111,10 @@ function challengeCost(d) {
 
 function syncCardBadge(cost) {
   const badge = document.querySelector('#dailyChallengeCard .jiu-price-badge');
-  if (badge) {
-    badge.setAttribute('data-jiu-price', String(cost));
-    badge.setAttribute('aria-label', `消耗 ${cost} 韭币`);
-    badge.innerHTML = amountWithCoinHtml(cost, { size: 12 });
-  }
-  // Sheet row cost chip (number + coin icon)
-  const costN = document.querySelector('#dailyChallengeCard .pm-cost-n');
-  const costWrap = document.querySelector('#dailyChallengeCard .pm-mode-cost');
-  if (costN) costN.textContent = String(cost);
-  if (costWrap) costWrap.setAttribute('aria-label', `消耗 ${cost} 韭币`);
-}
-
-/** Short CTA labels for the compact sheet chip; keep long copy on legacy lanes. */
-function setDailyCta(ctaEl, longText) {
-  if (!ctaEl) return;
-  if (ctaEl.classList.contains('pm-mode-go')) {
-    const map = {
-      '开始今日挑战': '开始',
-      '继续挑战': '继续',
-      '查看结果': '查看',
-      '稍后再来': '稍候',
-      '重试': '重试',
-    };
-    ctaEl.textContent = map[longText] || longText.slice(0, 2);
-    return;
-  }
-  ctaEl.textContent = longText;
+  if (!badge) return;
+  badge.setAttribute('data-jiu-price', String(cost));
+  badge.setAttribute('aria-label', `消耗 ${cost} 韭币`);
+  badge.innerHTML = amountWithCoinHtml(cost, { size: 12 });
 }
 
 export async function refreshDailyChallengeCard() {
@@ -162,7 +139,7 @@ export async function refreshDailyChallengeCard() {
       return;
     }
     if (stateEl) stateEl.textContent = '状态加载失败，点此重试';
-    setDailyCta(ctaEl, '重试');
+    if (ctaEl) ctaEl.textContent = '重试';
     return;
   }
 
@@ -176,31 +153,25 @@ export async function refreshDailyChallengeCard() {
   if (!d.ready) {
     card.classList.add('is-disabled');
     if (stateEl) stateEl.textContent = d.message || '今日挑战准备中';
-    setDailyCta(ctaEl, '稍后再来');
+    if (ctaEl) ctaEl.textContent = '稍后再来';
     return;
   }
   card.classList.remove('is-disabled');
 
-  const setState = (text) => {
-    if (!stateEl) return;
-    if (!text) { stateEl.hidden = true; stateEl.textContent = ''; return; }
-    stateEl.hidden = false;
-    stateEl.textContent = text;
-  };
   if (d.activeGame) {
-    setState('进行中 · 可继续（不扣币）');
-    setDailyCta(ctaEl, '继续挑战');
+    if (stateEl) stateEl.textContent = '进行中 · 可继续（不扣币）';
+    if (ctaEl) ctaEl.textContent = '继续挑战';
   } else if (d.attempt && (d.attempt.status === 'settled' || d.attempt.status === 'settle_late')) {
     const ppm = d.attempt.returnPpm;
     const pct = ppm == null ? '—' : (ppm / 10000).toFixed(2) + '%';
-    setState(`已结算 · 收益 ${pct}`);
-    setDailyCta(ctaEl, '查看结果');
+    if (stateEl) stateEl.textContent = `已结算 · 收益 ${pct}`;
+    if (ctaEl) ctaEl.textContent = '查看结果';
   } else if (d.remainingChance === 0) {
-    setState('今日机会已用完');
-    setDailyCta(ctaEl, '查看结果');
+    if (stateEl) stateEl.textContent = '今日机会已用完';
+    if (ctaEl) ctaEl.textContent = '查看结果';
   } else {
-    setState('剩余正式机会 1 次 · 无反悔');
-    setDailyCta(ctaEl, '开始今日挑战');
+    if (stateEl) stateEl.textContent = '剩余正式机会 1 次 · 无反悔';
+    if (ctaEl) ctaEl.textContent = '开始今日挑战';
   }
 }
 

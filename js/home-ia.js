@@ -79,24 +79,11 @@ function closePlayModesSheet() {
 function setPlayModesLoading(isLoading) {
   const list = document.getElementById("playModesList");
   const skel = document.getElementById("playModesSkel");
-  if (list) list.setAttribute("aria-busy", isLoading ? "true" : "false");
-  if (skel) skel.hidden = !isLoading;
-  // Hide live mode rows under the skeleton so we never flash a lone classic
-  // or a dangling 加载中 line while flags are in flight.
-  for (const id of [
-    "dailyChallengeCard",
-    "dailyChallengeBoardBtn",
-    "classicModeCard",
-    "oneshotModeCard",
-    "survivalModeCard",
-  ]) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    if (isLoading) {
-      el.dataset.pmWasHidden = el.hidden ? "1" : "0";
-      el.hidden = true;
-    }
+  if (list) {
+    list.setAttribute("aria-busy", isLoading ? "true" : "false");
+    list.hidden = !!isLoading;
   }
+  if (skel) skel.hidden = !isLoading;
 }
 
 function setPlayModesError(show) {
@@ -197,16 +184,23 @@ function bindPlayModesSheetChrome() {
 
   // Swipe-down on grab handle to dismiss
   if (grab && sheet) {
+    const baseTransform = () =>
+      window.matchMedia("(min-width: 900px)").matches
+        ? "translate(-50%, -50%)"
+        : "translateX(-50%)";
     const onStart = (ev) => {
-      const t = ev.touches ? ev.touches[0] : ev;
-      playModesTouch = { y0: t.clientY, dy: 0 };
+      const pt = ev.touches ? ev.touches[0] : ev;
+      playModesTouch = { y0: pt.clientY, dy: 0 };
       sheet.classList.add("is-dragging");
     };
     const onMove = (ev) => {
       if (!playModesTouch) return;
-      const t = ev.touches ? ev.touches[0] : ev;
-      playModesTouch.dy = Math.max(0, t.clientY - playModesTouch.y0);
-      sheet.style.transform = `translateX(-50%) translateY(${playModesTouch.dy}px)`;
+      const pt = ev.touches ? ev.touches[0] : ev;
+      playModesTouch.dy = Math.max(0, pt.clientY - playModesTouch.y0);
+      const dy = playModesTouch.dy;
+      sheet.style.transform = window.matchMedia("(min-width: 900px)").matches
+        ? `translate(-50%, calc(-50% + ${dy}px))`
+        : `translateX(-50%) translateY(${dy}px)`;
       if (ev.cancelable) ev.preventDefault();
     };
     const onEnd = () => {
@@ -214,12 +208,8 @@ function bindPlayModesSheetChrome() {
       const dy = playModesTouch.dy;
       playModesTouch = null;
       sheet.classList.remove("is-dragging");
-      if (dy > 96) {
-        sheet.style.transform = "";
-        closePlayModesSheet();
-      } else {
-        sheet.style.transform = "";
-      }
+      sheet.style.transform = "";
+      if (dy > 96) closePlayModesSheet();
     };
     grab.addEventListener("touchstart", onStart, { passive: true });
     grab.addEventListener("touchmove", onMove, { passive: false });
