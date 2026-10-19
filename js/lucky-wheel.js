@@ -9,6 +9,7 @@
 import { api, getAuthState, showToast } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
 import * as P from "./lucky-wheel-pure.js";
+import { getRewindTickets, refreshRewindTickets } from "./rewind-tickets.js";
 
 const V = P.LW_ASSET_V;
 const ASSET_DIR = "assets/lucky-wheel/";
@@ -102,7 +103,7 @@ function ensureDom() {
         <button type="button" class="lw-hub" id="lwHub" data-state="default" aria-label="启动转盘"></button>
         <div class="lw-error" id="lwError" hidden><div id="lwErrorMsg">加载失败</div><button type="button" id="lwRetry">重试</button></div>
       </div>
-      <div class="lw-free" id="lwFree"><span class="lw-free-inner">免费次数：<span class="lw-free-n" id="lwFreeN">–</span>次</span></div>
+      <div class="lw-free" id="lwFree"><span class="lw-free-inner">免费次数：<span class="lw-free-n" id="lwFreeN">–</span>次<span class="lw-free-tk" id="lwFreeTk" hidden><span class="lw-free-sep">·</span>后悔券×<span class="lw-free-tk-n" id="lwFreeTkN">0</span></span></span></div>
       <button type="button" class="lw-go" id="lwGo" data-state="loading" disabled><span class="lw-go-label" id="lwGoLabel">载入中…</span></button>
       <p class="lw-reset" id="lwReset" aria-live="polite"></p>
       <button type="button" class="lw-odds-btn" id="lwOddsBtn" aria-expanded="false">概率说明</button>
@@ -117,7 +118,7 @@ function ensureDom() {
   S.els = {
     dialog: $(".lw-dialog"), fit: $("#lwFit"), stage: $("#lwStage"), disc: $("#lwDisc"), hits: $("#lwHits"), labels: $("#lwLabels"),
     pointer: $("#lwPointer"), hub: $("#lwHub"), go: $("#lwGo"), goLabel: $("#lwGoLabel"), free: $("#lwFree"),
-    freeN: $("#lwFreeN"), reset: $("#lwReset"), close: $("#lwClose"), odds: $("#lwOdds"), oddsBtn: $("#lwOddsBtn"),
+    freeN: $("#lwFreeN"), freeTk: $("#lwFreeTk"), freeTkN: $("#lwFreeTkN"), reset: $("#lwReset"), close: $("#lwClose"), odds: $("#lwOdds"), oddsBtn: $("#lwOddsBtn"),
     pop: $("#lwPop"), err: $("#lwError"), errMsg: $("#lwErrorMsg"), retry: $("#lwRetry"), fx: $("#lwFx"),
     flashPos: $("#lwFlashPos"), live: $("#lwLive"),
   };
@@ -316,6 +317,16 @@ function setGo(state, label) {
   go.setAttribute("aria-busy", state === "loading" ? "true" : "false");
 }
 
+/** Track R3: 后悔券 count in the free-spins tag, shown once the wheel has item sectors or the player holds tickets. */
+function paintTickets() {
+  const { freeTk, freeTkN } = S.els;
+  if (!freeTk) return;
+  const t = getRewindTickets();
+  const show = t.known && (t.tickets > 0 || sectors().some((s) => s.kind === "item"));
+  freeTk.hidden = !show;
+  if (freeTkN.textContent !== String(t.tickets)) freeTkN.textContent = String(t.tickets);
+}
+
 function renderControls() {
   const left = remaining();
   const { freeN, free, reset } = S.els;
@@ -325,6 +336,7 @@ function renderControls() {
     void free.offsetWidth;
     if (S.phase !== "loading") free.classList.add("is-bump");
   }
+  paintTickets();
   if (S.phase === "idle") {
     if (left > 0) setGo("default", "启动转盘");
     else setGo("disabled", "明日再来");
@@ -671,6 +683,7 @@ function settle(res) {
     const a = getAuthState();
     if (a.user && Number.isFinite(Number(res.balance))) a.user.jiuCoinBalance = res.balance;
   } catch { /* ignore */ }
+  if (res.prize?.kind === "item") void refreshRewindTickets(); // Track R3: 后悔券 landed in the bag
   S.phase = "loading"; // stays locked until the pop-up is dismissed
   const delay = reduced ? 260 : res.isJackpot ? 1000 : 650;
   const sess = S.session;
@@ -955,7 +968,14 @@ function forceClose() {
  * Open the modal. Resolves { enabled: true } when shown, { enabled: false } when the server says the wheel is off
  * (caller falls back to the legacy flow), { enabled: null } when the state could not be loaded (modal stays open with retry).
  */
+if (typeof document !== "undefined") {
+  document.addEventListener("stockgame:items-changed", () => {
+    if (S.els) paintTickets();
+  });
+}
+
 export async function openLuckyWheel({ onChange } = {}) {
+  void refreshRewindTickets({ maxAgeMs: 15000 });
   if (onChange) S.hooks.onChange = onChange;
   ensureDom();
   const auth = getAuthState();

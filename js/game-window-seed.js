@@ -112,6 +112,7 @@ export function seedClassicFromWindow(cloud) {
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,
     assistClass: cloud.assistClass || null,
+    rewindVia: cloud.rewindVia || null,
     currentStock,
     historyLength: historyDays,
     gameKline: history.concat(bars),

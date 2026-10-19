@@ -267,13 +267,15 @@ export async function appendCloudDecision(action, expectedRevision) {
 }
 
 /** F03 rewind */
-export async function rewindCloudGame(expectedRevision, { idempotencyKey } = {}) {
+export async function rewindCloudGame(expectedRevision, { idempotencyKey, payWith } = {}) {
   const gameId = gameState.cloudGameId;
   if (!gameId) throw new Error("无云端对局");
   const key = idempotencyKey || newIdempotencyKeyLocal();
+  // Track R3: only a ticket rewind sends payWith; the coin request body stays exactly as before.
+  const body = payWith === "ticket" ? { expectedRevision, payWith: "ticket" } : { expectedRevision };
   const { data } = await apiWithHeaders(`/games/${gameId}/rewind`, {
     method: "POST",
-    body: { expectedRevision },
+    body,
     headers: { "Idempotency-Key": key },
   });
   return { data, idempotencyKey: key };

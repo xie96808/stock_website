@@ -40,5 +40,7 @@ export function resultDto(resultRow, sessionRow) {
     scoreVersion: resultRow.score_version ?? null,
     assistClass:
       resultRow.assist_class ?? sessionRow?.assist_class ?? null,
+    // Track R2: owner-only audit fact, present only for 后悔券 rewinds (absent = coin / none, as before).
+    ...(sessionRow?.rewind_via ? { rewindVia: sessionRow.rewind_via } : {}),
   };
 }
