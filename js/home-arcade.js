@@ -117,6 +117,44 @@ function paintPanel() {
   });
 }
 
+/**
+ * Keep every panel number on one line (e.g. 「+266,027.91 +8.01%」) at any width / font scale.
+ * Android WebView follows the system font size, so CSS alone can still overflow a column:
+ * measure each value cell and shrink the whole panel's numerals uniformly (--fit) until all fit.
+ */
+let fitObserver = null;
+function fitPanel() {
+  const panel = $("homeArcadePanel");
+  if (!panel) return;
+  const cells = panel.querySelectorAll(".vw");
+  panel.style.setProperty("--fit", "1");
+  let fit = 1;
+  cells.forEach((vw) => {
+    const avail = vw.clientWidth;
+    const need = vw.scrollWidth;
+    if (avail > 0 && need > avail + 0.5) fit = Math.min(fit, (avail / need) * 0.97);
+  });
+  if (fit < 1) panel.style.setProperty("--fit", String(Math.max(0.55, Math.round(fit * 1000) / 1000)));
+}
+
+function watchPanelFit() {
+  const panel = $("homeArcadePanel");
+  if (!panel) return;
+  fitPanel();
+  if (typeof ResizeObserver === "function" && !fitObserver) {
+    // Fires when the hero first gets a size (home shown) and on any resize; --fit never changes panel size.
+    fitObserver = new ResizeObserver(() => fitPanel());
+    fitObserver.observe(panel);
+  }
+  try {
+    // font-display: swap → the system fallback is wider than APNum; refit once the webfont lands.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitPanel, () => {});
+    if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", fitPanel);
+  } catch {
+    /* fonts API unavailable */
+  }
+}
+
 function drawKline() {
   const el = $("homeArcadeKl");
   if (!el) return;
@@ -318,6 +356,7 @@ export function initHomeArcade() {
   if (!lanes || !lanes.classList.contains("home-arcade")) return;
 
   paintPanel();
+  watchPanelFit();
   drawKline();
   let resizeT = 0;
   window.addEventListener("resize", () => {

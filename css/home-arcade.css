@@ -238,7 +238,8 @@
 }
 .ha-bp .vw {
   display: flex;
-  flex-wrap: wrap;
+  /* One line always: 「+266,027.91 +8.01%」; js fitPanel() shrinks --fit if a font scale would overflow */
+  flex-wrap: nowrap;
   align-items: baseline;
   align-content: flex-start;
   column-gap: calc(var(--u) * 7);
@@ -249,7 +250,7 @@
 }
 .ha-bp .val {
   font-family: "APNum", Roboto, "DIN Alternate", sans-serif;
-  font-size: clamp(9px, calc(var(--u) * 34), calc(var(--u) * 34));
+  font-size: calc(var(--u) * 34 * var(--fit, 1));
   font-weight: 520;
   font-stretch: 78%;
   line-height: 1.05;
@@ -257,7 +258,7 @@
   font-variant-numeric: tabular-nums;
   display: block;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   white-space: nowrap;
   overflow: visible;
 }
@@ -269,11 +270,12 @@
 }
 .ha-bp .pct {
   font-family: "APNum", Roboto, sans-serif;
-  font-size: clamp(8px, calc(var(--u) * 28), calc(var(--u) * 28));
+  font-size: calc(var(--u) * 25 * var(--fit, 1));
   font-weight: 400;
   font-stretch: 85%;
   margin-left: 0;
   flex: 0 0 auto;
+  white-space: nowrap;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
