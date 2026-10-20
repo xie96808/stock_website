@@ -7,6 +7,10 @@ import {
     MA_DAY_COLORS,
 } from './utils.js';
 
+/** 复盘 drag-to-zoom slider strip (px). Was 18px tall at bottom 2. */
+export const ZOOM_SLIDER_HEIGHT = 30;
+export const ZOOM_SLIDER_BOTTOM = 8;
+
 const PVP_ME_COLOR = '#8a7350';
 const PVP_OPP_COLOR = '#4d6278';
 
@@ -565,17 +569,38 @@ export function buildKlineOption(vm) {
         },
     ];
     if (wantSlider) {
+        // 复盘 slider: taller paper strip, realtime with no throttle (the stock 100ms throttle made the
+        // main chart trail the finger). On the result screen js/zoom-slider-grip.js lays 44px touch
+        // handles over it; these canvas handles are the fallback (and hidden once the grip attaches).
         dataZoom.push({
             type: 'slider',
             xAxisIndex: zoomAxes,
             filterMode: 'none',
-            height: 18,
-            bottom: 2,
+            left: yAxisLeftPx,
+            right: 14,
+            height: ZOOM_SLIDER_HEIGHT,
+            bottom: ZOOM_SLIDER_BOTTOM,
+            realtime: true,
+            throttle: 0,
             brushSelect: false,
             showDetail: false,
-            handleSize: '80%',
-            borderColor: 'rgba(88,166,255,0.2)',
-            fillerColor: 'rgba(88,166,255,0.12)',
+            showDataShadow: true,
+            handleSize: '115%',
+            handleIcon: 'path://M3,0 h6 a3,3 0 0 1 3,3 v18 a3,3 0 0 1 -3,3 h-6 a3,3 0 0 1 -3,-3 v-18 a3,3 0 0 1 3,-3 z',
+            handleStyle: { color: '#f3ead8', borderColor: '#3a3530', borderWidth: 1.4 },
+            moveHandleSize: 0,
+            borderRadius: 7,
+            backgroundColor: 'rgba(255,252,244,0.6)',
+            borderColor: 'rgba(58,53,48,0.42)',
+            fillerColor: 'rgba(196,92,58,0.13)',
+            dataBackground: {
+                lineStyle: { color: 'rgba(90,82,72,0.5)', width: 1.2, opacity: 1 },
+                areaStyle: { color: 'rgba(90,82,72,0.07)', opacity: 1 },
+            },
+            selectedDataBackground: {
+                lineStyle: { color: 'rgba(196,92,58,0.95)', width: 1.5, opacity: 1 },
+                areaStyle: { color: 'rgba(196,92,58,0.16)', opacity: 1 },
+            },
             ...dataZoomWindow,
         });
     }

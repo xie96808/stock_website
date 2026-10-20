@@ -333,3 +333,54 @@
   border-radius: 14px;
   padding: 0.85rem 0.2rem 0.4rem;
 }
+
+/* ---- 选择成交方式: two separated hand-drawn option cards (2026-10-20) ----
+   The picker is a plain column (no popover 9-slice → no notch over card 1, no shell behind
+   the cards). Each card owns one ink outline; selected = same 2px outline in red (no outer
+   ring), so it can't double up, overlap the other card, or be clipped by the sheet. */
+#fillModeModal .fill-mode-picker,
+[data-theme="dark"] #fillModeModal .fill-mode-picker {
+  margin: 0.85rem 0 1rem;
+  padding: 0;
+  border: 0;
+  border-image: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+#fillModeModal .fill-mode-option,
+[data-theme="dark"] #fillModeModal .fill-mode-option {
+  position: relative;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 11px 13px;
+  align-items: center;
+  border: 2px solid rgba(58, 53, 48, 0.42);
+  border-image: none;
+  border-radius: 15px 12px 16px 11px / 12px 16px 11px 15px;
+  background: #fbf6ea;
+  color: #2c2824;
+  box-shadow: 1.5px 2px 0 rgba(58, 53, 48, 0.16);
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 100ms ease-out, background-color 100ms ease-out, box-shadow 100ms ease-out, transform 90ms ease-out;
+}
+#fillModeModal .fill-mode-option strong { color: #2c2824; }
+#fillModeModal .fill-mode-option small { color: #5a5248; opacity: 1; }
+#fillModeModal .fill-mode-option:has(input:checked),
+[data-theme="dark"] #fillModeModal .fill-mode-option:has(input:checked) {
+  border-color: #d6362b;
+  background: #fff3e8;
+  box-shadow: 1.5px 2px 0 rgba(214, 54, 43, 0.22);
+}
+#fillModeModal .fill-mode-option:active {
+  transform: translate(1px, 1px);
+  box-shadow: 0.5px 1px 0 rgba(58, 53, 48, 0.16);
+}
+#fillModeModal .fill-mode-option input[type="radio"] {
+  margin: 0;
+  flex: none;
+}
