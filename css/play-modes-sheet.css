@@ -162,273 +162,224 @@ html.pm-sheet-open body {
 }
 
 /* ============================================================
-   .lane--compact — dense (~76–88px single-note @390).
-   Small corner ribbons (≥10px, full text) clipped to top-right;
-   seal / copy / cost+开始 vertically centered; actions at right
-   edge (12–14px), below the ribbon band.
+   .lane--compact v2 — two text lines (title + one subtitle), no corner
+   ribbons. Every non-daily card is the same fixed height (68px);
+   今日挑战 adds one row for 查看日榜. Light theme keeps the P4 paper
+   frame; an opaque inset ::before hides the ruled lines baked into the
+   paper image and carries the mode tint inside the frame only.
    ============================================================ */
 
 .start-screen #playModes .lane.lane--compact {
+  --pm-card-h: 68px;
+  --pm-paper: rgb(239, 230, 212);
+  --pm-tint: transparent;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: "mark copy actions";
-  align-items: center; /* vertical center seal, copy, actions */
-  column-gap: 8px;
+  align-items: center;
+  column-gap: 10px;
   box-sizing: border-box;
+  height: var(--pm-card-h);
+  min-height: var(--pm-card-h);
+  padding: 0 12px 0 10px;
   overflow: hidden;
   position: relative;
-  /* Keep P4 border-image paper; never paint a square fill behind it */
-  background: transparent !important;
   isolation: isolate;
+  background: transparent !important;
 }
-/* Mode tint only inside the paper frame (inset under border-image) */
+.start-screen #playModes .lane.lane--compact .lane-ribbon-clip { display: none !important; }
 .start-screen #playModes .lane.lane--compact::before {
   content: "";
   position: absolute;
-  inset: 10px 12px 11px 10px;
-  border-radius: 10px 12px 10px 12px;
+  inset: 8px;
+  border-radius: 9px 12px 9px 12px;
   pointer-events: none;
   z-index: 0;
-  background: transparent;
+  background:
+    linear-gradient(135deg, var(--pm-tint) 0%, transparent 70%),
+    var(--pm-paper);
 }
-.start-screen #playModes .lane.lane--compact::after {
-  background-image: none !important;
-}
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane::before {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--challenge) 18%, transparent) 0%,
-    color-mix(in srgb, var(--challenge) 6%, transparent) 55%,
-    transparent 100%
-  );
-}
-.start-screen #playModes .lane.lane--compact.classic-mode-lane::before {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--mode-classic, #2a2418) 14%, transparent) 0%,
-    color-mix(in srgb, var(--mode-classic, #2a2418) 5%, transparent) 55%,
-    transparent 100%
-  );
-}
-.start-screen #playModes .lane.lane--compact.oneshot-mode-lane::before {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--mode-oneshot) 18%, transparent) 0%,
-    color-mix(in srgb, var(--mode-oneshot) 6%, transparent) 55%,
-    transparent 100%
-  );
-}
-.start-screen #playModes .lane.lane--compact.survival-mode-lane::before {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--mode-survival) 16%, transparent) 0%,
-    color-mix(in srgb, var(--mode-survival) 5%, transparent) 55%,
-    transparent 100%
-  );
-}
-/* Dark has no P4 border-image — solid rounded card + same inset tint */
+.start-screen #playModes .lane.lane--compact::after { background-image: none !important; }
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane { --pm-tint: color-mix(in srgb, var(--challenge) 16%, transparent); }
+.start-screen #playModes .lane.lane--compact.classic-mode-lane { --pm-tint: color-mix(in srgb, var(--mode-classic, #2a2418) 12%, transparent); }
+.start-screen #playModes .lane.lane--compact.oneshot-mode-lane { --pm-tint: color-mix(in srgb, var(--mode-oneshot) 18%, transparent); }
+.start-screen #playModes .lane.lane--compact.survival-mode-lane { --pm-tint: color-mix(in srgb, var(--mode-survival) 15%, transparent); }
+
+/* Dark: no P4 paper image — solid rounded card, tint inset inside border */
 [data-theme="dark"] .start-screen #playModes .lane.lane--compact {
+  --pm-paper: var(--card, #242018);
   background: var(--card, #242018) !important;
-  border-radius: 18px 24px 16px 22px;
   border: 1.6px solid var(--line);
+  border-radius: 16px 20px 15px 19px;
   box-shadow: 2px 2px 0 var(--line);
 }
-[data-theme="dark"] .start-screen #playModes .lane.lane--compact.daily-challenge-lane {
-  border-color: color-mix(in srgb, var(--challenge) 78%, var(--line));
-}
-[data-theme="dark"] .start-screen #playModes .lane.lane--compact.classic-mode-lane {
-  border-color: color-mix(in srgb, var(--mode-classic) 72%, var(--line));
-}
-[data-theme="dark"] .start-screen #playModes .lane.lane--compact.oneshot-mode-lane {
-  border-color: color-mix(in srgb, var(--mode-oneshot) 78%, var(--line));
-}
-[data-theme="dark"] .start-screen #playModes .lane.lane--compact.survival-mode-lane {
-  border-color: color-mix(in srgb, var(--mode-survival) 78%, var(--line));
-}
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact::before { inset: 2px; border-radius: 13px 17px 12px 16px; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.daily-challenge-lane { border-color: color-mix(in srgb, var(--challenge) 78%, var(--line)); }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.classic-mode-lane { border-color: color-mix(in srgb, var(--mode-classic) 72%, var(--line)); }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.oneshot-mode-lane { border-color: color-mix(in srgb, var(--mode-oneshot) 78%, var(--line)); }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.survival-mode-lane { border-color: color-mix(in srgb, var(--mode-survival) 78%, var(--line)); }
 
-/* Single-note modes — dense @390; top pad clears inset ribbon glyphs. */
-.start-screen #playModes .lane.lane--compact:not(.lane--compact-link):not(.daily-challenge-lane) {
-  min-height: 88px;
-  height: auto;
-  padding: 46px 13px 6px 10px; /* 12–14px right */
+.start-screen #playModes .lane.lane--compact > * { position: relative; z-index: 1; }
+
+/* Folded corner (start cards only): a 1-character tab at the card's top-right.
+   The glyph sits in the corner outside the 开始 button's rounded corner (the
+   button is 12px from the top, 12–14px from the right, radius 16), so the
+   button does not move. At 30px the tab's diagonal clears the button's
+   rounded corner by ≈3–4px (≈2.4px at 360@130%), so the two never merge. The fill matches the mode's 开始 colour; the text uses the
+   button's own contrast pair. */
+.start-screen #playModes .lane.lane--compact > .lane-fold {
+  --fold: 30px;
+  --fold-bg: var(--ink);
+  --fold-fg: #f3ead8;
+  --fold-edge: var(--line);
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1; /* DOM order puts it before .lane-actions, so 开始 paints over its lower edge */
+  width: var(--fold);
+  height: var(--fold);
+  pointer-events: none;
+  background: linear-gradient(225deg,
+    var(--fold-bg) 0 calc(50% - 1px),
+    var(--fold-edge) calc(50% - 1px) calc(50% + 0.6px),
+    transparent calc(50% + 0.6px));
 }
+.start-screen #playModes .lane.lane--compact > .lane-fold b {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--fold-fg);
+  -webkit-font-smoothing: antialiased;
+}
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane > .lane-fold { --fold-bg: rgb(61, 90, 128); }
+.start-screen #playModes .lane.lane--compact.classic-mode-lane > .lane-fold { --fold-bg: rgb(58, 53, 48); }
+.start-screen #playModes .lane.lane--compact.oneshot-mode-lane > .lane-fold { --fold-bg: rgb(184, 134, 11); --fold-fg: #1c1810; }
+.start-screen #playModes .lane.lane--compact.survival-mode-lane > .lane-fold { --fold-bg: rgb(190, 62, 62); }
+/* Dark: the tab sits inside the 1.6px border and follows the card's rounded corner */
+/* Dark: the card's 20px top-right radius would clip the tab, so start cards
+   get a nearly square top-right corner (the folded corner) */
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact:has(> .lane-fold) { border-top-right-radius: 5px; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact:has(> .lane-fold)::before { border-top-right-radius: 4px; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact > .lane-fold {
+  --fold-edge: rgba(0, 0, 0, 0.55);
+  border-top-right-radius: 3px;
+}
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.daily-challenge-lane > .lane-fold { --fold-bg: rgb(107, 143, 181); --fold-fg: #10161e; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.classic-mode-lane > .lane-fold { --fold-bg: rgb(200, 188, 168); --fold-fg: #1c1a16; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.oneshot-mode-lane > .lane-fold { --fold-bg: rgb(212, 168, 75); --fold-fg: #1c1810; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.survival-mode-lane > .lane-fold { --fold-bg: rgb(224, 112, 112); --fold-fg: #1c1212; }
 
 .start-screen #playModes .lane.lane--compact .mark {
   grid-area: mark;
   align-self: center;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   font-size: 15px;
-  z-index: 2;
 }
 .start-screen #playModes .lane.lane--compact .copy {
   grid-area: copy;
   align-self: center;
   min-width: 0;
-  padding-right: 4px;
-  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
 }
 .start-screen #playModes .lane.lane--compact .copy small { display: none; }
-.start-screen #playModes .lane.lane--compact .copy strong {
+.start-screen #playModes .lane.lane--compact .copy strong,
+.start-screen #playModes .lane.lane--compact .copy .lane-note {
   display: block;
-  font-size: 1.02rem;
-  letter-spacing: 0.12em;
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.start-screen #playModes .lane.lane--compact .copy strong {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
   line-height: 1.25;
 }
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane .copy strong {
-  font-size: 1.02rem;
-  letter-spacing: 0.12em;
-}
-.start-screen #playModes .lane.lane--compact .copy .lane-note,
-.start-screen #playModes .lane.lane--compact .copy p.lane-note {
-  margin-top: 2px;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  color: var(--ink-soft, var(--mute));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.start-screen #playModes .lane.lane--compact .lane-note-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  margin-top: 2px;
-  min-width: 0;
-}
-.start-screen #playModes .lane.lane--compact .copy .lane-note-sub,
-.start-screen #playModes .lane.lane--compact .daily-challenge-card-state {
-  margin: 0;
-  font-size: 0.68rem;
+.start-screen #playModes .lane.lane--compact .copy .lane-note {
+  font-size: 0.74rem;
   line-height: 1.3;
-  color: var(--mute);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--ink-soft, var(--mute));
 }
-.start-screen #playModes .lane.lane--compact .copy .lane-note-sub[hidden],
-.start-screen #playModes .lane.lane--compact .puzzle-chapter-card-state[hidden] {
-  display: none !important;
-}
+.start-screen #playModes .lane.lane--compact .copy .lane-note[hidden] { display: none !important; }
 
-/* Cost + 「开始」 — right edge, same midline as seal/copy (card
-   padding-top already clears the ribbon diagonal). */
+/* Cost (left) + coloured 「开始」 (≥44px) */
 .start-screen #playModes .lane.lane--compact .lane-actions {
   grid-area: actions;
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
-  z-index: 3;
-  align-self: center;
-  margin-top: 0;
-  padding-top: 0;
-  box-sizing: border-box;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
 }
 .start-screen #playModes .lane.lane--compact .lane-cost {
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: center;
   gap: 2px;
   flex-shrink: 0;
-  height: 40px;
   margin: 0;
   padding: 0;
   font-family: var(--kaiti, serif);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   line-height: 1;
   color: var(--ink);
+  white-space: nowrap;
 }
-.start-screen #playModes .lane.lane--compact .lane-cost .coin-slot {
-  display: inline-flex;
-  align-items: center;
-  width: 14px;
-  height: 14px;
-}
+.start-screen #playModes .lane.lane--compact .lane-cost .coin-slot,
 .start-screen #playModes .lane.lane--compact .lane-cost .coin-slot img {
+  display: block;
   width: 14px;
   height: 14px;
-  display: block;
 }
-
-.start-screen #playModes .lane.lane--compact .cta {
-  min-width: 44px;
+.start-screen #playModes .lane.lane--compact .cta:not(.lane-chevron) {
+  min-width: 56px;
   width: auto;
-  height: 40px;
-  min-height: 40px;
-  padding: 0 11px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
   box-sizing: border-box;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   letter-spacing: 0.14em;
+  white-space: nowrap;
   transition: transform 80ms ease, box-shadow 80ms ease, filter 80ms ease;
 }
-.start-screen #playModes .lane.lane--compact .daily-challenge-cta,
-.start-screen #playModes .lane.lane--compact .classic-mode-cta,
-.start-screen #playModes .lane.lane--compact .oneshot-mode-cta,
-.start-screen #playModes .lane.lane--compact .survival-mode-cta {
-  min-width: 44px;
-  height: 40px;
-  min-height: 40px;
-  font-size: 0.88rem;
-  letter-spacing: 0.14em;
-  padding: 0 11px;
-}
-.start-screen #playModes .lane.lane--compact:active .cta {
+.start-screen #playModes .lane.lane--compact:active .cta:not(.lane-chevron) {
   transform: translate(1px, 1px) scale(0.97);
   filter: brightness(0.96);
-  transition-duration: 80ms;
 }
 
-/* Ribbon: inset inside P4 paper ink; ≥2px glyph clearance from edges. */
-.start-screen #playModes .lane.lane--compact .lane-ribbon-clip {
-  position: absolute;
-  inset: auto;
-  top: 7px;
-  right: 12px;
-  width: 104px;
-  height: 44px;
-  overflow: hidden;
-  border-radius: 0 10px 0 0;
-  pointer-events: none;
-  z-index: 1;
-}
-.start-screen #playModes .lane.lane--compact .classic-mode-ribbon,
-.start-screen #playModes .lane.lane--compact .oneshot-mode-ribbon,
-.start-screen #playModes .lane.lane--compact .survival-mode-ribbon,
-.start-screen #playModes .lane.lane--compact .daily-challenge-ribbon {
-  top: 10px;
-  right: -12px;
-  padding: 2px 20px;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-  transform: rotate(22deg);
-  white-space: nowrap;
-  overflow: visible;
-  line-height: 1.1;
-}
-
-/* Daily: taller for 剩余 + inline 日榜 */
+/* 今日挑战: title + subtitle + its own 查看日榜 row (taller by one row) */
 .start-screen #playModes .lane.lane--compact.daily-challenge-lane {
-  min-height: 102px;
-  padding: 46px 13px 8px 10px;
+  height: auto;
+  padding-top: 12px;
+  padding-bottom: 12px;
   cursor: pointer;
 }
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane .lane-ribbon-clip {
-  border-radius: 0 10px 0 0;
-}
-.start-screen #playModes .lane.lane--compact.daily-challenge-lane.is-disabled {
-  cursor: default;
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane.is-disabled { cursor: default; }
+.start-screen #playModes .lane.lane--compact .lane-board-row {
+  display: flex;
+  margin-top: 3px;
 }
 .start-screen #playModes .lane.lane--compact .lane-board-mini {
   flex: 0 0 auto;
   margin: 0;
-  padding: 2px 8px;
+  padding: 2px 9px;
   min-height: 24px;
   border: 1.3px solid var(--line);
   border-radius: 7px 10px 6px 9px;
@@ -436,39 +387,30 @@ html.pm-sheet-open body {
   color: var(--ink);
   font: inherit;
   font-family: var(--kaiti, serif);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.1em;
+  line-height: 1.2;
+  white-space: nowrap;
   box-shadow: 1px 1px 0 var(--line);
   cursor: pointer;
   appearance: none;
   transition: transform 80ms ease, box-shadow 80ms ease;
-  z-index: 2;
 }
 .start-screen #playModes .lane.lane--compact .lane-board-mini:active {
   transform: translate(1px, 1px);
   box-shadow: 0 0 0 var(--line);
 }
-.start-screen #playModes .lane.lane--compact .lane-board-mini[hidden] {
-  display: none !important;
-}
+.start-screen #playModes .lane.lane--compact .lane-board-mini[hidden] { display: none !important; }
 
-/* Quiet chevrons */
+/* Quiet chevrons (残局 / 战绩 / 榜) — same 68px as mode cards */
 .start-screen #playModes .lane.lane--compact.lane--compact-link {
-  min-height: 48px;
-  padding: 8px 8px 8px 10px;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas: "mark copy actions";
-  background-image: none !important;
+  padding-right: 6px;
 }
-.start-screen #playModes .lane.lane--compact.lane--compact-link .copy strong {
-  font-size: 0.98rem;
-}
-.start-screen #playModes .lane.lane--compact.lane--compact-link .cta,
 .start-screen #playModes .lane.lane--compact.lane--compact-link .cta.lane-chevron {
   grid-area: actions;
   align-self: center;
-  margin-top: 0;
+  margin: 0;
   min-width: 44px;
   width: 44px;
   height: 44px;
@@ -488,14 +430,21 @@ html.pm-sheet-open body {
   display: grid;
   place-items: center;
 }
-.start-screen #playModes .lane.lane--compact.lane--compact-link .cta::after {
-  display: none;
-}
+.start-screen #playModes .lane.lane--compact.lane--compact-link .cta::after { display: none; }
 .start-screen #playModes .lane.lane--compact.lane--compact-link:hover .cta,
 .start-screen #playModes .lane.lane--compact.lane--compact-link:active .cta {
   opacity: 0.75;
   filter: none;
   transform: none;
+}
+
+/* Narrow (e.g. 360 @130% ≈ 277 CSS px): tighten, never wrap */
+@media (max-width: 340px) {
+  .start-screen #playModes .lane.lane--compact { column-gap: 7px; padding-left: 8px; padding-right: 10px; }
+  .start-screen #playModes .lane.lane--compact .mark { width: 28px; height: 28px; font-size: 13px; }
+  .start-screen #playModes .lane.lane--compact .copy strong { letter-spacing: 0.04em; }
+  .start-screen #playModes .lane.lane--compact .cta:not(.lane-chevron) { min-width: 48px; padding: 0 9px; letter-spacing: 0.06em; }
+  .start-screen #playModes .lane.lane--compact .lane-actions { gap: 4px; }
 }
 
 .pm-skel {
@@ -576,18 +525,4 @@ html.pm-sheet-open body {
 @media (max-width: 430px) {
   .pm-sheet-body { padding: 8px 10px 6px; }
   #playModes #playModesList.lanes { gap: 8px; }
-  .start-screen #playModes .lane.lane--compact:not(.lane--compact-link) {
-    padding-left: 8px;
-    padding-right: 12px;
-    /* keep asymmetric top/bottom from base compact rules */
-  }
-  .start-screen #playModes .lane.lane--compact .copy strong {
-    font-size: 0.96rem;
-    letter-spacing: 0.08em;
-  }
-}
-@media (min-width: 801px) {
-  .start-screen #playModes :is(.daily-challenge-lane, .classic-mode-lane, .oneshot-mode-lane, .survival-mode-lane).lane--compact {
-    padding-right: 14px;
-  }
 }
