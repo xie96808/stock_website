@@ -6,35 +6,13 @@
  *              gesture alive while the link is fetched) → execCommand("copy").
  *              The Android shell (StockGameApp) has no clipboard method today;
  *              if one is added as copyText(text), it is used first.
- *   保存邀请图 → off-screen card → html2canvas → deliverImage(): Android
- *              StockGameApp.saveImage → Web Share files → <a download>.
- *
- * Share-image art is not final. INVITE_CARD_ART is the only place to plug it
- * in: set `background` to the finished art (same 1080×1440 canvas) and move
- * the QR / text slots to where the art leaves room. With background null the
- * placeholder layout below is drawn.
+ *   保存邀请图 → S6 card drawn on a canvas (invite-card-s6.js, 2160×2880)
+ *              → deliverImage(): Android StockGameApp.saveImage → Web Share
+ *              files → <a download>.
  */
-import { showToast } from "../auth.js";
+import { displayAvatarUrl, getAuthState, showToast } from "../auth.js";
 import { buildBattleSharePayload, PVP_INVITE_SHARE_TEXT } from "./copy.js";
 import { pvpFetch } from "./transport.js";
-
-export const INVITE_CARD_ART = Object.freeze({
-  width: 1080,
-  height: 1440,
-  /** Full-bleed background art URL (same-origin, 1080×1440 PNG/WebP), or null for the placeholder. */
-  background: null,
-  /** QR slot on the card, in card pixels. */
-  qr: { left: 360, top: 900, size: 360 },
-  /** Text block under the QR (invite line + link). */
-  text: { left: 96, top: 1290, width: 888 },
-});
-
-const INK = "#2c2824";
-const SOFT = "#6b6258";
-const KRAFT = "#f3ead8";
-const FONT_KAI = '"Kaiti SC","STKaiti","KaiTi","BiauKai","Noto Serif CJK SC","Songti SC",serif';
-const FONT_MONO = 'ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace';
-const COVER = "assets/pvp/battle-cover.webp";
 
 let cached = null; // { payload, code, expiresAt }
 
@@ -132,73 +110,6 @@ export async function copyInviteLink({ note } = {}) {
   return "failed";
 }
 
-function el(tag, style = {}, text) {
-  const node = document.createElement(tag);
-  Object.assign(node.style, style);
-  if (text != null) node.textContent = String(text);
-  return node;
-}
-
-function picture(src, style) {
-  const node = document.createElement("img");
-  node.alt = "";
-  node.crossOrigin = "anonymous";
-  node.src = src;
-  Object.assign(node.style, { display: "block", ...style });
-  return node;
-}
-
-/** Off-screen invite card. `art` defaults to INVITE_CARD_ART. */
-export async function buildInviteCard(payload, { art = INVITE_CARD_ART } = {}) {
-  const share = await import("../share-image.js");
-  const qr = await share.qrDataUrl(payload.url);
-  const root = el("div", {
-    position: "fixed", left: "-20000px", top: "0",
-    width: `${art.width}px`, height: `${art.height}px`, boxSizing: "border-box",
-    background: KRAFT, color: INK, fontFamily: FONT_KAI, overflow: "hidden",
-  });
-  root.setAttribute("aria-hidden", "true");
-  root.dataset.shareCard = "pvp-invite";
-
-  if (art.background) {
-    root.append(picture(art.background, { position: "absolute", inset: "0", width: "100%", height: "100%", objectFit: "cover" }));
-  } else {
-    // Placeholder layout until the commissioned art lands.
-    root.append(el("div", { position: "absolute", inset: "24px", border: `5px solid ${INK}`, borderRadius: "34px 40px 30px 38px" }));
-    root.append(el("div", { position: "absolute", left: "96px", top: "92px", fontSize: "34px", letterSpacing: "0.3em", color: SOFT }, "双人对战 · 约战邀请"));
-    root.append(el("div", { position: "absolute", left: "96px", top: "150px", fontSize: "76px", fontWeight: "700", letterSpacing: "0.1em" }, "来一局？"));
-    root.append(picture(COVER, { position: "absolute", left: "96px", top: "286px", width: "888px", height: "444px", objectFit: "cover", borderRadius: "22px", border: `4px solid ${INK}` }));
-    root.append(el("div", { position: "absolute", left: "96px", top: "772px", width: "888px", fontSize: "40px", lineHeight: "1.4", textAlign: "center" }, PVP_INVITE_SHARE_TEXT));
-  }
-
-  // White frame keeps a wide quiet zone between the ink border and the code.
-  const qrFrame = el("div", {
-    position: "absolute", left: `${art.qr.left}px`, top: `${art.qr.top}px`,
-    width: `${art.qr.size}px`, height: `${art.qr.size}px`, boxSizing: "border-box",
-    padding: "24px", background: "#fff", border: `5px solid ${INK}`, borderRadius: "18px",
-  });
-  qrFrame.append(picture(qr, { display: "block", width: "100%", height: "100%", imageRendering: "pixelated" }));
-  root.append(qrFrame);
-  const words = el("div", {
-    position: "absolute", left: `${art.text.left}px`, top: `${art.text.top}px`, width: `${art.text.width}px`,
-    display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", textAlign: "center",
-  });
-  words.append(el("div", { fontSize: "30px", color: SOFT }, "扫码进房间 · 早知道当初不炒了"));
-  words.append(el("div", { fontFamily: FONT_MONO, fontSize: "26px", color: SOFT, wordBreak: "break-all" }, payload.url));
-  root.append(words);
-
-  document.body.appendChild(root);
-  await Promise.all([...root.querySelectorAll("img")].map((node) => (
-    node.complete && node.naturalWidth > 0
-      ? Promise.resolve()
-      : new Promise((resolve) => {
-        node.onload = resolve;
-        node.onerror = () => { node.style.visibility = "hidden"; resolve(); };
-      })
-  )));
-  return root;
-}
-
 const DONE_COPY = {
   "bridge-saved": "已保存到相册",
   "bridge-shared": "已打开系统分享",
@@ -206,17 +117,40 @@ const DONE_COPY = {
   downloaded: "邀请图已保存",
 };
 
+/** Avatar sources for the card, best first: custom → preset → default preset. */
+export function inviteAvatarSources(user) {
+  const list = [];
+  if (user) list.push(displayAvatarUrl(user));
+  if (user?.avatarUrl) list.push(displayAvatarUrl(user.avatarId || 1));
+  list.push(DEFAULT_AVATAR);
+  return [...new Set(list.filter(Boolean))];
+}
+const DEFAULT_AVATAR = "/images/avatars/01.png";
+
+/** 2160×2880 unless the device is short on canvas budget. */
+function cardScale(win = typeof window !== "undefined" ? window : null) {
+  const mem = Number(win?.navigator?.deviceMemory);
+  return Number.isFinite(mem) && mem > 0 && mem < 2 ? 1 : 2;
+}
+
+/** Builds the S6 invite card canvas for the current user. */
+export async function buildInviteCanvas(payload, { user = getAuthState()?.user, scale = cardScale() } = {}) {
+  const { renderInviteCardS6 } = await import("./invite-card-s6.js");
+  return renderInviteCardS6({
+    url: payload.url,
+    nickname: user?.nickname || "我",
+    avatarSources: inviteAvatarSources(user),
+    scale,
+  });
+}
+
 /** 保存邀请图 button. Never throws. */
 export async function saveInviteImage({ note } = {}) {
-  let node = null;
   try {
     const payload = await getInvitePayload();
     if (note) note.textContent = payload.url;
     const share = await import("../share-image.js");
-    node = await buildInviteCard(payload);
-    const canvas = await share.renderNodeToCanvas(node);
-    node.remove();
-    node = null;
+    const { canvas } = await buildInviteCanvas(payload);
     const how = await share.deliverImage(canvas, `zaozhidao-pvp-invite-${payload.code}.png`, { text: PVP_INVITE_SHARE_TEXT });
     if (DONE_COPY[how]) showToast(DONE_COPY[how], "success");
     return how;
@@ -224,7 +158,5 @@ export async function saveInviteImage({ note } = {}) {
     console.warn("invite image failed", err);
     showToast(err?.message && err.status ? err.message : "邀请图没生成出来，请稍后再试", "error");
     return "error";
-  } finally {
-    if (node) node.remove();
   }
 }

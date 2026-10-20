@@ -59,7 +59,7 @@ test("invite share text is one constant shared by link, copy and card", () => {
   assert.match(invite, /execCommand\("copy"\)/);
   assert.match(invite, /链接已复制/);
   assert.match(invite, /deliverImage/);
-  assert.match(invite, /INVITE_CARD_ART/);
+  assert.match(invite, /renderInviteCardS6/);
   assert.doesNotMatch(invite + read("js/pvp/rank-help.js"), /\balert\(/);
   const html = read("index.html");
   assert.match(html, /id="pvpShareCopyBtn"/);
@@ -80,4 +80,47 @@ test("lobby hero is H1, per-theme transparent art with webp + png at 600w/1200w"
       }
     }
   }
+});
+
+import {
+  MASKED_STOCK_LABEL,
+  S6_SAMPLE_BARS,
+  graphemes,
+  isUp,
+  lastOhlc,
+  movingAverage,
+  ohlcText,
+  splitHeadline,
+  truncateToWidth,
+} from "../../js/pvp/invite-card-s6.js";
+
+test("S6 invite card never names a stock and computes O/H/L/C from the bars it draws", () => {
+  const src = read("js/pvp/invite-card-s6.js");
+  assert.doesNotMatch(src, /君实生物|688180|39\.63|39\.70|38\.03|38\.51/);
+  assert.equal(MASKED_STOCK_LABEL, "神秘个股 · 开局揭晓");
+  assert.doesNotMatch(src, /\d{4}-\d{2}-\d{2}/, "no date range on the card");
+  assert.equal(S6_SAMPLE_BARS.length, 42);
+  for (const [o, h, l, c, v] of S6_SAMPLE_BARS) {
+    assert.ok(h >= Math.max(o, c) && l <= Math.min(o, c) && v > 0);
+  }
+  const last = S6_SAMPLE_BARS.at(-1);
+  assert.deepEqual(lastOhlc(S6_SAMPLE_BARS), { open: last[0], high: last[1], low: last[2], close: last[3] });
+  assert.equal(ohlcText(S6_SAMPLE_BARS), `开 ${last[0].toFixed(2)}  高 ${last[1].toFixed(2)}  低 ${last[2].toFixed(2)}  收 ${last[3].toFixed(2)}`);
+  // volume bars and candle bodies share one up/down rule (red up, green down)
+  assert.match(src, /fillStyle = isUp\(b\) \? C\.up : C\.down;[\s\S]*fillStyle = isUp\(b\) \? C\.up : C\.down;/);
+  assert.equal(isUp([1, 2, 0.5, 1]), true);
+  assert.equal(isUp([1, 2, 0.5, 0.9]), false);
+  // server: stock is chosen at match start and revealed only after a completed settlement
+  assert.match(read("server/src/lib/pvp/challenges.js"), /pickRandomWindow\(\)/);
+  assert.match(read("server/src/lib/pvp/view.js"), /terminalType === "completed"[\s\S]*view\.identity = \{/);
+});
+
+test("S6 helpers: MA, headline split, nickname truncation", () => {
+  assert.deepEqual(movingAverage([1, 2, 3, 4, 5, 6], 5), [null, null, null, null, 3, 4]);
+  const w = (s) => graphemes(s).length * 10;
+  assert.deepEqual(splitHeadline("还不来？同一段行情，和我 PK 收益率！", 100, w), ["还不来？同一段行情，", "和我 PK 收益率！"]);
+  assert.equal(truncateToWidth("短名", 100, w), "短名");
+  const cut = truncateToWidth("超级无敌长昵称的韭菜大王", 60, w);
+  assert.ok(cut.endsWith("…") && w(cut) <= 60);
+  assert.equal(truncateToWidth("👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍👩‍👧‍👦", 25, w), "👨‍👩‍👧‍👦…");
 });

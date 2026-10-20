@@ -6,8 +6,7 @@
  * 404s. If an image fails at runtime we fall back to the old avatar.
  *
  * Bot art and the lobby hero (battle-hero-{light,dark}, 1200x600 + 600x300,
- * transparent) are wired. battle-cover* (cat K-line) now only feeds the invite
- * share card in invite-share.js.
+ * transparent) are wired.
  */
 import { displayAvatarUrl } from "../auth.js";
 import { getTheme, onThemeChange, THEME_DARK } from "../theme.js";
