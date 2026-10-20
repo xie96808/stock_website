@@ -919,3 +919,73 @@
     cursor: pointer;
 }
 .result-retry-toast__btn:active { transform: translate(1px, 1px); }
+
+/* ── 复盘 K 线 zoom slider grip (js/zoom-slider-grip.js) ──
+   44px hit band over the ECharts slider strip; only this band blocks page scroll. */
+.zs-grip {
+    position: absolute;
+    z-index: 3;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: ew-resize;
+    --zs-bar-h: 30px;
+}
+.zs-grip-win {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: var(--zs-bar-h);
+    margin-top: calc(var(--zs-bar-h) / -2);
+    border-radius: 7px 9px 7px 8px;
+    border: 1.5px solid transparent;
+    box-sizing: border-box;
+    pointer-events: none;
+    transition: border-color 90ms ease-out;
+    will-change: transform, width;
+}
+.zs-grip.is-moving .zs-grip-win { border-color: rgba(196, 92, 58, 0.55); }
+.zs-grip-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    will-change: transform;
+}
+.zs-grip-pill {
+    box-sizing: border-box;
+    width: 13px;
+    height: calc(var(--zs-bar-h) + 8px);
+    border-radius: 7px 6px 7px 6px;
+    border: 1.6px solid var(--line, #3a3530);
+    background: var(--paper, #f3ead8);
+    box-shadow: 1.5px 1.5px 0 var(--line, #3a3530);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: transform 80ms ease-out, background-color 80ms ease-out, box-shadow 80ms ease-out;
+}
+.zs-grip-pill i {
+    display: block;
+    width: 1.5px;
+    height: 11px;
+    border-radius: 1px;
+    background: var(--ink-soft, #5a5248);
+    opacity: 0.75;
+}
+.zs-grip-handle.is-pressed .zs-grip-pill {
+    transform: scale(1.14, 1.08);
+    background: var(--terra, #c45c3a);
+    box-shadow: 0.5px 0.5px 0 var(--line, #3a3530);
+}
+.zs-grip-handle.is-pressed .zs-grip-pill i { background: var(--terra-ink, #f3ead8); opacity: 0.95; }
+@media (prefers-reduced-motion: reduce) {
+    .zs-grip-pill, .zs-grip-win { transition: none; }
+}

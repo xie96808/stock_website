@@ -4,6 +4,7 @@ import { ticketChip } from './rewind-tickets-pure.js';
 import { getSession, selectSettleView } from './game-session.js';
 import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { buildKlineOption } from './kline-option.js';
+import { attachZoomSliderGrip, applySliderTheme } from './zoom-slider-grip.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
 import { calcGrade } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
@@ -33,8 +34,13 @@ import {
 } from './echarts-loader.js';
 import { unitIconsHtml, ticketAmountHtml, escapeHtml as escapeChipHtml } from './unit-icons.js';
 
+/** 复盘 slider grip + the option it was built from (theme re-colour targets the slider only). */
+let resultGrip = null;
+let resultOption = null;
+
 onThemeChange((theme) => {
     applyChartTheme(chartRefs.resultChart, theme);
+    if (resultOption) applySliderTheme(chartRefs.resultChart, theme, resultOption);
 });
 
 export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
@@ -449,6 +455,11 @@ export async function drawResultChart() {
     }
     clearChartLoading(chartDom);
 
+    if (resultGrip) {
+        resultGrip.destroy();
+        resultGrip = null;
+    }
+    resultOption = null;
     if (chartRefs.resultChart) {
         chartRefs.resultChart.dispose();
     }
@@ -472,6 +483,15 @@ export async function drawResultChart() {
         if (!chartRefs.resultChart) return;
         chartRefs.resultChart.setOption(option);
         applyChartTheme(chartRefs.resultChart, getTheme());
+        resultOption = option;
+        applySliderTheme(chartRefs.resultChart, getTheme(), option);
+        try {
+            resultGrip = attachZoomSliderGrip(chartRefs.resultChart, option, { barCount: fullData.length });
+        } catch (err) {
+            // Stock ECharts slider stays usable if the grip cannot attach.
+            console.warn('zoom slider grip unavailable', err);
+            resultGrip = null;
+        }
         buildPointNavigator(chartRefs.resultChart, histLen, fullData);
     });
 }
