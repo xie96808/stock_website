@@ -2,6 +2,8 @@ package top.xieyw.stockgame
 
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
@@ -324,6 +326,38 @@ class MainActivity : AppCompatActivity() {
             val bytes = decodePng(base64) ?: return "error"
             return if (shareBytes(bytes, safePngName(fileName), title)) "shared" else "error"
         }
+
+        /**
+         * 发给微信好友: send a base64 PNG straight to WeChat's friend picker
+         * (com.tencent.mm/.ui.tools.ShareImgUI, image only; WeChat drops EXTRA_TEXT
+         * when an image is attached, so the link travels in the card's QR code).
+         * Falls back to the system chooser when WeChat is missing or refuses.
+         * Returns "wechat" | "chooser" | "error".
+         */
+        @JavascriptInterface
+        fun shareImageToWeChat(base64: String?, fileName: String?): String {
+            val bytes = decodePng(base64) ?: return "error"
+            val uri = writeShareFile(bytes, safePngName(fileName)) ?: return "error"
+            val direct = weChatImageIntent(uri)
+            if (direct == null) {
+                return if (startChooser(uri, "发给微信好友")) "chooser" else "error"
+            }
+            runOnUiThread {
+                if (isFinishing) return@runOnUiThread
+                try {
+                    grantUriPermission(WECHAT_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    startActivity(direct)
+                } catch (_: Exception) {
+                    // ActivityNotFound / SecurityException (component renamed or not exported).
+                    launchChooser(uri, "发给微信好友")
+                }
+            }
+            return "wechat"
+        }
+
+        /** Lets the web UI show 「发给微信好友」 only when the shell can do it. */
+        @JavascriptInterface
+        fun canShareToWeChat(): Boolean = isWeChatInstalled()
     }
 
     private fun decodePng(base64: String?): ByteArray? {
@@ -340,6 +374,58 @@ class MainActivity : AppCompatActivity() {
         val base = (fileName ?: "").replace(Regex("[^A-Za-z0-9._-]"), "_").take(80)
         val stem = base.removeSuffix(".png").ifBlank { "zaozhidao-${System.currentTimeMillis()}" }
         return "$stem.png"
+    }
+
+    private fun isWeChatInstalled(): Boolean = try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(WECHAT_PACKAGE, PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(WECHAT_PACKAGE, 0)
+        }
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
+    }
+
+    /** Explicit ShareImgUI intent, or null when WeChat (or that activity) is not resolvable. */
+    private fun weChatImageIntent(uri: Uri): Intent? {
+        if (!isWeChatInstalled()) return null
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            component = ComponentName(WECHAT_PACKAGE, WECHAT_SHARE_IMG_UI)
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        return if (intent.resolveActivity(packageManager) != null) intent else null
+    }
+
+    private fun writeShareFile(bytes: ByteArray, name: String): Uri? = try {
+        val dir = File(cacheDir, "share").apply { mkdirs() }
+        dir.listFiles()?.forEach { if (it.name != name) it.delete() }
+        val file = File(dir, name)
+        file.writeBytes(bytes)
+        FileProvider.getUriForFile(this, "$packageName${AppUpdater.AUTHORITY_SUFFIX}", file)
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun startChooser(uri: Uri, title: String?): Boolean {
+        runOnUiThread { if (!isFinishing) launchChooser(uri, title) }
+        return true
+    }
+
+    private fun launchChooser(uri: Uri, title: String?) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        try {
+            startActivity(Intent.createChooser(send, title ?: "分享图片"))
+        } catch (_: ActivityNotFoundException) {
+            // No share target.
+        }
     }
 
     private fun shareBytes(bytes: ByteArray, name: String, title: String?): Boolean {
@@ -370,6 +456,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val ALBUM_DIR = "早知道当初不炒了"
+        private const val WECHAT_PACKAGE = "com.tencent.mm"
+        private const val WECHAT_SHARE_IMG_UI = "com.tencent.mm.ui.tools.ShareImgUI"
         private const val MAX_IMAGE_B64 = 24 * 1024 * 1024
         private val PAPER_LIGHT = Color.parseColor("#F3EAD8")
         private val PAPER_DARK = Color.parseColor("#1C1A16")

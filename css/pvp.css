@@ -2151,6 +2151,19 @@ img.pvp-bot-art[data-bot-art="bot-glitch"] {
   min-width: 0;
   margin: 0;
 }
+/* 发给微信好友 (Android app only): one full-width pill under the share row. */
+#pvpLobbyScreen .pvp-share-wechat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(440px, 100%);
+  margin: 0 auto 0.6rem;
+}
+#pvpLobbyScreen .pvp-share-wechat[hidden] { display: none; }
+#pvpLobbyScreen .pvp-share-wechat .pvp-share-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-3deg); }
+#pvpLobbyScreen .pvp-share-wechat .pvp-mini-fill { fill: color-mix(in srgb, var(--terra, #c4553b) 16%, transparent); }
+#pvpLobbyScreen .pvp-share-wechat[aria-busy="true"] { opacity: 0.7; cursor: progress; }
 .pvp-share-mini {
   flex: none;
   display: inline-grid;
