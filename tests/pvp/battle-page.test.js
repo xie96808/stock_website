@@ -66,3 +66,18 @@ test("invite share text is one constant shared by link, copy and card", () => {
   assert.match(html, /id="pvpShareImageBtn"/);
   assert.doesNotMatch(html.split('class="pvp-rules"')[1].split("</ul>")[0], /平局各退|一局最长/);
 });
+
+test("lobby hero is H1, per-theme transparent art with webp + png at 600w/1200w", () => {
+  const art = read("js/pvp/bot-art.js");
+  assert.match(art, /img\.alt = "模拟对战"/);
+  assert.match(art, /battle-hero-\$\{theme === THEME_DARK \? "dark" : "light"\}/);
+  assert.match(art, /onThemeChange/);
+  assert.doesNotMatch(art, /assets\/pvp\/battle-cover/);
+  for (const t of ["light", "dark"]) {
+    for (const s of ["", "-600"]) {
+      for (const ext of ["webp", "png"]) {
+        assert.ok(readFileSync(new URL(`assets/pvp/battle-hero-${t}${s}.${ext}`, root)).length > 1000);
+      }
+    }
+  }
+});
