@@ -85,7 +85,7 @@ function paintClockFace(id, seconds, kicker, urgent, fraction) {
   }
 }
 
-const READY_WINDOW_MS = 15_000;
+const READY_WINDOW_MS = 30_000;
 let readyRingKey = "";
 let readyRingTotal = READY_WINDOW_MS;
 

@@ -125,7 +125,7 @@
 - 同时 A→B、B→A：唯一无序 pair pending 键；第二个创建返回已有约战及“请接受”状态，**不替用户自动接受**。
 - 接受在 `BEGIN IMMEDIATE` 短事务内：检查 pending 和截止 → 检查双方房间锁 → 创建 waiting_ready、两席 player、两条 active_member → challenge accepted → 取消涉及双方的其他 pending。只允许事务全部成功。
 - 接受 A→B 与 C→B 同时到达，B 的 active_member 主键使其中一个成功；另一方得到 TARGET_BUSY，零扣费。
-- 准备超时／任一取消：aborted(reason=ready_timeout/ready_cancelled)，释放双方锁，零扣费、零胜负。连续 3 次准备超时／15分钟暂停约战 5 分钟，避免单次弱网即惩罚。
+- 准备窗口 30 秒（READY_MS）。准备超时／任一取消：aborted(reason=ready_timeout/ready_cancelled)，释放双方锁，零扣费、零胜负。连续 3 次准备超时／15分钟暂停约战 5 分钟，避免单次弱网即惩罚。
 - 两人准备确认后再校验资格与余额；双人扣款任一失败，整笔扣款回滚；随后单独将准备房间作废并释放锁，错误中不暴露对方具体余额。
 
 ### 3.3 多设备
