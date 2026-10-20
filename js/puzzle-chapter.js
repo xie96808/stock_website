@@ -26,6 +26,14 @@ export function isPuzzleChapterEnabled() {
   return puzzleEnabled;
 }
 
+/** Seed the flags from an already-fetched /config `features` object (no extra request). */
+export function primePuzzleChapterFlag(features) {
+  puzzleEnabled = !!(features && features.puzzleChapter);
+  puzzleWeeklyEnabled = !!(features && features.puzzleWeekly);
+  syncWeeklyUiVisibility();
+  return puzzleEnabled;
+}
+
 export async function refreshPuzzleChapterFlag() {
   try {
     const res = await fetch('/api/v1/config', {

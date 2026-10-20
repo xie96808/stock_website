@@ -2,11 +2,12 @@
 
 import { loadChunk } from "./chunk-reload.js";
 import {
-  refreshDailyChallengeFlag,
+  primeDailyChallengeFlag,
   refreshDailyChallengeCard,
 } from "./daily-challenge.js";
 import { refreshGhostDuelFlag } from "./ghost-duel.js";
 import {
+  primePuzzleChapterFlag,
   refreshPuzzleChapterFlag,
   refreshPuzzleChapterCard,
 } from "./puzzle-chapter.js";
@@ -127,23 +128,27 @@ async function refreshPlayModesFlags() {
   setPlayModesLoading(false);
   revealClassicMode();
 
-  try {
-    await refreshDailyChallengeFlag();
-    await refreshDailyChallengeCard();
-  } catch { /* card stays hidden if flag off */ }
-
+  // One /config read decides every card, so the list paints once in its final
+  // order. Before, 今日挑战 / 一把梭 / 生存 / 残局 popped in one by one over ~5s
+  // (each behind another /config + status call) and 经典练习 slid down ~130px
+  // under the player's finger. Card bodies keep their own 「加载中…」 copy until
+  // their status call below returns.
+  primeDailyChallengeFlag(features);
+  primePuzzleChapterFlag(features);
+  const daily = document.getElementById("dailyChallengeCard");
+  if (daily) daily.hidden = !features.dailyChallenge;
   const oneshot = document.getElementById("oneshotModeCard");
   if (oneshot) oneshot.hidden = !features.oneshotMode;
   const survival = document.getElementById("survivalModeCard");
   if (survival) survival.hidden = !features.survivalMode;
+  const puzzle = document.getElementById("puzzleChapterCard");
+  if (puzzle) puzzle.hidden = !features.puzzleChapter;
 
-  try {
-    await refreshGhostDuelFlag();
-  } catch { /* ignore */ }
-  try {
-    await refreshPuzzleChapterFlag();
-    await refreshPuzzleChapterCard();
-  } catch { /* ignore */ }
+  await Promise.allSettled([
+    refreshDailyChallengeCard(),
+    refreshGhostDuelFlag(),
+    refreshPuzzleChapterCard(),
+  ]);
 
   return true;
 }
