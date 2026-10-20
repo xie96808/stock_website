@@ -78,7 +78,6 @@ export async function refreshPuzzleChapterCard() {
     return;
   }
   card.hidden = false;
-  const meta = document.getElementById('puzzleChapterCardMeta');
   const stateEl = document.getElementById('puzzleChapterCardState');
   try {
     const res = await fetch('/api/v1/puzzles?chapter=ch1', {
@@ -97,12 +96,10 @@ export async function refreshPuzzleChapterCard() {
     }
     chapterCache = json.data;
     if (chapterCache.status === 'preparing' || !chapterCache.levels?.length) {
-      if (meta) meta.textContent = '残局 · 准备中';
       if (stateEl) stateEl.textContent = chapterCache.message || '残局准备中';
       return;
     }
     const summary = chapterProgressSummary(chapterCache);
-    if (meta) meta.textContent = '短窗口 · 星级首通';
     if (stateEl) {
       stateEl.hidden = false;
       stateEl.textContent = `进度 ${summary.cleared}/${summary.total} · 星 ${summary.starsEarned}/${summary.starsMax}`;

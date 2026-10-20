@@ -132,7 +132,6 @@ export async function refreshDailyChallengeCard() {
   card.hidden = false;
   const boardBtn = boardBtnEl();
   if (boardBtn) boardBtn.hidden = false;
-  const meta = document.getElementById('dailyChallengeCardMeta');
   const stateEl = document.getElementById('dailyChallengeCardState');
   const ctaEl = document.getElementById('dailyChallengeCardCta');
   try {
@@ -151,10 +150,7 @@ export async function refreshDailyChallengeCard() {
   const d = statusCache;
   const cost = challengeCost(d);
   syncCardBadge(cost);
-  // Compact sheet note: short line; remaining / status on sub-line
-  if (meta) {
-    meta.textContent = '每日一盘';
-  }
+  // Compact sheet: one subtitle line (remaining / status); 日榜 on its own row below.
 
   if (!d.ready) {
     card.classList.add('is-disabled');
