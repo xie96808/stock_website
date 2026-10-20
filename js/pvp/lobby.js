@@ -276,7 +276,7 @@ async function shareBattle() {
 
     const copied = await copyText(payload.clipboard);
     showToast(
-      copied ? "已复制邀请链接，粘贴到微信会显示卡片" : "没能复制，请长按下方链接",
+      copied ? "链接已复制，可粘贴到微信发给好友" : "没能复制，请长按下方链接",
       copied ? "success" : "error",
     );
   } catch (err) {
