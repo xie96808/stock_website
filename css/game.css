@@ -410,7 +410,6 @@
     mix-blend-mode: multiply;
 }
 
-.action-btn:hover:not(:disabled) { transform: translate(-1px, -1px); }
 .action-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
 
 .action-btn.buy {
@@ -419,7 +418,6 @@
     border-radius: 22px 16px 24px 18px;
     box-shadow: 2px 2px 0 var(--line);
 }
-.action-btn.buy:hover:not(:disabled) { box-shadow: 3px 3px 0 var(--line); }
 
 .action-btn.sell {
     color: var(--wash-ink);
@@ -427,7 +425,6 @@
     border-radius: 18px 24px 16px 22px;
     box-shadow: 1px 1px 0 var(--line);
 }
-.action-btn.sell:hover:not(:disabled) { box-shadow: 2px 2px 0 var(--line); }
 
 .action-btn.hold {
     color: var(--ink);
@@ -435,7 +432,15 @@
     border-radius: 16px 22px 18px 24px;
     box-shadow: none;
 }
-.action-btn.hold:hover:not(:disabled) { background: var(--chip-bg); }
+/* Legacy hover lift / tint, only on devices that really hover (a tap on touch must not leave it stuck).
+   观望's tint is background-COLOR on the plain (non-.ctl) button only: the old `background:` shorthand here
+   (0,4,0) beat `.action-btn.ctl.hold` (0,3,0) and wiped the hand-drawn shell image on hover / after a tap. */
+@media (hover: hover) and (pointer: fine) {
+    .action-btn:hover:not(:disabled) { transform: translate(-1px, -1px); }
+    .action-btn.buy:hover:not(:disabled) { box-shadow: 3px 3px 0 var(--line); }
+    .action-btn.sell:hover:not(:disabled) { box-shadow: 2px 2px 0 var(--line); }
+    .action-btn.hold:not(.ctl):hover:not(:disabled) { background-color: var(--chip-bg); }
+}
 
 #holdBtn,
 #fastForwardBtn {
