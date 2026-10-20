@@ -51,7 +51,9 @@ test("rule copy numbers are the Elo numbers, never hard-coded", () => {
 
 test("invite share text is one constant shared by link, copy and card", () => {
   const p = buildBattleSharePayload("abc23456", "https://x.test");
-  assert.ok(p.clipboard.includes(PVP_INVITE_SHARE_TEXT));
+  assert.equal(PVP_INVITE_SHARE_TEXT, "还不来？同一段行情，和我 PK 收益率！");
+  assert.equal(p.text, PVP_INVITE_SHARE_TEXT);
+  assert.equal(p.clipboard, `${PVP_INVITE_SHARE_TEXT}\n${p.url}`);
   const invite = read("js/pvp/invite-share.js");
   assert.match(invite, /PVP_INVITE_SHARE_TEXT/);
   assert.match(invite, /execCommand\("copy"\)/);
