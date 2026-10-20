@@ -41,6 +41,30 @@ export function puzzlePositionFromState(qty, decisionDay, buyFillDay, firstSella
   return 'holding';
 }
 
+/**
+ * 残局「持仓天数」: trading days that closed with shares on the book. Puzzles can
+ * start already holding (e.g. 第一天站岗), and the puzzle engine does not report
+ * holding days, so the settle page always showed 0 (M-06). Fills are next_open:
+ * a buy filled on day d holds from d; a sell filled on day d is flat at d close.
+ */
+export function puzzleHoldingDays({ initialQty = 0, trades = [], gameDays = 0 } = {}) {
+  const days = Math.max(0, Math.floor(Number(gameDays) || 0));
+  const fills = new Map();
+  for (const t of trades || []) {
+    const d = Number(t && t.day);
+    if (Number.isFinite(d)) fills.set(d, t.type);
+  }
+  let holding = Number(initialQty) > 0;
+  let n = 0;
+  for (let d = 1; d <= days; d++) {
+    const f = fills.get(d);
+    if (f === 'buy') holding = true;
+    else if (f === 'sell') holding = false;
+    if (holding) n += 1;
+  }
+  return n;
+}
+
 /** Apply puzzle engine mid/finish result onto the session (no DOM). */
 export function applyPuzzleEngineResult(r, { finished = false, bars = null, session = getSession() } = {}) {
   const gameDays = sessionGameDays(session);
@@ -55,11 +79,9 @@ export function applyPuzzleEngineResult(r, { finished = false, bars = null, sess
   const tradeGains = trades
     .filter((t) => t.type === 'sell' && t.return != null)
     .map((t) => (t.return - 1) * 100);
-  let holdingDays = 0;
-  for (const t of trades) {
-    if (t.type === 'buy') holdingDays = 0;
-    // approximate; engine owns truth on settle
-  }
+  // Finished: whole window. Mid-game: only days already closed (actions taken).
+  const closedDays = finished ? gameDays : Math.min((session.actions || []).length, gameDays);
+  const holdingDays = puzzleHoldingDays({ initialQty: init.qty, trades, gameDays: closedDays });
   if (finished) {
     patchSession({
       tradeHistory: trades,
