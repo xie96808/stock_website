@@ -199,6 +199,22 @@ export async function refreshDailyChallengeCard() {
   }
 }
 
+/** 今日挑战榜收益列: signed (+13.05% / −2.10%) so it reads like the rest of the app. */
+export function formatDcReturn(returnPct, returnPpm) {
+  const n = Number(returnPct);
+  if (returnPct == null || returnPct === '' || !Number.isFinite(n)) return '—';
+  const ppm = Number.isFinite(Number(returnPpm)) ? Number(returnPpm) : Math.round(n * 10000);
+  if (ppm > 0) return `+${returnPct}%`;
+  return `${returnPct}%`;
+}
+
+/** Red for gains, green for losses (A-share convention, same tokens as the result page). */
+export function dcReturnTone(returnPpm) {
+  const n = Number(returnPpm);
+  if (!Number.isFinite(n) || n === 0) return '';
+  return n > 0 ? 'positive' : 'negative';
+}
+
 function ensureConfirmModal() {
   if (document.getElementById('dailyChallengeConfirmModal')) return;
   const wrap = document.createElement('div');
@@ -579,7 +595,7 @@ export async function showDailyChallengeBoard() {
               <span>${escapeHtml(e.nickname || '玩家')}</span>
             </span>
           </td>
-          <td>${e.returnPct}%</td>
+          <td class="dc-ret ${dcReturnTone(e.returnPpm)}">${formatDcReturn(e.returnPct, e.returnPpm)}</td>
           <td>${mdd}</td>
         </tr>`;
       })
