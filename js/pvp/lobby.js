@@ -3,7 +3,7 @@ import { coinIconHtml } from "../jiu-coin.js";
 import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { escapeHtml, formatRemain, remainingMs } from "./copy.js";
-import { canSendToWeChat, copyInviteLink, forgetInvitePayload, getInvitePayload, saveInviteImage, sendInviteToWeChat } from "./invite-share.js";
+import { buildInviteCanvas, canSendToWeChat, copyInviteLink, forgetInvitePayload, getInvitePayload, saveInviteImage, sendInviteToWeChat } from "./invite-share.js";
 import { mountRankHelp } from "./rank-help.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { mountBattleCover, setPvpAvatar } from "./bot-art.js";
@@ -265,6 +265,15 @@ async function shareBattle() {
 
     if (nativeAppShare(payload)) {
       showToast("已打开系统分享，可选微信发给朋友", "success");
+      return;
+    }
+    // WeChat in-app browser: no usable share sheet; point at the native ··· menu.
+    const guide = await import("./wechat-guide.js");
+    if (guide.isWeChatBrowser()) {
+      const imageUrl = guide.isIosUa()
+        ? buildInviteCanvas(payload).then(({ canvas }) => canvas.toDataURL("image/png")).catch(() => null)
+        : null;
+      guide.showWeChatGuide(payload, { imageUrl });
       return;
     }
     const shared = await systemShare(payload);
