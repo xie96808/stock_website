@@ -241,3 +241,43 @@ html:not([data-theme="dark"]) .action-zone {
 html:not([data-theme="dark"]) :is(.chart-stage, .chart-container) {
   border-width: 12px;
 }
+
+/* M-02 · Tap-target hit-slop (≥44×44 hit area, visual size unchanged).
+   An invisible ::after extends the clickable box of small controls. Only
+   applied where the control has no ::after of its own and the extension does
+   not reach a neighbouring control (checked per screen at 360 / 375 / 393 px).
+   Offsets are from the padding box, so they include ~2px for the control border. */
+#announcementsBtn,
+#jiuCoinDailyBtn,
+#authLoginBtn,
+#authUserBtn,
+.ha-daily > button,
+.auth-tab,
+#dailyChallengeBoardBtn,
+.sg-tut__btn {
+    position: relative;
+}
+#announcementsBtn::after,
+#jiuCoinDailyBtn::after,
+#authLoginBtn::after,
+#authUserBtn::after,
+.ha-daily > button::after,
+.auth-tab::after,
+#dailyChallengeBoardBtn::after,
+.sg-tut__btn::after,
+#indicatorsToggle::after {
+    content: "";
+    position: absolute;
+    top: calc(-1 * var(--hit-slop-top, 7px));
+    bottom: calc(-1 * var(--hit-slop-bottom, 7px));
+    left: calc(-1 * var(--hit-slop-left, 0px));
+    right: calc(-1 * var(--hit-slop-right, 0px));
+    background: transparent;
+}
+/* Avatar sits right of 签到/幸运转盘: grow up, down and to the right only. */
+#authUserBtn { --hit-slop-top: 6px; --hit-slop-bottom: 6px; --hit-slop-right: 6px; }
+.ha-daily > button { --hit-slop-top: 10px; --hit-slop-bottom: 10px; }
+.auth-tab { --hit-slop-top: 6px; --hit-slop-bottom: 6px; }
+#dailyChallengeBoardBtn { --hit-slop-top: 11px; --hit-slop-bottom: 11px; }
+/* Not extended: ⓘ (#rlHintToggle) and 快进 — any slop on ⓘ reached into 快进. */
+#indicatorsToggle { --hit-slop-top: 5px; --hit-slop-bottom: 5px; }
