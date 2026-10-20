@@ -77,8 +77,7 @@ html:not([data-theme="dark"]) :is(
 /* ---------- Popovers (arrow top-center; top slice 24, sides 16) ---------- */
 html:not([data-theme="dark"]) :is(
   .pvp-msg-picker,
-  .hindsight-suggestions,
-  .fill-mode-picker
+  .hindsight-suggestions
 ) {
   border-style: solid;
   border-color: transparent;
