@@ -164,7 +164,13 @@ export function marksFromView(view) {
 
 const SHARE_SITE = "早知道当初不炒了";
 const SHARE_TITLE = `来【${SHARE_SITE}】模拟盘对战`;
-const SHARE_TEXT = "我在模拟盘对战里等你，点开就能进房间。";
+/**
+ * The one invite line used everywhere a battle invite goes out: system share,
+ * 复制链接, and the 保存邀请图 card. Final wording is still being chosen —
+ * change it here only.
+ */
+export const PVP_INVITE_SHARE_TEXT = "我在模拟盘对战里等你，点开就能进房间。";
+const SHARE_TEXT = PVP_INVITE_SHARE_TEXT;
 
 /** Path-based invite URL (not hash) so WeChat/iMessage can fetch OG and show a link card. */
 export function buildBattleInviteUrl(code, origin = "") {

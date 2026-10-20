@@ -279,7 +279,9 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(lobby, /已复制邀请链接，粘贴到微信会显示卡片/);
   assert.match(lobby, /navigator\.share/);
   assert.match(lobby, /StockGameApp/);
-  assert.match(lobby, /buildBattleSharePayload/);
+  assert.match(lobby, /getInvitePayload/);
+  const inviteShare = readFileSync(new URL("js/pvp/invite-share.js", root), "utf8");
+  assert.match(inviteShare, /buildBattleSharePayload/);
   const shareCopy = readFileSync(new URL("js/pvp/copy.js", root), "utf8");
   assert.match(shareCopy, /invite\.html\?c=/);
   assert.match(shareCopy, /buildBattleInviteUrl/);

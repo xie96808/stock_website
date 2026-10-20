@@ -102,7 +102,7 @@ export function drawCurvesDataUrl(view, w = 960, h = 300) {
   return canvas.toDataURL("image/png");
 }
 
-async function qrDataUrl(text) {
+export async function qrDataUrl(text) {
   const { default: qrcode } = await importWithRetry(
     "qrcode",
     () => import("./vendor/qrcode.js"),

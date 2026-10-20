@@ -3,6 +3,7 @@ import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-ro
 import { rankPoints, rankProgress, rankIconPathForTitle } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
 import { pvpEnabled, pvpFetch, whenAuthReady } from "./transport.js";
+import { noteRankProfile, openRankHelp, placementGamesLeft } from "./rank-help.js";
 
 
 function escapeAttr(s) {
@@ -79,6 +80,7 @@ export function fillDossier(node, profile) {
     return;
   }
   node.hidden = false;
+  noteRankProfile(profile);
   // Hand-drawn rank card shell (ctl-rank-card): rank icon sits in the left slot.
   node.classList.add("ctl-rank-card");
   const emblem = document.createElement("img");
@@ -128,9 +130,18 @@ export function fillDossier(node, profile) {
   rank.append(rankTitleWithIcon(profile.title || "散户一段"));
   body.append(name, rank);
   if (profile.inPlacement) {
-    const place = document.createElement("p");
-    place.className = "pvp-dossier-place";
+    // 定级中 is tappable: opens 段位说明, and says how many rated games are left.
+    const place = document.createElement("button");
+    place.type = "button";
+    place.className = "pvp-dossier-place pvp-dossier-place-btn";
+    const left = placementGamesLeft(profile);
+    // Short label keeps the rank line on one row at 360; the modal says 再打 N 局.
     place.textContent = "定级中";
+    const hint = left == null ? "定级中，点开看段位说明" : `定级中：再打 ${left} 局定级，点开看段位说明`;
+    place.title = hint;
+    place.setAttribute("aria-label", hint);
+    place.setAttribute("aria-haspopup", "dialog");
+    place.addEventListener("click", () => openRankHelp(profile));
     body.append(place);
   }
   if (profile.rating != null && Number.isFinite(Number(profile.rating))) {
