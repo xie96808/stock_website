@@ -252,12 +252,28 @@ export async function joinSharedBattle(code) {
   }
 }
 
+export const SHARE_PENDING_LABEL = "生成链接…";
+let sharePending = false;
+
 async function shareBattle() {
+  // Lobby polling re-renders the button (disabled = !shareOk) while the request
+  // is in flight, so a disabled button alone does not dedupe repeat taps.
+  if (sharePending) return;
+  sharePending = true;
   setError("");
   const note = document.getElementById("pvpShareNote");
   if (note) note.textContent = "";
   const button = document.getElementById("pvpShareBtn");
-  if (button) button.disabled = true;
+  const label = button?.querySelector(".ctl-label");
+  const idleText = label?.textContent || "分享对战";
+  if (button) {
+    button.disabled = true;
+    // Immediate feedback while POST /pvp/shares is in flight (M-10): before, the
+    // button only went disabled with no visible change for several seconds.
+    button.setAttribute("aria-busy", "true");
+    button.classList.add("is-pending");
+  }
+  if (label) label.textContent = SHARE_PENDING_LABEL;
   try {
     // Same invite link as 复制链接 / 保存邀请图 (buildBattleSharePayload inside).
     const payload = await getInvitePayload();
@@ -291,7 +307,13 @@ async function shareBattle() {
   } catch (err) {
     setError(err.message || "没能生成分享链接");
   } finally {
-    if (button) button.disabled = false;
+    sharePending = false;
+    if (label) label.textContent = idleText;
+    if (button) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.classList.remove("is-pending");
+    }
   }
 }
 
@@ -523,7 +545,7 @@ function renderState(state) {
   const shareOk = !!state.eligibility?.ok && acceptingNew;
   if (shareBtn) {
     shareBtn.hidden = !shareOk;
-    shareBtn.disabled = !shareOk;
+    shareBtn.disabled = !shareOk || sharePending;
   }
   const shareRow = document.getElementById("pvpShareRow");
   if (shareRow) shareRow.hidden = !shareOk;

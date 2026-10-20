@@ -1973,6 +1973,7 @@
   letter-spacing: 0.12em;
 }
 #pvpLobbyScreen .pvp-share-big[hidden] { display: none; }
+#pvpLobbyScreen .pvp-share-big.is-pending { cursor: progress; opacity: 0.8; }
 #pvpLobbyScreen .pvp-share-icon {
   flex: 0 0 auto;
   width: 28px;

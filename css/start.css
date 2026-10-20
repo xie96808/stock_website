@@ -762,15 +762,38 @@ html.is-doc-hidden .start-screen .cta-bounce::before {
 }
 .daily-challenge-table th:nth-child(1),
 .daily-challenge-table td:nth-child(1) {
-    width: 3.5em;
+    width: 3.2em;
+}
+.daily-challenge-table th {
+    white-space: nowrap;
 }
 .daily-challenge-table th:nth-child(3),
 .daily-challenge-table td:nth-child(3) {
-    width: 5.5em;
+    width: 5.4em;
 }
 .daily-challenge-table th:nth-child(4),
 .daily-challenge-table td:nth-child(4) {
-    width: 6.5em;
+    width: 5em;
+}
+/* Phones: the fixed columns left the nickname 1–2 characters wide (「Q…」). */
+@media (max-width: 420px) {
+    .daily-challenge-table th,
+    .daily-challenge-table td {
+        padding: 8px 4px;
+    }
+    .daily-challenge-nick-inner {
+        gap: 6px;
+    }
+    .daily-challenge-table .dc-avatar {
+        width: 24px;
+        height: 24px;
+    }
+}
+.daily-challenge-table td.dc-ret.positive { color: var(--gain-color); }
+.daily-challenge-table td.dc-ret.negative { color: var(--loss-color); }
+/* The modal close × sits top-right; keep the title out from under it. */
+.daily-challenge-board-modal .daily-challenge-board-head {
+    padding-right: 48px;
 }
 /* Flex must NOT be on <td> — breaks row border alignment across columns. */
 .daily-challenge-nick-cell {
