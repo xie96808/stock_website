@@ -566,7 +566,11 @@
                 </div>
                 <div id="pvpLobbyMember" hidden>
                     <p id="pvpLobbyEligibility" hidden></p>
-                    <button type="button" class="pvp-btn ctl ctl-secondary pvp-share-big" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><svg class="pvp-share-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4.5 15.8 C10 13.2 19.5 8.6 27.4 4.6 C25.2 11.8 22.6 20.4 20.3 27.2 C18.4 23.6 16.6 20.6 14.6 17.8 C11.2 17.2 7.8 16.6 4.5 15.8 Z"/><path d="M14.6 17.8 C18.2 14.4 22.4 9.8 27.4 4.6 M14.6 17.8 L14 24.6 C15.4 23.2 16.6 22 17.8 21"/></svg><span class="ctl-label">分享对战</span></button>
+                    <div class="pvp-share-row" id="pvpShareRow" hidden>
+                        <button type="button" class="pvp-btn ctl ctl-secondary pvp-share-big" id="pvpShareBtn" data-ctl-kind="secondary" data-state="default" hidden><svg class="pvp-share-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M4.5 15.8 C10 13.2 19.5 8.6 27.4 4.6 C25.2 11.8 22.6 20.4 20.3 27.2 C18.4 23.6 16.6 20.6 14.6 17.8 C11.2 17.2 7.8 16.6 4.5 15.8 Z"/><path d="M14.6 17.8 C18.2 14.4 22.4 9.8 27.4 4.6 M14.6 17.8 L14 24.6 C15.4 23.2 16.6 22 17.8 21"/></svg><span class="ctl-label">分享对战</span></button>
+                        <button type="button" class="pvp-share-mini" id="pvpShareCopyBtn" title="复制邀请链接" aria-label="复制邀请链接"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="pvp-mini-fill" d="M5.6 9.2 C5.5 7.1 7 5.7 9.1 5.8 L23.2 5.5 C25.2 5.5 26.6 6.9 26.5 8.9 L26.3 18.4 C26.2 20.4 24.8 21.7 22.8 21.7 L14.6 21.9 L9.4 26.3 C9.1 26.6 8.7 26.4 8.8 26 L9.6 21.9 L9 21.9 C7.1 21.9 5.8 20.6 5.8 18.6 Z"/><path d="M14.2 16.6 L12.9 17.9 C11.8 19 10.1 19 9.1 17.9 C8.1 16.9 8.1 15.3 9.2 14.2 L11.4 12.1 C12.4 11.1 14 11.1 15 12.1"/><path d="M17.6 10.8 L18.9 9.5 C20 8.4 21.7 8.5 22.7 9.5 C23.7 10.5 23.6 12.1 22.6 13.1 L20.4 15.3 C19.4 16.3 17.8 16.3 16.8 15.3"/><path d="M13.6 15 L18.2 12.4"/></svg></button>
+                        <button type="button" class="pvp-share-mini" id="pvpShareImageBtn" title="保存邀请图（含二维码）" aria-label="保存邀请图"><svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="pvp-mini-fill" d="M5.4 8.6 C5.4 6.9 6.6 5.8 8.3 5.8 L23.9 5.4 C25.6 5.4 26.7 6.5 26.7 8.2 L26.5 23.7 C26.5 25.4 25.4 26.4 23.7 26.4 L8.2 26.7 C6.5 26.7 5.5 25.6 5.5 23.9 Z"/><path d="M7.6 22.9 L12.8 15.9 C13.1 15.5 13.6 15.5 13.9 15.9 L17.4 20.6 L19.6 17.9 C19.9 17.5 20.4 17.5 20.7 17.9 L24.6 22.8"/><circle cx="20.6" cy="11.3" r="2.3"/></svg></button>
+                    </div>
                     <p id="pvpShareNote"></p>
                     <div id="pvpInbound"></div>
                     <div id="pvpOutbound"></div>
@@ -583,8 +587,6 @@
                     <ul class="pvp-rules">
                     <li>双方各付 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
                     <li>胜者到账 <span class="jiu-coin-amt"><span class="jiu-price-num">35</span><span data-jiu-coin-icon data-size="14"></span></span>（净赚 <span class="jiu-coin-amt"><span class="jiu-price-num">15</span><span data-jiu-coin-icon data-size="14"></span></span>），负者净减 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
-                    <li>平局各退 <span class="jiu-coin-amt"><span class="jiu-price-num">20</span><span data-jiu-coin-icon data-size="14"></span></span>。</li>
-                    <li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>
                     </ul>
                 </div>
                 <p id="pvpLobbyError" role="status"></p>

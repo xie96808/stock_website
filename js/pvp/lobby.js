@@ -2,7 +2,9 @@ import { displayAvatarUrl, getAuthState, openAuthModal, showToast } from "../aut
 import { coinIconHtml } from "../jiu-coin.js";
 import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
-import { buildBattleSharePayload, escapeHtml, formatRemain, remainingMs } from "./copy.js";
+import { escapeHtml, formatRemain, remainingMs } from "./copy.js";
+import { copyInviteLink, forgetInvitePayload, getInvitePayload, saveInviteImage } from "./invite-share.js";
+import { mountRankHelp } from "./rank-help.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { mountBattleCover, setPvpAvatar } from "./bot-art.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
@@ -47,6 +49,19 @@ async function copyText(text) {
     return ok;
   } catch {
     return false;
+  }
+}
+
+/** Busy flag on the two small share icons (copy / save image). */
+async function withMiniBusy(button, task) {
+  if (!button || button.getAttribute("aria-busy") === "true") return;
+  button.setAttribute("aria-busy", "true");
+  button.disabled = true;
+  try {
+    await task();
+  } finally {
+    button.removeAttribute("aria-busy");
+    button.disabled = !(latestState?.eligibility?.ok && acceptingNew);
   }
 }
 
@@ -140,6 +155,7 @@ function wirePresence() {
 
 export function leavePvpLobby() {
   showing = false;
+  forgetInvitePayload();
   stopLoops();
   document.getElementById("pvpLobbyScreen")?.classList.remove("pvp-instant");
 }
@@ -243,12 +259,8 @@ async function shareBattle() {
   const button = document.getElementById("pvpShareBtn");
   if (button) button.disabled = true;
   try {
-    const { data } = await pvpFetch("/pvp/shares", { method: "POST", body: {} });
-    const payload = buildBattleSharePayload(data.code, location.origin);
-    if (!payload.url) {
-      setError("没能生成分享链接");
-      return;
-    }
+    // Same invite link as 复制链接 / 保存邀请图 (buildBattleSharePayload inside).
+    const payload = await getInvitePayload();
     if (note) note.textContent = payload.url;
 
     if (nativeAppShare(payload)) {
@@ -264,7 +276,7 @@ async function shareBattle() {
 
     const copied = await copyText(payload.clipboard);
     showToast(
-      copied ? "已复制邀请链接，粘贴到微信会显示卡片" : "没能复制，请长按下方链接",
+      copied ? "链接已复制，可粘贴到微信发给好友" : "没能复制，请长按下方链接",
       copied ? "success" : "error",
     );
   } catch (err) {
@@ -487,8 +499,6 @@ function paintLobbyRules(economy) {
   list.innerHTML = [
     `<li>双方各付 ${coin(entryCost)}。</li>`,
     `<li>胜者到账 ${coin(winReward)}（净赚 ${coin(net)}），负者净减 ${coin(entryCost)}。</li>`,
-    `<li>平局各退 ${coin(entryCost)}。</li>`,
-    `<li>一局最长约 15 分钟。切到后台后，计时仍按服务器继续。</li>`,
   ].join("");
 }
 
@@ -501,10 +511,16 @@ function renderState(state) {
     eligibility.textContent = state.eligibility?.ok ? "" : (state.eligibility?.message || "");
   }
   const shareBtn = document.getElementById("pvpShareBtn");
+  const shareOk = !!state.eligibility?.ok && acceptingNew;
   if (shareBtn) {
-    const ok = !!state.eligibility?.ok && acceptingNew;
-    shareBtn.hidden = !ok;
-    shareBtn.disabled = !ok;
+    shareBtn.hidden = !shareOk;
+    shareBtn.disabled = !shareOk;
+  }
+  const shareRow = document.getElementById("pvpShareRow");
+  if (shareRow) shareRow.hidden = !shareOk;
+  for (const id of ["pvpShareCopyBtn", "pvpShareImageBtn"]) {
+    const mini = document.getElementById(id);
+    if (mini && mini.getAttribute("aria-busy") !== "true") mini.disabled = !shareOk;
   }
   const balance = state.balance == null ? "—" : escapeHtml(state.balance);
   const balanceNode = balanceEl || document.getElementById("pvpLobbyBalance");
@@ -605,6 +621,16 @@ function wireLobby() {
     if (id) enterMatch(id).catch((err) => setError(err.message || ""));
   });
   document.getElementById("pvpShareBtn")?.addEventListener("click", () => { shareBattle().catch(() => {}); });
+  const shareNote = () => document.getElementById("pvpShareNote");
+  const copyBtn = document.getElementById("pvpShareCopyBtn");
+  copyBtn?.addEventListener("click", () => {
+    withMiniBusy(copyBtn, () => copyInviteLink({ note: shareNote() })).catch(() => {});
+  });
+  const imageBtn = document.getElementById("pvpShareImageBtn");
+  imageBtn?.addEventListener("click", () => {
+    withMiniBusy(imageBtn, () => saveInviteImage({ note: shareNote() })).catch(() => {});
+  });
+  mountRankHelp();
   document.addEventListener("stockgame:auth-changed", () => {
     if (showing) refresh().catch(() => {});
   });

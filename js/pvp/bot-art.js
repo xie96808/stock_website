@@ -1,14 +1,15 @@
 /**
  * Hand-drawn art for the three PvP bots and the 双人对战 hub cover.
- * Art lands in assets/pvp/ as bot-a / bot-b / bot-glitch / battle-cover
+ * Art lands in assets/pvp/ as bot-a / bot-b / bot-glitch / battle-hero
  * (.webp + .png, 256 and 512). Until the files are committed the READY flags
  * stay false and every caller keeps the current avatar / sketch, so nothing
  * 404s. If an image fails at runtime we fall back to the old avatar.
  *
- * Bot art and the titled battle-cover (1200x600 + 600x300) are wired; the
- * battle-cover-notext* files are intentionally not used.
+ * Bot art and the lobby hero (battle-hero-{light,dark}, 1200x600 + 600x300,
+ * transparent) are wired.
  */
 import { displayAvatarUrl } from "../auth.js";
+import { getTheme, onThemeChange, THEME_DARK } from "../theme.js";
 
 export const BOT_ART_READY = true;
 export const COVER_ART_READY = true;
@@ -70,7 +71,20 @@ export function setPvpAvatar(img, person, { size = 48 } = {}) {
   img.src = artUrl(key, size > 128 ? 512 : 256, "png");
 }
 
-/** Swap the hub sketch for the drawn cover (keeps the sketch on failure). */
+/** Hero H1 (Bill, PR #199): transparent ink art per theme, page paper shows through. */
+const HERO_V = "20261020h1";
+const heroUrl = (theme, w, ext) =>
+  `assets/pvp/battle-hero-${theme === THEME_DARK ? "dark" : "light"}${w === 600 ? "-600" : ""}.${ext}?v=${HERO_V}`;
+let stopHeroTheme = null;
+
+function paintHero(webp, img, theme) {
+  webp.srcset = `${heroUrl(theme, 600, "webp")} 600w, ${heroUrl(theme, 1200, "webp")} 1200w`;
+  img.srcset = `${heroUrl(theme, 600, "png")} 600w, ${heroUrl(theme, 1200, "png")} 1200w`;
+  img.src = heroUrl(theme, 1200, "png");
+  img.dataset.theme = theme === THEME_DARK ? "dark" : "light";
+}
+
+/** Swap the hub sketch for the drawn hero (keeps the sketch on failure). */
 export function mountBattleCover(sketch) {
   if (!COVER_ART_READY || !sketch || sketch.dataset.coverMounted === "1") return;
   sketch.dataset.coverMounted = "1";
@@ -78,30 +92,31 @@ export function mountBattleCover(sketch) {
   picture.className = "pvp-cover-wrap";
   const webp = document.createElement("source");
   webp.type = "image/webp";
-  const cover = (w, ext) => `assets/pvp/battle-cover${w === 600 ? "-600" : ""}.${ext}?v=${ART_V}`;
   const sizes = "(max-width: 720px) 92vw, 560px";
-  webp.srcset = `${cover(600, "webp")} 600w, ${cover(1200, "webp")} 1200w`;
   webp.sizes = sizes;
   const img = document.createElement("img");
   img.className = "pvp-cover";
-  // The cover has 「在线对弈 · 双人对战」 drawn in, so once it loads the text
-  // title row is visually hidden (kept as the accessible heading). On failure the
-  // sketch and the text title come back.
-  img.alt = "在线对弈 · 双人对战";
+  // The hero has its title lettered in, so once it loads the text title row is
+  // visually hidden (kept as the accessible heading). On failure the sketch and
+  // the text title come back.
+  img.alt = "模拟对战";
   img.width = 1200;
   img.height = 600;
-  img.srcset = `${cover(600, "png")} 600w, ${cover(1200, "png")} 1200w`;
   img.sizes = sizes;
   img.decoding = "async";
-  img.src = cover(1200, "png");
+  paintHero(webp, img, getTheme());
   const screen = sketch.closest("#pvpLobbyScreen");
   img.addEventListener("load", () => { screen?.classList.add("pvp-hub-has-cover"); }, { once: true });
   img.addEventListener("error", () => {
     picture.remove();
     sketch.removeAttribute("hidden");
     screen?.classList.remove("pvp-hub-has-cover");
+    if (stopHeroTheme) { stopHeroTheme(); stopHeroTheme = null; }
   }, { once: true });
   picture.append(webp, img);
   sketch.setAttribute("hidden", "");
   sketch.after(picture);
+  // 纸/墨 flips live: swap to the matching ink so there is no light-ink-on-dark halo.
+  if (stopHeroTheme) stopHeroTheme();
+  stopHeroTheme = onThemeChange((next) => paintHero(webp, img, next));
 }
