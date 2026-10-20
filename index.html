@@ -1491,6 +1491,7 @@
         import { initP4Controls } from './js/controls-p4.js';
         import { initAnnouncements } from './js/announcements.js';
         import { initFeedback } from './js/feedback.js';
+        import { initBackHandler } from './js/back-handler.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
@@ -1604,6 +1605,7 @@
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
+        initBackHandler();
         applyApkDownloadEntry();
         applyAppUpdateEntry();
         (function () {
