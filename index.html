@@ -282,6 +282,7 @@
                             <div class="lanes sim-hub-lanes play-modes-lanes" id="playModesList" aria-busy="true">
                                 <div class="lane lane--compact daily-challenge-lane" id="dailyChallengeCard" hidden role="button" tabindex="0" onclick="onDailyChallengeCardClick()">
                                     <span class="mark daily-challenge-mark">日</span>
+                                    <span class="lane-fold" aria-hidden="true"><b>同</b></span>
                                     <span class="copy">
                                         <strong>今日挑战</strong>
                                         <p class="lane-note daily-challenge-card-state" id="dailyChallengeCardState">加载中…</p>
@@ -294,6 +295,7 @@
                                 </div>
                                 <button type="button" class="lane lane--compact classic-mode-lane" id="classicModeCard" onclick="startClassicPractice()">
                                     <span class="mark classic-mode-mark">练</span>
+                                    <span class="lane-fold" aria-hidden="true"><b>墨</b></span>
                                     <span class="copy">
                                         <strong>经典练习</strong>
                                         <p class="lane-note">三十日随机盘</p>
@@ -305,6 +307,7 @@
                                 </button>
                                 <button type="button" class="lane lane--compact oneshot-mode-lane" id="oneshotModeCard" hidden onclick="startOneshotGame()">
                                     <span class="mark oneshot-mode-mark">梭</span>
+                                    <span class="lane-fold" aria-hidden="true"><b>击</b></span>
                                     <span class="copy">
                                         <strong>一把梭</strong>
                                         <p class="lane-note">只买一次 · 只卖一次</p>
@@ -316,6 +319,7 @@
                                 </button>
                                 <button type="button" class="lane lane--compact survival-mode-lane" id="survivalModeCard" hidden onclick="startSurvivalGame()">
                                     <span class="mark survival-mode-mark">生</span>
+                                    <span class="lane-fold" aria-hidden="true"><b>险</b></span>
                                     <span class="copy">
                                         <strong>生存模式</strong>
                                         <p class="lane-note">爆仓线 −20%</p>

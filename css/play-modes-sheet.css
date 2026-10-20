@@ -221,6 +221,63 @@ html.pm-sheet-open body {
 
 .start-screen #playModes .lane.lane--compact > * { position: relative; z-index: 1; }
 
+/* Folded corner (start cards only): a 1-character tab at the card's top-right.
+   The glyph sits in the corner outside the 开始 button's rounded corner (the
+   button is 12px from the top, 12–14px from the right, radius 16), so the
+   button does not move. At 30px the tab's diagonal clears the button's
+   rounded corner by ≈3–4px (≈2.4px at 360@130%), so the two never merge. The fill matches the mode's 开始 colour; the text uses the
+   button's own contrast pair. */
+.start-screen #playModes .lane.lane--compact > .lane-fold {
+  --fold: 30px;
+  --fold-bg: var(--ink);
+  --fold-fg: #f3ead8;
+  --fold-edge: var(--line);
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1; /* DOM order puts it before .lane-actions, so 开始 paints over its lower edge */
+  width: var(--fold);
+  height: var(--fold);
+  pointer-events: none;
+  background: linear-gradient(225deg,
+    var(--fold-bg) 0 calc(50% - 1px),
+    var(--fold-edge) calc(50% - 1px) calc(50% + 0.6px),
+    transparent calc(50% + 0.6px));
+}
+.start-screen #playModes .lane.lane--compact > .lane-fold b {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  display: grid;
+  place-items: center;
+  font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--fold-fg);
+  -webkit-font-smoothing: antialiased;
+}
+.start-screen #playModes .lane.lane--compact.daily-challenge-lane > .lane-fold { --fold-bg: rgb(61, 90, 128); }
+.start-screen #playModes .lane.lane--compact.classic-mode-lane > .lane-fold { --fold-bg: rgb(58, 53, 48); }
+.start-screen #playModes .lane.lane--compact.oneshot-mode-lane > .lane-fold { --fold-bg: rgb(184, 134, 11); --fold-fg: #1c1810; }
+.start-screen #playModes .lane.lane--compact.survival-mode-lane > .lane-fold { --fold-bg: rgb(190, 62, 62); }
+/* Dark: the tab sits inside the 1.6px border and follows the card's rounded corner */
+/* Dark: the card's 20px top-right radius would clip the tab, so start cards
+   get a nearly square top-right corner (the folded corner) */
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact:has(> .lane-fold) { border-top-right-radius: 5px; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact:has(> .lane-fold)::before { border-top-right-radius: 4px; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact > .lane-fold {
+  --fold-edge: rgba(0, 0, 0, 0.55);
+  border-top-right-radius: 3px;
+}
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.daily-challenge-lane > .lane-fold { --fold-bg: rgb(107, 143, 181); --fold-fg: #10161e; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.classic-mode-lane > .lane-fold { --fold-bg: rgb(200, 188, 168); --fold-fg: #1c1a16; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.oneshot-mode-lane > .lane-fold { --fold-bg: rgb(212, 168, 75); --fold-fg: #1c1810; }
+[data-theme="dark"] .start-screen #playModes .lane.lane--compact.survival-mode-lane > .lane-fold { --fold-bg: rgb(224, 112, 112); --fold-fg: #1c1212; }
+
 .start-screen #playModes .lane.lane--compact .mark {
   grid-area: mark;
   align-self: center;
