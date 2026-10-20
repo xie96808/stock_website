@@ -87,7 +87,17 @@ test('formatPlayHudChrome survival badge', () => {
   });
   assert.equal(hud.isSurvival, true);
   assert.equal(hud.badge, '活过三十日');
-  assert.match(hud.subtitle, /相对开局/);
+  // shown once: on the meter label, not again as the header subtitle or the mood line
+  assert.equal(hud.subtitle, '');
+  assert.match(hud.meterLabel, /相对开局 -5\.00% · 爆仓线 -20%/);
+  assert.doesNotMatch(hud.mood, /爆仓|相对开局/);
+});
+
+test('survival progress card renders 相对开局 · 爆仓线 only in the meter label', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="survivalNavLabel">相对开局 0\.00%</);
+  const game = fs.readFileSync(new URL('../js/game.js', import.meta.url), 'utf8');
+  assert.match(game, /lab\.textContent = survivalFloat\.label/);
 });
 
 test('rewind ineligible for survival', () => {
