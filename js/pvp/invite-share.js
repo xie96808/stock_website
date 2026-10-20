@@ -157,7 +157,7 @@ export function canSendToWeChat(win = typeof window !== "undefined" ? window : n
 
 const WECHAT_COPY = {
   wechat: "已打开微信，选好友发送",
-  chooser: "没找到微信，已打开系统分享",
+  chooser: "没能直接打开微信，已打开系统分享",
 };
 
 /** 发给微信好友 (app only): S6 invite image straight to WeChat's friend picker. Never throws. */
