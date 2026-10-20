@@ -680,6 +680,9 @@
     color: var(--ink);
 }
 
+.result-stat__value.positive { color: var(--gain-color); }
+.result-stat__value.negative { color: var(--loss-color); }
+
 @media (max-width: 900px) {
     .result-hero { grid-template-columns: 1fr; text-align: center; }
     .result-hero__left { margin: 0 auto; }

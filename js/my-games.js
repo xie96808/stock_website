@@ -10,6 +10,18 @@ import {
 } from "./screen-router.js";
 import { formatShanghaiDateTime } from "./time.js";
 
+/** 列表每条标出玩法：统计卡只算经典局，列表却包含所有玩法，不标会以为是经典局。 */
+const GAME_KIND_LABELS = {
+  classic: "经典练习",
+  oneshot: "一把梭",
+  survival: "生存模式",
+  daily: "今日挑战",
+  puzzle: "残局",
+};
+export function gameKindLabel(kind) {
+  return GAME_KIND_LABELS[kind] || GAME_KIND_LABELS.classic;
+}
+
 
 function fmtPct(ppm) {
   if (ppm == null) return "—";
@@ -113,7 +125,7 @@ async function loadMyGamesPanel() {
                 <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}" title="收益率">${fmtPct(g.returnPpm)}</span>
               </div>
               <div class="my-game-meta">
-                ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml(formatShanghaiDateTime(g.finishedAt || g.savedAt) || "—")}
+                <span class="my-game-kind">${escapeHtml(gameKindLabel(g.gameKind))}</span> · ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml(formatShanghaiDateTime(g.finishedAt || g.savedAt) || "—")}
               </div>
             </article>`
           )
