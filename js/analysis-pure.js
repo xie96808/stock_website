@@ -503,6 +503,22 @@ export function computeBSReport({
 }
 
 
+/**
+ * 结算页「最大单笔收益」: best closed trade, signed, with the red/green class.
+ * No closed trade → "—" (not "+0.00%", which reads as a break-even sale).
+ * @param {number[]} tradeGains percent per closed trade, e.g. [3.5, -1.2]
+ * @returns {{ text: string, tone: 'positive'|'negative'|'zero'|'none' }}
+ */
+export function formatMaxTradeGain(tradeGains) {
+    const gains = (Array.isArray(tradeGains) ? tradeGains : []).filter((g) => Number.isFinite(g));
+    if (!gains.length) return { text: '—', tone: 'none' };
+    const max = Math.max(...gains);
+    const rounded = Number(max.toFixed(2));
+    const tone = rounded > 0 ? 'positive' : rounded < 0 ? 'negative' : 'zero';
+    const body = tone === 'zero' ? '0.00' : (tone === 'positive' ? '+' : '') + rounded.toFixed(2);
+    return { text: body + '%', tone };
+}
+
 export function calcGrade(finalReturnPercent, bsScore) {
     // Emphasize realized return; BS is a light tie-breaker only.
     const score = finalReturnPercent * 0.85 + ((bsScore || 50) - 70) * 0.08;
