@@ -220,6 +220,15 @@ function wireEvents() {
 }
 
 /**
+ * No auto-open over a PvP room / invite join (#/pvp/join/…, #/pvp/<matchId>):
+ * the full-screen notice covered 「准备」 and the short ready window ran out
+ * (M-09). The 公告 button in the header still opens it on demand.
+ */
+export function shouldAutoOpenAnnouncements(hash) {
+  return !/^#\/pvp\/./.test(String(hash || ""));
+}
+
+/**
  * Init: ensure header control, wire events, auto-open if not dismissed today.
  */
 export async function initAnnouncements() {
@@ -228,7 +237,7 @@ export async function initAnnouncements() {
   const seq = ++openSeq;
   const items = await fetchAnnouncements();
   renderList(items);
-  if (seq === openSeq && items.length && !isDismissedToday()) {
+  if (seq === openSeq && items.length && !isDismissedToday() && shouldAutoOpenAnnouncements(location.hash)) {
     const modal = document.getElementById("announcementsModal");
     if (modal && modal.hidden) openCtlOverlay(modal);
   }

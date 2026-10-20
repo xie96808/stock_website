@@ -6,7 +6,7 @@ import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
 import { buildKlineOption } from './kline-option.js';
 import { attachZoomSliderGrip, applySliderTheme } from './zoom-slider-grip.js';
 import { generateBSReport, generateBestPoints, generateKlineAnalysis } from './analysis.js';
-import { calcGrade } from './analysis-pure.js';
+import { calcGrade, formatMaxTradeGain } from './analysis-pure.js';
 import { finishCloudGame, updateSaveStatusUi } from './game-sync.js';
 import { persistSettledCloudGame, shouldPersistCloudSettle } from './game-play-usecase.js';
 import {
@@ -239,10 +239,10 @@ export function endGame() {
     document.getElementById('finalTradeCount').textContent = view.tradeHistory.length;
     document.getElementById('holdingDays').textContent = view.holdingDays;
 
-    const maxGain = view.tradeGains.length > 0 ?
-        Math.max(...view.tradeGains) : 0;
-    document.getElementById('maxGain').textContent =
-        (maxGain >= 0 ? '+' : '') + maxGain.toFixed(2) + '%';
+    const maxGain = formatMaxTradeGain(view.tradeGains);
+    const maxGainEl = document.getElementById('maxGain');
+    maxGainEl.textContent = maxGain.text;
+    maxGainEl.className = 'result-stat__value' + (maxGain.tone === 'none' ? '' : ' ' + maxGain.tone);
 
     document.getElementById('resultChartSubtitle').textContent =
         `${view.currentStock.name} (${view.currentStock.code})`;

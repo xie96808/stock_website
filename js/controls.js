@@ -233,6 +233,37 @@ function unlockScroll() {
  * Open a modal overlay already in the DOM (hidden attr).
  * Adds is-open, locks scroll, focuses close/primary.
  */
+/**
+ * A quick double tap on a card opens an overlay with the first tap and lands
+ * the second tap on the freshly shown backdrop, which closed it again (the
+ * dialog "flashed" and nothing happened). For a short window after opening,
+ * swallow clicks that hit the overlay outside its dialog panel.
+ */
+export const GHOST_TAP_GUARD_MS = 350;
+const DIALOG_PANEL_SEL = '[role="dialog"], [role="alertdialog"], .ctl-panel';
+
+export function isGhostTap(openedAt, now, insidePanel, ms = GHOST_TAP_GUARD_MS) {
+  if (insidePanel || !Number.isFinite(openedAt)) return false;
+  return now - openedAt < ms;
+}
+
+function armGhostTapGuard(overlay) {
+  overlay._ctlOpenedAt = performance.now();
+  if (overlay._ctlGhostGuard) return;
+  overlay._ctlGhostGuard = true;
+  overlay.addEventListener(
+    "click",
+    (e) => {
+      const inside = !!(e.target && e.target.closest && e.target.closest(DIALOG_PANEL_SEL));
+      if (isGhostTap(overlay._ctlOpenedAt, performance.now(), inside)) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    },
+    true
+  );
+}
+
 export function openCtlOverlay(overlay, opts = {}) {
   if (!overlay) return;
   if (!overlay.hidden && overlay.classList.contains("is-open") && !overlay.classList.contains("is-leaving")) return;
@@ -242,6 +273,7 @@ export function openCtlOverlay(overlay, opts = {}) {
     overlay._ctlCloseResolve?.();
   }
   overlay.classList.remove("is-leaving");
+  armGhostTapGuard(overlay);
   overlayFocusPrev.set(overlay, document.activeElement);
   overlay.hidden = false;
   overlay.setAttribute("aria-hidden", "false");
