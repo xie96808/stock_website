@@ -102,6 +102,13 @@ function syncMobileIntelDefaults() {
 }
 
 
+/** Server already holds decisions for this event-v1 game (resume, not a fresh start). */
+export function isServerProgressResume(session, cloud) {
+    if (!session || !session.cloudMode || session.protocolVersion !== 'event-v1' || !session.cloudGameId) return false;
+    if (session.gameKind === 'puzzle') return false;
+    return Number(cloud && cloud.revision) > 0;
+}
+
 export async function startGame(options = {}) {
     hideResumeBanner();
     // Use-case owns reset + seed (puzzle / window DTO / pack / local); view owns chrome.
@@ -127,8 +134,27 @@ export async function startGame(options = {}) {
 
     const resumeActions = Array.isArray(options.resumeActions) ? options.resumeActions : null;
 
+    // M-03: resuming an event-v1 game that already has submitted decisions on the
+    // server (e.g. another device). Fetch /state now, in parallel with ECharts,
+    // and paint the real day / position / PnL — never 「第 1 天 · 空仓 · +0.00%」
+    // first (that flashed for ~3.5s before the post-chart resync).
+    const pre = getSession();
+    const cloudResume = isServerProgressResume(pre, options.cloud);
+    let serverApplied = false;
+    if (cloudResume) {
+        const gameScreen = document.getElementById('gameScreen');
+        gameScreen?.classList.add('is-cloud-syncing');
+        try {
+            const state = await fetchGameState(pre.cloudGameId);
+            serverApplied = !!applyServerDecisionState(state, { bars: getGameBars() })?.ok;
+        } catch (err) {
+            console.warn('cloud state prefetch failed', err);
+        }
+        gameScreen?.classList.remove('is-cloud-syncing');
+    }
+
     // Paint shell chrome (day / PnL / buttons) before ECharts init.
-    if (!(resumeActions && resumeActions.length)) {
+    if (serverApplied || !(resumeActions && resumeActions.length)) {
         updateUI();
         resetOHLCToToday();
         renderWaveAnalysis();
@@ -159,7 +185,14 @@ export async function startGame(options = {}) {
         !isPuzzleSession(seeded)
     ) {
         // Authoritative resume: never trust draft alone for revision/day (avoids stuck mismatch).
-        const ok = await resyncCloudGameFromServer();
+        let ok = false;
+        if (serverApplied) {
+            persistCurrentCloudDraft();
+            updateChart();
+            ok = true;
+        } else {
+            ok = await resyncCloudGameFromServer();
+        }
         if (!ok && resumeActions && resumeActions.length) {
             applyCloudResume(resumeActions);
         } else if (!ok) {

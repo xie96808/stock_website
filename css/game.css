@@ -1303,3 +1303,14 @@
     font-size: 0.88rem;
   }
 }
+
+/* M-03: while a cross-device resume pulls /games/:id/state, do not show the
+   seed's day-1 numbers or let the player act on them. */
+#gameScreen.is-cloud-syncing #currentDay,
+#gameScreen.is-cloud-syncing #holdingPnl,
+#gameScreen.is-cloud-syncing #positionStatus,
+#gameScreen.is-cloud-syncing #totalReturn,
+#gameScreen.is-cloud-syncing #tradeCount,
+#gameScreen.is-cloud-syncing .action-zone {
+    visibility: hidden;
+}
