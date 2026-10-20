@@ -31,6 +31,12 @@ export function isDailyChallengeEnabled() {
   return dailyChallengeEnabled;
 }
 
+/** Seed the flag from an already-fetched /config `features` object (no extra request). */
+export function primeDailyChallengeFlag(features) {
+  dailyChallengeEnabled = !!(features && features.dailyChallenge);
+  return dailyChallengeEnabled;
+}
+
 export async function refreshDailyChallengeFlag() {
   try {
     const res = await fetch('/api/v1/config', {
