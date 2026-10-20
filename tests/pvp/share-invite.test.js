@@ -23,3 +23,16 @@ test("battle share payload keeps a short clipboard line plus the invite URL", ()
   assert.equal(payload.clipboard, `${payload.text}\n${payload.url}`);
   assert.doesNotMatch(payload.clipboard, /#\/pvp\/join\//);
 });
+
+test("invite.html link-preview descriptions match PVP_INVITE_SHARE_TEXT", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../../invite.html", import.meta.url), "utf8");
+  const get = (re) => (html.match(re) || [])[1];
+  for (const re of [
+    /<meta\s+name="description"\s+content="([^"]*)"/,
+    /<meta\s+property="og:description"\s+content="([^"]*)"/,
+    /<meta\s+name="twitter:description"\s+content="([^"]*)"/,
+  ]) assert.equal(get(re), PVP_INVITE_SHARE_TEXT, String(re));
+  // No JS-SDK share config today; if one is added, its desc must use the same text.
+  for (const m of html.matchAll(/\bdesc\s*:\s*["'`]([^"'`]*)["'`]/g)) assert.equal(m[1], PVP_INVITE_SHARE_TEXT);
+});
