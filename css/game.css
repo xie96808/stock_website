@@ -1210,3 +1210,113 @@
   -webkit-user-drag: none;
   user-select: none;
 }
+
+/* ===== Phone: key return figures on the first screen (js/returns-layout.js) =====
+   Toggle on <html data-returns-layout="a|b|off">. Desktop (>900px) never shows these.
+   A: 收益率 + 仓位 inside the top progress card (replaces 「市场在等待你的判断…」).
+   B: compact strip on top of the fixed trade bar (收益率 · 仓位 · 当日).
+   Both: the two hint lines fold into one line + ⓘ; 快进 is slimmer. Trade buttons keep their size. */
+.rl-card, .rl-strip, .rl-info { display: none; }
+.rl-hint-row { display: contents; }
+@media (max-width: 900px) {
+  /* ---- A: progress card ---- */
+  html[data-returns-layout="a"] #gameScreen #progressMood { display: none; }
+  html[data-returns-layout="a"] #gameScreen .game-progress-meta { flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
+  html[data-returns-layout="a"] #gameScreen .rl-card {
+    display: flex;
+    order: 5;
+    flex: 1 0 100%;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .rl-card .rl-k { font-size: 0.74rem; color: var(--ink-soft); letter-spacing: 0.08em; }
+  .rl-card .rl-v {
+    font-family: var(--mono, "IBM Plex Mono", ui-monospace, monospace);
+    font-size: 1.32rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+  .rl-card .rl-chip { padding: 1px 7px; font-size: 0.7rem; line-height: 1.5; }
+  .rl-card .rl-sub { margin-left: auto; display: inline-flex; align-items: baseline; gap: 4px; }
+  .rl-card .rl-sub .rl-v { font-size: 0.8rem; font-weight: 700; }
+
+  /* ---- B: strip on the trade bar ---- */
+  html[data-returns-layout="b"] #gameScreen .rl-strip {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin: -2px 0 2px;
+    padding: 2px 4px 6px;
+    border-bottom: 1.4px dashed color-mix(in srgb, var(--line) 55%, transparent);
+  }
+  .rl-strip .rl-item { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; white-space: nowrap; }
+  .rl-strip .rl-item:first-child .rl-v { font-size: 1.12rem; }
+  .rl-strip .rl-k { font-size: 0.72rem; color: var(--ink-soft); letter-spacing: 0.06em; }
+  .rl-strip .rl-v {
+    font-family: var(--mono, "IBM Plex Mono", ui-monospace, monospace);
+    font-size: 0.92rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .rl-strip .rl-chip { padding: 1px 7px; font-size: 0.7rem; line-height: 1.5; align-self: center; }
+
+  .rl-v.positive { color: var(--gain-color); }
+  .rl-v.negative { color: var(--loss-color); }
+  .rl-v.neutral  { color: var(--ink); }
+
+  /* ---- A + B: one hint line + ⓘ, slimmer 快进 ---- */
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .rl-hint-row {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin: -4px 0 -4px;
+  }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .rl-hint-row .action-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 28px; /* balances the ⓘ so the line stays centred */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]):not(.rl-hints-open) #gameScreen .action-zone .ff-hint { display: none; }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]).rl-hints-open #gameScreen .rl-hint-row .action-hint { white-space: normal; }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .rl-info {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: italic 700 0.8rem/1 Georgia, "Times New Roman", serif;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .rl-info::before {
+    content: "";
+    grid-area: 1 / 1;
+    width: 20px;
+    height: 20px;
+    border: 1.6px solid var(--line);
+    border-radius: 50% 46% 52% 48% / 48% 52% 46% 50%;
+    background: var(--card);
+  }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .rl-info > span { grid-area: 1 / 1; position: relative; }
+  html.rl-hints-open #gameScreen .rl-info::before { background: var(--ink); }
+  html.rl-hints-open #gameScreen .rl-info { color: var(--card); }
+  html:is([data-returns-layout="a"], [data-returns-layout="b"]) #gameScreen .action-zone #fastForwardBtn {
+    height: 36px;
+    min-height: 36px;
+    font-size: 0.88rem;
+  }
+}
