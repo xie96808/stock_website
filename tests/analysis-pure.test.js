@@ -170,3 +170,15 @@ test('computeBSReport / kline model tolerate empty short input', () => {
   const model = computeKlineAnalysisModel({ kline: [], historyLength: 0, gameDays: 6 });
   assert.equal(model.trend, '数据不足');
 });
+
+test('formatMaxTradeGain: signed, toned, and "—" when nothing was closed', async () => {
+  const { formatMaxTradeGain } = await import('../js/analysis-pure.js');
+  assert.deepEqual(formatMaxTradeGain([]), { text: '—', tone: 'none' });
+  assert.deepEqual(formatMaxTradeGain(undefined), { text: '—', tone: 'none' });
+  assert.deepEqual(formatMaxTradeGain([3.567, -1.2]), { text: '+3.57%', tone: 'positive' });
+  assert.deepEqual(formatMaxTradeGain([-1.4601]), { text: '-1.46%', tone: 'negative' });
+  assert.deepEqual(formatMaxTradeGain([-6.03, -9]), { text: '-6.03%', tone: 'negative' });
+  assert.deepEqual(formatMaxTradeGain([0]), { text: '0.00%', tone: 'zero' });
+  assert.deepEqual(formatMaxTradeGain([-0.001]), { text: '0.00%', tone: 'zero' });
+  assert.deepEqual(formatMaxTradeGain([NaN, 1.95]), { text: '+1.95%', tone: 'positive' });
+});
