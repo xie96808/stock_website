@@ -148,9 +148,22 @@ function drawdownPpm(value) {
   return -Math.abs(n);
 }
 
+/**
+ * Match aborted before any round was played (e.g. ready_timeout): there is no market,
+ * replay or opponent play to analyse, so the 复盘 / gift blocks are hidden instead of
+ * showing 「复盘分析暂时不可用」.
+ */
+export function isUnplayedAbort(view) {
+  return view?.status === "aborted" && !(Number(view?.resolvedRounds) > 0);
+}
+
 function paintAnalysis(view) {
   const node = document.getElementById("pvpResultAnalysis");
   if (!node) return null;
+  if (isUnplayedAbort(view)) {
+    node.innerHTML = "";
+    return null;
+  }
   const bars = view?.market?.bars;
   if (!Array.isArray(bars) || !bars.length) {
     node.innerHTML = "<p>复盘分析暂时不可用，胜负和奖励不受影响。</p>";
@@ -448,7 +461,7 @@ function wireGifts(view) {
   if (note) note.textContent = "";
   const buttons = [...document.querySelectorAll("#pvpGifts .pvp-gift-send")];
   for (const button of buttons) hydrateGiftButton(button);
-  const canSend = !!view?.opponent?.userId && !!view?.matchId;
+  const canSend = !!view?.opponent?.userId && !!view?.matchId && !isUnplayedAbort(view);
   if (box) box.hidden = !canSend;
   for (const button of buttons) {
     button.disabled = !canSend;
@@ -516,6 +529,8 @@ function paintResultBody(view, { celebrate = false } = {}) {
   }
   paintIdentity("pvpResult", view);
   paintReplay(view);
+  const pan = document.querySelector("#pvpResultScreen .pvp-chart-pan");
+  if (pan) pan.hidden = isUnplayedAbort(view);
   let bestPoints = null;
   try { bestPoints = paintAnalysis(view); } catch {
     const node = document.getElementById("pvpResultAnalysis");
