@@ -36,3 +36,51 @@ test("invite.html link-preview descriptions match PVP_INVITE_SHARE_TEXT", async 
   // No JS-SDK share config today; if one is added, its desc must use the same text.
   for (const m of html.matchAll(/\bdesc\s*:\s*["'`]([^"'`]*)["'`]/g)) assert.equal(m[1], PVP_INVITE_SHARE_TEXT);
 });
+
+test("发给微信好友 is app-only: needs the shell bridge and an installed WeChat", async () => {
+  const { canSendToWeChat } = await import("../../js/pvp/invite-share.js");
+  assert.equal(canSendToWeChat({}), false);
+  assert.equal(canSendToWeChat({ StockGameApp: { saveImage() {} } }), false);
+  assert.equal(canSendToWeChat({ StockGameApp: { shareImageToWeChat() {}, canShareToWeChat: () => true } }), true);
+  assert.equal(canSendToWeChat({ StockGameApp: { shareImageToWeChat() {}, canShareToWeChat: () => false } }), false);
+  assert.equal(canSendToWeChat({ StockGameApp: { shareImageToWeChat() {}, canShareToWeChat: () => { throw new Error("x"); } } }), false);
+  const { readFile } = await import("node:fs/promises");
+  const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+  assert.match(html, /id="pvpShareWeChatBtn"[^>]*hidden/);
+});
+
+test("Android shell sends the invite image straight to WeChat ShareImgUI with a chooser fallback", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const kt = await readFile(new URL("../../android-app/app/src/main/java/top/xieyw/stockgame/MainActivity.kt", import.meta.url), "utf8");
+  assert.match(kt, /fun shareImageToWeChat\(base64: String\?, fileName: String\?\): String/);
+  assert.match(kt, /"com\.tencent\.mm\.ui\.tools\.ShareImgUI"/);
+  assert.match(kt, /type = "image\/png"/);
+  assert.match(kt, /FileProvider\.getUriForFile/);
+  assert.match(kt, /launchChooser\(uri, "发给微信好友"\)/);
+  const manifest = await readFile(new URL("../../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
+  assert.match(manifest, /<queries>\s*<package android:name="com\.tencent\.mm" \/>\s*<\/queries>/);
+  const gradle = await readFile(new URL("../../android-app/app/build.gradle.kts", import.meta.url), "utf8");
+  assert.match(gradle, /versionCode = 21/);
+  assert.match(gradle, /versionName = "1\.1\.6"/);
+});
+
+test("WeChat in-app browser: 分享对战 shows the ··· guide instead of the copy fallback", async () => {
+  const g = await import("../../js/pvp/wechat-guide.js");
+  const wxAndroid = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/150 Mobile Safari/537.36 XWEB/1300 MMWEBSDK/20260901 MicroMessenger/8.0.76.2860(0x28004C3D) NetType/WIFI Language/zh_CN";
+  const wxIos = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_6 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 MicroMessenger/8.0.76(0x18004c2b) NetType/WIFI";
+  assert.equal(g.isWeChatBrowser(wxAndroid), true);
+  assert.equal(g.isWeChatBrowser(wxIos), true);
+  assert.equal(g.isWeChatBrowser("Mozilla/5.0 (iPhone) Safari/604.1"), false);
+  assert.equal(g.isIosUa(wxIos), true);
+  assert.equal(g.isIosUa(wxAndroid), false);
+  assert.equal(g.invitePath("https://stockgame.xieyw.top/invite.html?c=abcd2345", "https://stockgame.xieyw.top"), "/invite.html?c=abcd2345");
+  assert.equal(g.invitePath("https://evil.example/x", "https://stockgame.xieyw.top"), null);
+  const { readFile } = await import("node:fs/promises");
+  const lobby = await readFile(new URL("../../js/pvp/lobby.js", import.meta.url), "utf8");
+  const share = lobby.slice(lobby.indexOf("async function shareBattle"));
+  assert.ok(share.indexOf("isWeChatBrowser()") > -1 && share.indexOf("isWeChatBrowser()") < share.indexOf("copyText(payload.clipboard)"));
+  const guide = await readFile(new URL("../../js/pvp/wechat-guide.js", import.meta.url), "utf8");
+  assert.match(guide, /点右上角 <span class="pvp-wx-dots" aria-hidden="true">···<\/span> 发送给朋友/);
+  assert.match(guide, /或长按图片保存，再发给朋友/);
+  assert.doesNotMatch(guide, /alert\(/);
+});

@@ -47,12 +47,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Hover lift only where a pointer really hovers; on touch a tap would leave it stuck (sticky :hover). */
+@media (hover: hover) and (pointer: fine) {
 .action-btn:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
 .pvp-btn:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
 .ctl:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]),
 .pvp-sketch-ctl:hover:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]):not([data-state="loading"]) {
   transform: translate(-1px, -1px);
   box-shadow: var(--ctl-shadow-hover);
+}
 }
 
 .action-btn:active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),

@@ -144,6 +144,44 @@ export async function buildInviteCanvas(payload, { user = getAuthState()?.user, 
   });
 }
 
+/** True only inside the Android shell when it can hand an image to WeChat directly. */
+export function canSendToWeChat(win = typeof window !== "undefined" ? window : null) {
+  const app = win?.StockGameApp;
+  if (!app || typeof app.shareImageToWeChat !== "function") return false;
+  try {
+    return typeof app.canShareToWeChat === "function" ? app.canShareToWeChat() === true || String(app.canShareToWeChat()) === "true" : true;
+  } catch {
+    return false;
+  }
+}
+
+const WECHAT_COPY = {
+  wechat: "已打开微信，选好友发送",
+  chooser: "没找到微信，已打开系统分享",
+};
+
+/** 发给微信好友 (app only): S6 invite image straight to WeChat's friend picker. Never throws. */
+export async function sendInviteToWeChat({ note } = {}, win = typeof window !== "undefined" ? window : null) {
+  try {
+    const payload = await getInvitePayload();
+    if (note) note.textContent = payload.url;
+    const { canvas } = await buildInviteCanvas(payload);
+    const base64 = canvas.toDataURL("image/png").split(",")[1] || "";
+    let res = "";
+    try { res = String(win?.StockGameApp?.shareImageToWeChat?.(base64, `zaozhidao-pvp-invite-${payload.code}.png`) ?? ""); } catch { res = ""; }
+    if (WECHAT_COPY[res]) {
+      showToast(WECHAT_COPY[res], "success");
+      return res;
+    }
+    // Bridge refused: keep the old path (save / system share / download).
+    return await saveInviteImage({ note });
+  } catch (err) {
+    console.warn("invite to wechat failed", err);
+    showToast(err?.message && err.status ? err.message : "邀请图没生成出来，请稍后再试", "error");
+    return "error";
+  }
+}
+
 /** 保存邀请图 button. Never throws. */
 export async function saveInviteImage({ note } = {}) {
   try {

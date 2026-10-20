@@ -3,7 +3,7 @@ import { coinIconHtml } from "../jiu-coin.js";
 import { setCtlState, shakeError, ensureCastbar } from "../controls.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { escapeHtml, formatRemain, remainingMs } from "./copy.js";
-import { copyInviteLink, forgetInvitePayload, getInvitePayload, saveInviteImage } from "./invite-share.js";
+import { buildInviteCanvas, canSendToWeChat, copyInviteLink, forgetInvitePayload, getInvitePayload, saveInviteImage, sendInviteToWeChat } from "./invite-share.js";
 import { mountRankHelp } from "./rank-help.js";
 import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { mountBattleCover, setPvpAvatar } from "./bot-art.js";
@@ -267,6 +267,15 @@ async function shareBattle() {
       showToast("已打开系统分享，可选微信发给朋友", "success");
       return;
     }
+    // WeChat in-app browser: no usable share sheet; point at the native ··· menu.
+    const guide = await import("./wechat-guide.js");
+    if (guide.isWeChatBrowser()) {
+      const imageUrl = guide.isIosUa()
+        ? buildInviteCanvas(payload).then(({ canvas }) => canvas.toDataURL("image/png")).catch(() => null)
+        : null;
+      guide.showWeChatGuide(payload, { imageUrl });
+      return;
+    }
     const shared = await systemShare(payload);
     if (shared === true) {
       showToast("已打开分享，发给朋友就能进房间", "success");
@@ -518,6 +527,12 @@ function renderState(state) {
   }
   const shareRow = document.getElementById("pvpShareRow");
   if (shareRow) shareRow.hidden = !shareOk;
+  const weChatBtn = document.getElementById("pvpShareWeChatBtn");
+  if (weChatBtn) {
+    // Android shell only; the web keeps 分享对战 / copy / save.
+    weChatBtn.hidden = !(shareOk && canSendToWeChat());
+    if (weChatBtn.getAttribute("aria-busy") !== "true") weChatBtn.disabled = !shareOk;
+  }
   for (const id of ["pvpShareCopyBtn", "pvpShareImageBtn"]) {
     const mini = document.getElementById(id);
     if (mini && mini.getAttribute("aria-busy") !== "true") mini.disabled = !shareOk;
@@ -629,6 +644,10 @@ function wireLobby() {
   const imageBtn = document.getElementById("pvpShareImageBtn");
   imageBtn?.addEventListener("click", () => {
     withMiniBusy(imageBtn, () => saveInviteImage({ note: shareNote() })).catch(() => {});
+  });
+  const weChatBtn = document.getElementById("pvpShareWeChatBtn");
+  weChatBtn?.addEventListener("click", () => {
+    withMiniBusy(weChatBtn, () => sendInviteToWeChat({ note: shareNote() })).catch(() => {});
   });
   mountRankHelp();
   document.addEventListener("stockgame:auth-changed", () => {

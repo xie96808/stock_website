@@ -1,13 +1,14 @@
 import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
-import { coinIconHtml } from "../jiu-coin.js";
+import { coinIconHtml, refreshJiuCoinStatus } from "../jiu-coin.js";
 import { buildKlineOption, relaxPvpMarkers } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import {
   formatPpm,
   marksFromView,
   remainingMs,
+  lockedActionText,
   roundCaption,
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
@@ -85,7 +86,7 @@ function paintClockFace(id, seconds, kicker, urgent, fraction) {
   }
 }
 
-const READY_WINDOW_MS = 15_000;
+const READY_WINDOW_MS = 30_000;
 let readyRingKey = "";
 let readyRingTotal = READY_WINDOW_MS;
 
@@ -649,6 +650,8 @@ function paintTopClocks(status) {
   if (playClock) playClock.hidden = status !== "playing";
 }
 
+let entrySyncedFor = "";
+
 function render() {
   const ready = document.getElementById("pvpReadyPanel");
   const play = document.getElementById("pvpPlayPanel");
@@ -676,6 +679,11 @@ function render() {
   } else if (view?.status === "playing") {
     if (ready) ready.hidden = true;
     if (play) play.hidden = false;
+    // Entry fee is charged when play starts; keep the header chip in step.
+    if (matchId && entrySyncedFor !== matchId) {
+      entrySyncedFor = matchId;
+      try { refreshJiuCoinStatus()?.catch?.(() => {}); } catch { /* best effort */ }
+    }
     const staleReady = document.getElementById("pvpReadyBtn");
     if (staleReady && !readyInFlight && staleReady.dataset.state === "loading") setCtlState(staleReady, "default", { syncImg: false, forceDisabled: false });
     paintTopClocks("playing");
@@ -748,7 +756,7 @@ async function postAction(action) {
     await refresh();
     if (view?.me?.lockedToday) {
       pendingNetwork = false;
-      if (view.me.lockedAction) setText("pvpActionError", `本手已提交：${view.me.lockedAction}`);
+      if (view.me.lockedAction) setText("pvpActionError", lockedActionText(view.me.lockedAction));
     }
   } catch (err) {
     setText("pvpActionError", err.message || "正在核对局面");

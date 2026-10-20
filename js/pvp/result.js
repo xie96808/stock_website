@@ -4,7 +4,7 @@ import { ensureEcharts } from "../echarts-loader.js";
 import { buildKlineOption, relaxPvpMarkers } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { buildPvpKlineAnalysis } from "./analysis-view.js";
-import { coinIconHtml } from "../jiu-coin.js";
+import { coinIconHtml, refreshJiuCoinStatus } from "../jiu-coin.js";
 import { colorReturnHtml, escapeHtml, formatCoin, formatPpm, formatWindow, marksFromView, reasonLabel, resultHeadline } from "./copy.js";
 import { appendRankProgress, rankTitleWithIcon } from "./profile-battle.js";
 import { actionKey, pvpFetch, whenAuthReady } from "./transport.js";
@@ -574,9 +574,21 @@ function marketMissing(view) {
   return completed && (!Array.isArray(bars) || bars.length < 30);
 }
 
+let balanceSyncedFor = "";
+
+/** Settlement moved coins server-side; repaint the header chip now, not on lobby return. */
+function syncHeaderBalance(view) {
+  const key = view?.matchId ? `${view.matchId}:${view.status}` : "";
+  if (!key || key === balanceSyncedFor) return;
+  if (view.status !== "settled" && view.status !== "aborted") return;
+  balanceSyncedFor = key;
+  try { refreshJiuCoinStatus()?.catch?.(() => {}); } catch { /* chrome refresh is best effort */ }
+}
+
 export function showPvpResult(view, { celebrate = false } = {}) {
   destroyChart();
   shown = view || null;
+  syncHeaderBalance(view);
   prepareScreen(Route.PVP_RESULT);
   activateScreen(Route.PVP_RESULT);
   setRouteHash(Route.PVP_RESULT);

@@ -196,7 +196,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(html, /正常结束/);
   assert.match(html, /id="pvpBattleTop"/);
   assert.doesNotMatch(html, /id="pvpTrade"/);
-  assert.match(html, /id="pvpReadyClockNum">15</);
+  assert.match(html, /id="pvpReadyClockNum">30</);
   assert.match(html, /id="pvpWinMeAvatar"/);
   assert.match(html, /id="pvpWinOppAvatar"/);
   assert.match(html, /id="pvpWinIdentity"/);

@@ -144,8 +144,11 @@ export function formatPlayHudChrome(input = {}) {
       isGhost: false,
       kind: 'survival',
       badge: '活过三十日',
-      subtitle: floatLabel,
-      mood: '生存模式 · 相对开局 −20% 爆仓',
+      // 「相对开局 … · 爆仓线 −20%」 is shown once, on the meter above its bar (#survivalNavLabel).
+      // It used to be repeated here as the header subtitle and again in the mood line.
+      subtitle: '',
+      meterLabel: floatLabel,
+      mood: '生存模式 · 撑过三十个交易日',
       dayLead: '第',
       dayUnit: '天',
       remainLabel: '',

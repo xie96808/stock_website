@@ -410,7 +410,6 @@
     mix-blend-mode: multiply;
 }
 
-.action-btn:hover:not(:disabled) { transform: translate(-1px, -1px); }
 .action-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
 
 .action-btn.buy {
@@ -419,7 +418,6 @@
     border-radius: 22px 16px 24px 18px;
     box-shadow: 2px 2px 0 var(--line);
 }
-.action-btn.buy:hover:not(:disabled) { box-shadow: 3px 3px 0 var(--line); }
 
 .action-btn.sell {
     color: var(--wash-ink);
@@ -427,7 +425,6 @@
     border-radius: 18px 24px 16px 22px;
     box-shadow: 1px 1px 0 var(--line);
 }
-.action-btn.sell:hover:not(:disabled) { box-shadow: 2px 2px 0 var(--line); }
 
 .action-btn.hold {
     color: var(--ink);
@@ -435,7 +432,15 @@
     border-radius: 16px 22px 18px 24px;
     box-shadow: none;
 }
-.action-btn.hold:hover:not(:disabled) { background: var(--chip-bg); }
+/* Legacy hover lift / tint, only on devices that really hover (a tap on touch must not leave it stuck).
+   观望's tint is background-COLOR on the plain (non-.ctl) button only: the old `background:` shorthand here
+   (0,4,0) beat `.action-btn.ctl.hold` (0,3,0) and wiped the hand-drawn shell image on hover / after a tap. */
+@media (hover: hover) and (pointer: fine) {
+    .action-btn:hover:not(:disabled) { transform: translate(-1px, -1px); }
+    .action-btn.buy:hover:not(:disabled) { box-shadow: 3px 3px 0 var(--line); }
+    .action-btn.sell:hover:not(:disabled) { box-shadow: 2px 2px 0 var(--line); }
+    .action-btn.hold:not(.ctl):hover:not(:disabled) { background-color: var(--chip-bg); }
+}
 
 #holdBtn,
 #fastForwardBtn {
@@ -1209,4 +1214,92 @@
   max-width: none;
   -webkit-user-drag: none;
   user-select: none;
+}
+
+/* ===== Phone: key return figures on the first screen (js/returns-layout.js) =====
+   收益率 + 仓位 + 当日涨跌 in the top progress card (replaces 「市场在等待你的判断…」), the two hint lines
+   fold into one line + ⓘ, 快进 is slimmer. Trade buttons keep their size. Desktop (>900px) never sees any of it.
+   Every rule keys off classes the module adds (.rl-has-card / .rl-zone), so without the JS the page is unchanged. */
+.rl-card, .rl-info { display: none; }
+.rl-hint-row { display: contents; }
+@media (max-width: 900px) {
+  #gameScreen .game-progress-meta.rl-has-card { flex-wrap: wrap; row-gap: 4px; justify-content: space-between; }
+  #gameScreen .game-progress-meta.rl-has-card #progressMood { display: none; }
+  #gameScreen .rl-card {
+    display: flex;
+    order: 5;
+    flex: 1 0 100%;
+    flex-wrap: wrap; /* 当日涨跌 drops to its own line only when a long return + chip fill a 360px row */
+    align-items: center;
+    gap: 2px 8px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .rl-card .rl-k { font-size: 0.74rem; color: var(--ink-soft); letter-spacing: 0.08em; }
+  .rl-card .rl-v {
+    font-family: var(--mono, "IBM Plex Mono", ui-monospace, monospace);
+    font-size: 1.32rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    line-height: 1;
+  }
+  .rl-card .rl-chip { padding: 1px 7px; font-size: 0.7rem; line-height: 1.5; }
+  .rl-card .rl-sub { margin-left: auto; display: inline-flex; align-items: baseline; gap: 4px; }
+  .rl-card .rl-sub .rl-v { font-size: 0.8rem; font-weight: 700; }
+  .rl-v.positive { color: var(--gain-color); }
+  .rl-v.negative { color: var(--loss-color); }
+  .rl-v.neutral  { color: var(--ink); }
+
+  /* one hint line + ⓘ */
+  #gameScreen .rl-zone .rl-hint-row {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin: -4px 0 -4px;
+  }
+  #gameScreen .rl-zone .rl-hint-row .action-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 28px; /* balances the ⓘ so the line stays centred */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html:not(.rl-hints-open) #gameScreen .rl-zone .ff-hint { display: none; }
+  html.rl-hints-open #gameScreen .rl-zone .rl-hint-row .action-hint { white-space: normal; }
+  #gameScreen .rl-zone .rl-info {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: italic 700 0.8rem/1 Georgia, "Times New Roman", serif;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #gameScreen .rl-zone .rl-info::before {
+    content: "";
+    grid-area: 1 / 1;
+    width: 20px;
+    height: 20px;
+    border: 1.6px solid var(--line);
+    border-radius: 50% 46% 52% 48% / 48% 52% 46% 50%;
+    background: var(--card);
+  }
+  #gameScreen .rl-zone .rl-info > span { grid-area: 1 / 1; position: relative; }
+  html.rl-hints-open #gameScreen .rl-zone .rl-info::before { background: var(--ink); }
+  html.rl-hints-open #gameScreen .rl-zone .rl-info { color: var(--card); }
+
+  /* slimmer 快进 */
+  #gameScreen .rl-zone #fastForwardBtn {
+    height: 36px;
+    min-height: 36px;
+    font-size: 0.88rem;
+  }
 }

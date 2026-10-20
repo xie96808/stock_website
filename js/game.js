@@ -2,6 +2,7 @@
 import { chartRefs } from './state.js';
 import { hideResumeBanner } from './resume-banner.js';
 import { initActionZoneSync } from './action-zone-sync.js';
+import { initReturnsLayout } from './returns-layout.js';
 import {
     getSession,
     getStocksCatalog,
@@ -116,6 +117,7 @@ export async function startGame(options = {}) {
     activateScreen(Route.GAME);
     syncMobileIntelDefaults();
     initActionZoneSync();
+    initReturnsLayout();
 
     // Clear leftover 波段分析 from a previous run
     const tagsEl = document.getElementById('waveAnalysisTags');

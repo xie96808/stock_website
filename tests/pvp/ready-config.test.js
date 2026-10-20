@@ -4,14 +4,16 @@ import { readFileSync } from "node:fs";
 
 const root = new URL("../../", import.meta.url);
 
-test("ready window is 15 seconds on server and in the room clock placeholder", async () => {
+test("ready window is 30 seconds on server and in the room clock placeholder", async () => {
   const { READY_MS } = await import("../../server/src/lib/pvp/config.js");
-  assert.equal(READY_MS, 15_000);
+  assert.equal(READY_MS, 30_000);
   const html = readFileSync(new URL("index.html", root), "utf8");
-  assert.match(html, /id="pvpReadyClockNum">15</);
+  assert.match(html, /id="pvpReadyClockNum">30</);
   const cfg = readFileSync(new URL("server/src/lib/pvp/config.js", root), "utf8");
-  assert.match(cfg, /READY_MS = 15_000/);
-  assert.doesNotMatch(cfg, /READY_MS = 30_000/);
+  assert.match(cfg, /READY_MS = 30_000/);
+  assert.doesNotMatch(cfg, /READY_MS = 15_000/);
+  const room = readFileSync(new URL("js/pvp/room.js", root), "utf8");
+  assert.match(room, /const READY_WINDOW_MS = 30_000;/);
 });
 
 test("result screen imports formatCoin so rating paint cannot throw ReferenceError", () => {
@@ -31,6 +33,6 @@ test("result screen imports formatCoin so rating paint cannot throw ReferenceErr
   const html = readFileSync(new URL("index.html", root), "utf8");
   assert.match(html, /id="pvpBattleTop"/);
   assert.match(html, /id="pvpTradeSegment"/);
-  // Per-hand timer stays 30s (design); only READY_MS is 15s.
+  // Per-hand timer stays 30s (design); READY_MS is also 30s.
   assert.match(html, /id="pvpClockNum">30</);
 });
