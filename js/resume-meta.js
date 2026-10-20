@@ -49,3 +49,15 @@ export function resumeMetaText(active, dayInfo) {
   if (dayInfo) parts.push(`第 ${dayInfo.day}/${dayInfo.total} 天${dayInfo.ready ? ' · 待结算' : ''}`);
   return parts.join(' · ');
 }
+
+/**
+ * 「已有云端对局」冲突弹窗的进度说明 (M-11). event-v1 games keep every submitted
+ * decision on the server, so 继续 resumes from the cloud day — never 第 1 日.
+ * Only legacy-batch games (今日挑战) restart the same window from day 1.
+ */
+export function conflictProgressText(meta) {
+  const m = meta || {};
+  if (m.draftDay) return '本机进度：已决策 ' + m.decided + ' 日，将从第 ' + m.draftDay + ' 日继续';
+  if (m.protocolVersion === 'event-v1') return '本机暂无未提交进度，将按云端已提交的进度继续';
+  return '本机暂无未提交进度（将从第 1 日继续同一云端题目）';
+}

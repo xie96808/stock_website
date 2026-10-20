@@ -5,6 +5,7 @@
 
 import { getAuthState, openAuthModal, refreshMe, showToast } from './auth.js';
 import { openCtlSheet, closeCtlSheet, shakeError, ensureCastbar } from './controls.js';
+import { conflictProgressText } from './resume-meta.js';
 import {
   createCloudGame,
   fetchActiveCloudGame,
@@ -129,12 +130,10 @@ export function attachDeferredStart(startGame, gameState) {
         activeKind === 'daily'
           ? ''
           : (meta && meta.fillMode === 'same_close' ? '当日收盘成交' : '次日开盘成交');
-      const stockBit = meta && (meta.stockName || meta.stockCode)
-        ? (' · ' + (meta.stockName || '') + (meta.stockCode ? '（' + meta.stockCode + '）' : ''))
-        : '';
-      const draftBit = meta && meta.draftDay
-        ? ('本机进度：已决策 ' + meta.decided + ' 日，将从第 ' + meta.draftDay + ' 日继续')
-        : '本机暂无未提交进度（将从第 1 日继续同一云端题目）';
+      // Mid-game the stock stays hidden (股票代码 ******, resume banner too), so the
+      // conflict copy must not name it either.
+      const stockBit = '';
+      const draftBit = conflictProgressText(meta);
       const mismatch =
         activeKind !== wantKind
           ? ('当前活动局是「' + kindBit + '」，与本次要开的「' + kindLabel(wantKind) + '」不同。继续会回到原局；重新开始会放弃原局再开' + kindLabel(wantKind) + '。')
@@ -341,6 +340,7 @@ export function attachDeferredStart(startGame, gameState) {
               decided: decided,
               draftDay: decided ? decided + 1 : 0,
               gameKind: active.gameKind || 'classic',
+              protocolVersion: active.protocolVersion || '',
             });
 
             if (choice === 'cancel') {
