@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.os.SystemClock
 import android.provider.MediaStore
 import android.util.Base64
 import android.view.View
@@ -34,6 +35,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Thin WebView shell that loads the live game at https://stockgame.xieyw.top.
@@ -95,12 +99,31 @@ class MainActivity : AppCompatActivity() {
         configureWebView()
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            /** One back press at a time while the page is answering (A-01). */
+            private var asking = 0
+
             override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                if (asking != 0) return
+                val ticket = SystemClock.uptimeMillis().toInt() or 1
+                asking = ticket
+                // Ask the page first (window.__sgBack, web #211). Old pages without it
+                // answer false and the shell falls back to the 1.1.6 behaviour.
+                webView.evaluateJavascript(BackLogic.SCRIPT) { result -> settle(ticket, result) }
+                // A busy or dead renderer may never answer: then act like 1.1.6.
+                webView.postDelayed({ settle(ticket, null) }, BACK_ANSWER_TIMEOUT_MS)
+            }
+
+            private fun settle(ticket: Int, result: String?) {
+                if (asking != ticket) return
+                asking = 0
+                if (isFinishing) return
+                when (BackLogic.decide(result, webView.canGoBack())) {
+                    BackAction.HANDLED_BY_PAGE -> Unit
+                    BackAction.WEBVIEW_BACK -> webView.goBack()
+                    BackAction.EXIT -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
                 }
             }
         })
@@ -342,17 +365,33 @@ class MainActivity : AppCompatActivity() {
             if (direct == null) {
                 return if (startChooser(uri, "发给微信好友")) "chooser" else "error"
             }
+            // Report what actually opened (A-03): wait for the UI thread's startActivity
+            // so a refused ShareImgUI that falls back to the chooser returns "chooser",
+            // and the page's toast matches what the user sees.
+            val outcome = AtomicReference("chooser")
+            val done = CountDownLatch(1)
             runOnUiThread {
-                if (isFinishing) return@runOnUiThread
                 try {
-                    grantUriPermission(WECHAT_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    startActivity(direct)
-                } catch (_: Exception) {
-                    // ActivityNotFound / SecurityException (component renamed or not exported).
-                    launchChooser(uri, "发给微信好友")
+                    if (isFinishing) {
+                        outcome.set("error")
+                        return@runOnUiThread
+                    }
+                    try {
+                        grantUriPermission(WECHAT_PACKAGE, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        startActivity(direct)
+                        outcome.set("wechat")
+                    } catch (_: Exception) {
+                        // ActivityNotFound / SecurityException (component renamed or not exported).
+                        outcome.set(if (launchChooser(uri, "发给微信好友")) "chooser" else "error")
+                    }
+                } finally {
+                    done.countDown()
                 }
             }
-            return "wechat"
+            // @JavascriptInterface runs on a binder thread, never the UI thread, so this cannot deadlock.
+            // If the UI thread is slow, assume the fallback path: never claim WeChat opened when unsure.
+            if (!done.await(SHARE_WAIT_MS, TimeUnit.MILLISECONDS)) return "chooser"
+            return outcome.get()
         }
 
         /** Lets the web UI show 「发给微信好友」 only when the shell can do it. */
@@ -415,16 +454,18 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
-    private fun launchChooser(uri: Uri, title: String?) {
+    private fun launchChooser(uri: Uri, title: String?): Boolean {
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "image/png"
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        try {
+        return try {
             startActivity(Intent.createChooser(send, title ?: "分享图片"))
+            true
         } catch (_: ActivityNotFoundException) {
             // No share target.
+            false
         }
     }
 
@@ -459,6 +500,10 @@ class MainActivity : AppCompatActivity() {
         private const val WECHAT_PACKAGE = "com.tencent.mm"
         private const val WECHAT_SHARE_IMG_UI = "com.tencent.mm.ui.tools.ShareImgUI"
         private const val MAX_IMAGE_B64 = 24 * 1024 * 1024
+        /** Max wait for the UI thread to report which share screen opened (A-03). */
+        private const val SHARE_WAIT_MS = 1500L
+        /** Max wait for window.__sgBack to answer before using the old back path (A-01). */
+        private const val BACK_ANSWER_TIMEOUT_MS = 800L
         private val PAPER_LIGHT = Color.parseColor("#F3EAD8")
         private val PAPER_DARK = Color.parseColor("#1C1A16")
         private const val THEME_WATCH_JS = """

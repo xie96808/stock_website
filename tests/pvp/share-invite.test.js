@@ -60,8 +60,35 @@ test("Android shell sends the invite image straight to WeChat ShareImgUI with a 
   const manifest = await readFile(new URL("../../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
   assert.match(manifest, /<queries>\s*<package android:name="com\.tencent\.mm" \/>\s*<\/queries>/);
   const gradle = await readFile(new URL("../../android-app/app/build.gradle.kts", import.meta.url), "utf8");
-  assert.match(gradle, /versionCode = 21/);
-  assert.match(gradle, /versionName = "1\.1\.6"/);
+  assert.match(gradle, /versionCode = 22/);
+  assert.match(gradle, /versionName = "1\.1\.7"/);
+});
+
+test("A-03: shell reports the screen that really opened; chooser copy fits both fallbacks", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const kt = await readFile(new URL("../../android-app/app/src/main/java/top/xieyw/stockgame/MainActivity.kt", import.meta.url), "utf8");
+  const fn = kt.slice(kt.indexOf("fun shareImageToWeChat"), kt.indexOf("fun canShareToWeChat"));
+  // "wechat" only after startActivity(ShareImgUI) succeeded on the UI thread.
+  assert.ok(fn.indexOf('outcome.set("wechat")') > fn.indexOf("startActivity(direct)"));
+  assert.match(fn, /outcome\.set\(if \(launchChooser\(uri, "发给微信好友"\)\) "chooser" else "error"\)/);
+  assert.match(fn, /done\.await\(SHARE_WAIT_MS, TimeUnit\.MILLISECONDS\)\) return "chooser"/);
+  assert.doesNotMatch(fn, /\n\s*return "wechat"/);
+  const js = await readFile(new URL("../../js/pvp/invite-share.js", import.meta.url), "utf8");
+  assert.match(js, /chooser: "没能直接打开微信，已打开系统分享"/);
+  assert.doesNotMatch(js, /没找到微信/);
+});
+
+test("A-01: App back key asks window.__sgBack first, old pages keep the 1.1.6 path", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const kt = await readFile(new URL("../../android-app/app/src/main/java/top/xieyw/stockgame/MainActivity.kt", import.meta.url), "utf8");
+  const back = kt.slice(kt.indexOf("onBackPressedDispatcher.addCallback"), kt.indexOf("if (savedInstanceState != null)"));
+  assert.match(back, /webView\.evaluateJavascript\(BackLogic\.SCRIPT\)/);
+  assert.match(back, /BackAction\.WEBVIEW_BACK -> webView\.goBack\(\)/);
+  assert.match(back, /BackAction\.EXIT -> \{\s*isEnabled = false\s*onBackPressedDispatcher\.onBackPressed\(\)/);
+  assert.match(back, /postDelayed\(\{ settle\(ticket, null\) \}, BACK_ANSWER_TIMEOUT_MS\)/);
+  const logic = await readFile(new URL("../../android-app/app/src/main/java/top/xieyw/stockgame/BackLogic.kt", import.meta.url), "utf8");
+  assert.match(logic, /typeof window\.__sgBack==='function'&&window\.__sgBack\(\)===true/);
+  assert.match(logic, /jsResult\?\.trim\(\) == "true"/);
 });
 
 test("WeChat in-app browser: 分享对战 shows the ··· guide instead of the copy fallback", async () => {
