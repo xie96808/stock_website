@@ -102,6 +102,18 @@ const REASON_LABEL = {
   mtm_mismatch: "系统退款",
 };
 
+/** Player-facing name of a round action, same words as the PvP trade buttons (买入 / 卖出 / 保持). */
+const ACTION_LABELS = { buy: "买入", sell: "卖出", hold: "保持" };
+export function actionLabel(action) {
+  return ACTION_LABELS[String(action || "").toLowerCase()] || "";
+}
+
+/** 「本手已提交：买入」; unknown or missing action → plain 「本手已提交」, never the raw code. */
+export function lockedActionText(action) {
+  const label = actionLabel(action);
+  return label ? `本手已提交：${label}` : "本手已提交";
+}
+
 export function reasonLabel(reason) {
   if (Object.prototype.hasOwnProperty.call(REASON_LABEL, reason)) return REASON_LABEL[reason];
   return "已结束";

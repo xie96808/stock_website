@@ -8,6 +8,7 @@ import {
   formatPpm,
   marksFromView,
   remainingMs,
+  lockedActionText,
   roundCaption,
 } from "./copy.js";
 import { isSubmitting, noteRevision, setSubmitting } from "./store.js";
@@ -755,7 +756,7 @@ async function postAction(action) {
     await refresh();
     if (view?.me?.lockedToday) {
       pendingNetwork = false;
-      if (view.me.lockedAction) setText("pvpActionError", `本手已提交：${view.me.lockedAction}`);
+      if (view.me.lockedAction) setText("pvpActionError", lockedActionText(view.me.lockedAction));
     }
   } catch (err) {
     setText("pvpActionError", err.message || "正在核对局面");
