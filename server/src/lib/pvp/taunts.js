@@ -10,6 +10,7 @@ export const TAUNT_LINES = Object.freeze([
 ]);
 
 const LINE_SET = new Set(TAUNT_LINES);
+export const MAX_TAUNT_CODEPOINTS = 32;
 const MIN_GAP_MS = 2500;
 const MATCH_CAP = 20;
 const KEEP_MS = 60_000;
@@ -34,13 +35,17 @@ function deny(code, message, status) {
 }
 
 /**
- * Ephemeral in-match taunt. Allowlisted lines only.
+ * Ephemeral in-match taunt. Preset lines and short plain text are accepted.
  * Caller should push the event to both seats over WS.
  */
 export function sendTaunt(db, { matchId, fromUserId, text, now = Date.now() }) {
-  if (typeof text !== "string" || !LINE_SET.has(text)) {
-    return deny("BAD_PAYLOAD", "不认识这句消息", 400);
+  if (typeof text !== "string") return deny("BAD_PAYLOAD", "消息格式无效", 400);
+  const cleanText = text.trim();
+  const codepoints = [...cleanText].length;
+  if (!cleanText || codepoints > MAX_TAUNT_CODEPOINTS || /[\u0000-\u001f\u007f-\u009f]/u.test(cleanText)) {
+    return deny("BAD_PAYLOAD", `消息须为 1-${MAX_TAUNT_CODEPOINTS} 字，且不能含控制字符`, 400);
   }
+  const isCustom = !LINE_SET.has(cleanText);
   const players = db.prepare(
     `SELECT user_id FROM pvp_match_players WHERE match_id = ?`
   ).all(matchId);
@@ -60,7 +65,8 @@ export function sendTaunt(db, { matchId, fromUserId, text, now = Date.now() }) {
     id: seq,
     matchId,
     fromUserId,
-    text,
+    text: cleanText,
+    isCustom,
     nickname: publicNickname(user),
     at: now,
   };
@@ -73,6 +79,7 @@ export function sendTaunt(db, { matchId, fromUserId, text, now = Date.now() }) {
       matchId: event.matchId,
       fromUserId: event.fromUserId,
       text: event.text,
+      isCustom: event.isCustom,
       nickname: event.nickname,
       at: event.at,
     },

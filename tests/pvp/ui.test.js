@@ -64,6 +64,25 @@ test("pvp copy names the round, the lock, and the result in words", () => {
   ]);
 });
 
+test("PvP room supports ephemeral free-text messages beside the existing presets", () => {
+  const html = readFileSync(new URL("index.html", root), "utf8");
+  const room = readFileSync(new URL("js/pvp/room.js", root), "utf8");
+  const css = readFileSync(new URL("css/pvp.css", root), "utf8");
+  const taunts = readFileSync(new URL("server/src/lib/pvp/taunts.js", root), "utf8");
+  assert.match(html, /id="pvpMsgForm"/);
+  assert.match(html, /id="pvpMsgInput"[^>]*maxlength="64"/);
+  assert.match(html, /id="pvpMsgCount"/);
+  assert.match(room, /const PRESET_TAUNT_MS = 3200/);
+  assert.match(room, /const CUSTOM_TAUNT_MS = 4500/);
+  assert.match(room, /event\.isCustom === true/);
+  assert.match(room, /event\.isComposing \|\| event\.keyCode === 229/);
+  assert.match(room, /node\.textContent = text \|\| ""/);
+  assert.match(css, /\.pvp-msg-custom\s*\{[^}]*position:\s*sticky/);
+  assert.match(css, /max-width:\s*min\(220px, 78vw\)/);
+  assert.match(taunts, /MAX_TAUNT_CODEPOINTS = 32/);
+  assert.match(taunts, /isCustom/);
+});
+
 test("pvp chart uses h/d labels and shape markers, candles stay red and green", () => {
   const bars = [
     { label: "h1", open: 10, close: 11, low: 9, high: 12, volume: 1.5 },

@@ -313,6 +313,11 @@ export function leavePvpRoom({ deferChart = false } = {}) {
   stopLoops();
   closeLeave();
   closeMsgPicker();
+  const customInput = document.getElementById("pvpMsgInput");
+  if (customInput) customInput.value = "";
+  customTauntSending = false;
+  setText("pvpMsgStatus", "");
+  updateCustomTauntControls();
   showTauntBubble("me", "");
   showTauntBubble("opp", "");
   if (deferChart) window.setTimeout(() => destroyChart(), 0);
@@ -696,6 +701,7 @@ function render() {
   }
   paintClock();
   paintActions();
+  updateCustomTauntControls();
 }
 
 async function refresh() {
@@ -823,8 +829,34 @@ function onSocket(msg) {
 }
 
 
-const TAUNT_MS = 3200;
+const PRESET_TAUNT_MS = 3200;
+const CUSTOM_TAUNT_MS = 4500;
+const MAX_TAUNT_CODEPOINTS = 32;
 let tauntHideTimers = { me: 0, opp: 0 };
+let customTauntSending = false;
+
+function tauntLength(text) {
+  return [...String(text || "")].length;
+}
+
+function updateCustomTauntControls() {
+  const input = document.getElementById("pvpMsgInput");
+  const send = document.getElementById("pvpMsgSend");
+  const count = document.getElementById("pvpMsgCount");
+  if (!input || !send) return;
+  const length = tauntLength(input.value);
+  const tooLong = length > MAX_TAUNT_CODEPOINTS;
+  send.disabled = customTauntSending || !input.value.trim() || tooLong || view?.status !== "playing";
+  if (count) {
+    count.textContent = `${length}/${MAX_TAUNT_CODEPOINTS}`;
+    count.setAttribute("aria-label", `${length} 字，最多 ${MAX_TAUNT_CODEPOINTS} 字`);
+  }
+}
+
+function isPresetTaunt(text) {
+  return [...(document.querySelectorAll("#pvpMsgPicker .pvp-msg-line") || [])]
+    .some((button) => button.textContent.trim() === text);
+}
 
 function closeMsgPicker() {
   const picker = document.getElementById("pvpMsgPicker");
@@ -833,7 +865,7 @@ function closeMsgPicker() {
   if (open) open.setAttribute("aria-expanded", "false");
 }
 
-function showTauntBubble(side, text) {
+function showTauntBubble(side, text, isCustom = false) {
   const id = side === "me" ? "pvpTauntBubbleMe" : "pvpTauntBubbleOpp";
   const node = document.getElementById(id);
   if (!node) return;
@@ -844,7 +876,7 @@ function showTauntBubble(side, text) {
     tauntHideTimers[side] = window.setTimeout(() => {
       node.hidden = true;
       node.textContent = "";
-    }, TAUNT_MS);
+    }, isCustom ? CUSTOM_TAUNT_MS : PRESET_TAUNT_MS);
   }
 }
 
@@ -854,21 +886,46 @@ function onTauntEvent(msg) {
   if (!event?.text) return;
   const auth = getAuthState().user;
   const mine = auth && Number(event.fromUserId) === Number(auth.id);
-  showTauntBubble(mine ? "me" : "opp", event.text);
+  showTauntBubble(mine ? "me" : "opp", event.text, event.isCustom === true);
 }
 
-async function postTaunt(text) {
+async function postTaunt(text, { customInput = false } = {}) {
   if (!matchId || !text || view?.status !== "playing") return;
-  closeMsgPicker();
-  showTauntBubble("me", text);
+  if (!customInput) closeMsgPicker();
+  const isCustom = !isPresetTaunt(text);
+  showTauntBubble("me", text, isCustom);
   try {
     await pvpFetch(`/pvp/matches/${encodeURIComponent(matchId)}/taunts`, {
       method: "POST",
       body: { text },
     });
+    if (customInput) closeMsgPicker();
+    return true;
   } catch (err) {
+    showTauntBubble("me", "");
     setText("pvpActionError", err.message || "消息没能发送");
+    setText("pvpMsgStatus", err.message || "消息没能发送");
+    return false;
   }
+}
+
+async function sendCustomTaunt() {
+  const input = document.getElementById("pvpMsgInput");
+  const status = document.getElementById("pvpMsgStatus");
+  const text = String(input?.value || "").trim();
+  if (!input || !text || tauntLength(text) > MAX_TAUNT_CODEPOINTS || customTauntSending) return;
+  const sendingMatchId = matchId;
+  customTauntSending = true;
+  if (status) status.textContent = "";
+  updateCustomTauntControls();
+  const sent = await postTaunt(text, { customInput: true });
+  customTauntSending = false;
+  if (matchId !== sendingMatchId) return;
+  if (sent) {
+    input.value = "";
+    document.getElementById("pvpMsgOpen")?.focus();
+  }
+  updateCustomTauntControls();
 }
 
 function wireRoom() {
@@ -914,6 +971,20 @@ function wireRoom() {
     if (!btn) return;
     postTaunt(btn.textContent || "").catch(() => {});
   });
+  document.getElementById("pvpMsgForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendCustomTaunt().catch(() => {});
+  });
+  document.getElementById("pvpMsgInput")?.addEventListener("input", () => {
+    setText("pvpMsgStatus", "");
+    updateCustomTauntControls();
+  });
+  document.getElementById("pvpMsgInput")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    if (event.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    document.getElementById("pvpMsgForm")?.requestSubmit();
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && matchId) refresh().catch(() => {});
   });
@@ -931,6 +1002,8 @@ export async function showPvpRoom(id, seed) {
     bottomMode = "volume";
   }
   matchId = id;
+  customTauntSending = false;
+  updateCustomTauntControls();
   setText("pvpActionError", "");
   if (seed && noteRevision(id, seed.revision)) {
     view = seed;
