@@ -1596,26 +1596,105 @@
   box-shadow: none;
 }
 
-/* Single-line message bubbles under seat avatars. */
+.pvp-msg-custom {
+  position: sticky;
+  bottom: -0.55rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.15rem -0.15rem -0.15rem;
+  padding: 0.35rem 0.15rem 0.15rem;
+  background: #f5efe0;
+}
+
+.pvp-msg-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0.5rem 0.65rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 12px;
+  background: #fffdf6;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.pvp-msg-input:focus-visible,
+.pvp-msg-send:focus-visible {
+  outline: 3px solid #4055d8;
+  outline-offset: 2px;
+}
+
+.pvp-msg-count {
+  color: var(--ink-soft, #555);
+  font: 0.72rem var(--mono, monospace);
+  white-space: nowrap;
+}
+
+.pvp-msg-send {
+  min-height: 42px;
+  padding: 0.45rem 0.8rem;
+}
+
+.pvp-msg-send:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.pvp-msg-status {
+  grid-column: 1 / -1;
+  min-height: 0;
+  margin: 0;
+  color: var(--ink-soft, #555);
+  font-size: 0.78rem;
+}
+
+.pvp-msg-status:empty {
+  display: none;
+}
+
+.pvp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Ephemeral messages below seat avatars; wrap long user-entered text to two lines. */
 .pvp-taunt-bubble {
   position: absolute;
   left: 50%;
   top: calc(100% + 4px);
   transform: translateX(-50%);
   z-index: 200;
-  max-width: min(16rem, 72vw);
+  width: max-content;
+  max-width: min(220px, 78vw);
   padding: 0.28rem 0.65rem;
   border: 1.5px solid var(--ink);
-  border-radius: 999px;
+  border-radius: 12px;
   background: #fffdf6;
   color: var(--ink);
   font-size: 0.72rem;
   line-height: 1.2;
   box-shadow: 2px 2px 0 var(--line);
   pointer-events: none;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.pvp-seat-me .pvp-taunt-bubble {
+  left: 0;
+  transform: none;
 }
 
 .pvp-seat-opp .pvp-taunt-bubble {

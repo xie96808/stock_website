@@ -672,13 +672,20 @@
                         <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
                         <button type="button" id="pvpTauntOpen" hidden aria-hidden="true">消息</button>
                     </div>
-                    <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="listbox" aria-label="消息台词">
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这你都买？进厂打螺丝吧</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这都卖？啥都拿不住玩什么股票！</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" role="option" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
+                    <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="group" aria-label="对局消息">
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这你都买？进厂打螺丝吧</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这都卖？啥都拿不住玩什么股票！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
+                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
+                        <form class="pvp-msg-custom" id="pvpMsgForm">
+                            <label class="pvp-sr-only" for="pvpMsgInput">输入一条对局消息，最多 32 字</label>
+                            <input id="pvpMsgInput" class="pvp-msg-input" type="text" maxlength="64" autocomplete="off" placeholder="也可以自己打字…" aria-describedby="pvpMsgCount">
+                            <span class="pvp-msg-count" id="pvpMsgCount" aria-live="polite">0/32</span>
+                            <button type="submit" class="pvp-msg-send ctl ctl-secondary" id="pvpMsgSend" data-ctl-kind="secondary" data-state="default" disabled><span class="ctl-label">发送</span></button>
+                        </form>
+                        <p class="pvp-msg-status" id="pvpMsgStatus" role="status" aria-live="polite"></p>
                     </div>
                     <div class="pvp-taunt-picker" id="pvpTauntPicker" hidden></div>
                     <p id="pvpActionError" role="status"></p>
