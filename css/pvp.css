@@ -1692,6 +1692,11 @@
   word-break: break-word;
 }
 
+.pvp-seat-me .pvp-taunt-bubble {
+  left: 0;
+  transform: none;
+}
+
 .pvp-seat-opp .pvp-taunt-bubble {
   left: auto;
   right: 0;

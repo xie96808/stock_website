@@ -79,6 +79,7 @@ test("PvP room supports ephemeral free-text messages beside the existing presets
   assert.match(room, /node\.textContent = text \|\| ""/);
   assert.match(css, /\.pvp-msg-custom\s*\{[^}]*position:\s*sticky/);
   assert.match(css, /max-width:\s*min\(220px, 78vw\)/);
+  assert.match(css, /\.pvp-seat-me \.pvp-taunt-bubble\s*\{[^}]*left:\s*0/);
   assert.match(taunts, /MAX_TAUNT_CODEPOINTS = 32/);
   assert.match(taunts, /isCustom/);
 });
