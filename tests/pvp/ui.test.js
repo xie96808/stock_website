@@ -108,19 +108,25 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(mine.label.formatter, "{c}");
   assert.equal(mine.symbolOffset[0], 0);
   assert.ok(mine.symbolOffset[1] >= 24);
-  assert.equal(opp.label.show, true);
+  assert.equal(opp.label.show, false);
   assert.equal(opp.symbolOffset[0], 0);
-  assert.ok(opp.symbolOffset[1] <= -24);
-  assert.equal(opp.symbol, "diamond");
-  assert.match(String(opp.itemStyle.color), /7c4dff/i);
+  assert.equal(opp.symbolOffset[1], -10);
+  assert.equal(opp.symbol, "triangle");
+  assert.equal(opp.symbolRotate, 180);
+  assert.deepEqual(opp.symbolSize, [12, 12]);
+  assert.equal(opp.itemStyle.color, "transparent");
+  assert.match(String(opp.itemStyle.borderColor), /7c4dff/i);
   const oppBuy = buildKlineOption({
     mode: "pvp",
     bars,
     historyLength: 1,
     pvpMarks: [{ label: "d1", side: "opponent", kind: "buy" }],
   }).series[0].markPoint.data.find((point) => point.value === "对手买");
-  assert.equal(oppBuy.itemStyle.color, "#2f6fed");
-  assert.equal(oppBuy.symbol, "diamond");
+  assert.equal(oppBuy.itemStyle.borderColor, "#2f6fed");
+  assert.equal(oppBuy.itemStyle.color, "transparent");
+  assert.equal(oppBuy.symbolRotate, 0);
+  assert.equal(oppBuy.symbolOffset[1], 10);
+  assert.equal(oppBuy.symbol, "triangle");
   assert.equal(opt.tooltip.triggerOn, "click");
   assert.equal(opt.animation, false);
   const valued = buildKlineOption({
@@ -136,8 +142,8 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.equal(opt.series[0].itemStyle.color0, "#3db86a");
   assert.equal(opt.series[0].markLine, undefined);
   assert.equal(opt.series[0].barWidth, "76%");
-  assert.ok(opt.grid[0].right <= 24 && opt.grid[0].right >= 20); // PVP-04: room for the half-width of the last mark
-  assert.ok(opt.grid[0].left <= 56); // room for the rotated y-axis title (see "pvp y-axis names relative price")
+  assert.equal(opt.grid[0].right, 18); // enough room for the final own pill without a 40px diamond
+  assert.ok(opt.grid[0].left < 56); // numeric ticks only; no rotated title
   assert.equal(opt.dataZoom[0].start, 0);
   assert.equal(opt.dataZoom[0].end, 100);
   assert.equal(opt.dataZoom[0].maxSpan, 100);
@@ -335,19 +341,22 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.doesNotMatch(css, /嘲讽/);
 });
 
-test("pvp y-axis names relative price so it is not read as a real quote", () => {
+test("pvp keeps numeric ticks, removes the vertical title and widens aligned panes", () => {
   const bars = [
-    { label: "h1", open: 10, close: 11, low: 9, high: 12, volume: 1 },
-    { label: "d1", open: 11, close: 10, low: 9.5, high: 12.5, volume: 2 },
+    { label: "h1", open: 100, close: 110, low: 90, high: 120, volume: 1 },
+    { label: "d1", open: 110, close: 100, low: 95, high: 125, volume: 2 },
   ];
-  const opt = buildKlineOption({ mode: "pvp", bars, historyLength: 1, resetDataZoom: true });
-  assert.match(String(opt.yAxis[0].name || ""), /相对价/);
-  // The rotated title is centred nameGap px left of the axis line and is ~10px tall: the grid inset must keep
-  // its centre at least 6px inside the canvas, or the canvas edge clips it (seen at 360/390 px).
-  const grids = Array.isArray(opt.grid) ? opt.grid : [opt.grid];
-  const gap = opt.yAxis[0].nameGap;
-  assert.ok(gap >= 32, "title must clear the tick labels");
-  for (const g of grids) assert.ok(g.left - gap >= 6, `grid.left ${g.left} clips y-axis title (gap ${gap})`);
+  for (const pvpBottom of [null, 'volume', 'macd']) {
+    const opt = buildKlineOption({ mode: 'pvp', bars, pvpBottom });
+    assert.equal(opt.yAxis[0].name, undefined);
+    assert.notEqual(opt.yAxis[0].axisLabel.show, false);
+    assert.ok(opt.grid.every(g => g.left === 36 && g.right === 18));
+    if (pvpBottom) assert.equal(opt.grid[0].bottom, '28%');
+    const range = { min: 90, max: 125 };
+    assert.ok(opt.yAxis[0].min(range) < range.min);
+    assert.ok(opt.yAxis[0].max(range) > range.max);
+    assert.ok(opt.yAxis[0].max(range) - opt.yAxis[0].min(range) < 60);
+  }
 });
 
 test("pvp chart includes MA legend and MACD panel", () => {
@@ -399,7 +408,7 @@ test("battle chart can hide MA legend and toggle bottom indicator pane", () => {
   assert.ok(!macd.series.some((s) => s.name === "成交量"));
 });
 
-test("pvp marks stack instead of overlapping (PVP-04)", () => {
+test("own text pills keep their lanes while opponent pins start close to the wick", () => {
   const bars = Array.from({ length: 12 }, (_, i) => ({
     label: i < 4 ? `h${i + 1}` : `d${i - 3}`,
     open: 10, close: 10.5, low: 9.5, high: 11, volume: 1,
@@ -425,6 +434,7 @@ test("pvp marks stack instead of overlapping (PVP-04)", () => {
     for (let j = i + 1; j < points.length; j += 1) {
       const a = points[i];
       const b = points[j];
+      if (a.pvpOpponent || b.pvpOpponent) continue;
       if ((a.symbolOffset[1] < 0) !== (b.symbolOffset[1] < 0)) continue;
       const dx = Math.abs(Number(a.coord[0].slice(1)) - Number(b.coord[0].slice(1)));
       if (dx >= 4) continue;
@@ -433,6 +443,7 @@ test("pvp marks stack instead of overlapping (PVP-04)", () => {
       assert.ok(ra.hi <= rb.lo || rb.hi <= ra.lo, `${a.value}@${a.coord[0]} overlaps ${b.value}@${b.coord[0]}`);
     }
   }
+  for (const p of points.filter(p => p.pvpOpponent)) assert.equal(Math.abs(p.symbolOffset[1]), 10);
   const far = points.find((p) => p.coord[0] === "d8");
   assert.ok(far.symbolOffset[1] < 30, "an isolated mark stays next to its candle");
 });
@@ -472,4 +483,41 @@ test("pixel pass pushes overlapping marks apart and is idempotent (PVP-04)", () 
   } finally {
     globalThis.requestAnimationFrame = raf;
   }
+});
+
+
+test('PvP day tooltip reports both players without persistent opponent text', () => {
+  const bars = [{ label: 'd4', open: 100, close: 101, low: 99, high: 102, volume: 1 }];
+  const opt = buildKlineOption({ mode: 'pvp', bars, pvpMarks: [
+    { label: 'd4', side: 'opponent', kind: 'sell' },
+    { label: 'd4', side: 'me', kind: 'buy' },
+    { label: 'd5', side: 'opponent', kind: 'buy' },
+  ] });
+  const text = opt.tooltip.formatter([{ seriesName: 'K线', dataIndex: 0 }]);
+  assert.match(text, /第4天/); assert.match(text, /对手 · 卖出/); assert.match(text, /我 · 买入/);
+  assert.doesNotMatch(text, /对手 · 买入/);
+  const sell = opt.series[0].markPoint.data.find(p => p.pvpOpponent);
+  assert.match(opt.series[0].markPoint.tooltip.formatter({ data: sell }), /第4天 · 对手卖/);
+});
+
+test('pixel pass keeps opponent date pins closest to wicks without shifting candle dates', () => {
+  const applied = [];
+  const base = [
+    { coord: ['d1', 100], pvpOpponent: false, symbolSize: [28,18], symbolOffset: [0,-25] },
+    { coord: ['d1', 100], pvpOpponent: true, symbolSize: [12,12], symbolOffset: [0,-10] },
+    { coord: ['d2', 100], pvpOpponent: true, symbolSize: [12,12], symbolOffset: [0,-10] },
+  ];
+  const chart = { getHeight: () => 300, on() {},
+    convertToPixel: (_axis, coord) => [coord[0] === 'd1' ? 100 : 120,100],
+    setOption: opt => applied.push(opt.series[0].markPoint.data),
+  };
+  const raf = globalThis.requestAnimationFrame; globalThis.requestAnimationFrame = f => f();
+  try {
+    relaxPvpMarkers(chart, base);
+    const pins = applied[0].filter(p => p.pvpOpponent);
+    assert.ok(pins.every(p => p.symbolOffset[0] === 0 && p.symbolOffset[1] === -10));
+    const mine = applied[0].find(p => !p.pvpOpponent);
+    assert.ok(mine.symbolOffset[1] <= -26);
+    assert.deepEqual(base[0].symbolOffset, [0,-25]);
+  } finally { globalThis.requestAnimationFrame = raf; }
 });
