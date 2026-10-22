@@ -202,7 +202,7 @@ test("hub keeps 选择玩法 and hides the battle entry until the flag is on", (
   assert.match(html, /assets\/controls\/ctl-buy-default\.png/);
   assert.match(html, /assets\/controls\/ctl-msg-default\.png/);
   assert.match(html, /assets\/controls\/ctl-hold-default\.png/);
-  assert.match(html, /这你都买？进厂打螺丝吧/);
+  assert.doesNotMatch(html, /进厂打螺丝|啥都拿不住/);
   assert.match(html, /技术回调，慌个锤子/);
   assert.match(html, /id="pvpHold"/);
   assert.match(html, /aria-label="保持"/);
