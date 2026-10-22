@@ -10,15 +10,16 @@ function composer() {
     setAttribute(k, v) { this.attrs[k] = v; },
   }]));
   let resolve;
+  let reject;
   const context = vm.createContext({
     document: { getElementById: id => nodes[id], querySelectorAll: () => [] },
     view: { status: 'playing' }, matchId: 'room-a',
     window: { clearTimeout() {}, setTimeout() {} },
-    pvpFetch: () => new Promise(r => { resolve = r; }),
+    pvpFetch: () => new Promise((r, j) => { resolve = r; reject = j; }),
     setText: (id, text) => { if (nodes[id]) nodes[id].textContent = text; },
   });
   vm.runInContext(source.slice(source.indexOf('const PRESET_TAUNT_MS'), source.indexOf('function wireRoom()')), context);
-  return { nodes, run: code => vm.runInContext(code, context), finish: () => resolve({}) };
+  return { nodes, run: code => vm.runInContext(code, context), finish: () => resolve({}), fail: message => reject(new Error(message)) };
 }
 
 test('composer counts Unicode codepoints and disables overlong / blank messages', () => {
@@ -44,8 +45,8 @@ test('successful send keeps composer open and clears only the submitted draft', 
   c.finish(); await pending;
   assert.equal(c.nodes.pvpMsgInput.value, '');
   assert.equal(c.nodes.pvpMsgPicker.hidden, false);
-  assert.equal(c.nodes.pvpMsgInput.focused, true);
-  assert.equal(c.nodes.pvpMsgStatus.textContent, '已发送');
+  assert.notEqual(c.nodes.pvpMsgInput.focused, true);
+  assert.equal(c.nodes.pvpMsgStatus.textContent, '');
 });
 
 test('new draft typed while sending survives the response', async () => {
@@ -90,4 +91,26 @@ test('quick preset leaves a typed custom draft intact', async () => {
   const pending = c.run('sendCustomTaunt("买买买")');
   c.finish(); await pending;
   assert.equal(c.nodes.pvpMsgInput.value, '还在编辑');
+  assert.notEqual(c.nodes.pvpMsgInput.focused, true);
+  assert.equal(c.nodes.pvpMsgStatus.textContent, '');
+});
+
+
+test('failed sends keep the draft and error without moving focus', async () => {
+  const c = composer();
+  c.nodes.pvpMsgInput.value = '保留草稿';
+  const pending = c.run('sendCustomTaunt()');
+  c.fail('演示网络错误'); await pending;
+  assert.equal(c.nodes.pvpMsgInput.value, '保留草稿');
+  assert.equal(c.nodes.pvpMsgStatus.textContent, '演示网络错误');
+  assert.notEqual(c.nodes.pvpMsgInput.focused, true);
+});
+
+test('opening the chat picker never programmatically focuses the typing field', () => {
+  const start = source.indexOf('document.getElementById("pvpMsgOpen")?.addEventListener("click"');
+  const end = source.indexOf('document.addEventListener("pointerdown"',start);
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotMatch(source.slice(start,end), /\.focus\(/);
+  const sender = source.slice(source.indexOf('async function sendCustomTaunt('),source.indexOf('function wireRoom()'));
+  assert.doesNotMatch(sender, /\.focus\(|已发送/);
 });

@@ -927,8 +927,6 @@ async function sendCustomTaunt(presetText = null) {
   customTauntSending = false;
   if (sent) {
     if (presetText === null && input.value === draft) input.value = "";
-    if (!document.getElementById("pvpMsgPicker")?.hidden) input.focus({ preventScroll: true });
-    if (status) status.textContent = "已发送";
   }
   updateCustomTauntControls();
 }
@@ -970,7 +968,6 @@ function wireRoom() {
     const next = picker.hidden;
     picker.hidden = !next;
     open?.setAttribute("aria-expanded", next ? "true" : "false");
-    if (next) document.getElementById("pvpMsgInput")?.focus({ preventScroll: true });
   });
   document.addEventListener("pointerdown", (event) => {
     const picker = document.getElementById("pvpMsgPicker");

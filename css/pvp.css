@@ -2575,3 +2575,11 @@ img.pvp-bot-art[data-bot-art="bot-glitch"] {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* The hand-drawn focus shell already indicates the active chat field.
+   Avoid a second rectangular outline in mobile WebViews. */
+#pvpMsgPicker .pvp-msg-input:focus,
+#pvpMsgPicker .pvp-msg-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
