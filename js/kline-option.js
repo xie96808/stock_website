@@ -15,16 +15,16 @@ const PVP_ME_COLOR = '#8a7350';
 const PVP_OPP_COLOR = '#4d6278';
 
 function pvpNiceStep(span) {
-    const target = Math.max(span / 5, 1e-6);
+    const target = Math.max(span / 8, 1e-6);
     const pow = 10 ** Math.floor(Math.log10(target));
     const n = target / pow;
     const unit = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
     return unit * pow;
 }
 
-/** PvP plot-area left inset (px). The rotated y-axis title sits PVP_Y_NAME_GAP px left of the axis; the inset must leave room for it plus the tick labels, or the title is clipped by the canvas edge. */
-const PVP_GRID_LEFT = 56;
-const PVP_Y_NAME_GAP = 40;
+// PvP keeps numeric ticks, but reserves no room for a rotated axis title.
+const PVP_GRID_LEFT = 36;
+const PVP_GRID_RIGHT = 18;
 
 function pvpAxisBound(value, ratio, toward) {
     const span = (value.max - value.min) || Math.abs(value.max) || 1;
@@ -37,14 +37,13 @@ function pvpAxisBound(value, ratio, toward) {
 }
 
 /**
- * PvP marks: red「买」/ green「卖」text pills (A-share), not diamond/triangle.
+ * PvP: own red/green text pills, opponent small hollow directional triangles.
  * Valuation on d30 is day-30 MTM of leftover shares → label「期末估值」.
  */
 function pvpMarkerPoints(bars, marks) {
     const points = [];
-    // Collision stacking (PVP-04): marks are placed left to right. A mark whose horizontal neighbours on the
-    // same side of the candle (within ~4 bars) are already placed starts beyond their outer edge, so
-    // pills/diamonds never sit on top of each other. Shapes stay distinct (mine = pill, opponent = diamond).
+    // Keep text-pill lanes unchanged. Small opponent pins start close to their
+    // own candle; the pixel pass handles only real overlap, not nearby bar indices.
     const BASE_GAP = 16;
     const STACK_GAP = 3;
     const NEAR_BARS = 4;
@@ -80,30 +79,35 @@ function pvpMarkerPoints(bars, marks) {
             bg = mine ? '#3db86a' : '#7c4dff';
         }
         const above = valuation || sell;
-        const size = valuation ? [52, 18] : mine ? [28, 18] : [40, 40];
+        const opponent = !mine && !valuation;
+        const size = valuation ? [52, 18] : mine ? [28, 18] : [12, 12];
         const height = size[1];
         const side = above ? placedSide.above : placedSide.below;
-        let inner = BASE_GAP;
-        for (const other of side) {
-            if (Math.abs(other.index - index) < NEAR_BARS) inner = Math.max(inner, other.outer + STACK_GAP);
+        let inner = opponent ? 4 : BASE_GAP;
+        if (!opponent) {
+            for (const other of side) {
+                if (Math.abs(other.index - index) < NEAR_BARS) inner = Math.max(inner, other.outer + STACK_GAP);
+            }
+            side.push({ index, outer: inner + height });
         }
-        side.push({ index, outer: inner + height });
         const center = inner + height / 2;
         points.push({
             name: label,
             coord: [mark.label, above ? bar.high : bar.low],
             value: label,
-            symbol: mine || valuation ? 'roundRect' : 'diamond',
+            symbol: opponent ? 'triangle' : 'roundRect',
+            symbolRotate: opponent && sell ? 180 : 0,
+            pvpOpponent: opponent,
             symbolSize: size,
             // Vertical only. A sideways pixel shift lands on the next candle when bars are narrow.
             symbolOffset: [0, above ? -center : center],
             itemStyle: {
-                color: bg,
-                borderColor: valuation ? '#c9a227' : (buy ? (mine ? '#e05252' : '#1e4fc4') : (mine ? '#3db86a' : '#5b2fd6')),
-                borderWidth: mine || valuation ? 1 : 2,
+                color: opponent ? 'transparent' : bg,
+                borderColor: opponent ? bg : valuation ? '#c9a227' : (buy ? (mine ? '#e05252' : '#1e4fc4') : (mine ? '#3db86a' : '#5b2fd6')),
+                borderWidth: opponent ? 1.5 : 1,
             },
             label: {
-                show: true,
+                show: !opponent,
                 formatter: '{c}',
                 color,
                 fontSize: 11,
@@ -120,9 +124,9 @@ function pvpMarkerPoints(bars, marks) {
 }
 
 /**
- * PVP-04, pass 2 (pixels). pvpMarkerPoints() already lane-stacks marks by bar index, but vertical room
- * depends on each bar's price, which only the rendered chart knows. After every render this nudges any mark
- * that still overlaps an earlier one further out (and flips it to the other side if it would leave the canvas).
+ * PVP-04, pixel pass. Own text pills keep their index lanes; opponent pins start at the wick.
+ * Only actual pixel overlap moves a marker farther out. Text pills may flip at the canvas edge;
+ * opponent buy/sell pins retain their above/below direction and exact candle x coordinate.
  * It always starts from the pristine offsets in `baseData`, so repeated runs never compound.
  */
 const relaxState = new WeakMap();
@@ -138,7 +142,8 @@ export function relaxPvpMarkers(chart, baseData) {
         if (!base || !height) return;
         const placed = [];
         const next = [];
-        for (const item of base) {
+        // Give the tiny date pins first choice of their wick-adjacent position.
+        for (const item of [...base].sort((a, b) => Number(!!b.pvpOpponent) - Number(!!a.pvpOpponent))) {
             const w = item.symbolSize[0];
             const h = item.symbolSize[1];
             let px;
@@ -160,7 +165,7 @@ export function relaxPvpMarkers(chart, baseData) {
             };
             const sign = baseOffset < 0 ? -1 : 1;
             let cy = tryPlace(sign);
-            if (cy - h / 2 < 2 || cy + h / 2 > height - 2) {
+            if (!item.pvpOpponent && (cy - h / 2 < 2 || cy + h / 2 > height - 2)) {
                 const alt = tryPlace(-sign);
                 if (alt - h / 2 >= 2 && alt + h / 2 <= height - 2) cy = alt;
             }
@@ -360,6 +365,11 @@ export function buildKlineOption(vm) {
         return Math.max(m, hi.toFixed(2).length);
     }, 4);
     const yAxisLeftPx = Math.round(12 + maxPriceChars * 6.3);
+    const pvpTickChars = isPvp ? Math.max(...[-1, 1].map(toward => String(pvpAxisBound({
+        min: Math.min(...bars.map(bar => bar.low)),
+        max: Math.max(...bars.map(bar => bar.high)),
+    }, toward < 0 ? 0.12 : 0.18, toward)).length)) : 0;
+    const pvpGridLeft = Math.max(PVP_GRID_LEFT, Math.ceil(12 + pvpTickChars * 6.3));
 
     const xAxisBottomLabel = isPvp
         ? {
@@ -389,6 +399,10 @@ export function buildKlineOption(vm) {
                 symbol: 'circle',
                 symbolSize: 14,
                 animation: false,
+                tooltip: {
+                    trigger: 'item',
+                    formatter: (params) => `${pvpTipTitle(params.data?.coord?.[0])} · ${params.data?.name || ''}`,
+                },
             }
             : isResult
             ? {
@@ -641,6 +655,13 @@ export function buildKlineOption(vm) {
                         <div style="color:${clr}">开 ${kd.open.toFixed(2)}&nbsp;&nbsp;收 ${kd.close.toFixed(2)}</div>
                         <div>低 ${kd.low.toFixed(2)}&nbsp;&nbsp;高 ${kd.high.toFixed(2)}</div>
                         <div style="color:#8b949e">量 ${Number(kd.volume).toFixed(2)}</div>`;
+                    for (const mark of pvpMarks || []) {
+                        if (mark.label !== kd.label || !['buy', 'sell'].includes(mark.kind)) continue;
+                        const mine = mark.side === 'me';
+                        const buy = mark.kind === 'buy';
+                        const tone = mine ? (buy ? '#e05252' : '#3db86a') : (buy ? '#2f6fed' : '#7c4dff');
+                        html += `<div style="color:${tone}">${mine ? '我' : '对手'} · ${buy ? '买入' : '卖出'}</div>`;
+                    }
                     params.forEach((p) => {
                         if (MA_DAY_COLORS[p.seriesName] && p.data != null) {
                             html += `<div style="color:${MA_DAY_COLORS[p.seriesName]}">${p.seriesName}: ${Number(p.data).toFixed(2)}</div>`;
@@ -714,14 +735,14 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp && pvpTwoPane
             ? [
-                { left: PVP_GRID_LEFT, right: 24, top: 12, bottom: '34%' },
-                { left: PVP_GRID_LEFT, right: 24, top: '72%', bottom: 16 }
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: 12, bottom: '28%' },
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: '78%', bottom: 16 }
             ]
             : isPvp
             ? [
-                { left: PVP_GRID_LEFT, right: 24, top: 26, bottom: '42%' },
-                { left: PVP_GRID_LEFT, right: 24, top: '62%', bottom: '24%' },
-                { left: PVP_GRID_LEFT, right: 24, top: '80%', bottom: 16 }
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: 26, bottom: '38%' },
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: '66%', bottom: '24%' },
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: '80%', bottom: 16 }
             ]
             : isResult
             ? [
@@ -782,15 +803,12 @@ export function buildKlineOption(vm) {
             ? [
                 {
                     type: 'value', scale: true, gridIndex: 0,
-                    name: '相对价 (d1=100)',
-                    nameLocation: 'middle',
-                    nameGap: PVP_Y_NAME_GAP,
-                    nameTextStyle: { color: axisLabelColor, fontSize: 10 },
+                    name: undefined,
                     axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                     axisLine: { show: false },
                     splitLine: { lineStyle: { color: splitLineColor } },
-                    min: (value) => pvpAxisBound(value, 0.28, -1),
-                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                    min: (value) => pvpAxisBound(value, 0.12, -1),
+                    max: (value) => pvpAxisBound(value, 0.18, 1),
                 },
                 { type: 'value', scale: true, gridIndex: 1, show: false, splitLine: { show: false } },
             ]
@@ -798,15 +816,12 @@ export function buildKlineOption(vm) {
             ? [
                 {
                     type: 'value', scale: true, gridIndex: 0,
-                    name: '相对价 (d1=100)',
-                    nameLocation: 'middle',
-                    nameGap: PVP_Y_NAME_GAP,
-                    nameTextStyle: { color: axisLabelColor, fontSize: 10 },
+                    name: undefined,
                     axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                     axisLine: { show: false },
                     splitLine: { lineStyle: { color: splitLineColor } },
-                    min: (value) => pvpAxisBound(value, 0.28, -1),
-                    max: (value) => pvpAxisBound(value, 0.36, 1),
+                    min: (value) => pvpAxisBound(value, 0.12, -1),
+                    max: (value) => pvpAxisBound(value, 0.18, 1),
                 },
                 { type: 'value', scale: true, gridIndex: 1, show: false },
                 {
