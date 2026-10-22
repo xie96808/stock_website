@@ -661,7 +661,7 @@
                             <img class="pvp-sketch-chrome" id="pvpTradePrimaryImg" src="assets/controls/ctl-buy-default.png?v=20261013s" width="190" height="80" alt="" aria-hidden="true">
                             <span class="pvp-sketch-label ctl-label" id="pvpTradePrimaryLabel">买入</span>
                         </button>
-                        <button type="button" class="pvp-sketch-ctl pvp-msg-open ctl ctl-msg has-chrome-img" id="pvpMsgOpen" data-ctl="msg" data-ctl-kind="msg" data-state="default" aria-haspopup="listbox" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
+                        <button type="button" class="pvp-sketch-ctl pvp-msg-open ctl ctl-msg has-chrome-img" id="pvpMsgOpen" data-ctl="msg" data-ctl-kind="msg" data-state="default" aria-haspopup="dialog" aria-expanded="false" aria-controls="pvpMsgPicker" title="消息" aria-label="消息">
                             <img class="pvp-sketch-icon" src="assets/controls/ctl-msg-default.png?v=20261013s" width="80" height="80" alt="" aria-hidden="true">
                         </button>
                         <button type="button" class="pvp-sketch-ctl pvp-trade-hold ctl ctl-hold has-chrome-img" id="pvpHold" data-action="hold" data-ctl="hold" data-ctl-kind="hold" data-state="default" aria-label="保持">
@@ -672,16 +672,16 @@
                         <button type="button" id="pvpSell" data-action="sell" hidden>卖出</button>
                         <button type="button" id="pvpTauntOpen" hidden aria-hidden="true">消息</button>
                     </div>
-                    <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="group" aria-label="对局消息">
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这你都买？进厂打螺丝吧</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">这都卖？啥都拿不住玩什么股票！</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
-                        <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
+                    <div class="pvp-msg-picker" id="pvpMsgPicker" hidden role="dialog" aria-label="对局消息">
+                        <div class="pvp-msg-shortcuts" role="group" aria-label="快捷话语">
+                            <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">买买买</span></button>
+                            <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">割了割了</span></button>
+                            <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">给我加仓猛干！</span></button>
+                            <button type="button" class="pvp-msg-line ctl ctl-secondary" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">技术回调，慌个锤子</span></button>
+                        </div>
                         <form class="pvp-msg-custom" id="pvpMsgForm">
                             <label class="pvp-sr-only" for="pvpMsgInput">输入一条对局消息，最多 32 字</label>
-                            <input id="pvpMsgInput" class="pvp-msg-input" type="text" maxlength="64" autocomplete="off" placeholder="也可以自己打字…" aria-describedby="pvpMsgCount">
+                            <input id="pvpMsgInput" class="pvp-msg-input ctl-input" type="text" maxlength="64" autocomplete="off" enterkeyhint="send" placeholder="也可以自己打字…" aria-describedby="pvpMsgCount">
                             <span class="pvp-msg-count" id="pvpMsgCount" aria-live="polite">0/32</span>
                             <button type="submit" class="pvp-msg-send ctl ctl-secondary" id="pvpMsgSend" data-ctl-kind="secondary" data-state="default" disabled><span class="ctl-label">发送</span></button>
                         </form>

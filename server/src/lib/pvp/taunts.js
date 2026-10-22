@@ -1,8 +1,6 @@
 import { publicNickname } from "./names.js";
 
 export const TAUNT_LINES = Object.freeze([
-  "这你都买？进厂打螺丝吧",
-  "这都卖？啥都拿不住玩什么股票！",
   "买买买",
   "割了割了",
   "给我加仓猛干！",

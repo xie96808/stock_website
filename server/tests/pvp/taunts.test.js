@@ -60,8 +60,6 @@ test("custom taunts enforce codepoint length and reject empty/control text", () 
 
 test("seed taunt lines stay exact", () => {
   assert.deepEqual([...TAUNT_LINES], [
-    "这你都买？进厂打螺丝吧",
-    "这都卖？啥都拿不住玩什么股票！",
     "买买买",
     "割了割了",
     "给我加仓猛干！",

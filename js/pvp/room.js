@@ -846,6 +846,9 @@ function updateCustomTauntControls() {
   if (!input || !send) return;
   const length = tauntLength(input.value);
   const tooLong = length > MAX_TAUNT_CODEPOINTS;
+  input.setAttribute("aria-invalid", tooLong ? "true" : "false");
+  const sendLabel = send.querySelector?.(".ctl-label") || send;
+  sendLabel.textContent = customTauntSending ? "发送中" : "发送";
   send.disabled = customTauntSending || !input.value.trim() || tooLong || view?.status !== "playing";
   if (count) {
     count.textContent = `${length}/${MAX_TAUNT_CODEPOINTS}`;
@@ -889,9 +892,9 @@ function onTauntEvent(msg) {
   showTauntBubble(mine ? "me" : "opp", event.text, event.isCustom === true);
 }
 
-async function postTaunt(text, { customInput = false } = {}) {
+async function postTaunt(text) {
   if (!matchId || !text || view?.status !== "playing") return;
-  if (!customInput) closeMsgPicker();
+  const sendingMatchId = matchId;
   const isCustom = !isPresetTaunt(text);
   showTauntBubble("me", text, isCustom);
   try {
@@ -899,9 +902,9 @@ async function postTaunt(text, { customInput = false } = {}) {
       method: "POST",
       body: { text },
     });
-    if (customInput) closeMsgPicker();
-    return true;
+    return matchId === sendingMatchId;
   } catch (err) {
+    if (matchId !== sendingMatchId) return false;
     showTauntBubble("me", "");
     setText("pvpActionError", err.message || "消息没能发送");
     setText("pvpMsgStatus", err.message || "消息没能发送");
@@ -909,21 +912,23 @@ async function postTaunt(text, { customInput = false } = {}) {
   }
 }
 
-async function sendCustomTaunt() {
+async function sendCustomTaunt(presetText = null) {
   const input = document.getElementById("pvpMsgInput");
   const status = document.getElementById("pvpMsgStatus");
-  const text = String(input?.value || "").trim();
+  const text = String(presetText ?? input?.value ?? "").trim();
   if (!input || !text || tauntLength(text) > MAX_TAUNT_CODEPOINTS || customTauntSending) return;
   const sendingMatchId = matchId;
+  const draft = input.value;
   customTauntSending = true;
   if (status) status.textContent = "";
   updateCustomTauntControls();
-  const sent = await postTaunt(text, { customInput: true });
-  customTauntSending = false;
+  const sent = await postTaunt(text);
   if (matchId !== sendingMatchId) return;
+  customTauntSending = false;
   if (sent) {
-    input.value = "";
-    document.getElementById("pvpMsgOpen")?.focus();
+    if (presetText === null && input.value === draft) input.value = "";
+    if (!document.getElementById("pvpMsgPicker")?.hidden) input.focus({ preventScroll: true });
+    if (status) status.textContent = "已发送";
   }
   updateCustomTauntControls();
 }
@@ -965,11 +970,24 @@ function wireRoom() {
     const next = picker.hidden;
     picker.hidden = !next;
     open?.setAttribute("aria-expanded", next ? "true" : "false");
+    if (next) document.getElementById("pvpMsgInput")?.focus({ preventScroll: true });
+  });
+  document.addEventListener("pointerdown", (event) => {
+    const picker = document.getElementById("pvpMsgPicker");
+    if (!picker || picker.hidden || picker.contains(event.target)
+      || document.getElementById("pvpMsgOpen")?.contains(event.target)) return;
+    closeMsgPicker();
+  });
+  document.getElementById("pvpMsgPicker")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || event.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    closeMsgPicker();
+    document.getElementById("pvpMsgOpen")?.focus({ preventScroll: true });
   });
   document.getElementById("pvpMsgPicker")?.addEventListener("click", (event) => {
     const btn = event.target?.closest?.(".pvp-msg-line");
-    if (!btn) return;
-    postTaunt(btn.textContent || "").catch(() => {});
+    if (!btn || customTauntSending) return;
+    sendCustomTaunt(btn.textContent.trim()).catch(() => {});
   });
   document.getElementById("pvpMsgForm")?.addEventListener("submit", (event) => {
     event.preventDefault();
