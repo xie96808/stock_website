@@ -258,7 +258,7 @@ export function adminAdjustJiuCoin({
       },
     };
   }
-  if (op === "set" && n > 1_000_000_000) {
+  if (n > 1_000_000_000) {
     return { error: { status: 400, code: "INVALID_AMOUNT", message: "amount 过大" } };
   }
 

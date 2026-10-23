@@ -16,7 +16,7 @@ import {
 import { ok, fail } from "../lib/http.js";
 import { config } from "../lib/config.js";
 import {
-  clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, rateLimitFail,
+  clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, consumeRateLimit, rateLimitFail,
 } from "../lib/rateLimit.js";
 import { requireUser } from "../middleware/request.js";
 import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
@@ -205,6 +205,8 @@ router.get("/avatars/:id", (req, res) => {
 });
 
 router.post("/me/password", requireUser, async (req, res) => {
+  const pwLimit = consumeRateLimit(`me:password:u:${req.user.id}`, 5, 60_000);
+  if (!pwLimit.ok) return rateLimitFail(res, pwLimit.retryAfterSec, "密码校验过于频繁，请稍后再试");
   const row = findUserById(req.user.id);
   const cur = req.body?.currentPassword;
   const pwErr = validatePassword(req.body?.newPassword);
@@ -219,6 +221,8 @@ router.post("/me/password", requireUser, async (req, res) => {
 });
 
 router.delete("/me", requireUser, async (req, res) => {
+  const delLimit = consumeRateLimit(`me:delete:u:${req.user.id}`, 5, 60_000);
+  if (!delLimit.ok) return rateLimitFail(res, delLimit.retryAfterSec, "操作过于频繁，请稍后再试");
   const row = findUserById(req.user.id);
   const cur = req.body?.currentPassword;
   if (req.body?.confirmation !== "DELETE") {

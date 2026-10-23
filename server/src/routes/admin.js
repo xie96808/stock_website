@@ -90,6 +90,8 @@ const router = Router();
 router.use("/admin", requireAdminGate, requireAdmin);
 
 router.post("/admin/reauth", async (req, res) => {
+  const rl = consumeRateLimit(`admin:reauth:u:${req.user.id}`, 5, 60_000);
+  if (!rl.ok) return rateLimitFail(res, rl.retryAfterSec, "验证过于频繁，请稍后再试");
   const password = req.body?.password;
   if (typeof password !== "string") {
     return fail(res, 400, "INVALID_PASSWORD", "请输入当前密码");
@@ -100,6 +102,13 @@ router.post("/admin/reauth", async (req, res) => {
   if (!good) return fail(res, 401, "INVALID_CREDENTIALS", "密码错误");
   const verifiedAt = setAdminVerified(req.sessionToken);
   req.session.admin_verified_at = verifiedAt;
+  writeAuditLog({
+    actorId: req.user.id,
+    action: "admin.reauth",
+    targetType: "user",
+    targetId: String(req.user.id),
+    reason: "二次验证通过",
+  });
   return ok(res, {
     verifiedAt,
     expiresInMs: ADMIN_VERIFY_MS,

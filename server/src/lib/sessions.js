@@ -10,6 +10,14 @@ function absoluteExpiryIso(createdAtMs) {
   return new Date(createdAtMs + config.sessionAbsoluteMs).toISOString();
 }
 
+/** SQLite datetime('now') is UTC but carries no zone suffix. */
+function sqliteUtcMs(text) {
+  if (text == null) return NaN;
+  const raw = String(text);
+  if (raw.includes("T")) return Date.parse(raw);
+  return Date.parse(`${raw.replace(" ", "T")}Z`);
+}
+
 export function createSession(userId) {
   const sessionToken = randomToken(32);
   const csrfToken = deriveCsrfToken(sessionToken);
@@ -41,13 +49,13 @@ export function findValidSession(sessionToken) {
   if (row.status !== "active") return null;
 
   const now = Date.now();
-  const createdMs = Date.parse(row.session_created_at);
+  const createdMs = sqliteUtcMs(row.session_created_at);
   if (!Number.isFinite(createdMs)) return null;
   const absoluteMs = createdMs + config.sessionAbsoluteMs;
   if (now >= absoluteMs) return null;
-  if (Date.parse(row.expires_at) <= now) return null;
+  if (sqliteUtcMs(row.expires_at) <= now) return null;
 
-  const last = Date.parse(row.last_seen_at);
+  const last = sqliteUtcMs(row.last_seen_at);
   if (now - last > 5 * 60 * 1000) {
     const idleExp = now + config.sessionIdleMs;
     const capped = Math.min(idleExp, absoluteMs);
@@ -84,9 +92,9 @@ export function sessionStillValidByHash(tokenHash, now = Date.now()) {
     )
     .get(tokenHash);
   if (!row || row.revoked_at || row.status !== "active") return null;
-  const createdMs = Date.parse(row.session_created_at);
+  const createdMs = sqliteUtcMs(row.session_created_at);
   if (!Number.isFinite(createdMs) || now >= createdMs + config.sessionAbsoluteMs) return null;
-  if (Date.parse(row.expires_at) <= now) return null;
+  if (sqliteUtcMs(row.expires_at) <= now) return null;
   return row;
 }
 
