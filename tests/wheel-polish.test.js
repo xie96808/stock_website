@@ -11,7 +11,7 @@ import { ticketIconHtml, ticketVariantFor } from '../js/icon-art.js';
 import { backdropCloseAllowed, LW_BACKDROP_GUARD_MS } from '../js/lucky-wheel-pure.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const rd = (p) => readFileSync(join(ROOT, p), 'utf8');
+const rd = (p) => readFileSync(join(ROOT, p), 'utf8').replace(/\r\n/g, "\n");
 
 test('unitIconsHtml: number-adjacent 韭币 / 后悔券 become icons, the word stays as hidden text', () => {
   const h = unitIconsHtml('后悔券已用完，可改用 50 韭币反悔');

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const root = new URL("../", import.meta.url);
-const read = (p) => readFileSync(new URL(p, root), "utf8");
+const read = (p) => readFileSync(new URL(p, root), "utf8").replace(/\r\n/g, "\n");
 
 /** Strip `@media (hover: hover) and (pointer: fine) { … }` blocks (one nesting level). */
 function outsideHoverMedia(css) {

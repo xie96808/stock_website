@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const read = (p) => readFileSync(ROOT + p, 'utf8');
+const read = (p) => readFileSync(ROOT + p, 'utf8').replace(/\r\n/g, "\n");
 
 test('选择成交方式: option copy (same_close drops 「（今买明才能卖）」)', () => {
   const html = read('index.html');
