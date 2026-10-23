@@ -96,6 +96,7 @@ const REASON_LABEL = {
   admin_abort: "系统结束",
   ready_timeout: "准备超时",
   ready_cancelled: "取消准备",
+  entry_rejected: "准备失败，未扣费",
   boot_recovery: "系统退款",
   system_stall: "系统退款",
   system_restart: "系统退款",

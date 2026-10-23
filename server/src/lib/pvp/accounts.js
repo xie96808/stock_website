@@ -20,6 +20,7 @@ export const PVP_TOMBSTONE_TABLES = [
   "pvp_reward_days",
   "pvp_blocks",
   "pvp_reports",
+  "pvp_share_links",
   "pvp_runtime_control",
   "jiu_coin_ledger",
 ];

@@ -56,7 +56,7 @@ function recentOutcomes(db, userId) {
 /** Public card for opponent modal / match seat enrichment. */
 export function publicPlayerCard(db, userId) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, status, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
