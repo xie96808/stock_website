@@ -105,6 +105,8 @@ export function endGame() {
 
     prepareScreen(Route.RESULT);
     activateScreen(Route.RESULT);
+    // 「← 返回…」 at the top-left names the right parent (残局列表 for puzzles, 玩法选择 otherwise).
+    if (typeof window.refreshBackBar === 'function') window.refreshBackBar('result');
 
     const view = selectSettleView();
 

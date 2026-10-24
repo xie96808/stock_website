@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="css/controls.css">
     <link rel="stylesheet" href="css/controls-p4.css">
     <link rel="stylesheet" href="css/controls-p5.css">
+    <link rel="stylesheet" href="css/nav-back.css">
     <link rel="stylesheet" href="css/emoji-art.css">
     <!-- 签到转盘 cold open: fetch the lazy wheel module + its helper early (low priority, not executed until imported). -->
     <link rel="modulepreload" href="js/lucky-wheel.js">
@@ -360,7 +361,7 @@
 
                     <!-- L3 残局章节选择（与玩法三级同构） -->
                     <div class="lanes sim-hub-lanes puzzle-chapters-lanes" id="puzzleChapters" hidden>
-                        <button type="button" class="hub-back" onclick="showHome()">← 返回首页</button>
+                        <div class="sg-backbar" data-sg-back="puzzle-chapters"></div>
                         <button type="button" class="lane puzzle-chapter-lane" id="puzzleChapter1Card" onclick="onPuzzleChapterSelect(1)">
                             <span class="mark">一</span>
                             <span class="copy">
@@ -427,8 +428,8 @@
 
         <!-- Academy Screen -->
         <section class="academy-screen" id="academyScreen">
+            <div class="sg-backbar" data-sg-back="academy"></div>
             <div class="academy-header">
-                <button type="button" class="academy-back" onclick="hideAcademy()">← 返回首页</button>
                 <div class="academy-heading">
                     <span class="academy-title">韭菜修炼基地</span>
                     <p class="academy-subtitle">答题可赚韭币 · 训练免费</p>
@@ -462,7 +463,7 @@
 
             <!-- Knowledge Zone -->
             <div class="knowledge-zone" id="knowledgeZone" style="display:none;">
-                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="sg-backbar" data-sg-back="academy-zone"></div>
                 <div class="academy-tabs">
                     <button class="academy-tab active" onclick="switchTab(this, 'tab-kline')">K线形态</button>
                     <button class="academy-tab" onclick="switchTab(this, 'tab-volume')">成交量形态</button>
@@ -479,7 +480,7 @@
 
             <!-- Training Zone -->
             <div class="training-zone" id="trainingZone" style="display:none;">
-                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="sg-backbar" data-sg-back="academy-zone"></div>
                 <div class="quiz-progress">
                     <span class="quiz-progress-text" id="quizProgressText">1 / 10</span>
                     <div class="quiz-progress-track"><div class="quiz-progress-bar" id="quizProgressBar" style="width:10%"></div></div>
@@ -492,7 +493,7 @@
 
             <!-- Training Results -->
             <div class="training-results" id="trainingResults" style="display:none;">
-                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="sg-backbar" data-sg-back="academy-zone"></div>
                 <div class="quiz-result-card" id="quizResultCard"></div>
                 <div class="quiz-result-details" id="quizResultDetails"></div>
                 <div style="text-align:center;"><button class="quiz-retry-btn" onclick="enterTrainingZone()">再来一轮</button></div>
@@ -500,7 +501,7 @@
 
             <!-- Daily rewarded quiz (F11) -->
             <div class="training-zone daily-quiz-zone" id="dailyQuizZone" style="display:none;">
-                <button class="zone-back-btn" onclick="backToAcademyLanding()">&larr; 返回修炼基地</button>
+                <div class="sg-backbar" data-sg-back="academy-zone"></div>
                 <p class="daily-quiz-banner">今日计奖题组 · 首次答案锁定 · 全部提交后看解析</p>
                 <div class="quiz-progress">
                     <span class="quiz-progress-text" id="dailyQuizProgressText">1 / 5</span>
@@ -520,8 +521,8 @@
         <!-- Puzzle Screen (F02 dedicated) -->
         <section class="puzzle-screen" id="puzzleScreen" hidden aria-hidden="true">
             <div class="puzzle-screen-wrap">
+                <div class="sg-backbar" data-sg-back="puzzle-levels"></div>
                 <div class="puzzle-screen-head">
-                    <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn" onclick="hidePuzzleScreen()">← 返回章节</button>
                     <h2 class="puzzle-panel-title">残局挑战 · 第一章</h2>
                 </div>
                 <div class="puzzle-progress" id="puzzleProgress" hidden></div>
@@ -533,7 +534,7 @@
             <div class="pvp-wrap">
                 <div class="pvp-head pvp-hub-head">
                     <div class="pvp-hub-back-row">
-                        <button type="button" class="pvp-back" id="pvpLobbyBack">← 返回首页</button>
+                        <div class="sg-backbar" data-sg-back="pvp-lobby"></div>
                     </div>
                     <div class="pvp-title-block pvp-hub-title">
                         <p class="pvp-kicker pvp-hub-kicker">在线对弈</p>
@@ -709,8 +710,8 @@
 
         <section class="pvp-screen" id="pvpResultScreen">
             <div class="pvp-wrap">
+                <div class="sg-backbar" data-sg-back="pvp-result"></div>
                 <div class="pvp-head">
-                    <button type="button" class="pvp-back" id="pvpResultBack" onclick="showPvpLobby({ instant: true })">← 返回大厅</button>
                     <h2 id="pvpResultHeadline">对战结果</h2>
                 </div>
                 <p class="pvp-stock-name" id="pvpResultIdentity" hidden></p>
@@ -828,8 +829,8 @@
 
         <section class="pvp-screen" id="pvpHistoryScreen">
             <div class="pvp-wrap">
+                <div class="sg-backbar" data-sg-back="pvp-history"></div>
                 <div class="pvp-head">
-                    <button type="button" class="pvp-back" id="pvpHistoryBack" onclick="showPvpLobby({ instant: true })">← 返回</button>
                     <h2>对战档案</h2>
                 </div>
                 <p>战绩只对你自己可见。</p>
@@ -862,6 +863,7 @@
 
         <!-- Game Screen -->
         <section class="game-screen" id="gameScreen">
+            <div class="sg-backbar" data-sg-back="game"></div>
 
             <!-- 顶部进度条 -->
             <div class="game-progress-shell" id="gameProgressShell">
@@ -1046,6 +1048,7 @@
 
         <!-- Result Screen -->
         <section class="result-screen" id="resultScreen">
+            <div class="sg-backbar" data-sg-back="result"></div>
 
             <!-- 等级勋章英雄区 -->
             <div class="result-hero">
@@ -1157,6 +1160,7 @@
                 </div>
             </div>
 
+            <div class="sg-backbar" data-sg-back="hindsight"></div>
             <!-- 页眉区 -->
             <div class="hindsight-header">
                 <div class="hindsight-title-bar">
@@ -1172,11 +1176,6 @@
                     </div>
                     <span class="hindsight-screen-subtitle">治愈每一个错过大牛股的遗憾灵魂</span>
                 </div>
-                <!-- 封存档案按钮 -->
-                <button class="hindsight-back" onclick="hideHindsight()">
-                    <span class="hs-back-inner">← 封存档案</span>
-                    <span class="hs-back-sub">返回首页</span>
-                </button>
             </div>
 
             <!-- ── INPUT FORM STATE ── -->
@@ -1474,7 +1473,7 @@
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
-        import { startGame, handleAction, finishSettle, toggleIndicatorPanel, openRewindConfirm } from './js/game.js';
+        import { startGame, handleAction, finishSettle, toggleIndicatorPanel, openRewindConfirm, leaveGameScreen } from './js/game.js';
         import { attachDeferredStart } from "./js/start-flow.js";
         import {
             Route,
@@ -1499,6 +1498,7 @@
         import { initAnnouncements } from './js/announcements.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
+        import { initNavBack } from './js/nav-back.js';
         import { showMyGames, hideMyGames } from './js/my-games.js';
         import { showLeaderboard, hideLeaderboard } from './js/leaderboard.js';
         import { showHome, showSimHub, showPlayModes, showPuzzleChapters, restoreSimShell } from './js/home-ia.js';
@@ -1543,6 +1543,7 @@
         scheduleIdleEchartsPrefetch();
         window.handleAction = handleAction;
         window.finishSettle = finishSettle;
+        window.leaveGameScreen = leaveGameScreen;
         window.openRewindConfirm = openRewindConfirm;
         window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
@@ -1612,6 +1613,7 @@
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
+        initNavBack();
         initBackHandler();
         applyApkDownloadEntry();
         applyAppUpdateEntry();

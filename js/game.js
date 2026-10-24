@@ -500,6 +500,11 @@ function stopFastForward() {
     if (fastForward) fastForward.stop();
 }
 
+/** Called by the 「退出对局」 sheet (js/nav-back.js) right before it navigates away. */
+export function leaveGameScreen() {
+    stopFastForward();
+}
+
 function bindFastForwardControls() {
     const holdBtn = document.getElementById('holdBtn');
     const ffBtn = document.getElementById('fastForwardBtn');

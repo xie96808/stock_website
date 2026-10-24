@@ -161,7 +161,8 @@ html:not([data-theme="dark"]) :is(
   .leaderboard-back,
   .my-games-back,
   .hindsight-back,
-  .pvp-back
+  .pvp-back,
+  .sg-back
 ) {
   border-style: solid;
   border-color: transparent;
@@ -178,11 +179,11 @@ html:not([data-theme="dark"]) :is(
   font-weight: 700;
   transition: transform var(--p4-press-ms) ease-out, filter var(--p4-press-ms) ease-out;
 }
-html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back):active:not(:disabled) {
+html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back,.sg-back):active:not(:disabled) {
   border-image-source: var(--p4-back-press);
   transform: translate(1px, 1px);
 }
-html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back):disabled {
+html:not([data-theme="dark"]) :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back,.sg-back):disabled {
   border-image-source: var(--p4-back-disabled);
   filter: grayscale(1);
   opacity: 0.55;
@@ -196,7 +197,8 @@ html:not([data-theme="dark"]) :is(
   .announcements-btn,
   .auth-login-btn,
   .jiu-coin-daily-btn,
-  .point-nav-badge
+  .point-nav-badge,
+  .sg-home
 ) {
   padding: 6px 12px 7px !important;
   min-height: 34px;
@@ -211,7 +213,7 @@ html:not([data-theme="dark"]) :is(
   font-weight: 700;
   transition: transform var(--p4-press-ms) ease-out;
 }
-html:not([data-theme="dark"]) :is(.chrome-overflow-btn,.announcements-btn,.auth-login-btn,.jiu-coin-daily-btn,.point-nav-badge):is(:active, [data-state="press"]):not(:disabled) {
+html:not([data-theme="dark"]) :is(.chrome-overflow-btn,.announcements-btn,.auth-login-btn,.jiu-coin-daily-btn,.point-nav-badge,.sg-home):is(:active, [data-state="press"]):not(:disabled) {
   border-image-source: var(--p4-chip-press);
   transform: translate(1px, 1px);
 }
@@ -275,7 +277,7 @@ html:not([data-theme="dark"]) :is(.auth-tab,.leaderboard-tab,.leaderboard-metric
 html:not([data-theme="dark"]) .leaderboard-metric-tabs { background: transparent; box-shadow: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back,
+  :is(.hub-back,.academy-back,.zone-back-btn,.puzzle-screen-back,.leaderboard-back,.my-games-back,.hindsight-back,.pvp-back,.sg-back,.sg-home,
       .chrome-overflow-btn,.announcements-btn,.auth-login-btn,.jiu-coin-daily-btn,.point-nav-badge,
       .start-screen .lane,.auth-tab,.leaderboard-tab,.leaderboard-metric-tab,.leaderboard-assist-tab,.academy-tab) {
     transition: transform var(--p4-press-ms) linear !important;

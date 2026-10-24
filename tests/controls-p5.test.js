@@ -43,7 +43,10 @@ test("P5 covers icon/chart/popover/bar/option/seal/select/gift", () => {
   assert.match(css, /--p5-press-ms:\s*70ms/);
 });
 
-test("academy-back clears fixed chrome at 1280", () => {
+test("academy back bar clears fixed chrome at 1280", () => {
+  // zones keep the header's own 52px clearance; the landing bar carries it via nav-back.css
   assert.match(academy, /\.academy-header\s*\{[\s\S]*?padding-top:\s*52px/);
-  assert.match(html, /academy-header[\s\S]*?academy-back[\s\S]*?academy-heading/);
+  assert.match(html, /data-sg-back="academy"[\s\S]*?academy-header[\s\S]*?academy-heading/);
+  const navCss = readFileSync(new URL("../css/nav-back.css", import.meta.url), "utf8");
+  assert.match(navCss, /\.academy-screen > \.sg-backbar \{ margin-top: 56px; \}/);
 });

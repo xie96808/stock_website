@@ -4,7 +4,7 @@
  * Text content/aria stays; works for buttons rendered later (MutationObserver).
  */
 const BACK_SEL =
-  ".hub-back, .academy-back, .zone-back-btn, .puzzle-screen-back, .leaderboard-back, .my-games-back, .hindsight-back, .pvp-back";
+  ".hub-back, .academy-back, .zone-back-btn, .puzzle-screen-back, .leaderboard-back, .my-games-back, .hindsight-back, .pvp-back, .sg-back";
 
 function wrapGlyph(btn) {
   if (!btn || btn.dataset.p4Back === "1") return;
