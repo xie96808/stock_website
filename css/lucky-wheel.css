@@ -72,6 +72,15 @@
 [data-theme="dark"] .jiu-coin-daily-btn.is-wheel .lw-entry-dot { border-color: #f3ead8; }
 @media (max-width: 640px) {
   .jiu-coin-daily-btn.is-wheel { gap: 3px; padding-left: 7px; padding-right: 8px; }
+  /* Light theme draws a 10px hand-drawn frame (border-image) on a 1px border. The shared chip rule in
+     controls-p4.css pins padding to 6px/7px, so the two label lines ran under the frame strokes. Give the
+     two-line chip ≥9px of vertical clearance (2×10px lines + 18px + 2px border = 40px). */
+  html:not([data-theme="dark"]) #authChip .jiu-coin-daily-btn.is-wheel,
+  html:not([data-theme="dark"]) .top-left-chrome .jiu-coin-daily-btn.is-wheel {
+    padding-top: 9px !important;
+    padding-bottom: 9px !important;
+    min-height: 40px;
+  }
   /* 签到幸运转盘 on two short lines in exactly the old content width (16px icon + 3px gap + 「转盘」 at 12px = 43px),
      so the balance chip and 公告 do not move. The wheel glyph steps aside here; the name says what it is. */
   .jiu-coin-daily-btn.is-wheel .lw-entry-ico { display: none; }
@@ -81,10 +90,10 @@
     align-items: center;
     justify-content: center;
     width: 43px;
-    height: 16px; /* the old row height (16px glyph); the two lines overflow into the padding, so the button keeps its height */
+    height: 20px; /* two 10px lines; was 16px, which let both lines run into the hand-drawn frame */
     overflow: visible;
-    font-size: 9.5px;
-    line-height: 0.98;
+    font-size: 10px;
+    line-height: 1;
     letter-spacing: 0;
     white-space: nowrap;
   }

@@ -46,7 +46,7 @@
     <!-- 签到转盘 cold open: fetch the lazy wheel module + its helper early (low priority, not executed until imported). -->
     <link rel="modulepreload" href="js/lucky-wheel.js">
     <link rel="modulepreload" href="js/lucky-wheel-pure.js">
-    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
+    <script>(function(){var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');try{var tc=t==='dark'?'#1a1814':'#f7f1e6',ms=document.querySelectorAll('meta[name="theme-color"]');for(var i=0;i<ms.length;i++){ms[i].setAttribute('content',tc);ms[i].removeAttribute('media');}}catch(e){}var narrow=false;try{narrow=window.matchMedia('(max-width: 640px)').matches;}catch(e){}if(narrow)return;var z=localStorage.getItem('pageZoom');if(z!=null&&z!==''){var n=parseFloat(z);if(isFinite(n)&&n>=0.6&&n<=1.5){document.documentElement.style.zoom=String(n);document.documentElement.style.setProperty('--page-zoom',String(n));document.documentElement.dataset.pageZoom=String(n);}}})()</script>
 </head>
 <body>
     <div class="bg-grid"></div>

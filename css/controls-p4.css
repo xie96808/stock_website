@@ -83,6 +83,16 @@ html:not([data-theme="dark"]) :is(
   box-shadow: none;
 }
 
+/* OHLC cells are a single flex row (~13px of content). The 9-slice frame above is drawn 8px thick on a 1px
+   border, so with the old 5px/8px padding the frame strokes ran through the 开盘/最高/成交量 labels and the
+   values touched the right edge. Keep ≥8px of clear space inside the frame (light theme only; the dark theme
+   uses a plain 1px border and is unaffected). */
+html:not([data-theme="dark"]) .ohlc-item {
+  padding: 8px 13px;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
 /* ---------- Stamp tags (9-slice 9 → drawn 7px) ---------- */
 html:not([data-theme="dark"]) :is(
   .board-chip,

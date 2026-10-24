@@ -158,6 +158,10 @@
 
 .hs-card-header {
     display: flex;
+    /* On phones the archive no. + status no longer fit on one row. Let the status drop to its own line as a
+       whole instead of breaking mid-phrase and leaving a lone 「用」 on the second line. */
+    flex-wrap: wrap;
+    gap: 2px 12px;
     align-items: center;
     justify-content: space-between;
     padding: 12px 22px 11px;
@@ -177,6 +181,7 @@
     letter-spacing: 0.14em;
     color: var(--mute);
     text-transform: none;
+    white-space: nowrap;
 }
 
 .hs-fields-body {

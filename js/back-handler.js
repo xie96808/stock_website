@@ -11,6 +11,13 @@
  * It returns true when the press was handled. The App must call it first
  * (evaluateJavascript) and only finish() on "false" — that part ships with the
  * next App release.
+ *
+ * Web (browser back button / Android gesture in a plain browser): the same single
+ * decision is wired to history. One {sgGuard:true} entry sits on top of the page's
+ * base entry; popping it lands on the base entry, where we run sgBack() and, if it
+ * handled the press, push the guard again. If sgBack() says "exit" (home, nothing
+ * open) we step back once more so the browser really leaves — one gesture, no dead press.
+ * The play-modes sheet keeps its own {pmSheet:true} entry above the guard.
  */
 
 const CLOSE_SEL = [
@@ -26,6 +33,8 @@ const CLOSE_SEL = [
 ].join(', ');
 
 const BACK_TEXT = /^(?:[←‹<]\s*)?返回/;
+// Back buttons whose text starts with something else (「← 封存档案 / 返回首页」 two-line label).
+const BACK_EXTRA_SEL = '.hindsight-back';
 const STAY_SCREENS = ['gameScreen', 'pvpRoomScreen'];
 
 /**
@@ -59,7 +68,7 @@ function collect() {
   const fill = document.getElementById('fillModeModal');
   const fillModeOpen = !!(fill && !fill.hidden && fill.getBoundingClientRect().height > 0);
   const backButtons = [...document.querySelectorAll('button, a[href], [role="button"]')]
-    .filter((b) => BACK_TEXT.test((b.textContent || '').trim()))
+    .filter((b) => BACK_TEXT.test((b.textContent || '').trim()) || b.matches(BACK_EXTRA_SEL))
     .filter(isTopmostVisible);
   const activeScreens = STAY_SCREENS.filter((id) => document.getElementById(id)?.classList.contains('active'));
   return { closers, fillModeOpen, backButtons, activeScreens };
@@ -87,6 +96,44 @@ export function sgBack() {
   }
 }
 
+/**
+ * Pure: what should a popstate do? `landed` = state / href of the entry we are now on,
+ * `baseHref` = href of the base entry (the one under the guard).
+ * Only the base entry itself counts: guard / pm-sheet entries are above it, and a
+ * hand-edited hash or forward navigation lands on some other href — leave those alone.
+ */
+export function chooseWebBackStep({ state, href, baseHref } = {}) {
+  if (state && (state.sgGuard || state.pmSheet)) return 'ignore';
+  if (!baseHref || href !== baseHref) return 'ignore';
+  return 'handle';
+}
+
+let webBackInstalled = false;
+
+function initWebBack() {
+  if (webBackInstalled || typeof history === 'undefined' || typeof window === 'undefined') return;
+  webBackInstalled = true;
+  let baseHref = location.href;
+  const arm = () => {
+    try {
+      baseHref = location.href;
+      history.pushState({ sgGuard: true }, '', location.href);
+    } catch {
+      /* ignore: no history API → plain browser behaviour */
+    }
+  };
+  arm();
+  window.addEventListener('popstate', () => {
+    if (chooseWebBackStep({ state: history.state, href: location.href, baseHref }) !== 'handle') return;
+    if (sgBack()) {
+      arm();
+    } else {
+      try { history.back(); } catch { /* ignore */ }
+    }
+  });
+}
+
 export function initBackHandler() {
   window.__sgBack = sgBack;
+  initWebBack();
 }

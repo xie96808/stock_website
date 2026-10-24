@@ -98,8 +98,10 @@ export function setRouteHash(route) {
   const now = parseRouteHash();
   if ((want || "") === now) return;
   try {
-    if (want) history.replaceState(null, "", `#/${want}`);
-    else history.replaceState(null, "", location.pathname + location.search);
+    // Keep the web-back guard marker (js/back-handler.js) — replaceState(null) would erase it.
+    const keep = history.state && history.state.sgGuard ? { sgGuard: true } : null;
+    if (want) history.replaceState(keep, "", `#/${want}`);
+    else history.replaceState(keep, "", location.pathname + location.search);
   } catch {
     location.hash = want ? `#/${want}` : "";
   }
