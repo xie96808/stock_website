@@ -12,6 +12,7 @@ import {
 } from "./screen-router.js";
 import { formatShanghaiDateTime } from "./time.js";
 import { RECENT_STATUS_TEXT } from "./lb-verdict.js";
+import { hidePlayModesPanel } from "./home-ia.js";
 
 const REASON_TEXT = {
   not_opted_in: "尚未列入排行榜，打开资料设置并保存即可参与",
@@ -351,6 +352,8 @@ export async function showLeaderboard(preferred) {
   } else {
     preferredFillMode = preferred;
   }
+  // Close the scroll-locking home sheet before prepareScreen hides its parent.
+  hidePlayModesPanel();
   prepareScreen(Route.LEADERBOARD);
   setRouteHash(Route.LEADERBOARD);
   let screen = document.getElementById("leaderboardScreen");
