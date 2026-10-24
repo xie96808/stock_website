@@ -13,6 +13,7 @@ import { ctlConfirm } from './controls.js';
 import { formatLevelGoalLines } from './puzzle-goals-copy.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
 import { unitIconsHtml, coinAmountHtml } from './unit-icons.js';
+import { mountBackBars } from './nav-back.js';
 
 const ENTRY_TIMEOUT_MS = 20000;
 
@@ -157,8 +158,6 @@ export async function showPuzzleScreen() {
   prepareScreen(Route.PUZZLE);
   const screen = ensurePuzzleScreen();
   activateScreen(Route.PUZZLE);
-  const backBtn = screen?.querySelector?.('#puzzleScreenBackBtn');
-  if (backBtn) backBtn.textContent = '← 返回章节';
   const titleEl = screen?.querySelector?.('.puzzle-panel-title');
   if (titleEl) {
     const titles = {
@@ -226,8 +225,8 @@ function ensurePuzzleScreen() {
     screen.setAttribute('aria-hidden', 'true');
     screen.innerHTML = `
     <div class="puzzle-screen-wrap">
+      <div class="sg-backbar" data-sg-back="puzzle-levels"></div>
       <div class="puzzle-screen-head">
-        <button type="button" class="puzzle-screen-back" id="puzzleScreenBackBtn">← 返回章节</button>
         <h2 class="puzzle-panel-title">残局挑战 · 第一章</h2>
       </div>
       <div class="puzzle-progress" id="puzzleProgress" hidden></div>
@@ -235,8 +234,7 @@ function ensurePuzzleScreen() {
     </div>`;
     document.querySelector('.container')?.appendChild(screen);
   }
-  const back = screen.querySelector('#puzzleScreenBackBtn');
-  if (back) back.onclick = hidePuzzleScreen;
+  mountBackBars(screen);
   return screen;
 }
 

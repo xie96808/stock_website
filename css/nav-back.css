@@ -1,0 +1,74 @@
+/* Unified back bar (js/nav-back.js): one look, one slot — top-left of every sub page.
+   Light theme frames come from controls-p4.css (.sg-back = drawn back pill with the arrow in
+   the art, .sg-home = chip). Dark theme has no drawn art, so give them plain outlines here. */
+
+.sg-backbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 0 0 12px;
+  max-width: 100%;
+}
+.sg-backbar:empty { display: none; }
+
+.sg-backbar .sg-back,
+.sg-backbar .sg-home {
+  font-family: var(--kaiti, "Kaiti SC", "KaiTi", serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+}
+/* The p4 frame is 10px thick: border(3) + padding must cover it, so keep ≥10px vertical padding. */
+.sg-backbar .sg-back {
+  min-height: 44px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.sg-backbar .sg-home {
+  min-height: 40px;
+  color: var(--mute, var(--ink));
+}
+.sg-backbar .sg-home:hover { color: var(--ink); }
+
+/* Dark theme: plain outlined pills + the arrow glyph (light theme hides it, the art draws it). */
+html[data-theme="dark"] .sg-backbar .sg-back,
+html[data-theme="dark"] .sg-backbar .sg-home {
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--chip-bg, transparent);
+  padding: 10px 14px;
+}
+html[data-theme="dark"] .sg-backbar .sg-home { padding: 8px 14px; }
+html[data-theme="dark"] .sg-backbar .p4-back-glyph { display: inline; }
+
+/* Inside an academy zone the zone's own bar is the only one. */
+.academy-screen.academy-in-zone > .sg-backbar[data-sg-back="academy"] { display: none; }
+
+/* Page-level placement */
+.academy-screen > .sg-backbar,
+.hindsight-screen > .sg-backbar { margin: 0 0.25rem 10px; }
+.result-screen > .sg-backbar { margin: 0 0 12px; }
+.game-screen > .sg-backbar { margin: 0 0 10px; }
+#pvpLobbyScreen .pvp-hub-back-row .sg-backbar { margin: 0; }
+.puzzle-chapters-lanes > .sg-backbar { margin: 0 0 4px 2px; }
+
+/* scrollIntoView() on the puzzle level list used to park the page top under the fixed chrome,
+   hiding the back button behind the paper band. Keep it clear of the chrome. */
+.puzzle-screen { scroll-margin-top: 64px; }
+
+/* Exit-the-game sheet: three stacked choices */
+.sg-exit .sg-exit-actions { display: flex; flex-direction: column; gap: 10px; }
+.sg-exit .sg-exit-actions .ctl { width: 100%; }
+
+/* Desktop: the hindsight page has no top padding of its own, so the bar would sit under the fixed
+   纸/墨 + zoom chrome at the top-left. (Mobile reserves --mobile-chrome-top in mobile.css.) */
+@media (min-width: 641px) {
+  .hindsight-screen > .sg-backbar { margin-top: 56px; }
+  /* Academy: the landing bar now carries the clearance the header used to reserve itself. */
+  .academy-screen > .sg-backbar { margin-top: 56px; }
+  .academy-screen:not(.academy-in-zone) .academy-header { padding-top: 0; }
+}

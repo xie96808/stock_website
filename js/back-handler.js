@@ -30,9 +30,10 @@ const CLOSE_SEL = [
   '.feedback-close-x',
   '.pvp-rank-help-close',
   '.pvp-opp-card-close',
+  '.sg-exit-continue',
 ].join(', ');
 
-const BACK_TEXT = /^(?:[←‹<]\s*)?返回/;
+const BACK_TEXT = /^(?:[←‹<]\s*)?(?:返回|退出对局)/;
 // Back buttons whose text starts with something else (「← 封存档案 / 返回首页」 two-line label).
 const BACK_EXTRA_SEL = '.hindsight-back';
 const STAY_SCREENS = ['gameScreen', 'pvpRoomScreen'];

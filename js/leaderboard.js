@@ -13,6 +13,7 @@ import {
 import { formatShanghaiDateTime } from "./time.js";
 import { RECENT_STATUS_TEXT } from "./lb-verdict.js";
 import { hidePlayModesPanel } from "./home-ia.js";
+import { captureOrigin, mountBackBars } from "./nav-back.js";
 
 const REASON_TEXT = {
   not_opted_in: "尚未列入排行榜，打开资料设置并保存即可参与",
@@ -352,6 +353,8 @@ export async function showLeaderboard(preferred) {
   } else {
     preferredFillMode = preferred;
   }
+  // Remember where we came from (home / 玩法选择 sheet / 结算页) BEFORE the sheet is closed below.
+  captureOrigin("leaderboard");
   // Close the scroll-locking home sheet before prepareScreen hides its parent.
   hidePlayModesPanel();
   prepareScreen(Route.LEADERBOARD);
@@ -363,8 +366,8 @@ export async function showLeaderboard(preferred) {
     screen.className = "leaderboard-screen active";
     screen.innerHTML = `
       <div class="leaderboard-wrap">
+        <div class="sg-backbar" data-sg-back="leaderboard"></div>
         <div class="leaderboard-head">
-          <button type="button" class="leaderboard-back" id="leaderboardBackBtn">← 返回</button>
           <h2>排行榜</h2>
         </div>
         <div class="leaderboard-kind-tabs" id="leaderboardKindTabs" role="tablist" aria-label="玩法榜" hidden>
@@ -393,7 +396,7 @@ export async function showLeaderboard(preferred) {
         <p class="leaderboard-note leaderboard-assist-note" id="leaderboardAssistNote" hidden></p>
       </div>`;
     document.querySelector(".container")?.appendChild(screen);
-    screen.querySelector("#leaderboardBackBtn").onclick = hideLeaderboard;
+    mountBackBars(screen);
     bindTabHandlers(screen);
   }
   activateScreen(Route.LEADERBOARD);

@@ -9,6 +9,7 @@ import {
   setHeaderChrome,
 } from "./screen-router.js";
 import { formatShanghaiDateTime } from "./time.js";
+import { captureOrigin, mountBackBars } from "./nav-back.js";
 
 /** 列表每条标出玩法：统计卡只算经典局，列表却包含所有玩法，不标会以为是经典局。 */
 const GAME_KIND_LABELS = {
@@ -35,6 +36,7 @@ export async function showMyGames() {
     openAuthModal("login");
     return;
   }
+  captureOrigin("my-games");
   prepareScreen(Route.MY_GAMES);
   let screen = document.getElementById("myGamesScreen");
   if (!screen) {
@@ -43,8 +45,8 @@ export async function showMyGames() {
     screen.className = "my-games-screen active";
     screen.innerHTML = `
       <div class="my-games-wrap">
+        <div class="sg-backbar" data-sg-back="my-games"></div>
         <div class="my-games-head">
-          <button type="button" class="my-games-back" id="myGamesBackBtn">← 返回</button>
           <h2>我的战绩</h2>
         </div>
         <div class="my-games-stats" id="myGamesStats">加载统计…</div>
@@ -62,7 +64,7 @@ export async function showMyGames() {
         <div class="my-games-list" id="myGamesList">加载中…</div>
       </div>`;
     document.querySelector(".container")?.appendChild(screen);
-    screen.querySelector("#myGamesBackBtn").onclick = hideMyGames;
+    mountBackBars(screen);
     screen.querySelector("#myGamesRefreshBtn").onclick = () => loadMyGamesPanel();
     screen.querySelector("#myGamesFillMode").onchange = () => loadMyGamesPanel();
   }
