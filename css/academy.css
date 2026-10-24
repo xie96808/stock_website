@@ -544,6 +544,29 @@
 
 @media (max-width: 900px) {
     .academy-zone-cards { grid-template-columns: 1fr !important; }
+
+    /* Row cards: icon left, text right. The stacked 48px-icon-over-text layout made each
+       entry ~240px tall, so only two of the three zones fit on a phone screen. */
+    .academy-zone-card {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        column-gap: 14px;
+        row-gap: 0;
+        align-items: center;
+        padding: 18px 20px;
+    }
+    .academy-zone-card .zone-icon {
+        grid-row: 1 / span 4;
+        grid-column: 1;
+        margin: 0;
+        align-self: center;
+    }
+    .academy-zone-card .zone-icon svg { width: 40px; height: 40px; }
+    .academy-zone-card > :not(.zone-icon) { grid-column: 2; min-width: 0; }
+    .academy-zone-card .zone-title { margin: 0 0 4px; font-size: 1.15rem; letter-spacing: 0.14em; }
+    .academy-zone-card .zone-desc { margin: 0 0 2px; font-size: 0.8rem; line-height: 1.5; }
+    .academy-zone-card .daily-quiz-card-state { margin-bottom: 2px !important; }
+    .academy-zone-card .zone-enter-hint { margin-top: 2px; }
 }
 
 

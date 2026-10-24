@@ -335,6 +335,13 @@
     flex-shrink: 0;
 }
 
+/* Keep 起 → 止 on one row down to ~320px; only the very narrowest phones stack. */
+@media (max-width: 359px) {
+    .hindsight-date-input { padding: 10px 4px 10px 6px; font-size: 0.72rem; }
+    .hindsight-date-row { gap: 4px; }
+    .hindsight-date-sep { font-size: 0.72rem; }
+}
+
 .hindsight-field-hint {
     font-size: 0.7rem;
     margin-top: 6px;
@@ -450,8 +457,6 @@
     .hindsight-submit-btn { width: calc(100% - 32px); margin: 0 16px 18px; }
     .hs-title-group { gap: 8px; }
     .hindsight-screen-title { font-size: 1.3rem; }
-    .hindsight-date-row { flex-direction: column; }
-    .hindsight-date-sep { display: none; }
     .hindsight-back { margin-right: 0; }
     .hindsight-header { flex-direction: column; }
 }
@@ -773,8 +778,6 @@
 
 @media (max-width: 480px) {
     .hindsight-form-panel { padding: 0; }
-    .hindsight-date-row { flex-direction: column; }
-    .hindsight-date-sep { display: none; }
     .hindsight-return-counter { font-size: clamp(2rem, 12vw, 2.6rem); }
     .ar-title-row { padding: 14px 14px 10px; }
     .ar-left { padding: 14px; }
