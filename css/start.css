@@ -934,7 +934,11 @@ html.is-doc-hidden .start-screen .cta-bounce::before {
    ============================================================ */
 
 .start-screen .apk-download-entry {
-    flex: 0 0 auto;
+    /* May shrink + wrap inside .ha-foot (a flex-wrap row). With `0 0 auto` it kept its max-content width
+       (≈351px) and pushed the whole page 16px wider than a 320px phone. */
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
     margin-top: 2px;
     display: flex;
     flex-direction: column;

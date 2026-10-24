@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { chooseBackAction } from "../js/back-handler.js";
+import { chooseBackAction, chooseWebBackStep } from "../js/back-handler.js";
 
 test("topmost dialog closes first", () => {
   assert.deepEqual(chooseBackAction({ closers: ["x1", "x2"], backButtons: ["b"], activeScreens: ["gameScreen"] }), { kind: "close", target: "x1" });
@@ -26,4 +26,13 @@ test("installed on window from the main module", () => {
   assert.match(html, /initBackHandler\(\);/);
   const src = readFileSync(new URL("../js/back-handler.js", import.meta.url), "utf8");
   assert.match(src, /window\.__sgBack = sgBack/);
+});
+
+test("web back: only the base entry triggers a step; guard / pm entries and foreign hrefs are ignored", () => {
+  const base = "http://x/";
+  assert.equal(chooseWebBackStep({ state: null, href: base, baseHref: base }), "handle");
+  assert.equal(chooseWebBackStep({ state: { sgGuard: true }, href: base, baseHref: base }), "ignore");
+  assert.equal(chooseWebBackStep({ state: { pmSheet: true }, href: base, baseHref: base }), "ignore");
+  assert.equal(chooseWebBackStep({ state: null, href: base + "#/x", baseHref: base }), "ignore");
+  assert.equal(chooseWebBackStep({}), "ignore");
 });

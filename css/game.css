@@ -1180,6 +1180,16 @@
     grid-template-columns: 1fr 1fr 1fr;
     gap: 6px 8px;
     align-items: stretch;
+    /* 1366×768 laptops: even as one row, 买入/卖出/观望 start at y≈720 and their lower half sits below the fold.
+       Pin the zone to the bottom of the viewport while the board is taller than the screen (it un-sticks at the
+       board's own bottom edge). Opaque card background so the OHLC rows scroll cleanly underneath it. */
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    padding-top: 8px;
+    padding-bottom: 6px;
+    margin-bottom: -6px;
+    background: var(--card);
   }
   .action-zone .action-btn { width: auto; padding: 12px 6px; letter-spacing: 0.12em; }
   .action-zone .action-hint,

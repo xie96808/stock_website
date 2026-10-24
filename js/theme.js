@@ -30,6 +30,29 @@ export function __resetThemeForTests() {
     };
 }
 
+/** Browser chrome (address / status bar) colors; match the paper / ink page backgrounds. */
+export const THEME_COLOR_META = { light: '#f7f1e6', dark: '#1a1814' };
+
+/**
+ * Point every <meta name="theme-color"> at the APP theme.
+ * index.html ships two metas gated by `prefers-color-scheme`, i.e. by the OS — so with OS-dark + app-light
+ * (the default) the browser bar went dark over a cream page, and picking 墨 on a light OS left it light.
+ * The media gates are dropped once the app theme is known (the boot script in index.html does the same).
+ */
+export function syncThemeColorMeta(theme) {
+    const doc = deps.document;
+    if (!doc || typeof doc.querySelectorAll !== 'function') return;
+    const color = THEME_COLOR_META[normalizeTheme(theme)];
+    try {
+        doc.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+            m.setAttribute('content', color);
+            m.removeAttribute('media');
+        });
+    } catch {
+        /* ignore */
+    }
+}
+
 /** Normalize any value to 'light' | 'dark' (default light). */
 export function normalizeTheme(value) {
     return value === THEME_DARK ? THEME_DARK : THEME_LIGHT;
@@ -68,6 +91,7 @@ export function setTheme(next) {
     if (doc && doc.documentElement) {
         doc.documentElement.setAttribute('data-theme', theme);
     }
+    syncThemeColorMeta(theme);
     const store = deps.localStorage;
     if (store) {
         try {
