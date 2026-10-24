@@ -30,7 +30,7 @@ function puzzleChaptersEl() {
   return document.getElementById("puzzleChapters");
 }
 
-function hidePlayModesPanel() {
+export function hidePlayModesPanel() {
   const modes = playModesEl();
   if (modes) {
     modes.hidden = true;
