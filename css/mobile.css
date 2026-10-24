@@ -29,11 +29,17 @@
 
   .academy-screen.active,
   .hindsight-screen.active,
-  .leaderboard-screen.active,
-  .my-games-screen.active,
-  .pvp-screen.active,
   .puzzle-screen:not([hidden]) {
     padding-top: var(--mobile-chrome-top);
+  }
+
+  /* These screens keep the compact site header in the normal flow above them (see
+     prepareScreen → setHeaderChrome("compact")), so the header already clears the fixed
+     chrome. Re-reserving --mobile-chrome-top here left ~50px of dead paper under the title. */
+  .leaderboard-screen.active,
+  .my-games-screen.active,
+  .pvp-screen.active {
+    padding-top: 0.75rem;
   }
 
   .academy-header {
