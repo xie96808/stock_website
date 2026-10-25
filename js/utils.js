@@ -40,10 +40,11 @@ export function maDayLabel(period) {
 export const MA_DAY_LABELS = ['5日线', '10日线', '20日线', '30日线'];
 
 export const MA_DAY_COLORS = {
-    '5日线': '#f5c542',
-    '10日线': '#42a5f5',
-    '20日线': '#ab47bc',
-    '30日线': '#26a69a'
+    // 四条线色相拉开，并避开涨跌用的红 / 绿：琥珀 · 蓝 · 紫红 · 灰褐。
+    '5日线': '#f59e0b',
+    '10日线': '#2f80ed',
+    '20日线': '#d63fc4',
+    '30日线': '#7a6a58'
 };
 
 export function shuffleArray(arr) {

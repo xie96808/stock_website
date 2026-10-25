@@ -140,7 +140,9 @@ test("pvp chart uses h/d labels and shape markers, candles stay red and green", 
   assert.doesNotMatch(JSON.stringify(valued), /"估值"/);
   assert.equal(opt.series[0].itemStyle.color, "#e05252");
   assert.equal(opt.series[0].itemStyle.color0, "#3db86a");
-  assert.equal(opt.series[0].markLine, undefined);
+  // 横轴日期去掉后，用金色虚线标出「第 1 天」：线画在最后一根历史 K 线与第 1 天之间。
+  assert.equal(opt.series[0].markLine.data[0].xAxis, 0.5);
+  assert.match(opt.series[0].markLine.data[0].label.formatter, /第1天|开局/);
   assert.equal(opt.series[0].barWidth, "76%");
   assert.equal(opt.grid[0].right, 18); // enough room for the final own pill without a 40px diamond
   assert.ok(opt.grid[0].left < 56); // numeric ticks only; no rotated title
