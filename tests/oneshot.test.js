@@ -9,6 +9,7 @@ import {
   oneshotAmmoFromActions,
 } from '../shared/oneshot.js';
 import { formatPlayHudChrome } from '../js/puzzle-goals-copy.js';
+import { backSpecFor } from '../js/nav-back.js';
 import {
   validatePlayAction,
   evaluateRewindEligibility,
@@ -92,23 +93,27 @@ test('L2/L3 hub IA copy: 选择玩法, no L2 立即开始, no embedded daily tab
   assert.doesNotMatch(sim, /立即开始/);
   assert.doesNotMatch(sim, /id="dailyChallengeBoard"/);
   assert.doesNotMatch(sim, /id="dailyChallengeCard"/);
-  assert.match(play, /返回模拟盘/);
-  assert.match(play, /开始今日挑战/);
-  assert.match(play, /开始经典练习/);
-  assert.match(play, /开始一把梭/);
-  assert.match(play, /data-jiu-price="30"/);
+  // 玩法选择现在是底部 sheet：用 × 关闭，每个玩法一行紧凑卡片（名称 + 韭币价 + 「开始」）。
+  assert.match(play, /id="playModesClose"/);
+  assert.match(play, /id="dailyChallengeCard"[\s\S]*?<strong>今日挑战<\/strong>/);
+  assert.match(play, /id="classicModeCard"[\s\S]*?<strong>经典练习<\/strong>/);
+  assert.match(play, /id="oneshotModeCard"[\s\S]*?<strong>一把梭<\/strong>/);
+  assert.match(play, /oneshot-mode-cta">开始</);
+  assert.match(play, /id="oneshotModeCard"[\s\S]*?lane-cost-n">30</);
   assert.match(play, /查看日榜/);
   assert.match(html, /id="dailyChallengeBoardModal"/);
   assert.doesNotMatch(play, /立即开始/);
 });
 
 test('L3 puzzle chapters: chapter picker before level list; ch1–ch4 open', () => {
-  const sim = html.split('id="simHub"')[1].split('id="playModes"')[0];
+  const play = html.split('id="playModes"')[1].split('id="puzzleChapters"')[0];
   const chapters = html.split('id="puzzleChapters"')[1].split('</section>')[0];
-  assert.match(sim, /选择章节/);
-  assert.match(sim, /章节闯关/);
-  assert.match(sim, /onPuzzleChapterCardClick/);
-  assert.match(chapters, /返回模拟盘/);
+  // 残局入口在「选择玩法」sheet 里；章节页的返回条由 js/nav-back.js 统一渲染（← 返回玩法选择 + 返回主页）。
+  assert.match(play, /id="puzzleChapterCard"[\s\S]*?残局挑战/);
+  assert.match(play, /onPuzzleChapterCardClick/);
+  assert.match(chapters, /data-sg-back="puzzle-chapters"/);
+  assert.equal(backSpecFor('puzzle-chapters').parent.label, '玩法选择');
+  assert.equal(backSpecFor('puzzle-levels').parent.label, '章节');
   assert.match(chapters, /进入第一章/);
   assert.match(chapters, /进入第二章/);
   assert.match(chapters, /进入第三章/);
@@ -119,7 +124,6 @@ test('L3 puzzle chapters: chapter picker before level list; ch1–ch4 open', () 
   assert.match(chapters, /id="puzzleChapter2Card"/);
   assert.match(chapters, /id="puzzleChapter4Card"/);
   assert.doesNotMatch(chapters, /即将推出/);
-  assert.match(html, /← 返回章节/);
   assert.match(html, /mascot-l1-day\.jpg/);
   assert.match(html, /mascot-l2-day\.jpg/);
   assert.match(html, /mascot-l3-day\.jpg/);

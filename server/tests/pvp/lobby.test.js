@@ -191,7 +191,9 @@ test("lobby presence, decline, ready reveal, forfeit, and flag-off summary", asy
     assert.equal(mine.json.data.me.lockedAction, "hold");
     assert.equal(mine.json.data.opponent.lockedToday, false);
     assert.equal(mine.json.data.opponent.lockedAction, undefined);
-    assert.equal(mine.json.data.opponent.userId, undefined);
+    // The seat is tappable (opponent dossier / block / report), so the opponent's userId is part of the
+    // in-match view. Their locked action stays hidden until both have locked.
+    assert.equal(mine.json.data.opponent.userId, b.id);
     const holdB = await call(b.session, `/api/v1/pvp/matches/${playingId}/actions`, {
       method: "POST",
       body: { round: 1, action: "hold" },
