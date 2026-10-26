@@ -162,6 +162,9 @@ export async function finishCloudGame() {
         }));
       }
       patchSession(sessionPatchFromCloudFinish(data, { isPuzzle }));
+      if (data && data.inviteReward) {
+        import("./invite.js").then((m) => m.onInviteReward(data.inviteReward)).catch(() => {});
+      }
       clearCloudGameDraft(gameId);
       updateSaveStatusUi();
       if (!isPuzzle) {

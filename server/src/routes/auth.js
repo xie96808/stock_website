@@ -21,6 +21,7 @@ import {
 import { requireUser } from "../middleware/request.js";
 import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
 import { wheelSummary } from "../lib/luckyWheel.js";
+import { recordInviteRedemption } from "../lib/invite.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
 } from "../lib/avatars.js";
@@ -69,9 +70,20 @@ router.post("/auth/register", async (req, res) => {
     if (String(e.message || "").includes("UNIQUE")) return fail(res, 409, "USERNAME_TAKEN", "用户名已被占用");
     throw e;
   }
+  // 邀请码: best effort, never blocks the sign-up. Field is only present while the flag is on and a code was sent.
+  let invite;
+  if (req.body?.inviteCode != null) {
+    try {
+      invite = recordInviteRedemption(user.id, req.body.inviteCode, ip);
+    } catch (e) {
+      console.error("[invite] redeem failed", e);
+    }
+  }
   const sess = createSession(user.id);
   setSessionCookie(res, sess.sessionToken);
-  return ok(res, { user: publicUser(user), csrfToken: sess.csrfToken }, 201);
+  const body = { user: publicUser(user), csrfToken: sess.csrfToken };
+  if (invite && invite.reason !== "disabled") body.invite = invite;
+  return ok(res, body, 201);
 });
 
 router.post("/auth/login", async (req, res) => {

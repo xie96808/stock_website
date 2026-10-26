@@ -141,6 +141,13 @@ export const config = {
    */
   loginStreakEnabled:
     process.env.LOGIN_STREAK_ENABLED === "1" || process.env.LOGIN_STREAK_ENABLED === "true",
+  /**
+   * 邀请奖励 (invite code → both sides get 韭币 after the invitee's first settled game). Default OFF.
+   * OFF: register ignores inviteCode, GET /me/invite reports enabled:false, client hides the entry.
+   * Set INVITE_REWARDS_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  inviteRewardsEnabled:
+    process.env.INVITE_REWARDS_ENABLED === "1" || process.env.INVITE_REWARDS_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -232,6 +239,7 @@ export const OVERRIDABLE_KEYS = [
   "ghostDuelEnabled",
   "luckyWheelEnabled",
   "loginStreakEnabled",
+  "inviteRewardsEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

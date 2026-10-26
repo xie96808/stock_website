@@ -16,6 +16,7 @@ import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import { config } from "../lib/config.js";
 import { checkCreateGameLimits, rateLimitFail } from "../lib/rateLimit.js";
+import { maybeRewardInvite } from "../lib/invite.js";
 
 const router = Router();
 
@@ -66,6 +67,11 @@ router.post("/games/:id/finish", requireUser, (req, res) => {
   const result = finishGame(req.user.id, req.params.id, body, commandKey);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  // 邀请奖励: a first settle answers 201 (a replay is 200). Additive field, only present when it just paid.
+  if (result.status === 201) {
+    const inviteReward = maybeRewardInvite(req.user.id);
+    if (inviteReward) return ok(res, { ...result.data, inviteReward }, result.status);
   }
   return ok(res, result.data, result.status);
 });
@@ -159,6 +165,7 @@ export function gamesConfigPayload() {
       survivalMode: !!config.survivalModeEnabled,
       ghostDuel: !!config.ghostDuelEnabled,
       loginStreak: !!config.loginStreakEnabled,
+      inviteRewards: !!config.inviteRewardsEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,
