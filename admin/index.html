@@ -12,6 +12,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png?v=20260908">
   <link rel="stylesheet" href="../css/announcements.css" />
   <link rel="stylesheet" href="./admin.css" />
+  <link rel="stylesheet" href="./analytics.css" />
 </head>
 <body>
   <main class="wrap">
@@ -43,6 +44,7 @@
       <p id="opsMsg" class="msg" role="status" aria-live="polite"></p>
 
       <nav class="tabs" role="tablist" aria-label="后台功能">
+        <button type="button" role="tab" class="tab" data-tab="analytics" aria-selected="false">数据</button>
         <button type="button" role="tab" class="tab" data-tab="users" aria-selected="true">账号</button>
         <button type="button" role="tab" class="tab" data-tab="coin" aria-selected="false">韭币</button>
         <button type="button" role="tab" class="tab" data-tab="wheel" aria-selected="false">转盘</button>
@@ -56,6 +58,21 @@
         <button type="button" role="tab" class="tab" data-tab="audit" aria-selected="false">审计</button>
         <button type="button" role="tab" class="tab" data-tab="security" aria-selected="false">安全</button>
       </nav>
+
+      <section class="tabpanel hidden" data-panel="analytics" role="tabpanel">
+      <div class="row an-bar">
+        <h2>用户数据</h2>
+        <select id="anDays" aria-label="统计区间">
+          <option value="7">近 7 天</option>
+          <option value="14">近 14 天</option>
+          <option value="30" selected>近 30 天</option>
+          <option value="90">近 90 天</option>
+        </select>
+        <button type="button" id="anRefresh" class="ghost">刷新</button>
+        <span id="anStamp" aria-live="polite"></span>
+      </div>
+      <div id="anBody"><p class="note left">切到本页时自动加载，页面可见时每 30 秒自动刷新。</p></div>
+      </section>
 
       <section class="tabpanel" data-panel="users" role="tabpanel">
       <h2>用户 · 禁用 / 解禁 / 软删 / 恢复</h2>
@@ -458,5 +475,6 @@
     </section>
   </main>
   <script type="module" src="./admin.js"></script>
+  <script type="module" src="./analytics.js"></script>
 </body>
 </html>
