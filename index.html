@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/login-streak.css">
     <link rel="stylesheet" href="css/invite.css">
+    <link rel="stylesheet" href="css/achievements.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -147,9 +148,12 @@
                             今日挑战 · 刷新 <span class="ha-cd" aria-live="polite">--:--:--</span>
                             <button type="button">去挑战</button>
                         </div>
-                        <div class="ha-streak" id="homeStreak" hidden>
-                            <span class="hs-txt">连续登录奖励</span>
-                            <button type="button">领取</button>
+                        <div class="ha-pillrow">
+                            <div class="ha-streak" id="homeStreak" hidden>
+                                <span class="hs-txt">连续登录奖励</span>
+                                <button type="button">领取</button>
+                            </div>
+                            <button type="button" class="ha-ach" id="homeAch" hidden><span class="ha-pill-txt">成就</span></button>
                         </div>
                         <div class="ha-hero" aria-hidden="true">
                             <div class="ha-kl" id="homeArcadeKl"></div>
@@ -1505,6 +1509,7 @@
         import { initAnnouncements } from './js/announcements.js';
         import { initLoginStreak } from './js/login-streak.js';
         import { initInvite } from './js/invite.js';
+        import { initAchievements } from './js/achievements.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1631,6 +1636,7 @@
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initLoginStreak(); } catch (e) { console.warn('login streak', e); }
         try { initInvite(); } catch (e) { console.warn('invite', e); }
+        try { initAchievements(); } catch (e) { console.warn('achievements', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

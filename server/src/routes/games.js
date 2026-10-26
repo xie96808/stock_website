@@ -166,6 +166,7 @@ export function gamesConfigPayload() {
       ghostDuel: !!config.ghostDuelEnabled,
       loginStreak: !!config.loginStreakEnabled,
       inviteRewards: !!config.inviteRewardsEnabled,
+      achievements: !!config.achievementsEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,

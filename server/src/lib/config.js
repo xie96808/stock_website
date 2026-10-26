@@ -148,6 +148,13 @@ export const config = {
    */
   inviteRewardsEnabled:
     process.env.INVITE_REWARDS_ENABLED === "1" || process.env.INVITE_REWARDS_ENABLED === "true",
+  /**
+   * 成就 (progress derived from live data, claimed by hand for 韭币 / unlocks). Default OFF.
+   * OFF: GET /me/achievements reports enabled:false, claims are FEATURE_DISABLED, client hides the entry.
+   * Set ACHIEVEMENTS_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  achievementsEnabled:
+    process.env.ACHIEVEMENTS_ENABLED === "1" || process.env.ACHIEVEMENTS_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -240,6 +247,7 @@ export const OVERRIDABLE_KEYS = [
   "luckyWheelEnabled",
   "loginStreakEnabled",
   "inviteRewardsEnabled",
+  "achievementsEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

@@ -162,6 +162,7 @@ export async function finishCloudGame() {
         }));
       }
       patchSession(sessionPatchFromCloudFinish(data, { isPuzzle }));
+      import("./achievements.js").then((m) => m.refreshAchievements({ force: true })).catch(() => {});
       if (data && data.inviteReward) {
         import("./invite.js").then((m) => m.onInviteReward(data.inviteReward)).catch(() => {});
       }
