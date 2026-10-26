@@ -158,6 +158,7 @@ export function gamesConfigPayload() {
       oneshotMode: !!config.oneshotModeEnabled,
       survivalMode: !!config.survivalModeEnabled,
       ghostDuel: !!config.ghostDuelEnabled,
+      loginStreak: !!config.loginStreakEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,

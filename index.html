@@ -36,6 +36,7 @@
     <link rel="stylesheet" href="css/jiu-coin.css">
     <link rel="stylesheet" href="css/lucky-wheel.css">
     <link rel="stylesheet" href="css/announcements.css">
+    <link rel="stylesheet" href="css/login-streak.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -144,6 +145,10 @@
                         <div class="ha-daily" id="homeArcadeDaily" hidden>
                             今日挑战 · 刷新 <span class="ha-cd" aria-live="polite">--:--:--</span>
                             <button type="button">去挑战</button>
+                        </div>
+                        <div class="ha-streak" id="homeStreak" hidden>
+                            <span class="hs-txt">连续登录奖励</span>
+                            <button type="button">领取</button>
                         </div>
                         <div class="ha-hero" aria-hidden="true">
                             <div class="ha-kl" id="homeArcadeKl"></div>
@@ -1496,6 +1501,7 @@
         import { initChromeOverflow } from './js/chrome-overflow.js';
         import { initP4Controls } from './js/controls-p4.js';
         import { initAnnouncements } from './js/announcements.js';
+        import { initLoginStreak } from './js/login-streak.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1620,6 +1626,7 @@
           .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); try { usageHeartbeat && usageHeartbeat.tick(); } catch (e) { /* best effort */ } })
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
+        try { initLoginStreak(); } catch (e) { console.warn('login streak', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

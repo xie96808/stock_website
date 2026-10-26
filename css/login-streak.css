@@ -1,0 +1,162 @@
+/* ===== 连续登录奖励 (paper / ink) ===== */
+
+/* Home pill — same family as the 今日挑战 pill (.ha-daily). */
+.ha-streak {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+  padding: 0 4px 0 12px;
+  border-radius: 999px;
+  background: var(--ha-panel, var(--paper, #f7f1e6));
+  border: 1px solid var(--line, #3a3530);
+  font-size: 12.5px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  position: relative;
+  z-index: 1;
+  flex: none;
+  color: var(--ink, #2a2a2a);
+}
+.ha-streak.is-on {
+  display: inline-flex;
+}
+.ha-streak .hs-txt {
+  white-space: nowrap;
+}
+.ha-streak button {
+  position: relative;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line, #3a3530);
+  background: var(--paper-2, #efe4cc);
+  color: var(--ink, #2a2a2a);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+.ha-streak.is-claimable button {
+  background: var(--ink, #2a2a2a);
+  color: var(--paper, #fff1c9);
+  border-color: var(--ink, #2a2a2a);
+}
+.ha-streak button::after {
+  content: "";
+  position: absolute;
+  inset: -11px -4px;
+  background: transparent;
+}
+.ha-streak button:active {
+  transform: scale(0.965);
+}
+/* little red dot when something is waiting */
+.ha-streak.is-claimable .hs-txt::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: #d64545;
+  vertical-align: 2px;
+}
+
+/* Sheet */
+.streak-sub {
+  margin: -4px 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.streak-days {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.streak-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 66px;
+  padding: 6px 2px;
+  border: 1.5px dashed var(--line, #3a3530);
+  border-radius: 12px;
+  background: var(--paper-2, #efe4cc);
+  text-align: center;
+}
+.streak-day.is-last {
+  grid-column: span 2;
+}
+.streak-day .sd-n {
+  font-size: 12px;
+  color: var(--mute, #7a7064);
+}
+.streak-day .sd-v {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 800;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.streak-day .sd-extra {
+  font-size: 11px;
+  font-weight: 700;
+  color: #b4572a;
+}
+.streak-day.is-done {
+  opacity: 0.62;
+}
+.streak-day.is-today {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--ink, #2a2a2a);
+  background: var(--paper, #fff1c9);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.16);
+}
+.streak-day.is-today .sd-n {
+  color: var(--ink, #2a2a2a);
+  font-weight: 700;
+}
+.streak-day .sd-check {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  color: #c0392b;
+}
+.streak-note {
+  min-height: 1.2em;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--mute, #7a7064);
+}
+.streak-note:empty {
+  display: none;
+}
+.streak-actions {
+  justify-content: stretch;
+}
+.streak-actions .announcements-primary {
+  flex: 1;
+}
+.streak-actions .announcements-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+[data-theme="dark"] .ha-streak.is-claimable button {
+  background: var(--paper, #efe6d4);
+  color: var(--ink, #1c1a16);
+}
+[data-theme="dark"] .streak-day.is-today {
+  background: var(--paper, #1c1a16);
+}
