@@ -781,7 +781,12 @@
 
 @media (max-width: 600px) {
     .market-stage { min-height: 260px; }
-    #kline-chart { min-height: 220px; }
+    /* 手机：K 线区占满「按钮条以上」的首屏（价格 + 均线 + 成交量带一屏看全）。标题栏压成一行。 */
+    #kline-chart { min-height: clamp(230px, calc(100dvh - 548px), 360px); }
+    .market-stage { padding-top: 10px; }
+    .market-stage-header { margin-bottom: 6px; align-items: center; }
+    .market-stage-header .stage-kicker { display: none; }
+    .market-stage-header .stage-subtitle { margin-top: 0; }
     .action-btn { padding: 11px; font-size: 0.95rem; }
     .action-zone .action-btn { padding: 11px 4px; font-size: 0.9rem; letter-spacing: 0.08em; }
     .metric-value { font-size: 1.15rem; }

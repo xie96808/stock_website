@@ -262,6 +262,11 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
 export const LEGEND_FONT_PX = 10;
 export const LEGEND_ITEM_W = 14;
 export const LEGEND_ITEM_GAP = 8;
+/** 均线粗细（清爽布局）。1px 在手机上被蜡烛盖住，1.6px 才分得清四条线。 */
+export const MA_LINE_WIDTH = 1.6;
+/** 价格区下沿 / 成交量带上沿（占图高 %）。成交量带 ≈ 20%，手机上仍有 ≥ 60px 好点。 */
+export const CLEAN_PRICE_BOTTOM = '27%';
+export const CLEAN_VOLUME_TOP = '77%';
 
 export function buildKlineOption(vm) {
     const {
@@ -286,6 +291,10 @@ export function buildKlineOption(vm) {
     const bottomMode = isPvp && (pvpBottom === 'macd' || pvpBottom === 'volume') ? pvpBottom : null;
     const pvpTwoPane = !!bottomMode;
     const legendOn = showLegend != null ? !!showLegend : true;
+    // 「清爽」布局：对局里的 K 线（单人 + 双人）不画横轴日期、纵轴只留 3 个价位、
+    // 价格 + 均线占上面大块，成交量 / MACD 压成下面一条细带——一屏看全，且均线更醒目。
+    // （对战结算页的三栏复盘图 = pvp 且没有 pvpBottom，保持原样：留横轴、带 DIF/DEA 图例。）
+    const clean = !isResult && (!isPvp || pvpTwoPane);
     const dayLabels = isPvp
         ? bars.map((bar, index) => (bar && bar.label) || String(index + 1))
         : buildDayIndexLabels(bars.length);
@@ -356,7 +365,7 @@ export function buildKlineOption(vm) {
 
     const axisLineColor = paperChart ? 'rgba(200, 164, 78, 0.2)' : 'rgba(88,166,255,0.15)';
     const axisLabelColor = paperChart ? '#6b6660' : '#8b949e';
-    const splitLineColor = paperChart ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
+    const splitLineColor = clean ? 'rgba(128, 112, 88, 0.26)' : paperChart ? 'rgba(200, 164, 78, 0.06)' : 'rgba(88,166,255,0.06)';
 
     // Y labels are right-aligned to the grid's left edge: reserve their real width (px, same for the
     // price and volume grids so candles and bars stay aligned) instead of a % that clipped them.
@@ -373,6 +382,7 @@ export function buildKlineOption(vm) {
 
     const xAxisBottomLabel = isPvp
         ? {
+            show: !clean,
             color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, hideOverlap: true,
             formatter: (value) => pvpAxisText(value),
         }
@@ -385,6 +395,7 @@ export function buildKlineOption(vm) {
             }
         }
         : {
+            show: !clean,
             color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10, rotate: 0,
             formatter: (v) => v
         };
@@ -416,6 +427,35 @@ export function buildKlineOption(vm) {
             },
     };
 
+    // 清爽布局没有横轴日期了，所以用一条金色虚线 + 「第1天」标签，告诉用户左边是开局前的历史行情、
+    // 右边是正式开始交易的日子。线画在最后一根历史 K 线与第 1 天之间。
+    if (!isResult && historyLength > 0 && bars.length > historyLength) {
+        const nearRight = historyLength / bars.length > 0.78;
+        candleSeries.markLine = {
+            silent: true,
+            symbol: 'none',
+            animation: false,
+            data: [{
+                xAxis: historyLength - 0.5,
+                label: {
+                    show: true,
+                    formatter: nearRight ? '开局 ▸' : '▸ 第1天',
+                    position: 'start',
+                    align: nearRight ? 'right' : 'left',
+                    distance: 2,
+                    color: '#7a5a12',
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif',
+                    backgroundColor: 'rgba(245, 197, 66, 0.9)',
+                    padding: [1, 4],
+                    borderRadius: 3,
+                },
+                lineStyle: { color: '#c9a227', type: 'dashed', width: 1.2, opacity: 0.85 },
+            }],
+        };
+    }
+
     if (isResult) {
         candleSeries.markLine = {
             silent: true,
@@ -445,30 +485,32 @@ export function buildKlineOption(vm) {
         };
     }
 
+    const maWidth = clean ? MA_LINE_WIDTH : 1;
     const maSeries = [
         {
             name: '5日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5,
-            smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#f5c542' }
+            smooth: true, symbol: 'none', lineStyle: { width: maWidth, color: MA_DAY_COLORS['5日线'] }
         },
         {
             name: '10日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma10,
-            smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#42a5f5' }
+            smooth: true, symbol: 'none', lineStyle: { width: maWidth, color: MA_DAY_COLORS['10日线'] }
         },
         {
             name: '20日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
-            smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#ab47bc' }
+            smooth: true, symbol: 'none', lineStyle: { width: maWidth, color: MA_DAY_COLORS['20日线'] }
         },
         {
             name: '30日线', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma30,
-            smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#26a69a' }
+            smooth: true, symbol: 'none', lineStyle: { width: maWidth, color: MA_DAY_COLORS['30日线'] }
         },
     ];
 
     const volumeSeries = {
         name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1, data: volumes,
+        ...(clean ? { barWidth: '62%' } : {}),
         itemStyle: isResult
             ? { color: function(params) { return volumeColors[params.dataIndex]; } }
-            : { color: params => volumeColors[params.dataIndex] }
+            : { color: params => volumeColors[params.dataIndex], ...(clean ? { opacity: 0.8 } : {}) }
     };
 
     const macdAxis = pvpTwoPane ? 1 : 2;
@@ -523,23 +565,17 @@ export function buildKlineOption(vm) {
         };
     } else if (isPvp) {
         legend = {
-            data: [...MA_DAY_LABELS, 'DIF', 'DEA'],
-            selected: {
-                '5日线': true,
-                '10日线': true,
-                '20日线': true,
-                '30日线': true,
-                DIF: true,
-                DEA: true,
-                MACD: true,
-            },
-            selectedMode: true,
-            top: 2,
+            data: clean ? MA_DAY_LABELS.slice() : [...MA_DAY_LABELS, 'DIF', 'DEA'],
+            ...(clean ? { selectedMode: false } : {
+                selected: { '5日线': true, '10日线': true, '20日线': true, '30日线': true, DIF: true, DEA: true, MACD: true },
+                selectedMode: true,
+            }),
+            top: clean ? 4 : 2,
             left: 8,
-            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: 10 },
-            itemWidth: 14,
-            itemHeight: 2,
-            itemGap: 8
+            textStyle: { color: '#6b6660', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
+            itemWidth: LEGEND_ITEM_W,
+            itemHeight: clean ? 3 : 2,
+            itemGap: LEGEND_ITEM_GAP
         };
     } else {
         legend = {
@@ -551,11 +587,11 @@ export function buildKlineOption(vm) {
                 '30日线': true,
             },
             selectedMode: false,
-            top: 5,
+            top: 4,
             left: 8,
             textStyle: { color: '#8b949e', fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif', fontSize: LEGEND_FONT_PX },
             itemWidth: LEGEND_ITEM_W,
-            itemHeight: 2,
+            itemHeight: 3,
             itemGap: LEGEND_ITEM_GAP
         };
     }
@@ -735,8 +771,8 @@ export function buildKlineOption(vm) {
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
         grid: isPvp && pvpTwoPane
             ? [
-                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: 12, bottom: '28%' },
-                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: '78%', bottom: 16 }
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: legendOn ? 26 : 12, bottom: '28%' },
+                { left: pvpGridLeft, right: PVP_GRID_RIGHT, top: '78%', bottom: 8 }
             ]
             : isPvp
             ? [
@@ -750,8 +786,8 @@ export function buildKlineOption(vm) {
                 { left: yAxisLeftPx, right: 14, top: wantSlider ? '70%' : '72%', bottom: wantSlider ? '14%' : 30 }
             ]
             : [
-                { left: yAxisLeftPx, right: 14, top: 26, bottom: '38%' },
-                { left: yAxisLeftPx, right: 14, top: '66%', bottom: 30 }
+                { left: yAxisLeftPx, right: 10, top: 26, bottom: CLEAN_PRICE_BOTTOM },
+                { left: yAxisLeftPx, right: 10, top: CLEAN_VOLUME_TOP, bottom: 8 }
             ],
         xAxis: isPvp && pvpTwoPane
             ? [
@@ -804,9 +840,11 @@ export function buildKlineOption(vm) {
                 {
                     type: 'value', scale: true, gridIndex: 0,
                     name: undefined,
+                    splitNumber: 3,
                     axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                     axisLine: { show: false },
-                    splitLine: { lineStyle: { color: splitLineColor } },
+                    axisTick: { show: false },
+                    splitLine: { lineStyle: { color: splitLineColor, type: 'dashed' } },
                     min: (value) => pvpAxisBound(value, 0.12, -1),
                     max: (value) => pvpAxisBound(value, 0.18, 1),
                 },
@@ -836,14 +874,32 @@ export function buildKlineOption(vm) {
                 nameLocation: 'middle',
                 nameGap: 36,
                 nameTextStyle: undefined,
+                splitNumber: clean ? 3 : 5,
                 axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
-                splitLine: { lineStyle: { color: splitLineColor } },
+                axisTick: { show: !clean },
+                splitLine: { lineStyle: { color: splitLineColor, ...(clean ? { type: 'dashed' } : {}) } },
             },
             { type: 'value', scale: true, gridIndex: 1, show: false }
         ],
         series,
     };
+
+    if (clean) {
+        // 下方细带的小标签：告诉用户这条带是什么（对战里点它可在成交量 / MACD 间切换）。
+        const bottomLabel = isPvp
+            ? (bottomMode === 'macd' ? 'MACD · 点此切换成交量' : '成交量 · 点此切换 MACD')
+            : '成交量';
+        option.graphic = [{
+            id: 'sg-bottom-label',
+            type: 'text',
+            silent: true,
+            z: 20,
+            left: (isPvp ? pvpGridLeft : yAxisLeftPx) + 4,
+            top: CLEAN_VOLUME_TOP,
+            style: { text: bottomLabel, fill: axisLabelColor, fontSize: 10, fontFamily: 'system-ui, PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif' },
+        }];
+    }
 
     if (!isResult && !isPvp) {
         // Audit UI-04: every decision re-ran a 0.7–1.2s tween over the whole chart (looked like jitter).

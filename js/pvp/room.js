@@ -505,6 +505,42 @@ function paintActions() {
   paintReadyMark("pvpReadyMarkOpp", oppLocked, oppLocked, "已行动");
 }
 
+/**
+ * 手机上让 K 线（含下方成交量带）刚好占满「按钮条以下」的首屏，不用再往下滑。
+ * 只在首次绘制 / 窗口尺寸变化时重算——对局中途不改高度，避免图表跳动。
+ */
+const CHART_MIN_H = 240;
+const CHART_MAX_H = 560;
+function fitChartHeight(node) {
+  if (!node) return;
+  const vv = window.visualViewport;
+  const vh = Math.round((vv && vv.height) || window.innerHeight || 0);
+  if (!vh) return;
+  const top = node.getBoundingClientRect().top + (window.scrollY || 0);
+  const legend = document.querySelector("#pvpPlayPanel .pvp-mark-legend");
+  const legendH = legend ? Math.ceil(legend.getBoundingClientRect().height) + 6 : 0;
+  const room = vh - top - legendH - 10;
+  const h = Math.round(Math.min(CHART_MAX_H, Math.max(CHART_MIN_H, room)));
+  if (Math.abs((node.clientHeight || 0) - h) > 1) node.style.height = h + "px";
+  // 页面底部的留白因机型而异：量一次实际溢出量，再从图高里扣掉，保证整屏不出现竖向滚动。
+  const over = document.documentElement.scrollHeight - vh;
+  if (over > 0) {
+    const trimmed = Math.max(CHART_MIN_H, node.clientHeight - over);
+    if (trimmed < node.clientHeight) node.style.height = trimmed + "px";
+  }
+}
+let fitBound = false;
+function bindChartFit(node) {
+  if (fitBound) return;
+  fitBound = true;
+  const refit = () => {
+    const n = document.getElementById("pvpChart");
+    if (n && view?.status === "playing") fitChartHeight(n);
+  };
+  window.addEventListener("resize", refit);
+  window.addEventListener("orientationchange", () => window.setTimeout(refit, 200));
+}
+
 function bindChartResize(node) {
   let lastW = 0;
   let lastH = 0;
@@ -538,8 +574,10 @@ function bindBottomToggle(chartInstance) {
     if (!chart || view?.status !== "playing") return;
     let inBottom = false;
     try {
-      const pt = chart.convertFromPixel({ gridIndex: 1 }, [event.offsetX, event.offsetY]);
-      inBottom = Array.isArray(pt) && Number.isFinite(pt[0]) && Number.isFinite(pt[1]);
+      // containPixel: true only when the tap really lands inside the lower (volume / MACD) grid.
+      // (convertFromPixel also returns finite numbers for points outside the grid, which made a tap
+      // on the candles flip the pane.)
+      inBottom = !!chart.containPixel({ gridIndex: 1 }, [event.offsetX, event.offsetY]);
     } catch {
       inBottom = false;
     }
@@ -623,6 +661,8 @@ async function paintChart() {
   const resetDataZoom = firstPaint;
   try {
     const echarts = await ensureEcharts();
+    fitChartHeight(node);
+    bindChartFit(node);
     if (!chart) {
       chart = echarts.init(node);
       bindChartResize(node);
@@ -636,7 +676,6 @@ async function paintChart() {
       pvpMarks: marksFromView(view),
       showDataZoomSlider: false,
       resetDataZoom,
-      showLegend: false,
       pvpBottom: bottomMode,
     });
     chart.setOption(option, { replaceMerge: ["series", "legend", "grid", "xAxis", "yAxis"] });

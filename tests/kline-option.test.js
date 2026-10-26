@@ -129,3 +129,51 @@ test('legend(d): MA legend uses compact fixed metrics so 4 entries fit one row a
   assert.equal(opt.legend.textStyle.fontSize, LEGEND_FONT_PX);
   assert.equal(opt.legend.itemGap, LEGEND_ITEM_GAP);
 });
+
+test('clean battle layout: no x-axis dates, 3 price ticks, day-1 marker, thicker distinct MA lines', async () => {
+  const { MA_LINE_WIDTH } = await import('../js/kline-option.js');
+  const { MA_DAY_COLORS } = await import('../js/utils.js');
+  const kline = makeAnalysisKline();
+  const hist = HIST_LEN;
+  const full = kline.slice(0, hist + 5);
+  for (const mode of ['game', 'pvp']) {
+    const bars = mode === 'pvp'
+      ? full.map((b, i) => ({ ...b, label: i < hist ? 'h' + (i + 1) : 'd' + (i - hist + 1) }))
+      : full;
+    const opt = buildKlineOption({ bars, historyLength: hist, mode, pvpBottom: mode === 'pvp' ? 'volume' : null });
+    // axes: nothing to decode on the horizontal axis
+    assert.ok(opt.xAxis.every((x) => x.axisLabel.show === false), mode + ' x labels hidden');
+    assert.equal(opt.yAxis[0].splitNumber, 3);
+    // one price pane + one thin volume/MACD pane
+    assert.equal(opt.grid.length, 2);
+    // MA lines: thicker than the old 1px and four different colours
+    const mas = opt.series.filter((s) => /日线$/.test(s.name));
+    assert.equal(mas.length, 4);
+    assert.ok(mas.every((s) => s.lineStyle.width === MA_LINE_WIDTH && MA_LINE_WIDTH > 1));
+    assert.equal(new Set(mas.map((s) => s.lineStyle.color)).size, 4);
+    assert.deepEqual(mas.map((s) => s.lineStyle.color), Object.values(MA_DAY_COLORS));
+    // legend names every MA (battle used to hide it)
+    assert.deepEqual(opt.legend.data, ['5日线', '10日线', '20日线', '30日线']);
+    // 「第1天」 marker between the last history bar and day 1
+    const ml = opt.series[0].markLine;
+    assert.equal(ml.data[0].xAxis, hist - 0.5);
+    assert.match(ml.data[0].label.formatter, /第1天|开局/);
+    // bottom-strip caption
+    assert.ok(/成交量/.test(opt.graphic[0].style.text));
+  }
+});
+
+test('clean layout leaves the result chart untouched (dates, slider, 开局第1天 line)', () => {
+  const kline = makeAnalysisKline();
+  const opt = buildKlineOption({ bars: kline.slice(0, HIST_LEN + 30), historyLength: HIST_LEN, mode: 'result' });
+  assert.notEqual(opt.xAxis[1].axisLabel.show, false);
+  assert.equal(opt.series.filter((s) => /日线$/.test(s.name))[0].lineStyle.width, 1);
+  assert.equal(opt.graphic, undefined);
+  assert.ok(opt.series[0].markLine);
+});
+
+test('no day-1 marker before the first day exists', () => {
+  const kline = makeAnalysisKline();
+  const opt = buildKlineOption({ bars: kline.slice(0, HIST_LEN), historyLength: HIST_LEN, mode: 'game' });
+  assert.equal(opt.series[0].markLine, undefined);
+});

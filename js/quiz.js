@@ -180,8 +180,8 @@ function renderMiniKline(chart, data, isMini) {
         const ma10 = calcMaLine(10);
         const ma20 = calcMaLine(20);
         series.push(
-            { name: '5日线', type: 'line', data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#f5c542' } },
-            { name: '10日线', type: 'line', data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#42a5f5' } },
+            { name: '5日线', type: 'line', data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#f59e0b' } },
+            { name: '10日线', type: 'line', data: ma10, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#2f80ed' } },
             { name: '20日线', type: 'line', data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1.5, color: '#ab47bc' } }
         );
         legendData.push('5日线', '10日线', '20日线');

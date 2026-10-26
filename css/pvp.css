@@ -2583,3 +2583,27 @@ img.pvp-bot-art[data-bot-art="bot-glitch"] {
   outline: none;
   box-shadow: none;
 }
+
+/* ---- K 线清爽布局：图高由 js/pvp/room.js 按首屏剩余空间计算，这里只给出兜底 ---- */
+#pvpPlayPanel .pvp-mark-legend {
+  gap: 0.75rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+#pvpPlayPanel .pvp-chart {
+  margin-bottom: 0.25rem;
+}
+
+/* 对战房间：返回键与回合标题始终同一行（320 宽也不折行），省出一行高度给 K 线。 */
+#pvpRoomScreen .pvp-head {
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+#pvpRoomScreen #pvpRoomHeadline {
+  flex: 1 1 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
