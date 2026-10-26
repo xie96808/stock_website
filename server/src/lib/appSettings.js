@@ -29,6 +29,7 @@ export const SETTINGS_REGISTRY = {
   survivalModeEnabled: bool("爆仓生存", "feature"),
   ghostDuelEnabled: bool("幽灵对局", "feature"),
   luckyWheelEnabled: bool("幸运转盘（替代每日领取）", "feature", "开启后「每日领取」接口返回 410；先在「转盘」页检查奖池再开"),
+  loginStreakEnabled: bool("连续登录奖励", "feature", "7 天循环、手动领取；第 7 天另送 1 次转盘（需开启幸运转盘）"),
   luckyWheelDailyFree: int("转盘每日免费次数", "feature", 1, 5, "Asia/Shanghai 自然日；当日未用不累计"),
   rewindTicketBoard: { type: "enum", label: "后悔券反悔局计入哪个榜", group: "feature", options: ["clean", "undo"], note: "clean=普通榜（默认）；undo=反悔榜。只影响之后的新反悔；已有对局用「重新归类」" },
   rewindTicketDailyCap: int("每人每日转盘后悔券上限", "feature", 0, 20, "超出部分按券值折成韭币"),

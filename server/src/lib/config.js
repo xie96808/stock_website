@@ -134,6 +134,13 @@ export const config = {
    */
   luckyWheelEnabled:
     process.env.LUCKY_WHEEL_ENABLED === "1" || process.env.LUCKY_WHEEL_ENABLED === "true",
+  /**
+   * 连续登录奖励 (7-day cycle, claimed by hand). Default OFF like other new features.
+   * OFF: GET /me/streak reports enabled:false, POST /me/streak/claim is FEATURE_DISABLED, client hides the card.
+   * Set LOGIN_STREAK_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  loginStreakEnabled:
+    process.env.LOGIN_STREAK_ENABLED === "1" || process.env.LOGIN_STREAK_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -224,6 +231,7 @@ export const OVERRIDABLE_KEYS = [
   "survivalModeEnabled",
   "ghostDuelEnabled",
   "luckyWheelEnabled",
+  "loginStreakEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",
