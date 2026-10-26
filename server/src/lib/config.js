@@ -155,6 +155,13 @@ export const config = {
    */
   achievementsEnabled:
     process.env.ACHIEVEMENTS_ENABLED === "1" || process.env.ACHIEVEMENTS_ENABLED === "true",
+  /**
+   * 头像框 (code-drawn frames: buy with 韭币 or earn through 成就; equipped frame shows next to avatars). Default OFF.
+   * OFF: /me/frames reports enabled:false, buy/equip are FEATURE_DISABLED, no avatar DTO carries `avatarFrame`.
+   * Set AVATAR_FRAMES_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  avatarFramesEnabled:
+    process.env.AVATAR_FRAMES_ENABLED === "1" || process.env.AVATAR_FRAMES_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -248,6 +255,7 @@ export const OVERRIDABLE_KEYS = [
   "loginStreakEnabled",
   "inviteRewardsEnabled",
   "achievementsEnabled",
+  "avatarFramesEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

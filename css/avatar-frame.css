@@ -1,0 +1,125 @@
+/* ===== 头像框: wrapper + overlay art (drawn in js/avatar-frame-pure.js) ===== */
+.avf {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  vertical-align: middle;
+  line-height: 0;
+  border-radius: 50%;
+}
+.avf > img {
+  display: block;
+}
+/* The art is 120% of the avatar and centred, so it frames the avatar without changing its layout box. */
+.avf-art {
+  position: absolute;
+  left: -10%;
+  top: -10%;
+  width: 120%;
+  height: 120%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ===== 头像框商店 sheet ===== */
+.frame-dialog .frame-sub {
+  margin: -6px 0 10px;
+  font-size: 0.82rem;
+  color: var(--mute, #7a7066);
+}
+.frame-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 6px 2px 4px;
+}
+.frame-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px 10px;
+  border: 1.5px dashed var(--line, #3a3530);
+  border-radius: 14px;
+  background: var(--paper-2, #efe4cc);
+  text-align: center;
+}
+.frame-card.is-equipped {
+  border-style: solid;
+  border-color: var(--ink, #2a2a2a);
+  background: var(--paper, #fff1c9);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
+}
+.frame-preview {
+  padding: 10px 0 8px;
+}
+.frame-avatar {
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.frame-name {
+  font-family: var(--kaiti, serif);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.frame-cap {
+  min-height: 2.5em;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--mute, #7a7066);
+}
+.frame-btn {
+  position: relative;
+  min-width: 96px;
+  height: 34px;
+  margin-top: 2px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ink, #2a2a2a);
+  background: var(--ink, #2a2a2a);
+  color: var(--paper, #fff1c9);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.frame-btn::after {
+  content: "";
+  position: absolute;
+  inset: -5px -3px;
+}
+.frame-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.frame-btn:disabled {
+  background: transparent;
+  color: var(--mute, #7a7066);
+  border-style: dashed;
+  border-color: var(--line, #3a3530);
+  cursor: default;
+}
+.frame-btn--equip,
+.frame-btn--unequip {
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+}
+.frame-btn--confirm {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+[data-theme="dark"] .frame-btn:not(:disabled):not(.frame-btn--equip):not(.frame-btn--unequip):not(.frame-btn--confirm) {
+  background: var(--paper, #efe6d4);
+  color: var(--ink, #1c1a16);
+}
+[data-theme="dark"] .frame-card.is-equipped {
+  background: var(--paper, #1c1a16);
+}

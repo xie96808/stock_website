@@ -9,6 +9,7 @@
  * transparent) are wired.
  */
 import { displayAvatarUrl } from "../auth.js";
+import { applyFrameToImg } from "../avatar-frame.js";
 import { getTheme, onThemeChange, THEME_DARK } from "../theme.js";
 
 export const BOT_ART_READY = true;
@@ -46,6 +47,7 @@ const failedArt = new Set(); // keys whose art failed once: skip on re-render (n
 
 export function setPvpAvatar(img, person, { size = 48 } = {}) {
   if (!img) return;
+  applyFrameToImg(img, person && person.avatarFrame);
   const fallback = displayAvatarUrl(person || { avatarId: 1 });
   const raw = BOT_ART_READY ? botArtKey(person) : null;
   const key = raw && !failedArt.has(raw) ? raw : null;

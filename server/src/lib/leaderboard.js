@@ -10,6 +10,7 @@ import {
   GAME_KIND_SURVIVAL,
 } from "../../../shared/protocol.js";
 import { config } from "./config.js";
+import { frameProp } from "./frameProp.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const METRIC_SET = new Set(["best", "average"]);
@@ -141,6 +142,7 @@ function publicEntry(row, { includeBusted = false } = {}) {
     nickname: row.nickname,
     avatarId: row.avatar_id,
     avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
+    ...frameProp(row.avatar_frame),
     returnPpm: row.return_ppm,
     returnPct: ppmToPct(row.return_ppm),
     finishedAt: row.finished_at,
@@ -177,6 +179,7 @@ const BEST_SEATS_CTE = `
       u.nickname AS nickname,
       u.avatar_id AS avatar_id,
       u.avatar_custom_path AS avatar_custom_path,
+      u.avatar_frame AS avatar_frame,
       ROW_NUMBER() OVER (
         PARTITION BY s.user_id
         ORDER BY __SEAT_ORDER__
@@ -194,7 +197,7 @@ const BEST_SEATS_CTE = `
       AND u.leaderboard_opt_in = 1
   ),
   seats AS (
-    SELECT user_id, game_id, finished_at, return_ppm, is_busted, nickname, avatar_id, avatar_custom_path
+    SELECT user_id, game_id, finished_at, return_ppm, is_busted, nickname, avatar_id, avatar_custom_path, avatar_frame
     FROM eligible
     WHERE seat_rn = 1
   )
@@ -232,10 +235,11 @@ const AVG_SEATS_CTE = `
       0 AS is_busted,
       u.nickname AS nickname,
       u.avatar_id AS avatar_id,
-      u.avatar_custom_path AS avatar_custom_path
+      u.avatar_custom_path AS avatar_custom_path,
+      u.avatar_frame AS avatar_frame
     FROM eligible e
     JOIN users u ON u.id = e.user_id
-    GROUP BY e.user_id, u.nickname, u.avatar_id, u.avatar_custom_path
+    GROUP BY e.user_id, u.nickname, u.avatar_id, u.avatar_custom_path, u.avatar_frame
   )
 `;
 
@@ -358,6 +362,7 @@ function computeSharedBoard(db, board) {
          nickname,
          avatar_id,
          avatar_custom_path,
+         avatar_frame,
          ROW_NUMBER() OVER (
            ORDER BY ${orderExpr}
          ) AS rank
@@ -722,6 +727,7 @@ export function getLeaderboard(query = {}, viewerUser = null) {
             nickname: viewerUser.nickname,
             avatar_id: viewerUser.avatarId,
             avatar_custom_path: null,
+            avatar_frame: viewerUser.avatarFrame,
             return_ppm: seat.return_ppm,
             finished_at: seat.finished_at,
             game_count: myGameCount,

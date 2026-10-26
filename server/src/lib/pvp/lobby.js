@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { frameProp } from "../frameProp.js";
 import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
 import { roundHalfUp } from "../../../../shared/engine.js";
 import { PVP_RATING_INITIAL, titleForRating } from "../../../../shared/pvpRating.js";
@@ -56,7 +57,7 @@ function recentOutcomes(db, userId) {
 /** Public card for opponent modal / match seat enrichment. */
 export function publicPlayerCard(db, userId) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature, status FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, avatar_frame, signature, status FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -69,6 +70,7 @@ export function publicPlayerCard(db, userId) {
     nickname: publicNickname(user),
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
+    ...frameProp(user.avatar_frame),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
     titleName: title.name,
@@ -84,7 +86,7 @@ export function publicPlayerCard(db, userId) {
 
 function entryFor(db, userId, busy) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, avatar_frame, signature FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -94,6 +96,7 @@ function entryFor(db, userId, busy) {
     nickname: user.nickname || "对手",
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
+    ...frameProp(user.avatar_frame),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
     titleName: title.name,
@@ -144,7 +147,7 @@ export function listLobby(db, viewerId, { cursor = 0, limit = 20, now = Date.now
 
 function selfProfile(db, userId) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, signature FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, avatar_frame, signature FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -156,6 +159,7 @@ function selfProfile(db, userId) {
     nickname: user.nickname || "我",
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
+    ...frameProp(user.avatar_frame),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.name,
     iconPath: title.iconPath,
@@ -171,7 +175,7 @@ function selfProfile(db, userId) {
 function challengeCard(db, row, viewerId) {
   const otherId = row.from_user_id === viewerId ? row.to_user_id : row.from_user_id;
   const other = db
-    .prepare(`SELECT nickname, status, avatar_id, avatar_custom_path FROM users WHERE id = ?`)
+    .prepare(`SELECT nickname, status, avatar_id, avatar_custom_path, avatar_frame FROM users WHERE id = ?`)
     .get(otherId);
   return {
     challengeId: row.id,
@@ -181,6 +185,7 @@ function challengeCard(db, row, viewerId) {
     nickname: publicNickname(other),
     avatarId: other?.avatar_id || 1,
     avatarUrl: avatarUrl(other),
+    ...frameProp(other?.avatar_frame),
     expiresAt: row.expires_at,
   };
 }

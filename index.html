@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="css/login-streak.css">
     <link rel="stylesheet" href="css/invite.css">
     <link rel="stylesheet" href="css/achievements.css">
+    <link rel="stylesheet" href="css/avatar-frame.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -1510,6 +1511,7 @@
         import { initLoginStreak } from './js/login-streak.js';
         import { initInvite } from './js/invite.js';
         import { initAchievements } from './js/achievements.js';
+        import { initFrameShop } from './js/frame-shop.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1637,6 +1639,7 @@
         try { initLoginStreak(); } catch (e) { console.warn('login streak', e); }
         try { initInvite(); } catch (e) { console.warn('invite', e); }
         try { initAchievements(); } catch (e) { console.warn('achievements', e); }
+        try { initFrameShop(); } catch (e) { console.warn('frame shop', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

@@ -1,4 +1,5 @@
 /** F01 每日同题挑战 — hub card + confirm + start/resume/leaderboard */
+import { wrapAvatarHtml } from "./avatar-frame-pure.js";
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
 import { openCtlSheet, closeCtlSheet, ctlConfirm } from './controls.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
@@ -591,7 +592,7 @@ export async function showDailyChallengeBoard() {
           <td>${e.rank}</td>
           <td class="daily-challenge-nick-cell">
             <span class="daily-challenge-nick-inner">
-              <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
+              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame)}
               <span>${escapeHtml(e.nickname || '玩家')}</span>
             </span>
           </td>
