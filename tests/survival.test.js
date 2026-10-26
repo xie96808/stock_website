@@ -121,9 +121,10 @@ test('rewind ineligible for survival', () => {
 test('L3 survival card CTA and cost 20; hidden by default id', () => {
   const play = html.split('id="playModes"')[1].split('id="puzzleChapters"')[0];
   assert.match(play, /id="survivalModeCard"/);
-  assert.match(play, /开始生存模式/);
-  assert.match(play, /活过三十日/);
-  assert.match(play, /data-jiu-price="20"/);
+  assert.match(play, /<strong>生存模式<\/strong>/);
+  assert.match(play, /survival-mode-cta">开始</);
+  assert.match(play, /爆仓线 −20%/);
+  assert.match(play, /id="survivalModeCard"[\s\S]*?lane-cost-n">20</);
   assert.match(play, /hidden onclick="startSurvivalGame\(\)"/);
   assert.match(html, /id="survivalNavMeter"/);
 });

@@ -99,7 +99,7 @@ test('go button: label spans the art body, both states share box + size, body ce
   assert.equal((4 + 272) / 2 + 2, 280 / 2);
 });
 
-test('entry: 签到幸运转盘 (two short lines ≤640px in the old 43px content box), warm-up + parallel state fetch', () => {
+test('entry: 签到幸运转盘 (two short lines ≤640px in the old 43px content box, 20px tall), warm-up + parallel state fetch', () => {
   const jc = rd('js/jiu-coin.js');
   assert.match(jc, /const WHEEL_ENTRY_LABEL = "签到幸运转盘";/);
   assert.match(jc, /<span class="lw-entry-l1">签到<\/span><span class="lw-entry-l2">幸运转盘<\/span>/);
@@ -112,7 +112,7 @@ test('entry: 签到幸运转盘 (two short lines ≤640px in the old 43px conten
   assert.match(lw, /export function primeLuckyWheel\(state\)/);
   assert.match(lw, /await \(prefetched \|\| api\("\/me\/lucky-wheel"\)\)/);
   const css = rd('css/lucky-wheel.css');
-  assert.match(css, /\.jiu-coin-daily-btn\.is-wheel \.jiu-daily-short \{[^}]*width: 43px;[^}]*height: 16px;/s);
+  assert.match(css, /\.jiu-coin-daily-btn\.is-wheel \.jiu-daily-short \{[^}]*width: 43px;[^}]*height: 20px;/s);
 });
 
 test('index.html modulepreloads the wheel + helper, and the fingerprinter rewrites those hrefs', () => {
@@ -140,22 +140,21 @@ test('index.html modulepreloads the wheel + helper, and the fingerprinter rewrit
   }
 });
 
-test('进入模拟盘 bounce: transform/opacity only, paused on press + hidden tab, off for reduced motion, no texture', () => {
+test('开一局 bounce (home arcade): transform only, guest only, paused on press + hidden tab, off for reduced motion, no texture', () => {
   const html = rd('index.html');
-  assert.match(html, /<span class="cta cta-fill cta-bounce">进入模拟盘<\/span>/);
-  assert.equal((html.match(/cta-bounce/g) || []).length, 1);
-  const css = rd('css/start.css');
-  const block = css.slice(css.indexOf('.start-screen .cta-bounce {'), css.indexOf('@media (prefers-reduced-motion: reduce) {\n    .start-screen .cta-bounce'));
-  assert.ok(block.length > 200);
-  for (const kf of ['cta-bounce', 'cta-shine']) {
-    const body = css.match(new RegExp(`@keyframes ${kf} \\{([\\s\\S]*?)\\n\\}`))[1];
-    const props = [...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
-    assert.ok(props.every((p) => p === 'transform' || p === 'opacity'), `${kf}: ${props}`);
-  }
-  assert.match(css, /animation: cta-bounce 1\.4s /);
-  assert.ok(!/url\(|feTurbulence|noise/i.test(block), 'no texture in the bounce');
-  assert.match(css, /\.start-screen \.lane:active \.cta-bounce,[\s\S]*?html\.is-doc-hidden \.start-screen \.cta-bounce::before \{\n    animation-play-state: paused;/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n    \.start-screen \.cta-bounce,\n    \.start-screen \.cta-bounce::before \{\n        animation: none;/);
+  assert.match(html, /id="homeArcadeGoVisual"/);
+  const css = rd('css/home-arcade.css');
+  // keyframes animate transform only (no layout / paint cost)
+  const body = css.match(/@keyframes ha-cta-bounce \{([\s\S]*?)\n\}/)[1];
+  const props = [...body.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1]);
+  assert.ok(props.length > 0 && props.every((p) => p === 'transform'), `ha-cta-bounce: ${props}`);
+  // only for guests, visual layer only (hit target stays fixed)
+  assert.match(css, /html\[data-auth="guest"\] \.ha-go-visual\.ha-bounce \{\n  animation: ha-cta-bounce 1\.4s /);
+  const rule = css.slice(css.indexOf('html[data-auth="guest"] .ha-go-visual.ha-bounce {'), css.indexOf('@keyframes ha-cta-bounce'));
+  assert.ok(!/url\(|feTurbulence|noise/i.test(rule), 'no texture in the bounce');
+  // paused while pressed / tab hidden; off for reduced motion
+  assert.match(css, /#homeArcadeGo:active\) \.ha-go-visual\.ha-bounce,\nhtml\[data-auth\]\.is-doc-hidden \.ha-go-visual\.ha-bounce \{\n  animation-play-state: paused;/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{\n  html\[data-auth="guest"\] \.ha-go-visual\.ha-bounce,[\s\S]*?animation: none !important;/);
   assert.match(rd('js/home-ia.js'), /classList\.toggle\("is-doc-hidden", !!document\.hidden\)/);
 });
 
