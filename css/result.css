@@ -796,6 +796,61 @@
     margin-bottom: 14px;
 }
 
+/* Poster footer: QR + invite code (the code line is the thing people type into the register form). */
+.result-share-sheet__foot {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 0 12px;
+    margin-bottom: 10px;
+    border-top: 1.6px dashed var(--line);
+}
+.result-share-sheet__qr {
+    width: 120px;
+    height: 120px;
+    flex: none;
+    display: block;
+    padding: 6px;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1.6px solid var(--line);
+    border-radius: 10px;
+    image-rendering: pixelated;
+    visibility: hidden;
+}
+.result-share-sheet__foot-words {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.result-share-sheet__foot-1 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--ink);
+}
+.result-share-sheet__foot-code {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    line-height: 1.5;
+}
+.result-share-sheet__foot-code.is-code {
+    align-self: flex-start;
+    padding: 3px 12px;
+    font-family: var(--mono), monospace;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    color: var(--terra);
+    border: 1.6px dashed var(--terra);
+    border-radius: 10px;
+}
+.result-share-sheet__foot-3 {
+    font-size: 0.82rem;
+    color: var(--mute);
+}
+
 .result-share-sheet__url {
     font-size: 0.82rem;
     color: var(--mute);

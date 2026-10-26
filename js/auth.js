@@ -11,6 +11,11 @@ import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
 import { installAvatarFallback } from "./avatar-fallback.js";
 import { emojiArtHtml } from "./emoji-art.js";
+import { readPendingInvite, clearPendingInvite, registerNote, registerToast } from "./invite-pure.js";
+
+function inviteStore() {
+  try { return window.localStorage; } catch { return null; }
+}
 
 installAvatarFallback();
 
@@ -305,6 +310,7 @@ function ensureAuthDom() {
               <button type="button" class="auth-dice" id="registerAvatarDice" title="随机生肖" aria-label="随机生肖">${emojiArtHtml("dice")}</button>
             </div>
           </div>
+          <p class="auth-invite-note" id="registerInviteNote" hidden></p>
           <label class="auth-check"><input type="checkbox" name="terms" required> 我已阅读并同意服务条款</label>
           <button type="submit" class="auth-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">注册</span></button>
         </form>
@@ -328,6 +334,7 @@ function ensureAuthDom() {
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
           <p class="auth-items-line" id="authItemsLine" hidden></p>
+          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsInviteBtn" data-invite-entry data-invite-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">邀请好友 · 各得韭币</span></button>
           <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
           <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
           <hr>
@@ -550,6 +557,12 @@ function showForms(tab) {
   document.getElementById("authLoginForm").hidden = tab !== "login";
   document.getElementById("authRegisterForm").hidden = tab !== "register";
   document.getElementById("authSettingsPanel").hidden = tab !== "settings";
+  const inviteNote = document.getElementById("registerInviteNote");
+  if (inviteNote) {
+    const pending = tab === "register" ? readPendingInvite(inviteStore()) : null;
+    inviteNote.hidden = !pending;
+    inviteNote.textContent = pending ? registerNote(pending) : "";
+  }
   document.querySelectorAll("#authGuestTabs .auth-tab").forEach((b) => {
     b.classList.toggle("active", b.dataset.tab === tab);
   });
@@ -694,6 +707,7 @@ async function onRegister(ev) {
   const nickname = String(fd.get("nickname") || "").trim();
   setFormBusy(form, true, "注册中…");
   const t0 = performance.now();
+  const pendingInviteCode = readPendingInvite(inviteStore());
   try {
     const { data } = await api("/auth/register", {
       method: "POST",
@@ -704,8 +718,10 @@ async function onRegister(ev) {
         avatarId: pendingRegisterAvatarId,
         termsVersion: "v1",
         leaderboardOptIn: true,
+        ...(pendingInviteCode ? { inviteCode: pendingInviteCode } : {}),
       },
     });
+    if (pendingInviteCode) clearPendingInvite(inviteStore());
     applyAuth({
       type: "SESSION_ESTABLISHED",
       user: data.user,
@@ -728,7 +744,7 @@ async function onRegister(ev) {
     }
     renderAuthChrome();
     closeAuthModal();
-    showToast("注册成功", "success");
+    showToast(registerToast(data.invite) || "注册成功", "success");
     perfLog("auth.register.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);

@@ -37,6 +37,7 @@
     <link rel="stylesheet" href="css/lucky-wheel.css">
     <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/login-streak.css">
+    <link rel="stylesheet" href="css/invite.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -1104,6 +1105,7 @@
                         <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.4 4.3l9.4.1c.1 3-.3 6.9-4.6 7.4-4.2-.5-4.9-4.5-4.8-7.5z"/><path d="M7.4 6.1c-2.1-.4-3.3.3-3.1 2.1.3 1.9 1.9 2.7 3.5 2.8M16.8 6.1c2.1-.4 3.3.3 3.1 2.1-.3 1.9-1.9 2.7-3.5 2.8"/><path d="M12.2 11.8l.1 4.2M8.2 19.6l8.3.1M9.4 16.1l5.5.1.4 3.4"/></svg><span class="ctl-label">排行榜</span></button>
                     </div>
                     <p class="result-share-hint" id="resultShareHint" hidden></p>
+                    <button type="button" class="result-invite-link" data-invite-entry data-invite-open hidden>邀请好友，你得 <b data-invite-coins>100</b> 韭币，好友也有奖励 ›</button>
                 </div>
             </div>
 
@@ -1502,6 +1504,7 @@
         import { initP4Controls } from './js/controls-p4.js';
         import { initAnnouncements } from './js/announcements.js';
         import { initLoginStreak } from './js/login-streak.js';
+        import { initInvite } from './js/invite.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1627,6 +1630,7 @@
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initLoginStreak(); } catch (e) { console.warn('login streak', e); }
+        try { initInvite(); } catch (e) { console.warn('invite', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

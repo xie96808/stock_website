@@ -4,6 +4,7 @@ import { shareBoardQuery, planShareRank, bestGameText } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
+import { posterFooter, buildInviteLink } from './invite-pure.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -135,7 +136,11 @@ function fallbackCopyText(text) {
 }
 
 export async function copyResultShareText() {
-    const text = buildResultShareCopyText();
+    let text = buildResultShareCopyText();
+    try {
+        const st = (await import('./invite.js')).inviteState();
+        if (st && st.code) text += ' 邀请码 ' + st.code + '：' + buildInviteLink(st.code);
+    } catch (e) { /* plain text is fine */ }
     const btn = document.getElementById('resultShareCopyBtn');
     const orig = btn ? (btn.querySelector('.ctl-label') || btn).textContent : '';
     if (btn) btn.disabled = true;
@@ -229,13 +234,57 @@ function ensureResultShareSheet() {
     parts.push('<div class="result-share-sheet__return" id="rssReturn"></div>');
     parts.push('<div class="result-share-sheet__grade" id="rssGrade"></div>');
     parts.push('<div class="result-share-sheet__promo" id="rssPromo"></div>');
-    parts.push('<div class="result-share-sheet__url">' + SHARE_SITE_URL + '</div>');
+    parts.push(
+        '<div class="result-share-sheet__foot">' +
+            '<img class="result-share-sheet__qr" id="rssQr" alt="" width="120" height="120">' +
+            '<div class="result-share-sheet__foot-words">' +
+                '<div class="result-share-sheet__foot-1" id="rssFoot1"></div>' +
+                '<div class="result-share-sheet__foot-code" id="rssFoot2"></div>' +
+                '<div class="result-share-sheet__foot-3" id="rssFoot3"></div>' +
+            '</div>' +
+        '</div>'
+    );
+    parts.push('<div class="result-share-sheet__url" id="rssUrl">' + SHARE_SITE_URL + '</div>');
     sheet.innerHTML = parts.join('');
     document.body.appendChild(sheet);
     return sheet;
 }
 
-function populateResultShareSheet() {
+/** Invite code for the poster / caption. Never blocks saving: guests, flag off or a slow API → plain site card. */
+async function loadPosterInvite() {
+    try {
+        const m = await import('./invite.js');
+        return await Promise.race([
+            m.fetchInvite(),
+            new Promise(function (resolve) { window.setTimeout(function () { resolve(null); }, 2500); }),
+        ]);
+    } catch (e) {
+        return null;
+    }
+}
+
+async function fillPosterFooter(sheet, invite) {
+    const foot = posterFooter(invite);
+    sheet.querySelector('#rssFoot1').textContent = foot.line1;
+    const f2 = sheet.querySelector('#rssFoot2');
+    f2.textContent = foot.line2;
+    f2.classList.toggle('is-code', !!foot.code);
+    sheet.querySelector('#rssFoot3').textContent = foot.line3;
+    sheet.querySelector('#rssUrl').textContent = foot.code ? foot.link : SHARE_SITE_URL;
+    const img = sheet.querySelector('#rssQr');
+    try {
+        const { qrDataUrl } = await import('./share-image.js');
+        img.src = await qrDataUrl(foot.link);
+        await (img.decode ? img.decode().catch(function () {}) : Promise.resolve());
+        img.style.visibility = 'visible';
+    } catch (e) {
+        img.removeAttribute('src');
+        img.style.visibility = 'hidden';
+    }
+    return foot;
+}
+
+async function populateResultShareSheet() {
     const sheet = ensureResultShareSheet();
     const share = selectShareView();
     const stockEl = document.getElementById('stockReveal');
@@ -259,6 +308,8 @@ function populateResultShareSheet() {
     retEl.textContent = '收益率 ' + ret;
     sheet.querySelector('#rssGrade').textContent = gradeTitle;
     sheet.querySelector('#rssPromo').textContent = buildResultPromoCaption();
+    const invite = await loadPosterInvite();
+    lastPosterFoot = await fillPosterFooter(sheet, invite);
     return sheet;
 }
 
@@ -273,6 +324,7 @@ const SAVE_LOAD_TIMEOUT_MS = 10000;
 const SAVE_RENDER_TIMEOUT_MS = 20000;
 const SAVE_PREVIEW_MS = 1500;
 let saveImageBusy = false;
+let lastPosterFoot = null;
 
 function withTimeout(promise, ms, tag) {
     let timer = 0;
@@ -392,7 +444,7 @@ export async function saveResultShareImage() {
     }
     let sheet = null;
     try {
-        sheet = populateResultShareSheet();
+        sheet = await populateResultShareSheet();
         sheet.classList.add('capturing');
         void sheet.offsetWidth;
         const bg = getComputedStyle(document.documentElement).getPropertyValue('--card').trim()
@@ -411,7 +463,10 @@ export async function saveResultShareImage() {
             function () { return import('./share-image.js'); },
             function () { return new URL('./share-image.js', import.meta.url).href; }
         ), SAVE_LOAD_TIMEOUT_MS, 'deliver-load');
-        const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: buildResultPromoCaption() });
+        const caption = lastPosterFoot && lastPosterFoot.code
+            ? buildResultPromoCaption() + ' 邀请码 ' + lastPosterFoot.code + ' ' + lastPosterFoot.link
+            : buildResultPromoCaption();
+        const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: caption });
         if (how === 'cancelled') return;
         // In the Android shell, a bridge that did not report "saved" means nothing reached the album
         // and WebView ignores <a download>: do not claim success.
