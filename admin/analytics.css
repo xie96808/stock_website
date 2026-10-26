@@ -1,0 +1,46 @@
+/* 后台 · 「数据」标签（用户数据可视化）。只给 analytics.js 渲染出的元素加样式。 */
+.an-bar { align-items: center; }
+.an-bar h2 { margin: 0.6rem 0.5rem 0.2rem 0; }
+#anStamp { font-size: 0.8rem; opacity: 0.65; }
+.an-kpis .stat em { display: block; font-style: normal; font-size: 0.7rem; opacity: 0.55; margin-top: 0.1rem; }
+.an-kpis .stat.an-big { border-style: solid; border-color: var(--accent); }
+.an-kpis .stat.an-big b { font-size: 1.6rem; color: var(--accent); }
+.stat em { display: block; font-style: normal; font-size: 0.7rem; opacity: 0.55; margin-top: 0.1rem; }
+
+.an-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.6rem; margin: 0.4rem 0; }
+.an-chart { border: 1px dashed var(--line); border-radius: 10px; padding: 0.5rem 0.6rem 0.55rem; min-width: 0; }
+.an-chart h3 { margin: 0 0 0.35rem; font-size: 0.92rem; }
+.an-chart h3 small { font-weight: 400; opacity: 0.6; font-size: 0.75rem; margin-left: 0.3rem; }
+.an-svg { display: block; width: 100%; height: 5.6rem; }
+.an-cap { margin: 0.3rem 0 0; font-size: 0.78rem; opacity: 0.8; }
+.an-empty { display: flex; align-items: center; justify-content: center; min-height: 4rem; font-size: 0.82rem; opacity: 0.55; }
+
+.an-hbars { display: grid; gap: 0.3rem; }
+.an-hrow { display: grid; grid-template-columns: 6.2em 1fr auto; gap: 0.5rem; align-items: center; font-size: 0.82rem; }
+.an-htrack { height: 0.7rem; border-radius: 99px; background: color-mix(in srgb, var(--fg) 8%, transparent); overflow: hidden; }
+.an-htrack i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.an-hv small { opacity: 0.6; }
+
+.an-top3 { list-style: none; margin: 0.3rem 0 0.6rem; padding: 0; display: grid; gap: 0.5rem; }
+.an-top { display: grid; grid-template-columns: 2rem 40px 1fr auto; grid-template-areas: "rank ava who time" "meta meta meta meta"; gap: 0.2rem 0.6rem; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 0.5rem 0.65rem; background: color-mix(in srgb, var(--card) 70%, transparent); }
+.an-top .an-rank { grid-area: rank; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; background: #a9791c; }
+.an-top.an-gold .an-rank { background: #c9971f; }
+.an-top.an-silver .an-rank { background: #8d949b; }
+.an-top.an-bronze .an-rank { background: #a8683a; }
+.an-top.an-gold { border-color: #c9971f; }
+.an-top img.ava { grid-area: ava; border-radius: 50%; object-fit: cover; width: 40px; height: 40px; }
+.an-who { grid-area: who; min-width: 0; display: flex; flex-direction: column; }
+.an-who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-who small { opacity: 0.6; font-size: 0.74rem; }
+.an-time { grid-area: time; text-align: right; }
+.an-time b { display: block; font-size: 1.05rem; color: var(--accent); }
+.an-time small { opacity: 0.6; font-size: 0.72rem; }
+.an-meta { grid-area: meta; font-size: 0.76rem; opacity: 0.7; }
+
+@media (max-width: 480px) {
+  .an-grid { grid-template-columns: 1fr; }
+  .an-hrow { grid-template-columns: 5.2em 1fr auto; }
+  .an-top { grid-template-columns: 1.8rem 36px 1fr; grid-template-areas: "rank ava who" "time time time" "meta meta meta"; }
+  .an-time { text-align: left; display: flex; align-items: baseline; gap: 0.4rem; }
+  .an-top img.ava { width: 36px; height: 36px; }
+}

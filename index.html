@@ -1488,7 +1488,8 @@
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext, closeDailyQuizResultModal, goSimFromDailyQuizResult } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
         import { showKBPopup, hideKBPopup, hideKBPopupSoon, toggleKBPopup } from './js/patterns.js';
-        import { initAuth, openAuthModal } from './js/auth.js';
+        import { initAuth, openAuthModal, api as authApi, getAuthState, selectIsAuthenticated } from './js/auth.js';
+        import { createHeartbeat } from './js/heartbeat.js';
         import { initResumeBanner } from './js/resume-banner.js';
         import { initJiuCoin } from './js/jiu-coin.js';
         import { initPageZoom } from './js/page-zoom.js';
@@ -1606,8 +1607,17 @@
         initResumeBanner();
         initHomeArcade();
         initTutorialUi();
+        // 使用时长心跳（后台「数据」页的来源）：登录 + 页面可见 + 最近有操作时才上报，失败静默。
+        let usageHeartbeat = null;
+        try {
+            usageHeartbeat = createHeartbeat({
+                isAuthed: () => selectIsAuthenticated(getAuthState()),
+                send: () => authApi('/me/heartbeat', { method: 'POST' }),
+            });
+            usageHeartbeat.start();
+        } catch (e) { console.warn('heartbeat', e); }
         initAuth()
-          .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); })
+          .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); try { usageHeartbeat && usageHeartbeat.tick(); } catch (e) { /* best effort */ } })
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }

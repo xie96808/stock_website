@@ -71,6 +71,7 @@ import {
   adminUserWheel,
 } from "../lib/luckyWheel.js";
 import { openDb } from "../db/connection.js";
+import { getAdminAnalytics } from "../lib/adminAnalytics.js";
 import { adminAdjustItems, adminUserItems } from "../lib/userItems.js";
 import { adminReclassifyTicketGames, adminRewindStats } from "../lib/rewindAdmin.js";
 import {
@@ -108,6 +109,12 @@ router.post("/admin/reauth", async (req, res) => {
 
 router.get("/admin/overview", (req, res) => {
   return ok(res, getAdminOverview());
+});
+
+/** 「用户数据」面板：只读汇总（在线 / 注册 / 活跃 / 使用时长 / Top 3 / 留存 …）。 */
+router.get("/admin/analytics", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  return ok(res, getAdminAnalytics({ days: req.query.days }));
 });
 
 router.get("/admin/session", (req, res) => {
