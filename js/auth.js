@@ -11,6 +11,7 @@ import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
 import { installAvatarFallback } from "./avatar-fallback.js";
 import { emojiArtHtml } from "./emoji-art.js";
+import { applyFrameToImg } from "./avatar-frame.js";
 import { readPendingInvite, clearPendingInvite, registerNote, registerToast } from "./invite-pure.js";
 
 function inviteStore() {
@@ -51,6 +52,13 @@ function applyAuth(event) {
   authState.csrfToken = next.csrfToken;
   authState.ready = next.ready;
   authState.error = next.error;
+}
+
+/** Replace the signed-in user's profile after a server-side change (e.g. equipping a 头像框) and repaint the chip. */
+export function applyAuthUser(user) {
+  if (!user) return;
+  applyAuth({ type: "USER_UPDATED", user });
+  renderAuthChrome();
 }
 
 function clearSessionLocal(reason) {
@@ -334,6 +342,7 @@ function ensureAuthDom() {
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
           <p class="auth-items-line" id="authItemsLine" hidden></p>
+          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFrameBtn" data-frame-entry data-frame-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">头像框</span></button>
           <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsInviteBtn" data-invite-entry data-invite-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">邀请好友 · 各得韭币</span></button>
           <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
           <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
@@ -413,6 +422,7 @@ function setSettingsAvatar(id, customUrl) {
   if (img) {
     img.src = pendingSettingsObjectUrl || customUrl || zodiacAvatarUrl(id);
     img.alt = AVATAR_LABELS[id] || "avatar";
+    applyFrameToImg(img, authState.user && authState.user.avatarFrame);
   }
 }
 
@@ -629,6 +639,7 @@ function renderAuthChrome() {
     nickEl.textContent = authState.user.nickname;
     img.src = displayAvatarUrl(authState.user);
     img.alt = AVATAR_LABELS[authState.user.avatarId] || "avatar";
+    applyFrameToImg(img, authState.user.avatarFrame);
   } else {
     // guest (anonymous | error)
     loginBtn.hidden = false;
@@ -637,6 +648,7 @@ function renderAuthChrome() {
     nickEl.textContent = "";
     img.removeAttribute("src");
     img.alt = "";
+    applyFrameToImg(img, null);
   }
   try {
     document.dispatchEvent(new CustomEvent("stockgame:auth-changed", {

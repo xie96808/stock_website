@@ -5,6 +5,7 @@
 
 /** Names for the unlocks achievements can hand out (keys are shared with the avatar-frame shop). */
 export const UNLOCK_NAMES = Object.freeze({
+  "frame:ink_ring": "墨圈头像框",
   "frame:crown": "韭王冠头像框",
   "frame:laurel": "月桂头像框",
 });

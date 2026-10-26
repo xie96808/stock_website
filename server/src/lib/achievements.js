@@ -27,6 +27,7 @@ export const METRICS = Object.freeze({
   },
   dailyDone: (db, u) =>
     n(db, `SELECT COUNT(*) AS v FROM daily_challenge_attempts WHERE user_id = ? AND status = 'settled'`, u),
+  streakCycles: (db, u) => n(db, `SELECT COALESCE(MAX(cycles_done), 0) AS v FROM login_streaks WHERE user_id = ?`, u),
   streakBest: (db, u) => n(db, `SELECT COALESCE(MAX(best_run), 0) AS v FROM login_streaks WHERE user_id = ?`, u),
   quizDays: (db, u) => n(db, `SELECT COUNT(*) AS v FROM quiz_attempts WHERE user_id = ? AND status = 'settled'`, u),
   pvpPlayed: (db, u) =>
@@ -66,6 +67,7 @@ export const ACHIEVEMENTS = Object.freeze([
   { key: "streak_3", group: "habit", name: "三天打卡", desc: "连续登录 3 天", metric: "streakBest", target: 3, coins: 30 },
   { key: "streak_7", group: "habit", name: "一周不断", desc: "连续登录 7 天", metric: "streakBest", target: 7, coins: 80 },
   { key: "streak_30", group: "habit", name: "月度常驻", desc: "连续登录 30 天", metric: "streakBest", target: 30, coins: 300 },
+  { key: "streak_cycle_3", group: "habit", name: "七日成瘾", desc: "集齐 3 轮 7 天签到循环（第 7 天的碎片）", metric: "streakCycles", target: 3, coins: 100, unlock: "frame:ink_ring" },
   { key: "quiz_1", group: "habit", name: "好学生", desc: "完成 1 次每日答题", metric: "quizDays", target: 1, coins: 20 },
   { key: "quiz_7", group: "habit", name: "学而时习", desc: "累计完成 7 次每日答题", metric: "quizDays", target: 7, coins: 80 },
   { key: "wheel_10", group: "habit", name: "转运达人", desc: "累计转动幸运转盘 10 次", metric: "wheelSpins", target: 10, coins: 50 },

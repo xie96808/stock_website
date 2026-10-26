@@ -1,4 +1,5 @@
 import { closeAuthModal, displayAvatarUrl, getAuthState, openAuthModal } from "../auth.js";
+import { applyFrameToImg } from "../avatar-frame.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import { rankPoints, rankProgress, rankIconPathForTitle } from "../../shared/pvpRating.js";
 import { formatPpm, formatWinRate, reasonLabel } from "./copy.js";
@@ -119,6 +120,7 @@ export function fillDossier(node, profile) {
   avatarBtn.title = "更换头像";
   avatarBtn.setAttribute("aria-label", "更换头像");
   avatarBtn.append(img);
+  applyFrameToImg(img, profile.avatarFrame);
   avatarBtn.addEventListener("click", () => openAuthModal("settings"));
   const body = document.createElement("div");
   body.className = "pvp-dossier-body";

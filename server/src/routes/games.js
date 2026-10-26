@@ -167,6 +167,7 @@ export function gamesConfigPayload() {
       loginStreak: !!config.loginStreakEnabled,
       inviteRewards: !!config.inviteRewardsEnabled,
       achievements: !!config.achievementsEnabled,
+      avatarFrames: !!config.avatarFramesEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,

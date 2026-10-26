@@ -5,6 +5,7 @@
 import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
+import { frameProp } from "./frameProp.js";
 import { shanghaiYmd } from "./jiuCoin.js";
 import { seedAllPuzzleChapters } from "./puzzleChapter.js";
 import { levelDefByKey, chapterIdFromLevelKey } from "./puzzleLevels.js";
@@ -247,6 +248,7 @@ function queryWeeklyBoard(db, { levelKey, startIso, endIso, limit, userId }) {
          u.nickname AS nickname,
          u.avatar_id AS avatar_id,
          u.avatar_custom_path AS avatar_custom_path,
+         u.avatar_frame AS avatar_frame,
          DENSE_RANK() OVER (
            ORDER BY r.return_ppm DESC, r.mdd_ppm ASC, r.finished_at ASC, r.user_id ASC
          ) AS rank
@@ -283,6 +285,7 @@ function queryWeeklyBoard(db, { levelKey, startIso, endIso, limit, userId }) {
       avatarId: r.avatar_id,
       avatarCustomPath: custom,
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
+      ...frameProp(r.avatar_frame),
       gameId: r.game_id,
       returnPpm: r.return_ppm,
       returnPct: formatReturnPct(r.return_ppm),

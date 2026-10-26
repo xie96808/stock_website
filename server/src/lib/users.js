@@ -2,6 +2,7 @@ import { openDb } from "../db/connection.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { runUserUnavailableHook, writeUserTombstone } from "./tombstones.js";
 import { grantRegisterBonus } from "./jiuCoin.js";
+import { frameProp } from "./frameProp.js";
 
 export function publicUser(row) {
   if (!row) return null;
@@ -12,6 +13,7 @@ export function publicUser(row) {
     nickname: row.nickname,
     avatarId: row.avatar_id,
     avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
+    ...frameProp(row.avatar_frame),
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,

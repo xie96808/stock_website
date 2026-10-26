@@ -1,4 +1,5 @@
 /** F02 残局挑战 (ch1…ch4) — hub entry card + dedicated #puzzleScreen */
+import { wrapAvatarHtml } from "./avatar-frame-pure.js";
 import { getAuthState, openAuthModal, showToast, refreshMe } from './auth.js';
 import { loadCloudGameDraft, clearCloudGameDraft } from './cloud-draft.js';
 import { abandonCloudGame } from './game-sync.js';
@@ -701,7 +702,7 @@ export async function showPuzzleWeeklyBoard() {
           <td>${e.rank}</td>
           <td class="puzzle-weekly-nick-cell">
             <span class="puzzle-weekly-nick-inner">
-              <img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">
+              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame)}
               <span>${escapeHtml(e.nickname || '玩家')}</span>
             </span>
           </td>

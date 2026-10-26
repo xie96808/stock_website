@@ -5,6 +5,7 @@
 import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
+import { frameProp } from "./frameProp.js";
 import {
   ensureDatasetLoaded,
   pickRandomWindow,
@@ -666,6 +667,7 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
          u.nickname AS nickname,
          u.avatar_id AS avatar_id,
          u.avatar_custom_path AS avatar_custom_path,
+         u.avatar_frame AS avatar_frame,
          DENSE_RANK() OVER (
            ORDER BY a.return_ppm DESC, a.mdd_ppm ASC, a.settled_at ASC, a.user_id ASC
          ) AS rank
@@ -702,6 +704,7 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
       avatarCustomPath: custom,
       // Same pattern as classic leaderboard: custom CDN path or null (client falls back to preset).
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
+      ...frameProp(r.avatar_frame),
       returnPpm: r.return_ppm,
       returnPct: (r.return_ppm / 10000).toFixed(2),
       mddPpm: r.mdd_ppm,
