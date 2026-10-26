@@ -58,6 +58,79 @@
   font-weight: 600;
 }
 
+/* Title row: 「系统公告」 + small ⓘ (earlier notices). History view swaps in 「‹ 返回」. */
+.announcements-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 40px 10px 0;
+  min-height: 40px;
+}
+.announcements-dialog .announcements-head h2 {
+  margin: 0;
+  min-width: 0;
+}
+.announcements-info {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+  font: italic 700 0.8rem/1 Georgia, "Times New Roman", serif;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.announcements-info[hidden],
+.announcements-back[hidden] {
+  display: none;
+}
+.announcements-info::before {
+  content: "";
+  grid-area: 1 / 1;
+  width: 20px;
+  height: 20px;
+  border: 1.6px solid var(--line, #2a2a2a);
+  border-radius: 50% 46% 52% 48% / 48% 52% 46% 50%;
+  background: var(--paper-2, #efe4cc);
+}
+.announcements-info > span {
+  grid-area: 1 / 1;
+  position: relative;
+}
+.announcements-info:active::before {
+  background: var(--ink, #2a2a2a);
+}
+.announcements-info:active {
+  color: var(--paper, #f7f1e6);
+}
+.announcements-info:focus-visible,
+.announcements-back:focus-visible {
+  outline: 2px solid var(--ink, #2a2a2a);
+  outline-offset: 2px;
+}
+.announcements-back {
+  flex: 0 0 auto;
+  min-height: 40px;
+  margin: 0 6px 0 -6px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+/* History view: only 关闭公告 (今日关闭 belongs to the popup). */
+.announcements-modal[data-view="history"] #announcementsDismissToday {
+  display: none;
+}
+
 .announcements-close-x {
   position: absolute;
   right: 10px;
@@ -184,6 +257,14 @@
 }
 [data-theme="dark"] .announcements-item {
   background: var(--paper-2, #161410);
+}
+[data-theme="dark"] .announcements-info::before {
+  background: var(--paper-2, #161410);
+  border-color: var(--line, #efe6d4);
+}
+[data-theme="dark"] .announcements-info,
+[data-theme="dark"] .announcements-back {
+  color: var(--ink, #efe6d4);
 }
 [data-theme="dark"] .announcements-btn,
 [data-theme="dark"] .announcements-secondary {

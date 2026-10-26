@@ -1,6 +1,8 @@
 /**
  * System announcements modal — paper/ink sketch UI.
  * Auto-opens unless localStorage says dismissed for today's local calendar day.
+ * The popup shows only the newest notice; earlier ones sit behind the ⓘ next to
+ * the 「系统公告」 title (history view, 「‹ 返回」 goes back).
  */
 
 import { formatShanghaiDateTime } from "./time.js";
@@ -61,7 +63,11 @@ function ensureDom() {
       el(`<div class="announcements-modal" id="announcementsModal" hidden>
         <div class="announcements-dialog" role="dialog" aria-modal="true" aria-labelledby="announcementsTitle">
           <button type="button" class="announcements-close-x" id="announcementsCloseX" aria-label="关闭">×</button>
-          <h2 id="announcementsTitle">系统公告</h2>
+          <div class="announcements-head">
+            <button type="button" class="announcements-back" id="announcementsBack" aria-label="返回最新公告" hidden>‹ 返回</button>
+            <h2 id="announcementsTitle">系统公告</h2>
+            <button type="button" class="announcements-info" id="announcementsInfo" aria-label="查看往期公告" title="往期公告" hidden><span aria-hidden="true">i</span></button>
+          </div>
           <div class="announcements-list" id="announcementsList"></div>
           <p class="announcements-empty" id="announcementsEmpty" hidden>暂无公告</p>
           <div class="announcements-actions">
@@ -79,6 +85,24 @@ function formatPublishedAt(iso) {
   const formatted = formatShanghaiDateTime(iso);
   return escapeHtml(formatted || iso);
 }
+
+/** Newest first (publishedAt desc, then id desc) — don't trust the API order. */
+export function sortAnnouncements(items) {
+  return [...(items || [])].sort((a, b) => {
+    const ta = Date.parse(a?.publishedAt) || 0;
+    const tb = Date.parse(b?.publishedAt) || 0;
+    return tb - ta || (Number(b?.id) || 0) - (Number(a?.id) || 0);
+  });
+}
+
+/** The popup shows only `latest`; `earlier` lives behind the ⓘ button. */
+export function splitAnnouncements(items) {
+  const sorted = sortAnnouncements(items);
+  return { latest: sorted[0] || null, earlier: sorted.slice(1) };
+}
+
+const VIEW_TITLE = { latest: "系统公告", history: "往期公告" };
+let currentView = "latest";
 
 function renderList(items) {
   const list = document.getElementById("announcementsList");
@@ -105,6 +129,23 @@ function renderList(items) {
       </article>`;
     })
     .join("");
+}
+
+/** Switch the dialog between the latest notice and the earlier ones (ⓘ). */
+function showView(view, items = cachedItems) {
+  const { latest, earlier } = splitAnnouncements(items);
+  currentView = view === "history" && earlier.length ? "history" : "latest";
+  const modal = document.getElementById("announcementsModal");
+  if (modal) modal.dataset.view = currentView;
+  const title = document.getElementById("announcementsTitle");
+  if (title) title.textContent = VIEW_TITLE[currentView];
+  const back = document.getElementById("announcementsBack");
+  if (back) back.hidden = currentView !== "history";
+  const info = document.getElementById("announcementsInfo");
+  if (info) info.hidden = currentView === "history" || !earlier.length;
+  renderList(currentView === "history" ? earlier : latest ? [latest] : []);
+  const list = document.getElementById("announcementsList");
+  if (list) list.scrollTop = 0;
 }
 
 let cachedItems = null;
@@ -150,7 +191,7 @@ export async function openAnnouncementsModal({ force = true } = {}) {
   const seq = ++openSeq;
   const items = cachedItems ?? (await fetchAnnouncements());
   if (seq !== openSeq) return items;
-  renderList(items);
+  showView("latest", items);
   const modal = document.getElementById("announcementsModal");
   if (modal && modal.hidden) openCtlOverlay(modal);
   return items;
@@ -172,7 +213,7 @@ function wireEvents() {
     // can release a few px off it while the box grows, so the browser fires the
     // click on the common ancestor instead of the button → close was dropped.
     // Remember which action button the pointer went down on and honour it.
-    const ACTIONS = "#announcementsClose, #announcementsCloseX, #announcementsDismissToday";
+    const ACTIONS = "#announcementsClose, #announcementsCloseX, #announcementsDismissToday, #announcementsInfo, #announcementsBack";
     const actionAt = (x, y, pad) => {
       for (const b of modal.querySelectorAll(ACTIONS)) {
         const r = b.getBoundingClientRect();
@@ -197,12 +238,16 @@ function wireEvents() {
       downAction = null;
       if (hit) return; // button's own handler runs
       if (pending && pending !== modal) {
+        if (pending.id === "announcementsInfo") return showView("history");
+        if (pending.id === "announcementsBack") return showView("latest");
         if (pending.id === "announcementsDismissToday") dismissToday();
         closeAnnouncementsModal();
         return;
       }
       if (e.target === modal) closeAnnouncementsModal();
     });
+    document.getElementById("announcementsInfo")?.addEventListener("click", () => showView("history"));
+    document.getElementById("announcementsBack")?.addEventListener("click", () => showView("latest"));
     document.getElementById("announcementsCloseX")?.addEventListener("click", () => {
       closeAnnouncementsModal();
     });
@@ -236,7 +281,7 @@ export async function initAnnouncements() {
   wireEvents();
   const seq = ++openSeq;
   const items = await fetchAnnouncements();
-  renderList(items);
+  showView("latest", items);
   if (seq === openSeq && items.length && !isDismissedToday() && shouldAutoOpenAnnouncements(location.hash)) {
     const modal = document.getElementById("announcementsModal");
     if (modal && modal.hidden) openCtlOverlay(modal);
