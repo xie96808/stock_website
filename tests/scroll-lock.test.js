@@ -28,3 +28,28 @@ test('non-overlay widgets do not use the overlay marker class', () => {
   assert.ok(!/is-open/.test(read('../js/achievements.js')));
   assert.ok(!/is-open/.test(read('../css/achievements.css')));
 });
+
+test('leaving the play-modes sheet for another page releases its html scroll lock', async () => {
+  const { dismissPlayModesSheet, prepareScreen, Route } = await import('../js/screen-router.js');
+  const classes = new Set(['pm-sheet-open']);
+  const mk = () => ({ hidden: false, style: { transform: 'x' }, classList: { remove: (...c) => c.forEach((k) => classes.delete(k)) }, setAttribute() {} });
+  const sheet = mk();
+  const bd = mk();
+  const prev = globalThis.document;
+  globalThis.document = {
+    documentElement: { classList: { remove: (...c) => c.forEach((k) => classes.delete(k)) } },
+    getElementById: (id) => (id === 'playModes' ? sheet : id === 'playModesBackdrop' ? bd : null),
+    querySelectorAll: () => [],
+  };
+  try {
+    dismissPlayModesSheet();
+    assert.equal(classes.has('pm-sheet-open'), false);
+    assert.equal(sheet.hidden, true);
+    assert.equal(bd.hidden, true);
+  } finally {
+    globalThis.document = prev;
+  }
+  assert.equal(typeof prepareScreen, 'function');
+  assert.ok(Route.MY_GAMES);
+  assert.match(readFileSync(new URL('../js/screen-router.js', import.meta.url), 'utf8'), /route !== Route\.HOME && route !== Route\.SIM\) dismissPlayModesSheet\(\)/);
+});

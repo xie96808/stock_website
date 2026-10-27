@@ -128,3 +128,43 @@
 }
 .avatar-picker{position:relative}
 .auth-items-line{margin:2px 0 4px;font-size:13px;opacity:.85}
+
+/* ===== 资料设置：紧凑卡片布局（头像+昵称同行，入口做成小方块，保存/退出并排） ===== */
+#authSettingsPanel { gap: 8px; }
+.auth-profile-head { display: flex; align-items: center; gap: 12px; }
+.auth-profile-head .avatar-picker { position: relative; flex: none; gap: 0; }
+.auth-profile-head .avatar-preview-btn { width: 56px; height: 56px; }
+.auth-profile-head .avatar-preview { width: 56px; height: 56px; }
+.auth-profile-head .avatar-actions { position: absolute; right: -8px; bottom: -6px; z-index: 2; }
+.auth-profile-head .avatar-actions .auth-dice { padding: 2px; width: 28px; height: 28px; min-width: 28px; display: inline-flex; align-items: center; justify-content: center; }
+.auth-profile-head .auth-nick-row { flex: 1; min-width: 0; }
+#authSettingsPanel .auth-nick-field { gap: 2px; }
+#authSettingsPanel .auth-items-line { margin: 0; }
+.auth-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.auth-tiles > [hidden] { display: none !important; }
+.auth-tiles .auth-tile.ctl {
+  margin: 0;
+  min-height: 58px;
+  padding: 6px 4px;
+  flex-direction: column;
+  gap: 2px;
+  letter-spacing: 0.06em;
+  font-size: 13px;
+  text-align: center;
+  width: 100%;
+}
+.auth-tiles .ctl-label, .auth-actions .ctl-label { letter-spacing: 0.04em; white-space: nowrap; }
+.auth-profile-head .auth-nick-field { flex: 1; min-width: 0; }
+.auth-profile-head .auth-nick-field input { width: 100%; min-width: 0; box-sizing: border-box; }
+.auth-profile-head .auth-nick-row .auth-dice { flex: none; }
+.auth-tile-sub { position: relative; z-index: 1; font-size: 10px; font-weight: 500; letter-spacing: 0; opacity: .7; pointer-events: none; }
+.auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+.auth-actions .ctl { margin: 0; width: 100%; min-height: 48px; }
+#authSettingsPanel .pvp-settings {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--ink, #2a2a2a) 35%, transparent);
+  border-radius: 10px;
+}
+#authSettingsPanel .pvp-settings-title { margin: 0; font-size: 12px; opacity: .7; }
+#authSettingsPanel .pvp-settings-rank { margin: 2px 0 0; font-size: 1.1rem; letter-spacing: 0.1em; }

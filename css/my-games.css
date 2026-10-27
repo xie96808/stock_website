@@ -66,6 +66,18 @@
 .my-game-main .ret.neg { color: #3db86a; }
 .my-game-meta { margin-top: 0.35rem; font-size: 0.8rem; opacity: 0.7; }
 .my-game-kind { font-weight: 600; }
+.my-game-review {
+  margin-top: 0.55rem;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 8px;
+  border: 1.5px solid var(--ink, #2a2a2a);
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+  cursor: pointer;
+}
+.my-game-review.is-owned { background: var(--ink, #2a2a2a); color: var(--paper, #f7f1e6); }
 .my-games-empty { opacity: 0.7; }
 .cloud-save-status {
   margin: 0.6rem 0 0;

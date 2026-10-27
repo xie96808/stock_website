@@ -66,6 +66,33 @@ export function loadReviewable(db, userId, gameId, { now = Date.now() } = {}) {
   return { row, result, actions, win, maxBuys };
 }
 
+/** 「我的战绩」列表：给每局标出能不能复盘、买过哪些（功能关闭时原样返回）。 */
+export function annotateReviews(userId, items) {
+  if (!gameReviewEnabled() || !Array.isArray(items) || !items.length) return items;
+  const db = openDb();
+  const ids = items.map((g) => g.gameId).filter(Boolean);
+  const owned = new Map();
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const rows = db
+      .prepare(`SELECT game_id, product FROM game_reviews WHERE user_id = ? AND game_id IN (${chunk.map(() => "?").join(",")})`)
+      .all(userId, ...chunk);
+    for (const r of rows) {
+      const o = owned.get(r.game_id) || { route: false, hold: false };
+      o[r.product] = true;
+      owned.set(r.game_id, o);
+    }
+  }
+  const supportedKinds = new Set([GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_DAILY]);
+  return items.map((g) => ({
+    ...g,
+    review: {
+      supported: supportedKinds.has(g.gameKind || GAME_KIND_CLASSIC),
+      owned: owned.get(g.gameId) || { route: false, hold: false },
+    },
+  }));
+}
+
 function productList(owned, balance) {
   return Object.values(REVIEW_PRODUCTS).map((p) => ({
     id: p.id,

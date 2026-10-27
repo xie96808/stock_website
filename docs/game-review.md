@@ -41,6 +41,10 @@ Off ⇒ `GET /games/:id/review` → `{enabled:false}`, unlock is `FEATURE_DISABL
 - 解锁两步确认（第一次点击变「确认 -N」，3.5 秒内再点才扣）。
 - K 线复用对局里的 `buildKlineOption`（新增 `extraMarks` 画「我买 / 我卖」）。
 
+## 「我的战绩」里的入口
+- `GET /me/games` 每条多带 `review: {supported, owned:{route,hold}}`（`annotateReviews`，功能关闭时不带）。
+- 列表每局显示按钮：没买 →「复盘 · 30 韭币」，买过 →「重看复盘」（含死拿时带后缀）；残局 / 生存不显示。
+- 点按钮调 `openReviewReplay(gameId)`，买过的直接重走，没买的走原来的试看 + 两次点击购买；关闭复盘后派发 `rr:closed`，列表刷新状态。
+
 ## 未做
-- 「我的对局」历史列表里的入口（目前只在刚结算的结果页）。
 - 残局 / 生存 / 对战的复盘。

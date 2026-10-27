@@ -187,3 +187,25 @@ test("game kinds: oneshot is capped at one buy, daily waits for the day to close
   assert.equal((await review(g3.gameId)).json.data.reason, "REVIEW_UNSUPPORTED");
   assert.equal(getJiuCoinBalance(auth.user.id), 500 - 30 - 20 * 3 + 0, "only the oneshot unlock was charged (plus three game fees)");
 });
+
+test("我的战绩 list: each game says whether it can be reviewed and what was bought", async () => {
+  const auth = await register(uname("lst"));
+  const a = await playGame(auth);
+  const b = await playGame(auth, undefined, { stockIndex: 1, windowStartIndex: 30, historyLength: 30 });
+  assert.equal((await unlock(auth, a.gameId, "route")).status, 200);
+  assert.equal((await unlock(auth, a.gameId, "hold")).status, 200);
+  const list = await api("/api/v1/me/games?limit=10");
+  assert.equal(list.status, 200, JSON.stringify(list.json));
+  const items = list.json.data.items;
+  const ia = items.find((g) => g.gameId === a.gameId);
+  const ib = items.find((g) => g.gameId === b.gameId);
+  assert.deepEqual(ia.review, { supported: true, owned: { route: true, hold: true } });
+  assert.deepEqual(ib.review, { supported: true, owned: { route: false, hold: false } });
+  config.gameReviewEnabled = false;
+  try {
+    const off = await api("/api/v1/me/games?limit=10");
+    assert.equal(off.json.data.items[0].review, undefined, "flag off: list unchanged");
+  } finally {
+    config.gameReviewEnabled = true;
+  }
+});

@@ -323,31 +323,36 @@ function ensureAuthDom() {
           <button type="submit" class="auth-primary ctl ctl-primary" data-ctl-kind="primary" data-state="default"><span class="ctl-label">注册</span></button>
         </form>
         <div id="authSettingsPanel" class="auth-form" hidden>
-          <div class="avatar-picker">
-            <label class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="settingsAvatarFile">
-              <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
-            </label>
-            <input type="file" id="settingsAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
-            <div class="avatar-actions">
-              <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">${emojiArtHtml("dice")}</button>
+          <div class="auth-profile-head">
+            <div class="avatar-picker">
+              <label class="avatar-preview-btn" id="settingsAvatarPick" title="点击上传头像" aria-label="点击上传头像" for="settingsAvatarFile">
+                <img class="avatar-preview" id="settingsAvatarImg" alt="头像预览">
+              </label>
+              <input type="file" id="settingsAvatarFile" class="avatar-file-input" accept="image/*" aria-hidden="true" tabindex="-1">
+              <div class="avatar-actions">
+                <button type="button" class="auth-dice" id="settingsAvatarDice" title="随机生肖" aria-label="随机生肖">${emojiArtHtml("dice")}</button>
+              </div>
             </div>
-          </div>
-          <div class="auth-nick-row">
-            <label class="auth-nick-field">昵称
-              <input id="settingsNickname" maxlength="16">
-            </label>
-            <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">${emojiArtHtml("dice")}</button>
+            <div class="auth-nick-row">
+              <label class="auth-nick-field">昵称
+                <input id="settingsNickname" maxlength="16">
+              </label>
+              <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">${emojiArtHtml("dice")}</button>
+            </div>
           </div>
           <label class="auth-nick-field">个性签名
             <input id="settingsSignature" maxlength="40" placeholder="一句话介绍自己（可选）">
           </label>
           <p class="auth-items-line" id="authItemsLine" hidden></p>
-          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFrameBtn" data-frame-entry data-frame-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">头像框</span></button>
-          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsInviteBtn" data-invite-entry data-invite-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">邀请好友 · 各得韭币</span></button>
-          <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
-          <button type="button" class="auth-secondary ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
-          <hr>
-          <button type="button" class="auth-danger ctl ctl-danger" id="authLogoutBtn" data-ctl-kind="danger" data-state="default"><span class="ctl-label">退出登录</span></button>
+          <div class="auth-tiles" id="authEntryGrid">
+            <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsFrameBtn" data-frame-entry data-frame-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">头像框</span></button>
+            <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsInviteBtn" data-invite-entry data-invite-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">邀请好友</span><small class="auth-tile-sub">各得韭币</small></button>
+            <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
+          </div>
+          <div class="auth-actions">
+            <button type="button" class="auth-primary ctl ctl-primary" id="settingsSave" data-ctl-kind="primary" data-state="default"><span class="ctl-label">保存资料</span></button>
+            <button type="button" class="auth-danger ctl ctl-danger" id="authLogoutBtn" data-ctl-kind="danger" data-state="default"><span class="ctl-label">退出登录</span></button>
+          </div>
         </div>
       </div>
     </div>`));
