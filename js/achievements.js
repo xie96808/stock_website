@@ -15,6 +15,8 @@ let inflight = null;
 let fetchedAt = 0;
 let busy = false;
 let wired = false;
+/** Group ids the player has opened. Everything starts folded (the list is long on a phone); survives repaints. */
+const openGroups = new Set();
 const $ = (id) => document.getElementById(id);
 const authed = () => selectIsAuthenticated(getAuthState());
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -57,12 +59,24 @@ function itemHtml(it) {
   </div>`;
 }
 
+function groupHtml(s) {
+  const open = openGroups.has(s.id);
+  const badge = s.claimable > 0 ? `<em class="ach-group-badge">${s.claimable} 可领取</em>` : "";
+  return `<section class="ach-group${open ? " is-open" : ""}" data-group="${esc(s.id)}">
+    <button type="button" class="ach-group-head" data-ach-group="${esc(s.id)}" aria-expanded="${open}" aria-controls="achg-${esc(s.id)}">
+      <span class="ach-group-name">${esc(s.name)}</span>
+      <small>${s.claimed}/${s.total}</small>
+      ${badge}
+      <i class="ach-chev" aria-hidden="true"></i>
+    </button>
+    <div class="ach-group-body" id="achg-${esc(s.id)}"${open ? "" : " hidden"}>${s.items.map(itemHtml).join("")}</div>
+  </section>`;
+}
+
 function paintModal() {
   if (!state?.enabled) return;
   $("achSub").textContent = subText(state);
-  $("achList").innerHTML = sections(state)
-    .map((s) => `<section class="ach-group"><h3>${esc(s.name)}<small>${s.claimed}/${s.total}</small></h3>${s.items.map(itemHtml).join("")}</section>`)
-    .join("");
+  $("achList").innerHTML = sections(state).map(groupHtml).join("");
   const btn = $("achClaimAll");
   const can = state.summary.claimable > 0;
   btn.disabled = !can || busy;
@@ -148,7 +162,20 @@ function wire() {
   $("achCloseX").addEventListener("click", closeAchievementsModal);
   $("achClaimAll").addEventListener("click", () => doClaim(null));
   $("achList").addEventListener("click", (e) => {
-    const b = e.target.closest ? e.target.closest("[data-ach-claim]") : null;
+    const t = e.target.closest ? e.target : null;
+    const head = t && t.closest("[data-ach-group]");
+    if (head) {
+      const id = head.getAttribute("data-ach-group");
+      const open = !openGroups.has(id);
+      if (open) openGroups.add(id);
+      else openGroups.delete(id);
+      const sec = head.closest(".ach-group");
+      sec.classList.toggle("is-open", open);
+      head.setAttribute("aria-expanded", String(open));
+      sec.querySelector(".ach-group-body").hidden = !open;
+      return;
+    }
+    const b = t && t.closest("[data-ach-claim]");
     if (b) doClaim(b.getAttribute("data-ach-claim"));
   });
   modal.addEventListener("click", (e) => { if (e.target === modal) closeAchievementsModal(); });
