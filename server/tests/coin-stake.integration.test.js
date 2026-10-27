@@ -99,18 +99,18 @@ test("insufficient funds → 402 with required = stake, no game left behind", as
   assert.equal(db.prepare(`SELECT COUNT(*) c FROM game_sessions WHERE user_id = ?`).get(auth.user.id).c, 0);
 });
 
-test("third buy → STAKE_BUY_LIMIT; buy-sell-buy is fine", async () => {
+test("no buy-count limit: buy-sell-buy-sell-buy is accepted", async () => {
   const auth = await register(`bl${Date.now().toString(36)}`);
   const id = (await create(auth, 20)).json.data.gameId;
   assert.equal((await decide(auth, id, 0, "buy")).status, 200);
   assert.equal((await decide(auth, id, 1, "hold")).status, 200);
   assert.equal((await decide(auth, id, 2, "sell")).status, 200);
-  assert.equal((await decide(auth, id, 3, "buy")).status, 200); // second (last) buy
+  assert.equal((await decide(auth, id, 3, "buy")).status, 200); // second buy
   assert.equal((await decide(auth, id, 4, "sell")).status, 200);
   const third = await decide(auth, id, 5, "buy");
-  assert.equal(third.status, 409, JSON.stringify(third.json));
-  assert.equal(third.json.error.code, "STAKE_BUY_LIMIT");
-  assert.equal((await decide(auth, id, 5, "hold")).status, 200);
+  assert.equal(third.status, 200, JSON.stringify(third.json));
+  assert.equal((await decide(auth, id, 6, "sell")).status, 200);
+  assert.equal((await decide(auth, id, 7, "buy")).status, 200);
 });
 
 test("settle pays stake + profit − fee exactly once; replay and ledger idempotent", async () => {

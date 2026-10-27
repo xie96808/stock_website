@@ -5,14 +5,12 @@
 import {
   STAKE_MIN,
   STAKE_MAX,
-  STAKE_MAX_BUYS,
   STAKE_PRESETS,
   clampStake,
   stakeSettlement,
-  countBuys,
 } from '../shared/stake.js';
 
-export { STAKE_MIN, STAKE_MAX, STAKE_MAX_BUYS, STAKE_PRESETS, clampStake, stakeSettlement, countBuys };
+export { STAKE_MIN, STAKE_MAX, STAKE_PRESETS, clampStake, stakeSettlement };
 
 /** Presets the player can afford, always keeping the minimum so the sheet is never empty. */
 export function affordablePresets(balance) {
@@ -50,14 +48,9 @@ export function reelDigits(stake) {
 }
 
 /** HUD subtitle while playing. */
-export function stakeHudSubtitle(stake, actions) {
-  const left = Math.max(0, STAKE_MAX_BUYS - countBuys(actions));
+export function stakeHudSubtitle(stake) {
   const amount = stake && Number.isFinite(stake.amount) ? stake.amount : null;
-  return `${amount == null ? '' : `投入 ${amount} · `}剩余买入 ${left} 次`;
-}
-
-export function stakeBuysLeft(actions) {
-  return Math.max(0, STAKE_MAX_BUYS - countBuys(actions));
+  return amount == null ? '' : `投入 ${amount}`;
 }
 
 /**

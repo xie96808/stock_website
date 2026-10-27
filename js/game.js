@@ -59,7 +59,7 @@ import {
     ghostRevealedActions,
 } from './ghost-duel.js';
 import { survivalFloatHud } from '../shared/survival.js';
-import { stakeBuysLeft, stakeHudSubtitle } from './coin-stake-pure.js';
+import { stakeHudSubtitle } from './coin-stake-pure.js';
 import {
     ensureEcharts,
     markChartLoading,
@@ -897,10 +897,9 @@ export function updateUI() {
         session.gameKind === 'ghost' && session.modifiers?.ghost?.nickname
           ? session.modifiers.ghost.nickname
           : null;
-    const stakeLeft = session.gameKind === 'stake' ? stakeBuysLeft(session.actions) : null;
     const hud = formatPlayHudChrome({
         gameKind: session.gameKind,
-        stakeSubtitle: session.gameKind === 'stake' ? stakeHudSubtitle(session.stake, session.actions) : '',
+        stakeSubtitle: session.gameKind === 'stake' ? stakeHudSubtitle(session.stake) : '',
         title: session.puzzleTitle,
         theme: session.puzzleTheme,
         currentDay: session.currentDay,
@@ -1130,8 +1129,7 @@ export function updateUI() {
         if (buyBtn) {
             buyBtn.hidden = false;
             const oneshotBuyBlocked = session.gameKind === 'oneshot' && oneshotAmmo && oneshotAmmo.buysLeft <= 0;
-            const stakeBuyBlocked = stakeLeft != null && stakeLeft <= 0;
-            buyBtn.disabled = busy || session.position !== 'empty' || oneshotBuyBlocked || stakeBuyBlocked;
+            buyBtn.disabled = busy || session.position !== 'empty' || oneshotBuyBlocked;
         }
         if (sellBtn) {
             sellBtn.hidden = false;

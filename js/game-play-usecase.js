@@ -18,7 +18,6 @@ import {
 import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import { oneshotAmmoFromActions } from '../shared/oneshot.js';
-import { countBuys, STAKE_MAX_BUYS } from '../shared/stake.js';
 export { oneshotAmmoFromActions };
 import {
   replayPuzzle,
@@ -173,9 +172,6 @@ export function validatePlayAction(session, action) {
     if (action === 'sell' && ammo.sellsLeft <= 0) {
       return { ok: false, errorZh: '一把梭卖出次数已用完' };
     }
-  }
-  if (session.gameKind === 'stake' && action === 'buy' && countBuys(session.actions) >= STAKE_MAX_BUYS) {
-    return { ok: false, errorZh: '韭币局最多买入 2 次，买入次数已用完' };
   }
   if (action === 'buy' && session.position !== 'empty') {
     return { ok: false, errorZh: '已有持仓，不能再买入' };
