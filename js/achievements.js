@@ -62,7 +62,7 @@ function itemHtml(it) {
 function groupHtml(s) {
   const open = openGroups.has(s.id);
   const badge = s.claimable > 0 ? `<em class="ach-group-badge">${s.claimable} 可领取</em>` : "";
-  return `<section class="ach-group${open ? " is-open" : ""}" data-group="${esc(s.id)}">
+  return `<section class="ach-group${open ? " is-expanded" : ""}" data-group="${esc(s.id)}">
     <button type="button" class="ach-group-head" data-ach-group="${esc(s.id)}" aria-expanded="${open}" aria-controls="achg-${esc(s.id)}">
       <span class="ach-group-name">${esc(s.name)}</span>
       <small>${s.claimed}/${s.total}</small>
@@ -170,7 +170,7 @@ function wire() {
       if (open) openGroups.add(id);
       else openGroups.delete(id);
       const sec = head.closest(".ach-group");
-      sec.classList.toggle("is-open", open);
+      sec.classList.toggle("is-expanded", open);
       head.setAttribute("aria-expanded", String(open));
       sec.querySelector(".ach-group-body").hidden = !open;
       return;

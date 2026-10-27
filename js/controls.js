@@ -223,9 +223,24 @@ function lockScroll() {
   scrollLockCount += 1;
   document.body.classList.add("ctl-scroll-lock");
 }
+const OPEN_OVERLAY_SEL = ".is-open:not([hidden]):not(.is-leaving)";
+
+/**
+ * Overlays that are really on screen. `.is-open` is only an overlay marker, but a stray element carrying it
+ * (e.g. inside a sheet that was closed) must never keep the page locked, so require the element to be rendered
+ * (an element inside a display:none ancestor has no client rects).
+ */
+export function countOpenOverlays(root = document) {
+  let n = 0;
+  for (const el of root.querySelectorAll(OPEN_OVERLAY_SEL)) {
+    if (el.getClientRects().length > 0) n += 1;
+  }
+  return n;
+}
+
 function unlockScroll() {
   // Recount live overlays (robust if some legacy path set hidden directly).
-  scrollLockCount = document.querySelectorAll(".is-open:not([hidden]):not(.is-leaving)").length;
+  scrollLockCount = countOpenOverlays();
   if (scrollLockCount === 0) document.body.classList.remove("ctl-scroll-lock");
 }
 
@@ -502,7 +517,7 @@ export function initControls() {
   // Release scroll lock if a legacy path hides an overlay directly.
   new MutationObserver(() => {
     if (!document.body.classList.contains("ctl-scroll-lock")) return;
-    if (!document.querySelector(".is-open:not([hidden]):not(.is-leaving)")) {
+    if (countOpenOverlays() === 0) {
       document.body.classList.remove("ctl-scroll-lock");
     }
   }).observe(document.body, { attributes: true, attributeFilter: ["hidden"], subtree: true });
