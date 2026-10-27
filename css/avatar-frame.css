@@ -247,16 +247,25 @@
   letter-spacing: 0.1em;
 }
 .frame-cap {
-  min-height: 2.5em;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 3.75em;
+  max-height: 3.75em;
+  overflow: hidden;
   font-size: 0.72rem;
   line-height: 1.25;
   color: var(--mute, #7a7066);
+}
+.frame-card--prime .frame-cap {
+  min-height: 1.25em;
+  max-height: none;
+  flex: 0 0 auto;
 }
 .frame-btn {
   position: relative;
   min-width: 96px;
   height: 34px;
-  margin-top: 2px;
+  margin-top: auto;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--ink, #2a2a2a);
@@ -286,6 +295,10 @@
 .frame-btn--unequip {
   background: transparent;
   color: var(--ink, #2a2a2a);
+}
+.frame-btn--poor,
+.cos-btn--poor {
+  opacity: 0.5;
 }
 .frame-btn--confirm {
   background: #c0392b;
