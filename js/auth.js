@@ -336,6 +336,7 @@ function ensureAuthDom() {
             <div class="auth-nick-row">
               <label class="auth-nick-field">昵称
                 <input id="settingsNickname" maxlength="16">
+                <small class="auth-nick-hint" id="settingsNickHint" hidden></small>
               </label>
               <button type="button" class="auth-dice" id="settingsNickDice" title="随机昵称">${emojiArtHtml("dice")}</button>
             </div>
@@ -345,7 +346,6 @@ function ensureAuthDom() {
           </label>
           <p class="auth-items-line" id="authItemsLine" hidden></p>
           <div class="auth-tiles" id="authEntryGrid">
-            <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsFrameBtn" data-frame-entry data-frame-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">头像框</span></button>
             <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsInviteBtn" data-invite-entry data-invite-open hidden data-ctl-kind="secondary" data-state="default"><span class="ctl-label">邀请好友</span><small class="auth-tile-sub">各得韭币</small></button>
             <button type="button" class="auth-secondary auth-tile ctl ctl-secondary" id="settingsFeedbackBtn" data-ctl-kind="secondary" data-state="default"><span class="ctl-label">反馈</span></button>
           </div>
@@ -594,6 +594,12 @@ export function openAuthModal(tab = "login") {
       tab = "login";
     } else {
       document.getElementById("settingsNickname").value = authState.user.nickname;
+      const nickHint = document.getElementById("settingsNickHint");
+      if (nickHint) {
+        const cards = authState.user.renameCards;
+        nickHint.hidden = cards === undefined;
+        if (cards !== undefined) nickHint.textContent = `改昵称会消耗 1 张改名卡 · 你有 ${cards} 张`;
+      }
       const sig = document.getElementById("settingsSignature");
       if (sig) sig.value = authState.user.signature || "";
       pendingSettingsFile = null;
@@ -818,6 +824,9 @@ async function onSaveSettings() {
   } catch (e) {
     setError(e.message);
     showToast(e.message || "保存失败", "error");
+    if (e && e.code === "RENAME_CARD_REQUIRED") {
+      import("./leek-shop.js").then((m) => m.openLeekShop("rename")).catch(() => {});
+    }
   } finally {
     setBusy(saveBtn, false);
     if (panel) {

@@ -53,6 +53,37 @@
   transform-origin: 50% 50%;
   animation: avf-pulse 4.8s ease-in-out infinite;
 }
+/* Premium frames. avf-k = one candlestick breathing from its base; avf-flap = a wing beating about its shoulder;
+   avf-breathe = the whole wing pair swelling a touch. */
+.avf-art .avf-k {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: avf-k 2.8s ease-in-out infinite;
+}
+.avf-art .avf-flap {
+  transform-box: view-box;
+  animation: avf-flap 3.2s ease-in-out infinite;
+}
+.avf-art .avf-breathe {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  animation: avf-breathe 3.2s ease-in-out infinite;
+}
+.avf-art .avf-twinkle--slow {
+  animation-duration: 3.2s;
+}
+@keyframes avf-k {
+  0%, 100% { transform: scaleY(0.78); }
+  50% { transform: scaleY(1.22); }
+}
+@keyframes avf-flap {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50% { transform: rotate(4.5deg); }
+}
+@keyframes avf-breathe {
+  0%, 100% { transform: scale(0.985); }
+  50% { transform: scale(1.025); }
+}
 @keyframes avf-spin {
   to { transform: rotate(360deg); }
 }
@@ -72,16 +103,59 @@
   0%, 82%, 100% { transform: scale(1); }
   90% { transform: scale(1.12); }
 }
-/* A little glow for the two precious frames. */
+/* A little glow for the precious frames. */
 .avf--gold .avf-art,
 .avf--crown .avf-art {
   filter: drop-shadow(0 0 2.5px rgba(255, 196, 56, 0.55));
+}
+.avf--kline .avf-art {
+  filter: drop-shadow(0 0 2.6px rgba(255, 92, 64, 0.45)) drop-shadow(0 0 1.4px rgba(255, 214, 98, 0.6));
+}
+.avf--phoenix .avf-art {
+  filter: drop-shadow(0 0 3.2px rgba(255, 190, 48, 0.75));
+  animation: avf-glow 3.2s ease-in-out infinite;
+}
+@keyframes avf-glow {
+  0%, 100% { filter: drop-shadow(0 0 2.4px rgba(255, 190, 48, 0.55)); }
+  50% { filter: drop-shadow(0 0 5.2px rgba(255, 214, 98, 0.95)); }
+}
+
+/* Light sweep for the premium rims: a conic gradient masked to a ring and turned slowly. The ring sits where the
+   drawing's ring does (radius 52.2–52.4 of a 100-unit avatar, i.e. 3% outside the avatar box). */
+.avf--kline::after,
+.avf--gold::after,
+.avf--phoenix::after {
+  content: "";
+  position: absolute;
+  inset: -3.2%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  background: conic-gradient(from 0deg, transparent 0 62%, rgba(255, 255, 255, 0) 64%, rgba(255, 250, 220, 0.95) 80%, rgba(255, 255, 255, 0) 83%, transparent 85% 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent 0 88%, #000 90% 97%, transparent 99%);
+  mask: radial-gradient(farthest-side, transparent 0 88%, #000 90% 97%, transparent 99%);
+  mix-blend-mode: plus-lighter;
+  animation: avf-spin 4.6s linear infinite;
+}
+.avf--phoenix::after {
+  animation-duration: 3.6s;
+}
+.avf--gold::after {
+  opacity: 0.7;
+  animation-duration: 6s;
 }
 @media (prefers-reduced-motion: reduce) {
   .avf-art .avf-sheen,
   .avf-art .avf-sway,
   .avf-art .avf-twinkle,
-  .avf-art .avf-pulse {
+  .avf-art .avf-pulse,
+  .avf-art .avf-k,
+  .avf-art .avf-flap,
+  .avf-art .avf-breathe,
+  .avf--phoenix .avf-art,
+  .avf--kline::after,
+  .avf--gold::after,
+  .avf--phoenix::after {
     animation: none;
   }
 }
@@ -113,6 +187,44 @@
   border-radius: 14px;
   background: var(--paper-2, #efe4cc);
   text-align: center;
+}
+.frame-card {
+  position: relative;
+}
+.frame-card--fine {
+  border-style: solid;
+  border-color: #c9a227;
+  background: linear-gradient(180deg, var(--paper-2, #efe4cc), var(--paper, #fff1c9));
+}
+.frame-card--prime {
+  grid-column: 1 / -1;
+  border-style: solid;
+  border-width: 2px;
+  border-color: #b8860b;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 214, 98, 0.32), transparent 70%), var(--paper, #fff1c9);
+  box-shadow: 0 0 0 1px rgba(255, 214, 98, 0.5), 3px 3px 0 rgba(0, 0, 0, 0.14);
+}
+.frame-card--prime .frame-preview {
+  padding: 22px 0 16px;
+}
+.frame-card--prime .frame-avatar {
+  width: 92px;
+  height: 92px;
+}
+.frame-ribbon {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #b8860b;
+  color: #fff6d2;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.frame-ribbon--fine {
+  background: #c8321f;
 }
 .frame-card.is-equipped {
   border-style: solid;

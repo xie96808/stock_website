@@ -33,9 +33,14 @@ test("catalogue invariants", () => {
   assert.equal(new Set(stickers).size, stickers.length, "a sticker belongs to exactly one pack");
   for (const p of defs.PACKS) {
     assert.ok(p.stickers.length >= 6, p.id);
+    assert.ok(["basic", "fine", "grand"].includes(p.tier), `${p.id} tier`);
     assert.ok(Number.isInteger(p.price) && p.price >= 100, p.id);
     for (const s of p.stickers) assert.equal(defs.stickerPack(s), p.id);
   }
+  // the dearer the pack, the fancier the art: prices rise with the tier
+  const priceOf = (tier) => defs.PACKS.filter((p) => p.tier === tier).map((p) => p.price);
+  assert.ok(Math.min(...priceOf("fine")) > Math.max(...priceOf("basic")));
+  assert.ok(Math.min(...priceOf("grand")) > Math.max(...priceOf("fine")));
   for (const e of defs.ENTRANCES) assert.ok(Number.isInteger(e.price) && e.price >= 100, e.id);
   assert.equal(defs.itemDef("nope"), null);
   assert.equal(defs.itemDef("ink_splash").kind, "entrance");
@@ -70,7 +75,7 @@ test("config exposes the flag; unauthenticated is 401; flag off reports disabled
 test("buy a pack: pays once, 409 on repeat, 402 when short; balance matches the ledger", async () => {
   const auth = await register(uname("a"));
   const st0 = await state();
-  assert.equal(st0.packs.length, 2);
+  assert.equal(st0.packs.length, 6);
   assert.equal(st0.packs[0].owned, false);
   assert.equal(st0.packs[0].affordable, true);
   const price = st0.packs[0].price;

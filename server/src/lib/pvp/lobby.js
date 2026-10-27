@@ -1,5 +1,6 @@
 import { config } from "../config.js";
 import { medalProp } from "../coinBoard.js";
+import { titleProp } from "../titleProp.js";
 import { frameProp } from "../frameProp.js";
 import { entranceProp } from "../cosmeticProp.js";
 import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
@@ -74,6 +75,7 @@ export function publicPlayerCard(db, userId) {
     avatarUrl: avatarUrl(user),
     ...frameProp(user.avatar_frame),
     ...medalProp(user.id),
+    ...titleProp(user.id),
     ...entranceProp(user.pvp_entrance),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
@@ -102,6 +104,7 @@ function entryFor(db, userId, busy) {
     avatarUrl: avatarUrl(user),
     ...frameProp(user.avatar_frame),
     ...medalProp(user.id),
+    ...titleProp(user.id),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
     titleName: title.name,
@@ -166,6 +169,7 @@ function selfProfile(db, userId) {
     avatarUrl: avatarUrl(user),
     ...frameProp(user.avatar_frame),
     ...medalProp(user.id),
+    ...titleProp(user.id),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.name,
     iconPath: title.iconPath,
@@ -193,6 +197,7 @@ function challengeCard(db, row, viewerId) {
     avatarUrl: avatarUrl(other),
     ...frameProp(other?.avatar_frame),
     ...medalProp(other?.id),
+    ...titleProp(other?.id),
     expiresAt: row.expires_at,
   };
 }

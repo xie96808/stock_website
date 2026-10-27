@@ -5,6 +5,7 @@
 import { api, getAuthState, displayAvatarUrl, selectIsAuthenticated } from './auth.js';
 import { openCtlSheet, closeCtlSheet } from './controls.js';
 import { wrapAvatarHtml } from './avatar-frame-pure.js';
+import { titleChipHtml } from './title-pure.js';
 import { BOARD_TABS, boardNote, formatBoardValue, meLine } from './coin-board-pure.js';
 
 let overlay = null;
@@ -88,7 +89,7 @@ function rowHtml(e) {
   return `<li class="coin-board-row">
     <span class="coin-board-rank">${e.rank}</span>
     <span class="coin-board-av-wrap">${wrapAvatarHtml(img, e.avatarFrame, e.avatarMedal)}</span>
-    <span class="coin-board-name">${esc(e.nickname)}</span>
+    <span class="coin-board-name">${esc(e.nickname)}${titleChipHtml(e.shopTitle)}</span>
     <span class="coin-board-val${cls}">${esc(formatBoardValue(board, e.value))}</span>
   </li>`;
 }

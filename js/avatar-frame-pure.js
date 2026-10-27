@@ -9,17 +9,21 @@
  * Geometry: every drawing uses viewBox "-10 -10 120 120" — the avatar is the circle of radius 50 at (50,50), the ring
  * art sits at radius ~50–58 and (via .avf-art being 120% of the avatar) may spill a little outside it.
  *
- * Motion lives in css/avatar-frame.css (classes `avf-sway`, `avf-sheen`, `avf-twinkle`, `avf-pulse`); every moving part
- * is a `<g>` with one of those classes, and `prefers-reduced-motion` switches them all off.
+ * Motion lives in css/avatar-frame.css (classes `avf-sway`, `avf-sheen`, `avf-twinkle`, `avf-pulse`, `avf-breathe`, `avf-flap`);
+ * every moving part is a `<g>` with one of those classes, and `prefers-reduced-motion` switches them all off.
+ * The two premium frames (kline 1000, phoenix 2000) also get a light sweep that is pure CSS (a rotating conic-gradient on
+ * the wrapper's ::after in css/avatar-frame.css) — the one thing flat SVG cannot do without gradient ids.
  */
-export const FRAME_IDS = Object.freeze(["jiu_huang", "ink_ring", "bamboo", "cinnabar", "gold", "laurel", "crown"]);
+export const FRAME_IDS = Object.freeze(["jiu_huang", "ink_ring", "bamboo", "cinnabar", "kline", "gold", "phoenix", "laurel", "crown"]);
 
 export const FRAME_NAMES = Object.freeze({
   jiu_huang: "韭皇",
   ink_ring: "墨圈",
   bamboo: "青竹",
   cinnabar: "朱砂",
+  kline: "K线环",
   gold: "金边",
+  phoenix: "鎏金凤翼",
   laurel: "月桂",
   crown: "韭王冠",
 });
@@ -298,7 +302,124 @@ function jiuHuang() {
   );
 }
 
-const ART = { jiu_huang: jiuHuang, ink_ring: inkRing, bamboo, cinnabar, gold, laurel, crown };
+
+/* ---- premium ------------------------------------------------------------------------------------------------------- */
+
+/** A four-point sparkle star centred on (0,0), radius r. */
+const starPath = (r) => `M0 ${-r}C${r1(r * 0.12)} ${-r1(r * 0.12)} ${r1(r * 0.12)} ${-r1(r * 0.12)} ${r} 0C${r1(r * 0.12)} ${r1(r * 0.12)} ${r1(r * 0.12)} ${r1(r * 0.12)} 0 ${r}C${-r1(r * 0.12)} ${r1(r * 0.12)} ${-r1(r * 0.12)} ${r1(r * 0.12)} ${-r} 0C${-r1(r * 0.12)} ${-r1(r * 0.12)} ${-r1(r * 0.12)} ${-r1(r * 0.12)} 0 ${-r}Z`;
+
+function sparkle(deg, radius, r, delay, fill = "#fff6d2") {
+  const [x, y] = polar(deg, radius);
+  return (
+    `<g transform="translate(${x} ${y})"><g class="avf-twinkle" style="animation-delay:${delay}s">` +
+    `<path d="${starPath(r)}" fill="${fill}" stroke="#c9a227" stroke-width=".45" stroke-linejoin="round"/></g></g>`
+  );
+}
+
+/**
+ * K线环 (1000) — the avatar sits inside a ring of candlesticks. Red candles are up days, green are down days (A-share
+ * colours); the heights breathe in a slow wave, a gold hairline ring holds them together and a light sweep circles the rim.
+ */
+function kline() {
+  const N = 28;
+  const R = 53.5;
+  // A deterministic "bull run": trend rises clockwise, with noise. [bodyLen, wickUp, wickDown, up?]
+  const seq = [];
+  let v = 0.2;
+  for (let i = 0; i < N; i++) {
+    const noise = Math.sin(i * 2.17) * 0.5 + Math.sin(i * 0.9 + 1) * 0.35;
+    const next = Math.min(1, Math.max(0.05, v + 0.045 + noise * 0.09));
+    const up = next >= v;
+    seq.push({ body: 4 + Math.abs(next - v) * 70 + 2 * Math.abs(Math.sin(i * 1.7)), top: 1.4 + 3.6 * Math.abs(Math.sin(i * 3.1)), bot: 0.8 + 1.8 * Math.abs(Math.cos(i * 2.3)), up, lift: next * 5 });
+    v = next;
+  }
+  let candles = "";
+  for (let i = 0; i < N; i++) {
+    const a = -90 + (360 / N) * i;
+    const c = seq[i];
+    const [x, y] = polar(a, R - 0.4);
+    const body = r1(c.body);
+    const fill = c.up ? "#e23a2b" : "#2f9e5b";
+    const hi = c.up ? "#ff9a82" : "#8be0a8";
+    const w = 3.3;
+    const lift = r1(c.lift);
+    candles +=
+      `<g transform="translate(${x} ${y}) rotate(${r1(a + 90)})"><g class="avf-k" style="animation-delay:${r1((i % 14) * 0.2)}s">` +
+      `<path d="M0 ${-lift - body - r1(c.top)}L0 ${r1(c.bot)}" stroke="${INK}" stroke-width="1.05" stroke-linecap="round"/>` +
+      `<path d="M0 ${-lift - body - r1(c.top) + 0.4}L0 ${r1(c.bot) - 0.4}" stroke="#f3e2b0" stroke-width=".4" stroke-linecap="round"/>` +
+      `<rect x="${-w / 2}" y="${-lift - body}" width="${w}" height="${body}" rx=".55" fill="${fill}" stroke="${INK}" stroke-width=".75"/>` +
+      `<path d="M${-w / 2 + 0.75} ${r1(-lift - body + 0.8)}L${-w / 2 + 0.75} ${r1(-lift - 0.8)}" stroke="${hi}" stroke-width=".55" stroke-linecap="round" opacity=".9"/></g></g>`;
+  }
+  return (
+    `<circle cx="50" cy="50" r="52.2" fill="none" stroke="${INK}" stroke-width="4.6"/>` +
+    `<circle cx="50" cy="50" r="52.2" fill="none" stroke="#f0bd2d" stroke-width="2.6"/>` +
+    `<circle cx="50" cy="50" r="51.4" fill="none" stroke="#fff0a8" stroke-width=".7" opacity=".95"/>` +
+    candles +
+    `<g class="avf-sheen"><path d="M${at(-120, 52.2)}A52.2 52.2 0 0 1 ${at(-86, 52.2)}" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".95"/></g>` +
+    sparkle(-90, 63, 3.4, 0, "#fff6d2") + sparkle(35, 62, 2.2, 0.9) + sparkle(155, 62, 2.2, 1.6)
+  );
+}
+
+/** One feather lying along +x from (0,0): body colour, a tip colour over the outer third, centre rib. */
+function feather(L, W, body, rib, tip) {
+  return (
+    `<path d="${leafPath(L, W)}" fill="${body}" stroke="${INK}" stroke-width=".85" stroke-linejoin="round"/>` +
+    `<path d="M${r1(L * 0.68)} 0C${r1(L * 0.76)} ${-r1(W * 0.6)} ${r1(L * 0.9)} ${-r1(W * 0.42)} ${L} 0C${r1(L * 0.9)} ${r1(W * 0.42)} ${r1(L * 0.76)} ${r1(W * 0.6)} ${r1(L * 0.68)} 0Z" fill="${tip}"/>` +
+    `<path d="M${r1(L * 0.1)} 0L${r1(L * 0.86)} 0" stroke="${rib}" stroke-width=".55" stroke-linecap="round"/>` +
+    `<path d="M${r1(L * 0.2)} ${-r1(W * 0.34)}L${r1(L * 0.55)} ${-r1(W * 0.5)}" stroke="#fff" stroke-width=".55" stroke-linecap="round" opacity=".55"/>`
+  );
+}
+
+/** The right-hand wing, drawn for the upper-right of the ring; the left one is this mirrored about x = 50. */
+function wingRight() {
+  const [px, py] = polar(-7, 52.5);
+  // three rows fanned from the shoulder like an open wing: the leading edge reaches up, the long flight feathers sweep
+  // outward and the trailing edge drops away; short bright coverts sit in front.
+  const back = [[-112, 18, 5.4], [-92, 27, 6.4], [-72, 34, 7], [-52, 39, 7.4], [-33, 41, 7.6], [-15, 39, 7.4], [3, 34, 7], [21, 27, 6.2], [38, 20, 5.2]];
+  const mid = [[-102, 14, 4.6], [-82, 20, 5.4], [-62, 25, 5.8], [-42, 29, 6.2], [-23, 30, 6.2], [-5, 28, 5.8], [13, 23, 5.2], [30, 17, 4.4]];
+  const front = [[-92, 10, 3.6], [-72, 13, 4.1], [-52, 16, 4.4], [-33, 17, 4.6], [-14, 16, 4.4], [4, 13, 3.8], [21, 10, 3.2]];
+  const row = (list, body, rib, tip) =>
+    list.map(([rot, L, W]) => `<g transform="translate(${px} ${py}) rotate(${rot})">${feather(L, W, body, rib, tip)}</g>`).join("");
+  return (
+    `<g class="avf-flap" style="transform-origin:${px}px ${py}px">` +
+    row(back, "#d9951a", "#7a4d00", "#cf3a22") +
+    row(mid, "#f2c230", "#9a6a05", "#f0603c") +
+    row(front, "#fff0a0", "#a8730a", "#ffbe4a") +
+    `</g>`
+  );
+}
+
+/** 鎏金凤翼 (2000) — a gilded ring with a pair of feathered wings, a ruby at the crown and stars drifting round it. */
+function phoenix() {
+  const R = 52.4;
+  let beads = "";
+  for (let i = 0; i < 24; i++) {
+    const a = -90 + i * 15 + 7.5;
+    const [x, y] = polar(a, R);
+    beads += `<circle cx="${x}" cy="${y}" r="1.05" fill="#fff6d2" stroke="#8c5b00" stroke-width=".35"/>`;
+  }
+  const [gx, gy] = polar(-90, R + 1);
+  return (
+    `<g class="avf-breathe">` +
+    `<g>${wingRight()}</g>` +
+    `<g transform="translate(100 0) scale(-1 1)">${wingRight()}</g>` +
+    `</g>` +
+    `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${INK}" stroke-width="7"/>` +
+    `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#e3a920" stroke-width="5"/>` +
+    `<circle cx="50" cy="50" r="${R + 1.9}" fill="none" stroke="#a8730a" stroke-width=".9"/>` +
+    `<circle cx="50" cy="50" r="${R - 1.9}" fill="none" stroke="#fff0a8" stroke-width="1.1"/>` +
+    beads +
+    `<g class="avf-sheen"><path d="M${at(-130, R)}A${R} ${R} 0 0 1 ${at(-96, R)}" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" opacity=".95"/></g>` +
+    // ruby crown stone
+    `<g transform="translate(${gx} ${gy})"><g class="avf-twinkle avf-twinkle--slow">` +
+    `<path d="M0-8.2L6 0L0 8.2L-6 0Z" fill="#e5322a" stroke="${INK}" stroke-width="1" stroke-linejoin="round"/>` +
+    `<path d="M0-8.2L0 8.2M-6 0L6 0" stroke="#8f1710" stroke-width=".5" opacity=".7"/>` +
+    `<path d="M-2.4-3.2L0-6" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity=".9"/></g></g>` +
+    sparkle(-52, 66, 3, 0.3) + sparkle(-128, 66, 3, 1.1) + sparkle(32, 61, 2.3, 0.7) + sparkle(148, 61, 2.3, 1.5) + sparkle(90, 62, 2.6, 1.9, "#ffe27a")
+  );
+}
+
+const ART = { jiu_huang: jiuHuang, ink_ring: inkRing, bamboo, cinnabar, kline, gold, phoenix, laurel, crown };
 
 /** The overlay `<svg>` for a frame id, or "" for anything unknown. */
 export function frameSvg(id) {

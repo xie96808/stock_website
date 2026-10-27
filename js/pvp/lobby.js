@@ -9,6 +9,7 @@ import { fillDossier, rankTitleWithIcon } from "./profile-battle.js";
 import { mountBattleCover, setPvpAvatar } from "./bot-art.js";
 import { holdPvpSocket, pvpEnabled, pvpFetch, startPoll, whenAuthReady } from "./transport.js";
 import { loadChunk } from "../chunk-reload.js";
+import { setTitleChip } from "../title-pure.js";
 
 let showing = false;
 let stopPoll = null;
@@ -455,6 +456,7 @@ function renderList(entries, state) {
     const marks = (entry.recent || []).map(outcomeGlyph).join("");
     recent.innerHTML = marks ? `近况 ${marks}` : "暂无近况";
     body.append(name, title, recent);
+    setTitleChip(name, entry.shopTitle);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pvp-btn pvp-btn-primary ctl ctl-challenge";

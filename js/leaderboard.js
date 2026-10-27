@@ -1,5 +1,6 @@
 /** Stage 4: dual-mode + dual-metric public leaderboard (perf: per-panel cache + prefetch) */
 import { wrapAvatarHtml } from "./avatar-frame-pure.js";
+import { titleChipHtml } from "./title-pure.js";
 import { getAuthState, openAuthModal, api } from "./auth.js";
 import { getRewindTickets } from "./rewind-tickets.js";
 import {
@@ -222,7 +223,7 @@ function renderPanel(data) {
       return `<li class="leaderboard-row${survivalBoard ? (row.busted ? " lb-row-bust" : " lb-row-survive") : ""}${extraCls}">
           <span class="lb-rank">#${row.rank}</span>
           ${wrapAvatarHtml(`<img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">`, row.avatarFrame, row.avatarMedal)}
-          <span class="lb-nick"><span class="lb-nick-name">${escapeHtml(row.nickname)}${extraCls ? '<small class="lb-me-tag">我</small>' : ""}${survBadge}</span><small class="lb-stats">${escapeHtml(stats)}</small></span>
+          <span class="lb-nick"><span class="lb-nick-name">${escapeHtml(row.nickname)}${titleChipHtml(row.shopTitle)}${extraCls ? '<small class="lb-me-tag">我</small>' : ""}${survBadge}</span><small class="lb-stats">${escapeHtml(stats)}</small></span>
           <span class="lb-ret ${cls}" title="${escapeHtml(label)}"><small class="lb-ret-label">${escapeHtml(label)}</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>
         </li>`;

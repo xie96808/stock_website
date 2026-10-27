@@ -8,11 +8,12 @@ import { pvpFetch } from "./transport.js";
 import { stickerSvg, isStickerId } from "../sticker-art-pure.js";
 import { playEntranceFx } from "../entrance-fx.js";
 import { cosmeticsState, fetchCosmetics, onCosmeticsChange, openCosmeticShop } from "../cosmetic-shop.js";
-import { ownedStickerIds, lockedPacks, shouldPlayEntrance } from "../cosmetic-pure.js";
+import { ownedPacks, lockedPacks, shouldPlayEntrance } from "../cosmetic-pure.js";
 
 const POP_MS = 3400;
 const popTimers = { me: 0, opp: 0 };
 let sending = false;
+let trayPackId = "";
 let playedFor = "";
 let wired = false;
 let ctx = null;
@@ -31,13 +32,19 @@ export function renderStickerTray() {
   const st = cosmeticsState();
   if (!st) { tray.hidden = true; tray.innerHTML = ""; return; }
   const playing = ctx?.getView?.()?.status === "playing";
-  const owned = ownedStickerIds(st);
+  const owned = ownedPacks(st);
   if (owned.length) {
+    const pack = owned.find((p) => p.id === trayPackId) || owned[0];
+    trayPackId = pack.id;
+    const chips = owned.length > 1
+      ? `<div class="pvp-sticker-packs" role="tablist">${owned.map((p) => `<button type="button" role="tab" class="pvp-sticker-pack${p.id === pack.id ? " is-on" : ""}" data-sticker-pack="${p.id}" aria-selected="${p.id === pack.id}">${p.name}</button>`).join("")}</div>`
+      : "";
     tray.innerHTML =
       `<div class="pvp-sticker-tray-head"><span>表情</span><button type="button" class="pvp-sticker-tray-shop" data-cos-shop>更多表情</button></div>` +
-      `<div class="pvp-sticker-grid">${owned.map((id) => `<button type="button" class="pvp-sticker-btn" data-sticker="${id}" ${playing && !sending ? "" : "disabled"} aria-label="${id}">${stickerSvg(id)}</button>`).join("")}</div>`;
+      chips +
+      `<div class="pvp-sticker-grid">${pack.stickers.map((id) => `<button type="button" class="pvp-sticker-btn" data-sticker="${id}" ${playing && !sending ? "" : "disabled"} aria-label="${id}">${stickerSvg(id)}</button>`).join("")}</div>`;
   } else {
-    const first = lockedPacks(st)[0];
+    const first = [...lockedPacks(st)].sort((a, b) => a.price - b.price)[0];
     const ids = first ? first.stickers.slice(0, 4) : [];
     tray.innerHTML =
       `<div class="pvp-sticker-tray-head"><span>表情包 · 对手能看到</span><button type="button" class="pvp-sticker-tray-shop" data-cos-shop>去解锁</button></div>` +
@@ -142,6 +149,8 @@ export function initRoomCosmetics(c) {
   onCosmeticsChange(() => renderStickerTray());
   $("pvpStickerTray")?.addEventListener("click", (e) => {
     const t = e.target && e.target.closest ? e.target : null;
+    const chip = t && t.closest("[data-sticker-pack]");
+    if (chip) { trayPackId = chip.getAttribute("data-sticker-pack"); renderStickerTray(); return; }
     const st = t && t.closest("[data-sticker]");
     if (st) { sendSticker(st.getAttribute("data-sticker")).catch(() => {}); return; }
     if (t && t.closest("[data-cos-shop]")) openCosmeticShop().catch(() => {});

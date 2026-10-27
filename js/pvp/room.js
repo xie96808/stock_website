@@ -16,6 +16,7 @@ import { setCtlState, shakeError, openCtlOverlay, closeCtlOverlay, syncTradeCtl 
 
 import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 import { rankTitleWithIcon } from "./profile-battle.js";
+import { setTitleChip } from "../title-pure.js";
 import { initRoomCosmetics, renderStickerTray, onStickerEvent, maybePlayEntrance, clearStickerPops, warmRoomCosmetics } from "./cosmetics-ui.js";
 
 function stake(amount) {
@@ -190,7 +191,10 @@ function openOppCard(face) {
     setPvpAvatar(avatar, face, { size: 64 });
     avatar.alt = "";
   }
-  if (name) name.textContent = face.nickname || "对手";
+  if (name) {
+    name.textContent = face.nickname || "对手";
+    setTitleChip(name, face.shopTitle);
+  }
   if (title) {
     title.replaceChildren();
     title.append(rankTitleWithIcon(face.title || face.titleName || "散户一段"));
@@ -236,7 +240,10 @@ function paintSeat(prefix, face, fallback) {
   const img = document.getElementById(`${prefix}Avatar`);
   const name = document.getElementById(`${prefix}Name`);
   const who = face?.nickname || fallback;
-  if (name) name.textContent = who;
+  if (name) {
+    name.textContent = who;
+    setTitleChip(name, face?.shopTitle);
+  }
   if (img) {
     setPvpAvatar(img, face || { avatarId: 1 });
     img.alt = "";
@@ -251,6 +258,7 @@ function paintSeats() {
     avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
     avatarFrame: view?.me?.avatarFrame || auth?.avatarFrame || null,
     avatarMedal: view?.me?.avatarMedal || auth?.avatarMedal || null,
+    shopTitle: view?.me?.shopTitle || auth?.shopTitle || null,
   }, "我");
   paintSeat("pvpSeatOpp", view?.opponent, "对手");
   wireOppAvatarClick();

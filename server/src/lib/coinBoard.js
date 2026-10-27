@@ -12,6 +12,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { challengeNow } from "./dailyChallenge.js";
 import { frameProp } from "./frameProp.js";
+import { titleProp } from "./titleProp.js";
 
 export const TOP_N = 20;
 const CACHE_TTL_MS = Number(process.env.COIN_BOARD_CACHE_TTL_MS || 60_000);
@@ -105,6 +106,7 @@ function publicRow(r, board) {
     avatarId: r.avatar_id,
     avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
     ...frameProp(r.avatar_frame),
+    ...titleProp(r.user_id),
     ...(board === "balance" && r.rank <= MEDALS.length ? { avatarMedal: MEDALS[r.rank - 1] } : {}),
     value: r.value,
   };

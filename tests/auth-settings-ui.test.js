@@ -40,7 +40,9 @@ test("settings entries live in a compact tile grid; save + logout share one row"
   assert.match(authJs, /class="auth-actions"[\s\S]*id="settingsSave"[\s\S]*id="authLogoutBtn"/);
   const panel = authJs.slice(authJs.indexOf('id="authSettingsPanel"'), authJs.indexOf("</div>\n      </div>", authJs.indexOf('id="authSettingsPanel"')));
   assert.equal(/<hr>/.test(panel), false, "no full-width divider rows any more");
-  for (const id of ["settingsFrameBtn", "settingsInviteBtn", "settingsFeedbackBtn"]) {
+  // 头像框 moved to the 韭菜商店 (top bar), so the avatar menu no longer has an entry for it.
+  assert.equal(/settingsFrameBtn/.test(authJs), false);
+  for (const id of ["settingsInviteBtn", "settingsFeedbackBtn"]) {
     assert.match(panel, new RegExp(`class="auth-secondary auth-tile[^"]*"[^>]*id="${id}"`));
   }
   assert.match(authCss, /\.auth-tiles\s*\{[^}]*grid-template-columns/);

@@ -163,6 +163,20 @@ export const config = {
   avatarFramesEnabled:
     process.env.AVATAR_FRAMES_ENABLED === "1" || process.env.AVATAR_FRAMES_ENABLED === "true",
   /**
+   * 称号 (bought with 韭币, worn next to the nickname on boards / PvP). Default OFF.
+   * OFF: /me/titles reports enabled:false, buy/equip are FEATURE_DISABLED, no DTO carries `title`.
+   * Set TITLE_SHOP_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  titleShopEnabled:
+    process.env.TITLE_SHOP_ENABLED === "1" || process.env.TITLE_SHOP_ENABLED === "true",
+  /**
+   * 改名卡: changing a nickname costs one card (300 韭币 each in the 韭菜商店). Default OFF.
+   * OFF: nicknames change for free exactly as before; /me/rename-card reports enabled:false.
+   * Set RENAME_CARD_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  renameCardEnabled:
+    process.env.RENAME_CARD_ENABLED === "1" || process.env.RENAME_CARD_ENABLED === "true",
+  /**
    * 对战装扮 (sticker packs + entrance effects, bought with 韭币). Default OFF.
    * OFF: /me/cosmetics reports enabled:false, buy/equip/sticker sends are FEATURE_DISABLED, no player DTO carries `pvpEntrance`.
    * Set PVP_COSMETICS_ENABLED=1, or flip it in the admin 功能开关.
@@ -284,6 +298,8 @@ export const OVERRIDABLE_KEYS = [
   "achievementsEnabled",
   "avatarFramesEnabled",
   "pvpCosmeticsEnabled",
+  "titleShopEnabled",
+  "renameCardEnabled",
   "gameReviewEnabled",
   "coinStakeEnabled",
   "coinBoardEnabled",

@@ -11,7 +11,9 @@ and no `avatarFrame` property is emitted anywhere (see `frameProp`).
 | `ink_ring` | 墨圈 | 300 韭币，或成就「七日成瘾」(连续登录 3 个 7 天周期) 免费解锁 |
 | `bamboo` | 青竹 | 500 韭币 |
 | `cinnabar` | 朱砂 | 800 韭币 |
+| `kline` | K线环 | 1000 韭币（精品，动态） |
 | `gold` | 金边 | 1500 韭币 |
+| `phoenix` | 鎏金凤翼 | 2000 韭币（镇店，动态） |
 | `laurel` | 月桂 | 仅成就 (单局收益 ≥ 50%) |
 | `crown` | 韭王冠 | 仅成就 (累计 200 局) |
 
