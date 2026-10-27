@@ -169,6 +169,7 @@ export function gamesConfigPayload() {
       achievements: !!config.achievementsEnabled,
       avatarFrames: !!config.avatarFramesEnabled,
       pvpCosmetics: !!config.pvpCosmeticsEnabled,
+      gameReview: !!config.gameReviewEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,

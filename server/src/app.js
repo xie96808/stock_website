@@ -26,6 +26,7 @@ import inviteRoutes from "./routes/invite.js";
 import achievementRoutes from "./routes/achievements.js";
 import frameRoutes from "./routes/frames.js";
 import cosmeticRoutes from "./routes/cosmetics.js";
+import gameReviewRoutes from "./routes/gameReview.js";
 import "./lib/wheelItems.js"; // registers the wheel item granter (后悔券 prizes)
 import { openDb } from "./db/connection.js";
 import { pvpRecoveryError, runBootRecovery } from "./lib/pvp/recovery.js";
@@ -113,7 +114,7 @@ export function createApp({ skipMigrate = false, skipStatic = false } = {}) {
       return requireCsrf(req, res, next);
     }
     next();
-  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, pvpRoutes, luckyWheelRoutes, itemsRoutes, activityRoutes, streakRoutes, inviteRoutes, achievementRoutes, frameRoutes, cosmeticRoutes, adminRoutes);
+  }, authRoutes, gamesRoutes, leaderboardRoutes, announcementsRoutes, quizRoutes, dailyChallengeRoutes, puzzleRoutes, feedbackRoutes, pvpRoutes, luckyWheelRoutes, itemsRoutes, activityRoutes, streakRoutes, inviteRoutes, achievementRoutes, frameRoutes, cosmeticRoutes, gameReviewRoutes, adminRoutes);
 
   app.use("/api", (req, res) => fail(res, 404, "NOT_FOUND", "接口不存在"));
 
