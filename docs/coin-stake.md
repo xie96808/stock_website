@@ -44,7 +44,7 @@ Because payouts are whole coins, a small stake with a small move can round to ze
 Opened by tapping the 韭币余额 chip at the top. `GET /api/v1/leaderboard/coins?board=balance|week`.
 
 * **余额榜** — current balance, top 20.
-* **本周净赚榜** — sum of ledger deltas since Monday 00:00 Asia/Shanghai for: `stake_escrow`, `stake_payout`, `pvp_entry`, `pvp_reward`, `pvp_refund`, `daily_claim`, `wheel_prize`, `streak_claim`, `quiz_daily_reward`. Registration / achievement / admin grants and shop purchases are not counted. Only positive totals are listed.
+* **本周净赚榜** — sum of ledger deltas since Monday 00:00 Asia/Shanghai for: `stake_escrow`, `stake_payout`, `pvp_entry`, `pvp_reward`, `pvp_refund`, `daily_claim`, `lucky_wheel` (coin prizes of the wheel), `streak_claim`, `quiz_daily_reward`. Registration / achievement / admin grants and shop purchases are not counted. Only positive totals are listed.
 * Eligible = active, `role = 'user'`, `is_bot = 0`, `leaderboard_opt_in = 1`. Bots (10,000,000 balance), admins and opted-out players never appear.
 * Public rows carry no user ids. The viewer gets `me` (rank/value, or a `reason`).
 * 60 s in-memory cache (`COIN_BOARD_CACHE_TTL_MS`).

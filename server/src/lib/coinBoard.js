@@ -23,7 +23,7 @@ const WEEK_NET_REASONS = [
   "pvp_reward",
   "pvp_refund",
   "daily_claim",
-  "wheel_prize",
+  "lucky_wheel", // coin prizes of the 幸运转盘 (luckyWheel.js WHEEL_REASON); "wheel_prize" is the item ledger, not coins
   "streak_claim",
   "quiz_daily_reward",
 ];
