@@ -1,7 +1,7 @@
 /** Pure helpers for the 「继续对局」banner (no DOM / network). */
 
 /** Kinds the banner can resume: normal-mode single-player runs + daily challenge. */
-export const RESUMABLE_KINDS = ['classic', 'oneshot', 'survival', 'daily'];
+export const RESUMABLE_KINDS = ['classic', 'oneshot', 'survival', 'daily', 'stake'];
 
 export function isResumableActive(active) {
   if (!active || typeof active !== 'object') return false;
@@ -15,6 +15,7 @@ export function resumeModeLabel(active) {
   if (kind === 'oneshot') return '一把梭';
   if (kind === 'survival') return '生存模式';
   if (kind === 'daily') return '今日挑战';
+  if (kind === 'stake') return '韭币局';
   return '经典练习';
 }
 

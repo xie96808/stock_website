@@ -120,7 +120,7 @@ export function fillDossier(node, profile) {
   avatarBtn.title = "更换头像";
   avatarBtn.setAttribute("aria-label", "更换头像");
   avatarBtn.append(img);
-  applyFrameToImg(img, profile.avatarFrame);
+  applyFrameToImg(img, profile.avatarFrame, profile.avatarMedal);
   avatarBtn.addEventListener("click", () => openAuthModal("settings"));
   const body = document.createElement("div");
   body.className = "pvp-dossier-body";

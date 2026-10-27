@@ -306,11 +306,26 @@ export function frameSvg(id) {
   return `<svg class="avf-art" viewBox="-10 -10 120 120" aria-hidden="true" focusable="false">${ART[id]()}</svg>`;
 }
 
+/** 韭币榜 plaque: top three of the balance board wear one on the avatar's lower edge. */
+export const MEDAL_IDS = Object.freeze(["gold", "silver", "bronze"]);
+export const MEDAL_TEXT = Object.freeze({ gold: "冠", silver: "亚", bronze: "季" });
+export const MEDAL_LABEL = Object.freeze({ gold: "韭币榜冠军", silver: "韭币榜亚军", bronze: "韭币榜季军" });
+
+export function isMedalId(id) {
+  return typeof id === "string" && MEDAL_IDS.includes(id);
+}
+
+/** The plaque element as markup (placed inside an `.avm` wrapper). */
+export function medalPlaqueHtml(medal) {
+  return `<span class="avm-plaque" role="img" aria-label="${MEDAL_LABEL[medal]}">${MEDAL_TEXT[medal]}</span>`;
+}
+
 /**
- * Wrap an avatar `<img …>` string with its frame. Unknown / missing id → the string is returned untouched,
- * so un-framed players render exactly as before.
+ * Wrap an avatar `<img …>` string with its frame (and, for the balance-board top three, a plaque).
+ * Unknown / missing ids → the string is returned untouched, so players without either render exactly as before.
  */
-export function wrapAvatarHtml(imgHtml, frameId) {
-  if (!isFrameId(frameId)) return imgHtml;
-  return `<span class="avf avf--${frameId}">${imgHtml}${frameSvg(frameId)}</span>`;
+export function wrapAvatarHtml(imgHtml, frameId, medal) {
+  const framed = isFrameId(frameId) ? `<span class="avf avf--${frameId}">${imgHtml}${frameSvg(frameId)}</span>` : imgHtml;
+  if (!isMedalId(medal)) return framed;
+  return `<span class="avm avm--${medal}" data-avm="1">${framed}${medalPlaqueHtml(medal)}</span>`;
 }

@@ -262,6 +262,8 @@ function ensureCoinDom() {
     const btn = document.getElementById("jiuCoinDailyBtn");
     if (btn) btn.addEventListener("click", onDailyClaimClick);
     paintWheelEntry(btn);
+    // 韭币榜: the balance chip opens it (only wired when the server flag is on).
+    import("./coin-board.js").then((m) => m.wireCoinBoardEntry()).catch(() => {});
   }
   ensureModals();
   return wrap;

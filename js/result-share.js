@@ -491,6 +491,10 @@ export function openResultLeaderboard() {
         void showDailyChallengeBoard();
         return;
     }
+    if (session?.gameKind === 'stake') {
+        import('./coin-board.js').then((m) => m.showCoinBoard()).catch(() => {});
+        return;
+    }
     const mode = selectShareView().fillMode === 'same_close' ? 'same_close' : 'next_open';
     const kind = session?.gameKind;
     if (kind === 'oneshot' || kind === 'survival') {

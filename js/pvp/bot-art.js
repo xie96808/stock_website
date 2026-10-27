@@ -47,7 +47,7 @@ const failedArt = new Set(); // keys whose art failed once: skip on re-render (n
 
 export function setPvpAvatar(img, person, { size = 48 } = {}) {
   if (!img) return;
-  applyFrameToImg(img, person && person.avatarFrame);
+  applyFrameToImg(img, person && person.avatarFrame, person && person.avatarMedal);
   const fallback = displayAvatarUrl(person || { avatarId: 1 });
   const raw = BOT_ART_READY ? botArtKey(person) : null;
   const key = raw && !failedArt.has(raw) ? raw : null;

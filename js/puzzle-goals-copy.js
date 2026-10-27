@@ -116,6 +116,25 @@ export function formatPlayHudChrome(input = {}) {
   const isOneshot = input.gameKind === 'oneshot';
   const isSurvival = input.gameKind === 'survival';
   const isGhost = input.gameKind === 'ghost';
+  if (input.gameKind === 'stake') {
+    return {
+      isPuzzle: false,
+      isOneshot: false,
+      isSurvival: false,
+      isGhost: false,
+      isStake: true,
+      kind: 'stake',
+      badge: '韭币局',
+      subtitle: input.stakeSubtitle || '',
+      mood: '韭币局 · 赚到的归你，亏的也是你的',
+      dayLead: '第',
+      dayUnit: '天',
+      remainLabel: '',
+      boardKicker: 'STAKE · 韭币局',
+      stageKicker: '韭币局 · K-LINE',
+      stageTitle: '实时走势',
+    };
+  }
   if (isGhost) {
     const ghostName = input.ghostName || '幽灵选手';
     return {

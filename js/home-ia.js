@@ -21,6 +21,7 @@ import {
   setRouteHash,
   parseRouteHash,
 } from "./screen-router.js";
+import { primeStakeFlag } from "./coin-stake.js";
 
 function playModesEl() {
   return document.getElementById("playModes");
@@ -95,6 +96,40 @@ function setPlayModesError(show) {
 function revealClassicMode() {
   const classic = document.getElementById("classicModeCard");
   if (classic) classic.hidden = false;
+  // Without a confirmed config the 韭币局 layout is not applied: classic stays a plain, visible card.
+  const stake = document.getElementById("stakeModeCard");
+  const toggle = document.getElementById("classicFoldToggle");
+  if (stake) stake.hidden = true;
+  if (toggle) toggle.hidden = true;
+}
+
+let classicFoldOpen = false;
+
+/**
+ * 韭币局 is the featured mode: its card leads the list and the old 20-coin 经典练习 folds behind a small
+ * 「传统模式」 toggle. With the feature off nothing changes: classic is the plain card it always was.
+ */
+function applyStakeLayout(on) {
+  const stake = document.getElementById("stakeModeCard");
+  const toggle = document.getElementById("classicFoldToggle");
+  const classic = document.getElementById("classicModeCard");
+  if (stake) stake.hidden = !on;
+  if (toggle) {
+    toggle.hidden = !on;
+    toggle.setAttribute("aria-expanded", on && classicFoldOpen ? "true" : "false");
+    toggle.classList.toggle("is-open", on && classicFoldOpen);
+  }
+  if (classic) classic.hidden = on && !classicFoldOpen;
+}
+
+function bindClassicFold() {
+  const toggle = document.getElementById("classicFoldToggle");
+  if (!toggle || toggle.dataset.bound === "1") return;
+  toggle.dataset.bound = "1";
+  toggle.addEventListener("click", () => {
+    classicFoldOpen = !classicFoldOpen;
+    applyStakeLayout(true);
+  });
 }
 
 async function refreshPlayModesFlags() {
@@ -127,6 +162,10 @@ async function refreshPlayModesFlags() {
 
   setPlayModesLoading(false);
   revealClassicMode();
+  primeStakeFlag(features);
+  import("./coin-board.js").then((m) => { m.primeCoinBoardFlag(features); return m.wireCoinBoardEntry(); }).catch(() => {});
+  bindClassicFold();
+  applyStakeLayout(!!features.coinStake);
 
   // One /config read decides every card, so the list paints once in its final
   // order. Before, 今日挑战 / 一把梭 / 生存 / 残局 popped in one by one over ~5s

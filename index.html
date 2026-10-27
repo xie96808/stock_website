@@ -41,11 +41,13 @@
     <link rel="stylesheet" href="css/achievements.css">
     <link rel="stylesheet" href="css/avatar-frame.css">
     <link rel="stylesheet" href="css/cosmetics.css">
+    <link rel="stylesheet" href="css/coin-stake.css">
     <link rel="stylesheet" href="css/route-replay.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
     <link rel="stylesheet" href="css/controls.css">
+    <link rel="stylesheet" href="css/coin-stake-picker.css">
     <link rel="stylesheet" href="css/controls-p4.css">
     <link rel="stylesheet" href="css/controls-p5.css">
     <link rel="stylesheet" href="css/nav-back.css">
@@ -307,6 +309,18 @@
                                         <span class="cta cta-fill daily-challenge-cta" id="dailyChallengeCardCta">开始</span>
                                     </span>
                                 </div>
+                                <button type="button" class="lane lane--compact stake-mode-lane" id="stakeModeCard" hidden onclick="startStakeGame()">
+                                    <span class="mark stake-mode-mark">注</span>
+                                    <span class="lane-fold" aria-hidden="true"><b>局</b></span>
+                                    <span class="copy">
+                                        <strong>韭币局</strong>
+                                        <p class="lane-note">自选 10–200 韭币 · 赚亏都算你的</p>
+                                    </span>
+                                    <span class="lane-actions">
+                                        <span class="cta cta-fill stake-mode-cta">下注</span>
+                                    </span>
+                                </button>
+                                <button type="button" class="pm-classic-toggle" id="classicFoldToggle" hidden aria-expanded="false" aria-controls="classicModeCard">传统模式 · 固定 20 韭币开局 <span class="pm-classic-caret" aria-hidden="true">▾</span></button>
                                 <button type="button" class="lane lane--compact classic-mode-lane" id="classicModeCard" onclick="startClassicPractice()">
                                     <span class="mark classic-mode-mark">练</span>
                                     <span class="lane-fold" aria-hidden="true"><b>墨</b></span>
@@ -1092,6 +1106,7 @@
                         <div class="final-return-label">收益率</div>
                         <div class="final-return positive" id="finalReturn">+12.34%</div>
                     </div>
+                    <div class="stake-result" id="stakeResultBox" hidden aria-live="polite"></div>
                     <div class="result-stats-grid">
                         <div class="result-stat">
                             <div class="result-stat__label">总交易次数</div>
@@ -1442,8 +1457,36 @@
             <h2 id="fillModeDialogTitle" class="fill-mode-dialog-title">选择成交方式</h2>
 
             <div id="fillModeChoosePane">
-                <p class="fill-mode-dialog-sub">选定成交方式后开始加载；默认仍是次日开盘</p>
-                <div class="fill-mode-picker" role="radiogroup" aria-label="成交方式">
+                <p class="fill-mode-dialog-sub" id="fillModeSub">选定成交方式后开始加载；默认仍是次日开盘</p>
+                <div class="stake-picker" id="stakePicker" hidden>
+                    <div class="stake-marquee" aria-hidden="true"></div>
+                    <div class="stake-picker-head">
+                        <span class="stake-picker-title">本局下注</span>
+                        <span class="stake-balance" id="stakeBalance" aria-live="polite"></span>
+                    </div>
+                    <div class="stake-amount">
+                        <button type="button" class="stake-step" id="stakeMinus" aria-label="少投 10">−</button>
+                        <label class="stake-machine">
+                            <span class="stake-reels" id="stakeReels" aria-hidden="true"></span>
+                            <span class="stake-unit" aria-hidden="true">韭币</span>
+                            <input type="number" id="stakeInput" inputmode="numeric" min="10" max="200" step="1" value="50" aria-label="投入韭币数量">
+                        </label>
+                        <button type="button" class="stake-step" id="stakePlus" aria-label="多投 10">＋</button>
+                    </div>
+                    <input type="range" class="stake-range" id="stakeRange" min="10" max="200" step="10" value="50" aria-label="投入韭币滑杆">
+                    <div class="stake-presets" id="stakePresets" role="group" aria-label="快捷金额"></div>
+                    <div class="stake-payout" id="stakePayout" aria-live="polite">
+                        <div class="stake-payout-title">预期本金加奖金总和</div>
+                        <div class="stake-payout-rows" id="stakePayoutRows"></div>
+                        <p class="stake-preview" id="stakePreview" hidden></p>
+                    </div>
+                    <ul class="stake-rules" aria-label="规则">
+                        <li>开局不退</li>
+                        <li>最多买入 2 次</li>
+                        <li>中途放弃不退</li>
+                    </ul>
+                </div>
+                <div class="fill-mode-picker" id="fillModePicker" role="radiogroup" aria-label="成交方式">
                     <label class="fill-mode-option">
                         <input type="radio" name="fillMode" value="next_open" checked>
                         <span>
@@ -1459,6 +1502,7 @@
                         </span>
                     </label>
                 </div>
+                <button type="button" class="stake-switch" id="stakeSwitchBtn" hidden onclick="switchStakeClassic()"></button>
                 <p class="fill-mode-dialog-note" id="playModeGuestNote">云端对局每次新建消耗 20<span data-jiu-coin-icon data-size="12"></span>；继续未完成对局不扣费。放弃不退款。</p>
                 <div class="fill-mode-actions">
                     <button type="button" class="fill-mode-btn ghost ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="cancelFillModeModal()"><span class="ctl-label">取消</span></button>

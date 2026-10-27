@@ -427,7 +427,7 @@ function setSettingsAvatar(id, customUrl) {
   if (img) {
     img.src = pendingSettingsObjectUrl || customUrl || zodiacAvatarUrl(id);
     img.alt = AVATAR_LABELS[id] || "avatar";
-    applyFrameToImg(img, authState.user && authState.user.avatarFrame);
+    applyFrameToImg(img, authState.user && authState.user.avatarFrame, authState.user && authState.user.avatarMedal);
   }
 }
 
@@ -644,7 +644,7 @@ function renderAuthChrome() {
     nickEl.textContent = authState.user.nickname;
     img.src = displayAvatarUrl(authState.user);
     img.alt = AVATAR_LABELS[authState.user.avatarId] || "avatar";
-    applyFrameToImg(img, authState.user.avatarFrame);
+    applyFrameToImg(img, authState.user.avatarFrame, authState.user.avatarMedal);
   } else {
     // guest (anonymous | error)
     loginBtn.hidden = false;

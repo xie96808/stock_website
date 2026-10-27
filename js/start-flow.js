@@ -24,6 +24,8 @@ import {
   scheduleDeferredPrefetch,
 } from './pack-store.js';
 import { amountWithCoinHtml } from './jiu-coin.js';
+import { mountStakePicker, getStake, stakeEnabled } from './coin-stake.js';
+import { stakeAffordable } from './coin-stake-pure.js';
 
 function perfEnabled() {
   try {
@@ -82,7 +84,7 @@ export function attachDeferredStart(startGame, gameState) {
     if (choose) choose.hidden = false;
     if (loading) loading.hidden = true;
     if (conflict) conflict.hidden = true;
-    if (title) title.textContent = '选择成交方式';
+    if (title) title.textContent = pendingGameKind === 'stake' ? '韭币局' : '选择成交方式';
     setProgress(0, '股票资源加载中…');
     const modal = modalEl();
     if (modal) modal.classList.remove('is-loading');
@@ -104,6 +106,7 @@ export function attachDeferredStart(startGame, gameState) {
 
   function kindLabel(kind) {
     if (kind === 'daily') return '今日挑战';
+    if (kind === 'stake') return '韭币局';
     if (kind === 'oneshot') return '一把梭';
     if (kind === 'survival') return '生存模式';
     if (kind === 'puzzle') return '残局';
@@ -138,9 +141,12 @@ export function attachDeferredStart(startGame, gameState) {
         activeKind !== wantKind
           ? ('当前活动局是「' + kindBit + '」，与本次要开的「' + kindLabel(wantKind) + '」不同。继续会回到原局；重新开始会放弃原局再开' + kindLabel(wantKind) + '。')
           : '';
+      // 韭币局: the stake is already escrowed, so "重新开始" costs the player those coins.
+      const stakeWarn = activeKind === 'stake' ? '放弃韭币局后，已投入的韭币不退。' : '';
       detail.textContent =
         ('玩法：' + kindBit + (fillLabel ? ' · ' + fillLabel : '') + stockBit + '。' + draftBit + '。') +
-        (mismatch ? mismatch : '跨设备不保证同步未提交动作。');
+        (mismatch ? mismatch : '跨设备不保证同步未提交动作。') +
+        (stakeWarn ? ' ' + stakeWarn : '');
     }
     const contBtn = document.getElementById('fillModeContinueBtn');
     const restartBtn = document.getElementById('fillModeRestartBtn');
@@ -182,11 +188,35 @@ export function attachDeferredStart(startGame, gameState) {
       '；继续未完成对局不扣费。放弃不退款。';
   }
 
+  // 韭币局 ⇄ 传统模式 (20 韭币) switch inside the start modal: only between those two kinds, only while 韭币局 is live.
+  async function syncStakeSwitch() {
+    const btn = document.getElementById('stakeSwitchBtn');
+    if (!btn) return;
+    const swappable = pendingGameKind === 'stake' || pendingGameKind === 'classic';
+    const on = swappable && (await stakeEnabled());
+    btn.hidden = !on;
+    if (on) {
+      btn.textContent = pendingGameKind === 'stake' ? '传统模式 · 固定 20 韭币开局 ▾' : '← 回到韭币局';
+      btn.classList.toggle('is-back', pendingGameKind !== 'stake');
+    }
+  }
+
+  window.switchStakeClassic = function () {
+    if (locked) return;
+    pendingGameKind = pendingGameKind === 'stake' ? 'classic' : 'stake';
+    showChooseView();
+    syncCreateCostNote();
+    mountStakePicker(pendingGameKind === 'stake');
+    syncStakeSwitch();
+  };
+
   function openModal() {
     const modal = modalEl();
     if (!modal) return;
     showChooseView();
     syncCreateCostNote();
+    mountStakePicker(pendingGameKind === 'stake');
+    syncStakeSwitch();
     openCtlSheet(modal, { focusSelector: 'input[name="fillMode"]:checked' });
     prefetchStocksPack(gameState);
   }
@@ -229,7 +259,7 @@ export function attachDeferredStart(startGame, gameState) {
 
   async function openStartModal(gameKind) {
     pendingGameKind =
-      gameKind === 'oneshot' ? 'oneshot' : gameKind === 'survival' ? 'survival' : 'classic';
+      gameKind === 'oneshot' ? 'oneshot' : gameKind === 'survival' ? 'survival' : gameKind === 'stake' ? 'stake' : 'classic';
     if (locked) return;
     let auth = getAuthState();
     // Avoid "not logged in" during unknown/refreshing bootstrap.
@@ -253,6 +283,12 @@ export function attachDeferredStart(startGame, gameState) {
 
   window.startSurvivalGame = async function () {
     return openStartModal('survival');
+  };
+
+  // 韭币局: falls back to the traditional modal when the feature is off (e.g. a stale shortcut or result button).
+  window.startStakeGame = async function () {
+    if (!(await stakeEnabled())) return openStartModal('classic');
+    return openStartModal('stake');
   };
 
   window.cancelFillModeModal = function () {
@@ -295,6 +331,12 @@ export function attachDeferredStart(startGame, gameState) {
         throw cancelErr;
       }
       const wantCloud = true;
+      const stake = pendingGameKind === 'stake' ? getStake() : null;
+      if (stake != null && !stakeAffordable(stake, auth.user && auth.user.jiuCoinBalance)) {
+        const poor = new Error('韭币不够，请调低投入');
+        poor.code = 'INSUFFICIENT_FUNDS_LOCAL';
+        throw poor;
+      }
 
       const packAlreadyReady = packReady();
       setProgress(packAlreadyReady ? 55 : 8, packAlreadyReady ? '资源已就绪…' : '准备开局…');
@@ -306,6 +348,7 @@ export function attachDeferredStart(startGame, gameState) {
           createHttp: createCloudGame,
           clearDraft: clearCloudGameDraft,
           gameKind: pendingGameKind,
+          stake: stake,
         });
       }
 
@@ -365,6 +408,7 @@ export function attachDeferredStart(startGame, gameState) {
                 createHttp: createCloudGame,
                 clearDraft: clearCloudGameDraft,
                 gameKind: pendingGameKind,
+                stake: stake,
               });
               resumeActions = null;
             }

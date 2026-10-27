@@ -59,12 +59,13 @@ async function apiWithHeaders(path, { method = "GET", body, headers = {} } = {})
 }
 
 /** Create a cloud game for the logged-in user. */
-export async function createCloudGame(fillMode, { gameKind } = {}) {
+export async function createCloudGame(fillMode, { gameKind, stake } = {}) {
   const auth = getAuthState();
   if (!auth.user) throw new Error("未登录，无法创建云端对局");
   const key = newIdempotencyKey();
   const body = { fillMode };
   if (gameKind && gameKind !== "classic") body.gameKind = gameKind;
+  if (gameKind === "stake" && Number.isFinite(stake)) body.stake = stake;
   const { data, status } = await apiWithHeaders("/games", {
     method: "POST",
     body,
@@ -162,6 +163,7 @@ export async function finishCloudGame() {
         }));
       }
       patchSession(sessionPatchFromCloudFinish(data, { isPuzzle }));
+      if (data && data.stake) import("./coin-stake-ui.js").then((m) => m.afterStakeSettled()).catch(() => {});
       import("./achievements.js").then((m) => m.refreshAchievements({ force: true })).catch(() => {});
       if (data && data.inviteReward) {
         import("./invite.js").then((m) => m.onInviteReward(data.inviteReward)).catch(() => {});

@@ -1,0 +1,166 @@
+/* 韭币局: play-modes card, fold toggle, stake picker (start modal), result card, coin board. Paper / ink theme. */
+:root {
+    --mode-stake: #b8322a;
+    --mode-stake-ink: #f3ead8;
+}
+[data-theme="dark"] {
+    --mode-stake: #e0685e;
+    --mode-stake-ink: #1c1212;
+}
+
+/* ── play-modes sheet: featured card ───────────────────────────── */
+.start-screen #playModes .lane.lane--compact.stake-mode-lane {
+    --pm-tint: color-mix(in srgb, var(--mode-stake) 17%, transparent);
+    border-color: color-mix(in srgb, var(--mode-stake) 80%, var(--line));
+}
+.start-screen #playModes .lane.lane--compact.stake-mode-lane > .lane-fold {
+    --fold-bg: var(--mode-stake);
+    --fold-fg: var(--mode-stake-ink);
+}
+.start-screen .stake-mode-mark {
+    border-color: color-mix(in srgb, var(--mode-stake) 70%, var(--line));
+    background: color-mix(in srgb, var(--mode-stake) 16%, transparent);
+    color: color-mix(in srgb, var(--mode-stake) 85%, var(--ink));
+}
+.start-screen .stake-mode-lane[hidden],
+.pm-classic-toggle[hidden] { display: none !important; }
+
+/* small 「传统模式」 fold under the featured card */
+.pm-classic-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    margin: 0.1rem auto 0.1rem;
+    padding: 0.35rem 0.8rem;
+    min-height: 32px;
+    border: 0;
+    background: transparent;
+    color: var(--mute);
+    font: inherit;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.pm-classic-toggle:hover { color: var(--ink-soft); }
+.pm-classic-toggle:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; border-radius: 8px; }
+.pm-classic-caret { display: inline-block; transition: transform 160ms ease; }
+.pm-classic-toggle.is-open .pm-classic-caret { transform: rotate(180deg); }
+
+/* stake picker (slot-machine skin) lives in css/coin-stake-picker.css */
+.stake-switch {
+    display: block;
+    margin: 0 auto 0.5rem;
+    padding: 0.4rem 0.6rem;
+    min-height: 36px;
+    border: 0;
+    background: transparent;
+    color: var(--mute);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+.stake-switch[hidden] { display: none !important; }
+.stake-switch:hover { color: var(--ink-soft); }
+.stake-switch.is-back { color: var(--mode-stake); font-weight: 600; }
+
+/* ── result card ───────────────────────────────────────────────── */
+.stake-result {
+    margin: 0.9rem 0 0.4rem;
+    padding: 0.7rem 0.9rem;
+    border: 1.6px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+}
+.stake-result[hidden] { display: none !important; }
+.stake-result-head { font-weight: 700; font-size: 1rem; margin-bottom: 0.4rem; color: var(--ink); }
+.stake-result-head.is-up { color: var(--gain-color); }   /* red = up in A-shares */
+.stake-result-head.is-down { color: var(--loss-color); }
+.stake-result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.2rem 0;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+}
+.stake-result-row b { font-family: var(--mono); color: var(--ink); }
+.stake-result-row.is-up b { color: var(--gain-color); }
+.stake-result-row.is-down b { color: var(--loss-color); }
+.stake-result-row:last-child { border-top: 1px dashed var(--line); margin-top: 0.2rem; padding-top: 0.4rem; font-weight: 700; }
+.stake-result-wait { margin: 0; font-size: 0.82rem; color: var(--mute); }
+
+/* ── 韭币榜 plaque on avatars (balance-board top three) ─────────── */
+.avm {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    vertical-align: middle;
+    line-height: 0;
+}
+.avm-plaque {
+    --pq-bg: #d9a72a;
+    --pq-fg: #3a2a05;
+    position: absolute;
+    left: 50%;
+    bottom: -4px;
+    transform: translateX(-50%);
+    z-index: 2;
+    min-width: 14px;
+    padding: 2px 3px 1px;
+    border: 1px solid #2b2622;
+    border-radius: 3px 3px 5px 5px;
+    background: var(--pq-bg);
+    color: var(--pq-fg);
+    font: 700 9px/1 var(--kaiti);
+    text-align: center;
+    box-shadow: 0 1px 0 rgba(43, 38, 34, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    pointer-events: none;
+    white-space: nowrap;
+}
+.avm--silver .avm-plaque { --pq-bg: #c9ced4; --pq-fg: #22262b; }
+.avm--bronze .avm-plaque { --pq-bg: #c27b46; --pq-fg: #2a1304; }
+.avm--gold .avm-plaque { --pq-bg: #e2b23a; }
+
+/* ── 韭币榜 sheet ──────────────────────────────────────────────── */
+.coin-board-panel { width: min(440px, 100%); max-height: min(88vh, 720px); display: flex; flex-direction: column; }
+.coin-board-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.coin-board-head h2 { margin: 0; font-size: 1.1rem; }
+.coin-board-close {
+    min-width: 44px; min-height: 44px; border: 0; background: transparent; color: var(--ink);
+    font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.coin-board-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-bottom: 0.6rem; }
+.coin-board-tab {
+    min-height: 40px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--card);
+    color: var(--ink-soft); font: inherit; font-size: 0.9rem; cursor: pointer;
+}
+.coin-board-tab[aria-selected="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+.coin-board-note { margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--mute); line-height: 1.5; }
+.coin-board-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; flex: 1 1 auto; min-height: 120px; }
+.coin-board-row {
+    display: grid; grid-template-columns: 2rem 44px minmax(0, 1fr) auto; gap: 0.6rem; align-items: center;
+    padding: 0.5rem 0.2rem; border-bottom: 1px dashed color-mix(in srgb, var(--line) 35%, transparent);
+}
+.coin-board-rank { font: 700 1rem var(--mono); text-align: center; color: var(--ink-soft); }
+.coin-board-row:nth-child(-n+3) .coin-board-rank { color: var(--mode-stake); }
+.coin-board-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: block; background: var(--paper-2); }
+.coin-board-av-wrap { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
+.coin-board-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.92rem; color: var(--ink); }
+.coin-board-val { font: 700 0.95rem var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+.coin-board-val.is-gain { color: var(--gain-color); }
+.coin-board-me {
+    margin-top: 0.6rem; padding: 0.55rem 0.7rem; border: 1.6px solid var(--line); border-radius: 12px;
+    background: var(--card); font-size: 0.85rem; color: var(--ink-soft);
+}
+.coin-board-me b { color: var(--ink); font-family: var(--mono); }
+.coin-board-empty, .coin-board-error { padding: 1.4rem 0.4rem; text-align: center; color: var(--mute); font-size: 0.85rem; }
+.jiu-coin-balance.is-board-link { cursor: pointer; }
+.jiu-coin-balance.is-board-link:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; border-radius: 8px; }
+
+/* 我的战绩: stake settlement line */
+.my-game-stake { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 0.2rem; font-size: 0.8rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.my-game-stake b { font-family: var(--mono); }
+.my-game-stake b.pos { color: var(--gain-color); }
+.my-game-stake b.neg { color: var(--loss-color); }
