@@ -49,7 +49,7 @@ function ensureModal() {
 
 function cardHtml(f, avatarSrc) {
   const a = actionForBalance(f, state.balance, armedId === f.id);
-  const img = `<img class="frame-avatar" src="${esc(avatarSrc)}" alt="" width="56" height="56">`;
+  const img = `<img class="frame-avatar" src="${esc(avatarSrc)}" alt="" width="68" height="68">`;
   return `<div class="frame-card${f.equipped ? " is-equipped" : ""}${f.owned ? " is-owned" : ""}" data-id="${esc(f.id)}">
     <div class="frame-preview">${wrapAvatarHtml(img, f.id)}</div>
     <div class="frame-name">${esc(f.name)}</div>

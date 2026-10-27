@@ -43,3 +43,35 @@ test("client ids match the server catalogue", () => {
     assert.equal(FRAME_NAMES[m[1]], m[2], `name of ${m[1]}`);
   }
 });
+
+test("art is self-contained: no gradients, filters or ids that could collide between copies", () => {
+  for (const id of FRAME_IDS) {
+    const svg = frameSvg(id);
+    assert.ok(!/<(linearGradient|radialGradient|filter|clipPath|mask|defs)\b/.test(svg), `${id} uses a referenced resource`);
+    assert.ok(!/\sid=|url\(#/.test(svg), `${id} has ids / url refs`);
+  }
+});
+
+test("moving parts opt in through known classes only (so reduced-motion can switch them off)", () => {
+  const css = readFileSync(new URL("../css/avatar-frame.css", import.meta.url), "utf8");
+  const known = new Set(["avf-sheen", "avf-sway", "avf-twinkle", "avf-pulse"]);
+  for (const id of FRAME_IDS) {
+    for (const m of frameSvg(id).matchAll(/class="(avf-[a-z-]+(?: avf-[a-z-]+)*)"/g)) {
+      for (const c of m[1].split(" ")) {
+        if (c === "avf-art" || c === "avf-ink" || c === "avf-ink-halo" || c === "avf-sway--slow") continue;
+        assert.ok(known.has(c), `${id}: unknown class ${c}`);
+      }
+    }
+  }
+  const reduced = css.slice(css.indexOf("prefers-reduced-motion"));
+  for (const c of known) assert.ok(reduced.includes(`.${c}`), `${c} is switched off for reduced motion`);
+});
+
+test("PvP paints the viewer's own frame: seat painters carry avatarFrame", () => {
+  for (const f of ["../js/pvp/room.js", "../js/pvp/result.js"]) {
+    const src = readFileSync(new URL(f, import.meta.url), "utf8");
+    assert.ok(/avatarFrame: view\?\.me\?\.avatarFrame/.test(src), `${f} forwards avatarFrame for me`);
+  }
+  const lobby = readFileSync(new URL("../js/pvp/lobby.js", import.meta.url), "utf8");
+  assert.equal((lobby.match(/avatarFrame: auth\.avatarFrame/g) || []).length, 2);
+});
