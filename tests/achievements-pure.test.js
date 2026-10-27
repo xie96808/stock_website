@@ -22,6 +22,8 @@ test("sections: group order kept, empty groups dropped, claimable first, claimed
   assert.deepEqual(s[0].items.map((i) => i.key), ["a3", "a2", "a1"]);
   assert.equal(s[0].claimed, 1);
   assert.equal(s[0].total, 3);
+  assert.equal(s[0].claimable, 1);
+  assert.equal(s[1].claimable, 0);
   assert.deepEqual(sections(null), []);
   assert.deepEqual(sections({ items, groups: [] }), []);
 });

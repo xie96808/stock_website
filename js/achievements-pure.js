@@ -26,7 +26,14 @@ export function sections(state) {
         .filter(({ it }) => it.group === g.id)
         .sort((a, b) => rank(a.it) - rank(b.it) || a.idx - b.idx)
         .map(({ it }) => it);
-      return { id: g.id, name: g.name, items: list, claimed: list.filter((i) => i.claimed).length, total: list.length };
+      return {
+        id: g.id,
+        name: g.name,
+        items: list,
+        claimed: list.filter((i) => i.claimed).length,
+        claimable: list.filter((i) => i.claimable).length,
+        total: list.length,
+      };
     })
     .filter((s) => s.total > 0);
 }
