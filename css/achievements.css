@@ -136,10 +136,10 @@
 .ach-group-head small + .ach-chev {
   margin-left: auto;
 }
-.ach-group.is-open .ach-chev {
+.ach-group.is-expanded .ach-chev {
   transform: rotate(-135deg) translate(-2px, -2px);
 }
-.ach-group.is-open .ach-group-head {
+.ach-group.is-expanded .ach-group-head {
   border-style: dashed;
 }
 .ach-group-body {
