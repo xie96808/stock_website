@@ -206,6 +206,16 @@ export function noteMatchTaunt(matchId, event) {
   });
 }
 
+/** Immediate sticker push, same shape as the taunt push. */
+export function noteMatchSticker(matchId, event) {
+  if (!matchId || !event) return;
+  const players = openDb().prepare(`SELECT user_id FROM pvp_match_players WHERE match_id = ?`).all(matchId);
+  deliver({
+    userIds: players.map((player) => player.user_id),
+    payload: { t: "match.sticker", matchId, event, serverNow: Date.now() },
+  });
+}
+
 function allowedMessage(msg) {
   if (!msg || typeof msg !== "object" || Array.isArray(msg)) return false;
   const keys = Object.keys(msg);

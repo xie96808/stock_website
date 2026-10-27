@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="css/invite.css">
     <link rel="stylesheet" href="css/achievements.css">
     <link rel="stylesheet" href="css/avatar-frame.css">
+    <link rel="stylesheet" href="css/cosmetics.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -592,6 +593,7 @@
                     <div id="pvpLobbyList"></div>
                     <p id="pvpLobbyEmpty" hidden>现在没有可约战的对手。也可以去玩幽灵对局，或稍后再来。</p>
                     <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpLobbyModes" data-ctl-kind="secondary" data-state="default" hidden><span class="ctl-label">去玩幽灵对局</span></button>
+                    <button type="button" class="pvp-btn ctl ctl-secondary" id="pvpCosmeticsBtn" data-ctl-kind="secondary" data-state="default" data-cosmetic-entry data-cosmetic-open hidden><span class="ctl-label">对战装扮 · 表情与出场特效</span></button>
                     <div id="pvpLobbyMe" class="pvp-dossier" hidden></div>
                     <p id="pvpLobbyBalance" class="pvp-dossier-balance"></p>
                 </div>
@@ -698,6 +700,7 @@
                             <button type="submit" class="pvp-msg-send ctl ctl-secondary" id="pvpMsgSend" data-ctl-kind="secondary" data-state="default" disabled><span class="ctl-label">发送</span></button>
                         </form>
                         <p class="pvp-msg-status" id="pvpMsgStatus" role="status" aria-live="polite"></p>
+                        <div class="pvp-sticker-tray" id="pvpStickerTray" hidden></div>
                     </div>
                     <div class="pvp-taunt-picker" id="pvpTauntPicker" hidden></div>
                     <p id="pvpActionError" role="status"></p>
@@ -1512,6 +1515,7 @@
         import { initInvite } from './js/invite.js';
         import { initAchievements } from './js/achievements.js';
         import { initFrameShop } from './js/frame-shop.js';
+        import { initCosmeticShop } from './js/cosmetic-shop.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1640,6 +1644,7 @@
         try { initInvite(); } catch (e) { console.warn('invite', e); }
         try { initAchievements(); } catch (e) { console.warn('achievements', e); }
         try { initFrameShop(); } catch (e) { console.warn('frame shop', e); }
+        try { initCosmeticShop(); } catch (e) { console.warn('cosmetic shop', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

@@ -162,6 +162,13 @@ export const config = {
    */
   avatarFramesEnabled:
     process.env.AVATAR_FRAMES_ENABLED === "1" || process.env.AVATAR_FRAMES_ENABLED === "true",
+  /**
+   * 对战装扮 (sticker packs + entrance effects, bought with 韭币). Default OFF.
+   * OFF: /me/cosmetics reports enabled:false, buy/equip/sticker sends are FEATURE_DISABLED, no player DTO carries `pvpEntrance`.
+   * Set PVP_COSMETICS_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  pvpCosmeticsEnabled:
+    process.env.PVP_COSMETICS_ENABLED === "1" || process.env.PVP_COSMETICS_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -256,6 +263,7 @@ export const OVERRIDABLE_KEYS = [
   "inviteRewardsEnabled",
   "achievementsEnabled",
   "avatarFramesEnabled",
+  "pvpCosmeticsEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

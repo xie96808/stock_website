@@ -1,0 +1,274 @@
+/* ===== 对战装扮: shop sheet, in-match sticker tray / pop, entrance-effect layer ===== */
+
+/* --- shop sheet --- */
+.cos-dialog .cos-sub {
+  margin: -6px 0 8px;
+  font-size: 0.82rem;
+  color: var(--mute, #7a7066);
+}
+.cos-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 2px 6px;
+}
+.cos-h {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin: 12px 0 8px;
+  font-family: var(--kaiti, serif);
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+}
+.cos-h small {
+  font: 600 0.7rem/1.3 var(--sans, system-ui);
+  letter-spacing: 0;
+  color: var(--mute, #7a7066);
+}
+.cos-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 10px;
+  margin-bottom: 10px;
+  border: 1.5px dashed var(--line, #3a3530);
+  border-radius: 14px;
+  background: var(--paper-2, #efe4cc);
+}
+.cos-card.is-owned,
+.cos-card.is-equipped {
+  border-style: solid;
+}
+.cos-card.is-equipped {
+  border-color: var(--ink, #2a2a2a);
+  background: var(--paper, #fff1c9);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
+}
+.cos-pack-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.cos-name {
+  font-family: var(--kaiti, serif);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.cos-cap {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--mute, #7a7066);
+}
+.cos-minis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.cos-mini svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.cos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.cos-grid .cos-card {
+  margin: 0;
+  align-items: center;
+  text-align: center;
+}
+.cos-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 78px;
+}
+.cos-stage-dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--paper, #fff1c9);
+  border: 2px solid var(--ink, #2a2a2a);
+}
+.cos-btn,
+.cos-try {
+  position: relative;
+  min-width: 96px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--ink, #2a2a2a);
+  background: var(--ink, #2a2a2a);
+  color: var(--paper, #fff1c9);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cos-btn::after,
+.cos-try::after {
+  content: "";
+  position: absolute;
+  inset: -5px -3px;
+}
+.cos-btn:active:not(:disabled),
+.cos-try:active {
+  transform: scale(0.96);
+}
+.cos-try {
+  height: 28px;
+  min-width: 64px;
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+  font-size: 0.76rem;
+}
+.cos-btn:disabled {
+  background: transparent;
+  color: var(--mute, #7a7066);
+  border-style: dashed;
+  border-color: var(--line, #3a3530);
+  cursor: default;
+}
+.cos-btn--equip,
+.cos-btn--unequip {
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+}
+.cos-btn--confirm {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+}
+.cos-card--pack .cos-btn {
+  align-self: flex-end;
+}
+[data-theme="dark"] .cos-btn:not(:disabled):not(.cos-btn--equip):not(.cos-btn--unequip):not(.cos-btn--confirm) {
+  background: var(--paper, #efe6d4);
+  color: var(--ink, #1c1a16);
+}
+[data-theme="dark"] .cos-card.is-equipped {
+  background: var(--paper, #1c1a16);
+}
+
+/* --- in-match sticker tray (inside the message picker) --- */
+.pvp-sticker-tray {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1.5px dashed var(--line, #3a3530);
+}
+.pvp-sticker-tray[hidden] {
+  display: none;
+}
+.pvp-sticker-tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: var(--mute, #7a7066);
+}
+.pvp-sticker-tray-shop {
+  border: 0;
+  background: transparent;
+  color: var(--ink, #2a2a2a);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 6px 2px;
+}
+.pvp-sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.pvp-sticker-btn {
+  padding: 2px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pvp-sticker-btn svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pvp-sticker-btn:active:not(:disabled) {
+  transform: scale(0.93);
+}
+.pvp-sticker-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.pvp-sticker-teaser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pvp-sticker-teaser .pvp-sticker-grid {
+  flex: 1 1 auto;
+  grid-template-columns: repeat(4, 34px);
+  opacity: 0.85;
+}
+
+/* the sticker that pops next to a seat when someone sends one */
+.pvp-sticker-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  width: 68px;
+  height: 68px;
+  z-index: 210;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+.pvp-seat-me .pvp-sticker-pop {
+  left: 0;
+}
+.pvp-seat-opp .pvp-sticker-pop {
+  right: 0;
+}
+.pvp-sticker-pop svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(1px 2px 0 rgba(0, 0, 0, 0.25));
+}
+
+/* --- entrance effect layer: a fixed, click-through stage centred on the anchor --- */
+.fx-layer {
+  position: fixed;
+  z-index: 400;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.fx-svg {
+  position: absolute;
+  left: -140px;
+  top: -140px;
+  overflow: visible;
+  pointer-events: none;
+}
+.fx-svg * {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+.fx-svg g,
+.fx-svg circle,
+.fx-svg path {
+  transform-origin: 0 0;
+}

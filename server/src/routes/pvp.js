@@ -10,9 +10,10 @@ import { blockPlayer, fileReport, listBlocks, unblockPlayer } from "../lib/pvp/r
 import { forfeitMatch, lockAction, noteHeartbeat, readMatchView } from "../lib/pvp/match.js";
 import { listIncoming, sendReaction } from "../lib/pvp/reactions.js";
 import { sendTaunt } from "../lib/pvp/taunts.js";
+import { sendSticker } from "../lib/pvp/stickers.js";
 import { isChallengeableTarget } from "../lib/pvp/botUsers.js";
 import { isAvailable, setAvailable, touchPresence } from "../lib/pvp/presence.js";
-import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged, noteMatchTaunt } from "../lib/pvp/realtime.js";
+import { issueWsTicket, noteChallengeChanged, noteLobbyChanged, noteMatchChanged, noteMatchSticker, noteMatchTaunt } from "../lib/pvp/realtime.js";
 import { requireUser } from "../middleware/request.js";
 
 const router = Router();
@@ -323,6 +324,24 @@ router.post("/pvp/matches/:id/taunts", requireUser, (req, res) => {
   });
   if (!result?.ok) return sendDeny(res, result);
   noteMatchTaunt(req.params.id, result.event);
+  return ok(res, result.event, 201);
+});
+
+router.post("/pvp/matches/:id/stickers", requireUser, (req, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  const extra = Object.keys(body).filter((key) => key !== "stickerId");
+  if (extra.length || typeof body.stickerId !== "string") return fail(res, 400, "BAD_PAYLOAD", "包含无法识别的字段");
+  const perUser = consumeRateLimit(`pvp:sticker:u:${req.user.id}`, 12, 60_000);
+  if (!perUser.ok) return rateLimitFail(res, perUser.retryAfterSec, "表情发太快了");
+  const result = sendSticker(openDb(), {
+    matchId: req.params.id,
+    fromUserId: req.user.id,
+    stickerId: body.stickerId,
+    now: Date.now(),
+  });
+  if (!result?.ok) return sendDeny(res, result);
+  noteMatchSticker(req.params.id, result.event);
   return ok(res, result.event, 201);
 });
 
