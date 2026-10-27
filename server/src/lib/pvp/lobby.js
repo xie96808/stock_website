@@ -1,5 +1,6 @@
 import { config } from "../config.js";
 import { frameProp } from "../frameProp.js";
+import { entranceProp } from "../cosmeticProp.js";
 import { getJiuCoinBalance, shanghaiYmd } from "../jiuCoin.js";
 import { roundHalfUp } from "../../../../shared/engine.js";
 import { PVP_RATING_INITIAL, titleForRating } from "../../../../shared/pvpRating.js";
@@ -57,7 +58,7 @@ function recentOutcomes(db, userId) {
 /** Public card for opponent modal / match seat enrichment. */
 export function publicPlayerCard(db, userId) {
   const user = db
-    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, avatar_frame, signature, status FROM users WHERE id = ?`)
+    .prepare(`SELECT id, nickname, avatar_id, avatar_custom_path, avatar_frame, pvp_entrance, signature, status FROM users WHERE id = ?`)
     .get(userId);
   if (!user) return null;
   const rating = db.prepare(`SELECT rating, games, wins, losses, draws FROM pvp_ratings WHERE user_id = ?`).get(userId);
@@ -71,6 +72,7 @@ export function publicPlayerCard(db, userId) {
     avatarId: user.avatar_id || 1,
     avatarUrl: avatarUrl(user),
     ...frameProp(user.avatar_frame),
+    ...entranceProp(user.pvp_entrance),
     signature: user.signature == null ? "" : String(user.signature),
     title: title.inPlacement ? `${title.name} · 定级中` : title.name,
     titleName: title.name,

@@ -16,6 +16,7 @@ import { setCtlState, shakeError, openCtlOverlay, closeCtlOverlay, syncTradeCtl 
 
 import { actionKey, clearActionKeys, holdPvpSocket, pvpFetch, startPoll } from "./transport.js";
 import { rankTitleWithIcon } from "./profile-battle.js";
+import { initRoomCosmetics, renderStickerTray, onStickerEvent, maybePlayEntrance, clearStickerPops, warmRoomCosmetics } from "./cosmetics-ui.js";
 
 function stake(amount) {
   return `<span class="jiu-coin-amt"><span class="jiu-price-num">${amount}</span>${coinIconHtml({ size: 16 })}</span>`;
@@ -321,6 +322,7 @@ export function leavePvpRoom({ deferChart = false } = {}) {
   updateCustomTauntControls();
   showTauntBubble("me", "");
   showTauntBubble("opp", "");
+  clearStickerPops();
   if (deferChart) window.setTimeout(() => destroyChart(), 0);
   else destroyChart();
 }
@@ -732,6 +734,7 @@ function render() {
     const staleReady = document.getElementById("pvpReadyBtn");
     if (staleReady && !readyInFlight && staleReady.dataset.state === "loading") setCtlState(staleReady, "default", { syncImg: false, forceDisabled: false });
     paintTopClocks("playing");
+    maybePlayEntrance();
     setText("pvpRoomHeadline", roundCaption(view));
     paintReturn("pvpMeNav", view.me?.mtmPpm);
     paintReturn("pvpOppNav", view.opponent?.mtmPpm);
@@ -863,6 +866,10 @@ function onSocket(msg) {
     onTauntEvent(msg);
     return;
   }
+  if (msg.t === "match.sticker") {
+    onStickerEvent(msg);
+    return;
+  }
   if (msg.t !== "match.changed") return;
   if (!noteRevision(matchId, msg.revision)) return;
   refresh().catch(() => {});
@@ -974,6 +981,12 @@ async function sendCustomTaunt(presetText = null) {
 function wireRoom() {
   if (wired) return;
   wired = true;
+  initRoomCosmetics({
+    getView: () => view,
+    getMatchId: () => matchId,
+    closePicker: () => closeMsgPicker(),
+    setStatus: (text) => setText("pvpMsgStatus", text),
+  });
   document.getElementById("pvpRoomLeave")?.addEventListener("click", openLeave);
   document.getElementById("pvpLeaveStay")?.addEventListener("click", closeLeave);
   document.getElementById("pvpLeaveLobby")?.addEventListener("click", () => {
@@ -1006,6 +1019,7 @@ function wireRoom() {
     const open = document.getElementById("pvpMsgOpen");
     if (!picker) return;
     const next = picker.hidden;
+    if (next) renderStickerTray();
     picker.hidden = !next;
     open?.setAttribute("aria-expanded", next ? "true" : "false");
   });
@@ -1058,6 +1072,7 @@ export async function showPvpRoom(id, seed) {
   }
   matchId = id;
   customTauntSending = false;
+  warmRoomCosmetics();
   updateCustomTauntControls();
   setText("pvpActionError", "");
   if (seed && noteRevision(id, seed.revision)) {
