@@ -22,6 +22,70 @@
   z-index: 1;
 }
 
+/* 墨圈 is brush ink: dark on paper, light on the dark theme. */
+.avf--ink_ring .avf-ink { color: #2b2622; }
+[data-theme="dark"] .avf--ink_ring .avf-ink { color: #efe6d4; }
+[data-theme="dark"] .avf--ink_ring .avf-ink-halo { stroke: #2b2622; }
+
+/* Motion. Parts opt in with a class on a <g>; transform-box makes the origin px be viewBox units (centre = 50px 50px). */
+.avf-art .avf-sheen {
+  transform-box: view-box;
+  transform-origin: 50px 50px;
+  animation: avf-spin 5.2s linear infinite;
+}
+.avf-art .avf-sway {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: avf-sway 3.6s ease-in-out infinite;
+}
+.avf-art .avf-sway--slow {
+  transform-box: view-box;
+  transform-origin: 50px 0px;
+  animation: avf-bob 4.4s ease-in-out infinite;
+}
+.avf-art .avf-twinkle {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: avf-twinkle 2.4s ease-in-out infinite;
+}
+.avf-art .avf-pulse {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: avf-pulse 4.8s ease-in-out infinite;
+}
+@keyframes avf-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes avf-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(5deg); }
+}
+@keyframes avf-bob {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-1px) scaleY(1.035); }
+}
+@keyframes avf-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.8); }
+}
+@keyframes avf-pulse {
+  0%, 82%, 100% { transform: scale(1); }
+  90% { transform: scale(1.12); }
+}
+/* A little glow for the two precious frames. */
+.avf--gold .avf-art,
+.avf--crown .avf-art {
+  filter: drop-shadow(0 0 2.5px rgba(255, 196, 56, 0.55));
+}
+@media (prefers-reduced-motion: reduce) {
+  .avf-art .avf-sheen,
+  .avf-art .avf-sway,
+  .avf-art .avf-twinkle,
+  .avf-art .avf-pulse {
+    animation: none;
+  }
+}
+
 /* ===== 头像框商店 sheet ===== */
 .frame-dialog .frame-sub {
   margin: -6px 0 10px;
@@ -57,7 +121,7 @@
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
 }
 .frame-preview {
-  padding: 10px 0 8px;
+  padding: 16px 0 12px;
 }
 .frame-avatar {
   display: block;

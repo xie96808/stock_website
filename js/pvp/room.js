@@ -248,6 +248,7 @@ function paintSeats() {
     nickname: view?.me?.nickname || auth?.nickname,
     avatarId: view?.me?.avatarId || auth?.avatarId || 1,
     avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
+    avatarFrame: view?.me?.avatarFrame || auth?.avatarFrame || null,
   }, "我");
   paintSeat("pvpSeatOpp", view?.opponent, "对手");
   wireOppAvatarClick();

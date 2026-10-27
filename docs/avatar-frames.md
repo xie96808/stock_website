@@ -31,6 +31,23 @@ Owned = shop purchases ∪ achievement unlocks (`getAchievementUnlocks`). Achiev
 daily challenge, weekly puzzle, PvP lobby / battle view. Ghost-duel identities intentionally have none.
 Client wraps `<img>` avatars with `wrapAvatarHtml` / `applyFrameToImg` (`js/avatar-frame*.js`); the frame is pure inline SVG.
 
+## Art (v2)
+Woodblock-print style, all code-drawn SVG in `js/avatar-frame-pure.js`: flat colour + thin ink outline + one highlight.
+No gradients / filters / ids (nothing collides when a frame appears many times, a hidden copy cannot break a visible one).
+- 墨圈 — one brush stroke (圆相) with dry-brush streaks, ink drops and a red 韭 seal; ink flips to light in the dark theme
+- 青竹 — jointed bamboo stalk with two swaying sprigs
+- 朱砂 — vermilion ring, 祥云 scrolls, glowing beads, 韭 chop
+- 金边 — gilded band, beads, four crest diamonds, a highlight that travels round the ring
+- 月桂 — two-branch wreath with berries and a red ribbon
+- 韭王冠 — crown made of five leek blades on a gold band with a ruby
+Motion is opt-in per `<g>` (`avf-sheen / avf-sway / avf-twinkle / avf-pulse`) and switched off by `prefers-reduced-motion`.
+
+## PvP
+Seats, ready panel, invite card, lobby list/dossier and the result screens all go through `setPvpAvatar` / `applyFrameToImg`.
+The viewer's own seat is painted from `view.me` + the auth user, so those painters must forward `avatarFrame`
+(`js/pvp/room.js`, `js/pvp/result.js`, `js/pvp/lobby.js`; a test guards it). Ghost-duel identities and bots have none.
+Not yet drawn: the PvP "save share image" poster (html2canvas).
+
 ## Client
 资料设置 → 头像框 (`#settingsFrameBtn`) opens a sheet reusing the announcements dialog shell.
 Buying is two taps: the first arms a "确认 -N" button for 3.5s, the second pays.
