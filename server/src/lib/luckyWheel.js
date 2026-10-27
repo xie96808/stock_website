@@ -101,16 +101,6 @@ export function spinCapCoins(sectors) {
   return coins.length ? Math.min(...coins) : SPIN_CAP_SUBSTITUTE_COINS;
 }
 
-/** 后悔券 already won from the wheel on this Asia/Shanghai day (for rewindTicketDailyCap). */
-export function ticketsWonOn(db, userId, ymd) {
-  return db
-    .prepare(
-      `SELECT COALESCE(SUM(prize_qty), 0) AS q FROM lucky_wheel_spins
-       WHERE user_id = ? AND spin_date = ? AND prize_kind = 'item' AND prize_item = 'rewind_ticket'`
-    )
-    .get(userId, ymd).q;
-}
-
 /* ------------------------------------------------------------------ config math / validation */
 
 export function coinTier(amount) {
@@ -626,9 +616,7 @@ export function spinWheel(userId, { idemKey, rng = defaultRng, now = challengeNo
         let granted = null;
         if (!itemsAvailable()) subReason = "items_unavailable";
         else if (!rewindOk) subReason = "rewind_disabled";
-        else if (sector.item === "rewind_ticket" && ticketsWonOn(db, userId, ymd) + sector.qty > config.rewindTicketDailyCap) {
-          subReason = "ticket_daily_cap";
-        } else {
+        else {
           granted = itemGranter(db, { userId, item: sector.item, qty: sector.qty, spinId });
           if (granted?.overflow) subReason = granted.reason || "ticket_hold_cap";
         }

@@ -97,4 +97,4 @@ VPS 部署；强制打开 EVENT_PROTOCOL；虚构「原路线最终收益」复�
 - 无券 → `409 NO_TICKET`（局不变，不自动改扣韭币）。每局仍只能反悔一次（韭币或券二选一，共用 `undo_count` 守卫）。同幂等键换 `payWith` → `409 IDEMPOTENCY_CONFLICT`。
 - 响应（仅券路径）多 `paidWith:'ticket'`、`ticketsLeft`、`rewindVia:'ticket'`；状态 / 结果 DTO 仅在 `rewind_via` 非空时带 `rewindVia`（本人可见）。
 - `game_sessions.rewind_via`（迁移 028）只是审计事实；**任何榜单 / 统计 SQL 都不读它**（测试 grep 守卫）。
-- 管理：功能开关 `rewindTicketBoard`（clean 默认 / undo，只影响之后的新反悔）、`rewindTicketDailyCap`（每人每日转盘最多得券，默认 4）、`rewindTicketHoldCap`（转盘发券的持有上限，默认 30）；`POST /admin/rewind-tickets/reclassify {to, since?, dryRun, reason}`（二次验证，同时改 `game_sessions` + `game_results`，清榜单缓存，写审计）；`GET /admin/rewind/stats?days=`；`GET/POST /admin/users/:id/items`（发放 / 扣除，不受上限）；战绩详情 `rewindPaidWith`。
+- 管理：功能开关 `rewindTicketBoard`（clean 默认 / undo，只影响之后的新反悔）、（转盘每日得券无上限，2026-10-27 起去掉了每日上限）、`rewindTicketHoldCap`（转盘发券的持有上限，默认 30）；`POST /admin/rewind-tickets/reclassify {to, since?, dryRun, reason}`（二次验证，同时改 `game_sessions` + `game_results`，清榜单缓存，写审计）；`GET /admin/rewind/stats?days=`；`GET/POST /admin/users/:id/items`（发放 / 扣除，不受上限）；战绩详情 `rewindPaidWith`。

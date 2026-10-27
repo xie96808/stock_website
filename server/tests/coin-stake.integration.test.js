@@ -62,7 +62,7 @@ test("config advertises coinStake; invalid stakes rejected before any coin moves
   assert.equal(cfg.json.data.features.coinStake, true);
   const auth = await register(`st${Date.now().toString(36)}`);
   const bal = getJiuCoinBalance(auth.user.id);
-  for (const bad of [undefined, 9, 201, 10.5, "abc", -10, null]) {
+  for (const bad of [undefined, 9, 501, 10.5, "abc", -10, null]) {
     const r = await create(auth, bad);
     assert.equal(r.status, 400, String(bad));
     assert.equal(r.json.error.code, "INVALID_STAKE");

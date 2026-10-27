@@ -70,8 +70,6 @@ test("granter is registered at boot: item sectors save; config not auto-activate
 test("all 8 Table C landings exact; ticket → inventory + /me/items agrees; spin-again re-arms; balances reconcile", async () => {
   const saved = save(W.TABLE_C1);
   assert.ok(saved.ok, JSON.stringify(saved));
-  const oldCap = config.rewindTicketDailyCap;
-  config.rewindTicketDailyCap = 5; // ×2 + ×3 on one day (the default cap 4 is tested separately)
   try {
     const u = await userWithSpins("tc", 20);
     const uid = u.user.id;
@@ -113,31 +111,27 @@ test("all 8 Table C landings exact; ticket → inventory + /me/items agrees; spi
     assert.equal(ledgerSum(uid), getJiuCoinBalance(uid));
     assert.deepEqual(I.reconcileItems(db()), []);
   } finally {
-    config.rewindTicketDailyCap = oldCap;
     restoreA();
   }
 });
 
-test("supply caps: daily ticket cap 4 and hold cap 30 substitute coins (qty×50, substituteReason); admin grants ignore caps", async () => {
+test("no daily limit on wheel tickets; the hold cap 30 still substitutes coins (qty×50, substituteReason); admin grants ignore caps", async () => {
   assert.ok(save(W.TABLE_C1).ok);
   try {
     const u = await userWithSpins("cap", 20);
     const uid = u.user.id;
     const x3 = rollFor(W.TABLE_C1, 6);
     const x2 = rollFor(W.TABLE_C1, 1);
-    const a = W.spinWheel(uid, { idemKey: `idemkey-cap-${uid}-1`, rng: () => x3 });
-    assert.equal(a.data.prize.kind, "item"); // 3 won today
-    const b = W.spinWheel(uid, { idemKey: `idemkey-cap-${uid}-2`, rng: () => x2 }); // 3+2 > 4
-    assert.equal(b.data.prize.kind, "jiu_coin");
-    assert.equal(b.data.prize.amount, 100);
-    assert.equal(b.data.prize.substituted, true);
-    assert.equal(b.data.prize.substituteReason, "ticket_daily_cap");
-    assert.equal(b.data.prize.drawnKind, "item");
-    assert.equal(b.data.sector, 1, "still lands on the drawn sector");
-    assert.equal(tickets(uid), 3);
+    // Lucky day: ×3, ×2, ×3 in a row (8 tickets) — none is turned into coins any more.
+    for (const [i, roll] of [x3, x2, x3].entries()) {
+      const r = W.spinWheel(uid, { idemKey: `idemkey-cap-${uid}-${i + 1}`, rng: () => roll });
+      assert.equal(r.data.prize.kind, "item", `spin ${i + 1}`);
+      assert.equal(r.data.prize.substituted, false);
+    }
+    assert.equal(tickets(uid), 8);
     const rep = W.spinWheel(uid, { idemKey: `idemkey-cap-${uid}-2`, rng: () => 0 });
     assert.equal(rep.data.replayed, true);
-    assert.equal(rep.data.prize.substituteReason, "ticket_daily_cap");
+    assert.equal(rep.data.prize.kind, "item");
 
     const h = await userWithSpins("hold", 5);
     const adj = I.adminAdjustItems({ actorId: null, userId: h.user.id, delta: 29, reason: "测试持有上限" });
@@ -207,8 +201,6 @@ test("exhaustive roll map: every roll 0..9999 maps to its sector, frequencies ==
 
 test("2000 seeded spins on Table C1: realized per-draw value within 3% of configured; ledgers reconcile", async () => {
   assert.ok(save(W.TABLE_C1).ok);
-  const oldCap = config.rewindTicketDailyCap;
-  config.rewindTicketDailyCap = 20;
   try {
     let x = 0x9e3779b9;
     const rng = (m) => {
@@ -236,7 +228,6 @@ test("2000 seeded spins on Table C1: realized per-draw value within 3% of config
     for (const uid of users.slice(0, 50)) assert.equal(ledgerSum(uid), getJiuCoinBalance(uid));
     assert.deepEqual(I.reconcileItems(db()), []);
   } finally {
-    config.rewindTicketDailyCap = oldCap;
     restoreA();
   }
 });

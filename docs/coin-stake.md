@@ -9,7 +9,7 @@ A classic 30-day game played with the player's own coins instead of the fixed 20
 
 | Rule | Value |
 | --- | --- |
-| Stake | whole coins, 10–200, chosen at create time |
+| Stake | whole coins, 10–500, chosen at create time |
 | Entry fee | none — the stake is escrowed instead |
 | Buys | at most 2 in the whole game (the engine only buys when flat: buy, sell, buy again) |
 | Payout | `stake + profit − fee`; `profit = round(stake × return)` (half away from zero), `fee = floor(10% × profit)` only when `profit > 0` |
@@ -27,14 +27,14 @@ Because payouts are whole coins, a small stake with a small move can round to ze
   `migrate.js` lists the file so foreign keys are off during the rebuild. Verified on a copy of the production database (row count, column list, index list and id set unchanged; `foreign_key_check` / `integrity_check` clean).
 * `server/src/lib/coinStake.js` — `escrowStake` (inside the create TX, `INSUFFICIENT_FUNDS` with `required = stake`), `settleStake` (inside the finish TX of both the legacy and event-v1 paths; the `stake` object is also stored in the idempotent replay response), `forfeitStake`, `stakePublic`.
   An `open` stake whose game ended as `abandoned` / `expired` reads as `forfeited`, so the several expiry code paths don't each have to touch `coin_stakes`.
-* `POST /api/v1/games { gameKind: "stake", stake: 10..200 }`. Errors: `FEATURE_DISABLED` (403), `INVALID_STAKE` (400), `INSUFFICIENT_FUNDS` (402), `STAKE_BUY_LIMIT` (409 on a third buy).
+* `POST /api/v1/games { gameKind: "stake", stake: 10..500 }`. Errors: `FEATURE_DISABLED` (403), `INVALID_STAKE` (400), `INSUFFICIENT_FUNDS` (402), `STAKE_BUY_LIMIT` (409 on a third buy).
 * Game / result payloads gain `stake: { amount, status, [returnPpm, profit, fee, payout, net] }` for stake games only.
 * Ledger reasons: `stake_escrow` (−stake), `stake_payout` (+payout).
 
 ### Client
 
 * `开一局` on the home screen opens the stake picker when the feature is live; the start modal has a small「传统模式 · 固定 20 韭币开局 ▾」switch (and「← 回到韭币局」back). The play-modes sheet leads with the 韭币局 card and folds 经典练习 behind the same small toggle.
-* The stake picker is a slot-machine cabinet (`css/coin-stake-picker.css`): three digit reels that roll when the amount changes (tap the reels to type a number), − / ＋ gold coins, one row of red chip presets (10 / 50 / 100 / 200), and a 「预期本金加奖金总和」 panel showing the total paid back at +20% / −20%. Only three rules are printed: 开局不退 · 最多买入 2 次 · 中途放弃不退. Reduced-motion users get no spinning / blinking.
+* The stake picker is a slot-machine cabinet (`css/coin-stake-picker.css`): three digit reels that roll when the amount changes (tap the reels to type a number), − / ＋ gold coins, one row of red chip presets (50 / 100 / 200 / 500; − / ＋ and the slider step by 10 from 10), and a 「预期本金加奖金总和」 panel showing the total paid back at +20% / −20%. Only three rules are printed: 开局不退 · 最多买入 2 次 · 中途放弃不退. Reduced-motion users get no spinning / blinking.
 * HUD shows `投入 N · 剩余买入 M 次`; the buy button disables after two buys (mirrors the server).
 * Result screen shows 投入 / 盈亏 / 对局费 / 到账, and the top balance refreshes.
 * A stake game in progress is resumable from the home banner (the coins are at stake).
