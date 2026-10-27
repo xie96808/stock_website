@@ -30,6 +30,6 @@ test("card markers other modules and tests rely on are untouched", () => {
   assert.match(html, /id="oneshotModeCard"[\s\S]*?lane-cost-n">30</);
 });
 
-test("puzzle progress copy keeps 星 and its number together when the tile wraps", () => {
-  assert.match(read("../js/puzzle-chapter.js"), /星\\u00a0\$\{summary\.starsEarned\}/);
+test("tiles show only the mode name: the subtitle is hidden in the tile row", () => {
+  assert.match(read("../css/play-modes-sheet.css"), /\.pm-tiles \.lane\.lane--compact \.copy \.lane-note \{ display: none; \}/);
 });
