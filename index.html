@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="css/achievements.css">
     <link rel="stylesheet" href="css/avatar-frame.css">
     <link rel="stylesheet" href="css/cosmetics.css">
+    <link rel="stylesheet" href="css/route-replay.css">
     <link rel="stylesheet" href="css/feedback.css">
     <link rel="stylesheet" href="css/my-games.css">
     <link rel="stylesheet" href="css/leaderboard.css">
@@ -1120,6 +1121,9 @@
             <!-- F02 残局专属复盘（classic BS 在 puzzle 时隐藏） -->
             <div class="puzzle-debrief-host" id="puzzleDebrief" hidden></div>
 
+            <!-- 付费复盘入口（最优路线重演）：默认隐藏，flag 开且已保存的云端局才出现 -->
+            <div class="review-entry" id="reviewEntry" hidden></div>
+
             <!-- BS 报告 -->
             <div class="bs-report" id="bsReport"></div>
 
@@ -1516,6 +1520,7 @@
         import { initAchievements } from './js/achievements.js';
         import { initFrameShop } from './js/frame-shop.js';
         import { initCosmeticShop } from './js/cosmetic-shop.js';
+        import { initRouteReplay } from './js/route-replay.js';
         import { initFeedback } from './js/feedback.js';
         import { initBackHandler } from './js/back-handler.js';
         import { initNavBack } from './js/nav-back.js';
@@ -1645,6 +1650,7 @@
         try { initAchievements(); } catch (e) { console.warn('achievements', e); }
         try { initFrameShop(); } catch (e) { console.warn('frame shop', e); }
         try { initCosmeticShop(); } catch (e) { console.warn('cosmetic shop', e); }
+        try { initRouteReplay(); } catch (e) { console.warn('route replay', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }
         initFeedback();
         initNavBack();

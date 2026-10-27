@@ -18,6 +18,7 @@ import { formatPuzzleDebrief } from './puzzle-debrief-copy.js';
 import { renderStarIcons } from './puzzle-settle-copy.js';
 import { showToast } from './auth.js';
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
+import { hideReviewEntry, refreshReviewEntry } from './route-replay.js';
 import {
     clearShareRankMeta,
     refreshShareRankMeta,
@@ -325,6 +326,7 @@ export function endGame() {
     updateSaveStatusUi();
     clearShareRankMeta();
     updateShareRankHint();
+    hideReviewEntry();
     if (shouldPersistCloudSettle(settled)) {
         // Single settle→persist hook (use-case); HTTP/retry remain in game-sync.
         persistSettledCloudGame({ finishCloud: finishCloudGame }).then(async (res) => {
@@ -375,6 +377,7 @@ export function endGame() {
                 }
             }
             updateSaveStatusUi();
+            if (res && live.gameKind !== 'puzzle') refreshReviewEntry(live.cloudGameId).catch(() => {});
             if (res && live.gameKind !== 'puzzle') await refreshShareRankMeta();
             updateShareRankHint();
             if (!res && live.gameKind !== 'puzzle') notifySaveFailed(live.saveError);

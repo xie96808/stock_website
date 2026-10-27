@@ -169,6 +169,13 @@ export const config = {
    */
   pvpCosmeticsEnabled:
     process.env.PVP_COSMETICS_ENABLED === "1" || process.env.PVP_COSMETICS_ENABLED === "true",
+  /**
+   * 付费复盘 (最优路线重演 + 死拿对照, bought per game with 韭币). Default OFF.
+   * OFF: GET /games/:id/review reports enabled:false, unlock is FEATURE_DISABLED, the result-page card stays hidden.
+   * Set GAME_REVIEW_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  gameReviewEnabled:
+    process.env.GAME_REVIEW_ENABLED === "1" || process.env.GAME_REVIEW_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -264,6 +271,7 @@ export const OVERRIDABLE_KEYS = [
   "achievementsEnabled",
   "avatarFramesEnabled",
   "pvpCosmeticsEnabled",
+  "gameReviewEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

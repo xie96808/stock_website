@@ -283,6 +283,7 @@ export function buildKlineOption(vm) {
         showDataZoomSlider,
         showLegend,
         pvpBottom = null, // 'volume' | 'macd' — battle two-pane indicator toggle
+        extraMarks = [], // game mode only: grey 「我买/我卖」 pins ({ day, price, text }) — 最优路线重演 shows the player's own trades
     } = vm;
 
     const isResult = mode === 'result';
@@ -319,6 +320,21 @@ export function buildKlineOption(vm) {
                 color: trade.type === 'buy' ? '#e05252' : '#3db86a'
             }
         })).filter(p => Number(p.coord[0]) <= bars.length);
+
+    if (!isPvp && !isResult) {
+        for (const m of extraMarks || []) {
+            const idx = historyLength + Number(m.day);
+            if (!(idx >= 1 && idx <= bars.length) || !Number.isFinite(Number(m.price))) continue;
+            markPoints.push({
+                name: m.text,
+                coord: [String(idx), Number(m.price)],
+                value: m.text,
+                symbolSize: 30,
+                itemStyle: { color: 'rgba(110, 102, 90, 0.88)' },
+                label: { color: '#fff', fontSize: 9, fontWeight: 'bold' },
+            });
+        }
+    }
 
     if (valuation) {
         markPoints.push({
