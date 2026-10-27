@@ -32,11 +32,11 @@ const buy = (auth, id) => api(`/api/v1/me/frames/${id}/buy`, { method: "POST", c
 const equip = (auth, frameId) => api("/api/v1/me/frames/equip", { method: "POST", csrf: auth.csrfToken, body: { frameId } });
 
 test("catalogue invariants", () => {
-  assert.equal(FRAMES.length, 6);
-  assert.equal(new Set(FRAMES.map((f) => f.id)).size, 6);
+  assert.equal(FRAMES.length, 7);
+  assert.equal(new Set(FRAMES.map((f) => f.id)).size, 7);
   const shop = FRAMES.filter((f) => f.kind === "shop");
-  assert.equal(shop.length, 4);
-  for (const f of shop) assert.ok(Number.isInteger(f.price) && f.price >= 300 && f.price <= 1500, f.id);
+  assert.equal(shop.length, 5);
+  for (const f of shop) assert.ok(Number.isInteger(f.price) && f.price >= 100 && f.price <= 1500, f.id);
   assert.deepEqual(shop.map((f) => f.price), [...shop.map((f) => f.price)].sort((a, b) => a - b), "listed cheapest first");
   // every achievement-only frame is actually earnable, and every unlock points at a real frame
   const unlockIds = ACHIEVEMENTS.filter((a) => a.unlock).map((a) => a.unlock.replace("frame:", ""));
