@@ -24,6 +24,15 @@ export function gameKindLabel(kind) {
 }
 
 
+/** 战绩列表里的复盘按钮文案：买过 → 重看；没买 → 带价格；不支持的玩法不显示。 */
+export function reviewButtonCopy(review) {
+  if (!review || !review.supported) return null;
+  if (review.owned && review.owned.route) {
+    return { label: review.owned.hold ? "重看复盘 · 含死拿" : "重看复盘", owned: true };
+  }
+  return { label: "复盘 · 30 韭币", owned: false };
+}
+
 function fmtPct(ppm) {
   if (ppm == null) return "—";
   const v = ppm / 10000;
@@ -67,6 +76,20 @@ export async function showMyGames() {
     mountBackBars(screen);
     screen.querySelector("#myGamesRefreshBtn").onclick = () => loadMyGamesPanel();
     screen.querySelector("#myGamesFillMode").onchange = () => loadMyGamesPanel();
+    screen.querySelector("#myGamesList").addEventListener("click", async (ev) => {
+      const btn = ev.target.closest?.("[data-review-game]");
+      if (!btn) return;
+      const gameId = btn.getAttribute("data-review-game");
+      if (!gameId) return;
+      try {
+        const m = await import("./route-replay.js");
+        await m.openReviewReplay(gameId);
+      } catch { /* the replay shows its own toast */ }
+    });
+    // 复盘窗口关闭后（可能刚买了）刷新列表上的状态。
+    document.addEventListener("rr:closed", () => {
+      if (document.getElementById("myGamesScreen")?.classList.contains("active")) loadMyGamesPanel();
+    });
   }
   activateScreen(Route.MY_GAMES);
   await loadMyGamesPanel();
@@ -120,8 +143,12 @@ async function loadMyGamesPanel() {
         listEl.innerHTML = `<p class="my-games-empty">还没有已保存的对局。</p>`;
       } else {
         listEl.innerHTML = items
-          .map(
-            (g) => `<article class="my-game-item">
+          .map((g) => {
+            const rv = reviewButtonCopy(g.review);
+            const rvBtn = rv
+              ? `<button type="button" class="my-game-review ${rv.owned ? "is-owned" : ""}" data-review-game="${escapeHtml(g.gameId || "")}">${escapeHtml(rv.label)}</button>`
+              : "";
+            return `<article class="my-game-item">
               <div class="my-game-main">
                 <strong>${escapeHtml(g.stockName || "")} <span class="code">${escapeHtml(g.stockCode || "")}</span></strong>
                 <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}" title="收益率">${fmtPct(g.returnPpm)}</span>
@@ -129,8 +156,9 @@ async function loadMyGamesPanel() {
               <div class="my-game-meta">
                 <span class="my-game-kind">${escapeHtml(gameKindLabel(g.gameKind))}</span> · ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml(formatShanghaiDateTime(g.finishedAt || g.savedAt) || "—")}
               </div>
-            </article>`
-          )
+              ${rvBtn}
+            </article>`;
+          })
           .join("");
       }
     }

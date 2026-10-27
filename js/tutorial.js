@@ -399,11 +399,10 @@ export function initTutorialUi() {
     const b = document.createElement("button");
     b.type = "button";
     b.id = "tutReplaySettingsBtn";
-    b.className = "auth-secondary ctl ctl-secondary";
-    b.style.marginTop = "8px";
-    b.innerHTML = '<span class="ctl-label">再看新手教程</span>';
+    b.className = "auth-secondary auth-tile ctl ctl-secondary";
+    b.innerHTML = '<span class="ctl-label">新手教程</span>';
     b.addEventListener("click", onReplayTutorialClick);
-    settings.appendChild(b);
+    (document.getElementById("authEntryGrid") || settings).appendChild(b);
   }
 }
 

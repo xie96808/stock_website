@@ -146,7 +146,26 @@ export function hideTopLevelScreens(except = []) {
  * Prepare shell chrome for a top-level route: hide peers + header + start visibility.
  * Does not set hash and does not run feature-specific mount logic.
  */
+export function dismissPlayModesSheet() {
+  // 玩法面板给 <html> 加了锁滚（pm-sheet-open）；从面板里跳到别的页面时必须一并撤掉，
+  // 否则目标页（我的战绩 / 排行榜…）无法滚动。
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.remove("pm-sheet-open");
+  const sheet = document.getElementById("playModes");
+  if (sheet) {
+    sheet.hidden = true;
+    sheet.classList.remove("pm-sheet-open", "is-dragging");
+    sheet.style.transform = "";
+  }
+  const bd = document.getElementById("playModesBackdrop");
+  if (bd) {
+    bd.hidden = true;
+    bd.setAttribute("aria-hidden", "true");
+  }
+}
+
 export function prepareScreen(route) {
+  if (route !== Route.HOME && route !== Route.SIM) dismissPlayModesSheet();
   switch (route) {
     case Route.HOME:
     case Route.SIM:

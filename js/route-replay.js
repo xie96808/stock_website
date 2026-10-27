@@ -97,6 +97,8 @@ export function closeReplay() {
     S = null;
     const o = $('rrOverlay');
     if (o) closeCtlOverlay(o);
+    // 「我的战绩」据此刷新已购状态。
+    try { document.dispatchEvent(new CustomEvent('rr:closed')); } catch { /* ignore */ }
 }
 
 function setBody(html) {

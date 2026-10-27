@@ -34,3 +34,16 @@ test("settings no longer injects 打开对战档案 button", () => {
 test("feedback escape uses capture so auth does not steal it", () => {
   assert.match(feedbackJs, /addEventListener\("keydown",[\s\S]*true\)/);
 });
+
+test("settings entries live in a compact tile grid; save + logout share one row", () => {
+  assert.match(authJs, /id="authEntryGrid"/);
+  assert.match(authJs, /class="auth-actions"[\s\S]*id="settingsSave"[\s\S]*id="authLogoutBtn"/);
+  const panel = authJs.slice(authJs.indexOf('id="authSettingsPanel"'), authJs.indexOf("</div>\n      </div>", authJs.indexOf('id="authSettingsPanel"')));
+  assert.equal(/<hr>/.test(panel), false, "no full-width divider rows any more");
+  for (const id of ["settingsFrameBtn", "settingsInviteBtn", "settingsFeedbackBtn"]) {
+    assert.match(panel, new RegExp(`class="auth-secondary auth-tile[^"]*"[^>]*id="${id}"`));
+  }
+  assert.match(authCss, /\.auth-tiles\s*\{[^}]*grid-template-columns/);
+  // the PvP archive button joins the grid instead of becoming another full-width bar
+  assert.match(profileBattle, /authEntryGrid/);
+});

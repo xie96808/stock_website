@@ -12,6 +12,7 @@ import {
 } from "../lib/games.js";
 import { getGameState, appendDecision } from "../lib/gameProtocol.js";
 import { rewindGame } from "../lib/gameRewind.js";
+import { annotateReviews } from "../lib/gameReview.js";
 import { getDatasetMeta, ensureDatasetLoaded } from "../lib/dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import { config } from "../lib/config.js";
@@ -122,7 +123,7 @@ router.get("/me/games", requireUser, (req, res) => {
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message);
   }
-  return ok(res, result.data, result.status);
+  return ok(res, { ...result.data, items: annotateReviews(req.user.id, result.data.items) }, result.status);
 });
 
 router.get("/me/stats", requireUser, (req, res) => {

@@ -202,7 +202,7 @@ export async function syncPvpProfile() {
     const archive = document.createElement("button");
     archive.type = "button";
     archive.id = "pvpSettingsArchiveBtn";
-    archive.className = "auth-secondary ctl ctl-secondary pvp-settings-archive";
+    archive.className = "auth-secondary auth-tile ctl ctl-secondary pvp-settings-archive";
     archive.dataset.ctlKind = "secondary";
     archive.dataset.state = "default";
     const label = document.createElement("span");
@@ -213,8 +213,11 @@ export async function syncPvpProfile() {
       closeAuthModal();
       showPvpHistory().catch(() => {});
     });
-    section.append(title, rank, archive);
-    panel.insertBefore(section, panel.querySelector("hr") || null);
+    section.append(title, rank);
+    const grid = document.getElementById("authEntryGrid");
+    if (grid) grid.prepend(archive);
+    else section.append(archive);
+    panel.insertBefore(section, grid || panel.querySelector(".auth-actions") || null);
   }
   if (section) section.hidden = !on;
   const archiveBtn = document.getElementById("pvpSettingsArchiveBtn");
