@@ -257,4 +257,3 @@ test("lobby presence, decline, ready reveal, forfeit, and flag-off summary", asy
     closeDb();
   }
 });
-
