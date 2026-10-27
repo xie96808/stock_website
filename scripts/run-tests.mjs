@@ -63,6 +63,7 @@ const runs = [
   ["node", ["--test", "server/tests/pvp/match-http.test.js"]],
   ["node", ["--test", "server/tests/pvp/realtime.test.js"]],
   ["node", ["--test", "server/tests/pvp/lobby.test.js"]],
+  ["node", ["--test", "server/tests/pvp/presence-restart.test.js"]],
   ["node", ["--test", "server/tests/pvp/governance.test.js"]],
 ];
 for (const [cmd, args] of runs) {

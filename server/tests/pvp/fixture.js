@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 export const NOW = Date.parse("2026-10-11T04:00:00.000Z");
 export const CREATED = new Date(NOW - 3 * 24 * 60 * 60 * 1000).toISOString();
 
-export function seedUser(db, { name, balance = 500, createdAt = CREATED, classics = 3 } = {}) {
+export function seedUser(db, { name, balance = 500, createdAt = CREATED, classics = 3, stakes = 0, abandonedStakes = 0 } = {}) {
   const info = db
     .prepare(
       `INSERT INTO users (
@@ -13,16 +13,18 @@ export function seedUser(db, { name, balance = 500, createdAt = CREATED, classic
     .run(name, name, balance, createdAt);
   const id = Number(info.lastInsertRowid);
   if (classics > 0) seedClassics(db, id, classics);
+  if (stakes > 0) seedClassics(db, id, stakes, { kind: "stake" });
+  if (abandonedStakes > 0) seedClassics(db, id, abandonedStakes, { kind: "stake", status: "abandoned", result: false });
   return id;
 }
 
-function seedClassics(db, userId, n) {
+function seedClassics(db, userId, n, { kind = "classic", status = "settled", result = true } = {}) {
   db.prepare(
     `INSERT OR IGNORE INTO datasets (version, file_path, sha256, stock_count)
      VALUES ('pvp-test-ds', 'test', 'abc', 1)`
   ).run();
   for (let i = 0; i < n; i++) {
-    const id = `classic-${userId}-${i}-${crypto.randomUUID()}`;
+    const id = `${kind}-${userId}-${i}-${crypto.randomUUID()}`;
     db.prepare(
       `INSERT INTO game_sessions (
         id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
@@ -32,10 +34,11 @@ function seedClassics(db, userId, n) {
       ) VALUES (
         ?, ?, ?, 'h', 'sim30-mtm-v1', 'pvp-test-ds',
         'next_open', '000001', '测试', 0, 30, 30,
-        30, '{}', 'abc', 'settled', '2026-10-01T00:00:00.000Z', '2026-10-08T00:00:00.000Z',
-        '2026-10-01T00:00:00.000Z', 'classic'
+        30, '{}', 'abc', ?, '2026-10-01T00:00:00.000Z', '2026-10-08T00:00:00.000Z',
+        '2026-10-01T00:00:00.000Z', ?
       )`
-    ).run(id, userId, id);
+    ).run(id, userId, id, status, kind);
+    if (!result) continue;
     db.prepare(
       `INSERT INTO game_results (
         game_id, submission_hash, actions_json, trades_json, return_ppm,

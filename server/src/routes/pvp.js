@@ -170,8 +170,10 @@ router.post("/pvp/matches/:id/cancel-ready", requireUser, (req, res) => {
 router.post("/pvp/heartbeat", requireUser, (req, res) => {
   const now = Date.now();
   noteHeartbeat(req.user.id, now);
-  touchPresence(req.user.id, now);
-  return ok(res, { ok: true });
+  // Presence lives in memory, so an API restart forgets everyone. `presence: false` tells a client that still
+  // wants to be listed to announce itself again (js/pvp/lobby.js does this on the next beat).
+  const presence = touchPresence(req.user.id, now);
+  return ok(res, { ok: true, presence });
 });
 
 router.post("/pvp/shares", requireUser, (req, res) => {

@@ -194,6 +194,36 @@ test("a one-hour-old account can open a challenge, and a short classic history c
   );
 });
 
+test("settled 韭币局 games count toward the 3-practice-games gate (开一局 now starts a stake game)", () => {
+  const veteran = user("vet-stake");
+  // 2 classic + 1 settled stake = 3 practice games → can challenge, and can be challenged.
+  const newbie = user("stake-newbie", { classics: 2, stakes: 1 });
+  assert.equal(
+    createChallenge(db, { fromUserId: newbie, toUserId: veteran, createKey: key("stake-out"), now: NOW }).ok,
+    true
+  );
+  const other = user("vet-stake-2");
+  assert.equal(
+    createChallenge(db, { fromUserId: other, toUserId: newbie, createKey: key("stake-in"), now: NOW }).ok,
+    true
+  );
+  // Only stake games, all settled: still enough.
+  const allStake = user("all-stake", { classics: 0, stakes: 3 });
+  assert.equal(
+    createChallenge(db, { fromUserId: allStake, toUserId: veteran, createKey: key("stake-only"), now: NOW + 1 }).ok,
+    true
+  );
+});
+
+test("abandoned / forfeited 韭币局 games do not count toward the gate", () => {
+  const veteran = user("vet-forfeit");
+  const quitter = user("stake-quitter", { classics: 2, abandonedStakes: 3 });
+  const res = createChallenge(db, { fromUserId: quitter, toUserId: veteran, createKey: key("forfeit"), now: NOW });
+  assert.equal(res.ok, false);
+  assert.equal(res.code, "NOT_ELIGIBLE");
+  assert.match(res.message, /3 局/);
+});
+
 test("expired pending challenges are swept and no longer block outbound", () => {
   const a = user("exp-a");
   const b = user("exp-b");

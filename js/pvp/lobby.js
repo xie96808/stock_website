@@ -16,6 +16,7 @@ let releaseSocket = null;
 let wired = false;
 let presenceWired = false;
 let presenceOn = false;
+let presenceReannouncing = false;
 let stopPresenceBeat = null;
 let presenceChain = Promise.resolve();
 let waitingOutbound = false;
@@ -118,7 +119,18 @@ async function applyPresence(want) {
       presenceOn = true;
     }
     if (!stopPresenceBeat) {
-      const beat = () => pvpFetch("/pvp/heartbeat", { method: "POST", body: {} });
+      const beat = async () => {
+        const res = await pvpFetch("/pvp/heartbeat", { method: "POST", body: {} });
+        // The server forgot us (API restart / presence expired): announce availability again, once per beat.
+        if (res?.data?.presence === false && presenceOn && !presenceReannouncing) {
+          presenceReannouncing = true;
+          try {
+            await pvpFetch("/pvp/lobby/presence", { method: "POST", body: { available: true } });
+          } finally {
+            presenceReannouncing = false;
+          }
+        }
+      };
       beat().catch(() => {});
       stopPresenceBeat = startPoll(beat, 15_000);
     }

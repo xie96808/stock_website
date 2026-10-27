@@ -22,6 +22,10 @@ function denial(code, message, status) {
   return { ok: false, code, message, status };
 }
 
+/**
+ * Practice games that unlock 对战: finished (settled, valid) 经典练习 and 韭币局. 「开一局」 starts a 韭币局 when
+ * that mode is live, so a newbie's first games are stake games; abandoned / forfeited ones never reach 'settled'.
+ */
 export function classicSettledCount(db, userId) {
   const row = db
     .prepare(
@@ -29,7 +33,7 @@ export function classicSettledCount(db, userId) {
        FROM game_results r
        JOIN game_sessions s ON s.id = r.game_id
        WHERE s.user_id = ?
-         AND s.game_kind = 'classic'
+         AND s.game_kind IN ('classic', 'stake')
          AND s.status = 'settled'
          AND r.validity = 'valid'`
     )
@@ -59,7 +63,7 @@ export function assessSelf(db, userId, now, economy = currentEconomy(now)) {
     return denial("NOT_ELIGIBLE", "账号当前不能参加对战", 403);
   }
   if (classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
-    return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);
+    return denial("NOT_ELIGIBLE", "完成至少 3 局练习（经典练习或韭币局）后才能参加对战", 403);
   }
   const balance = getJiuCoinBalance(userId, db);
   if (balance < economy.entryCost) {
@@ -80,7 +84,7 @@ export function assessEntry(db, userIdA, userIdB, now, economy = currentEconomy(
     }
     // Companion bots skip the classic-practice gate; they still need entry balance.
     if (Number(user.is_bot) !== 1 && classicSettledCount(db, userId) < MIN_CLASSIC_GAMES) {
-      return denial("NOT_ELIGIBLE", "完成至少 3 局经典练习后才能参加对战", 403);
+      return denial("NOT_ELIGIBLE", "完成至少 3 局练习（经典练习或韭币局）后才能参加对战", 403);
     }
     if (getJiuCoinBalance(userId, db) < economy.entryCost) {
       return denial("INSUFFICIENT_FUNDS", "韭币不足，无法开始对战", 402);
