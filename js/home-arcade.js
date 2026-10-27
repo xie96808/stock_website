@@ -287,7 +287,7 @@ export function syncHomeGoLabel() {
     sub.hidden = !!resume;
     if (sub.dataset.classicHtml == null) sub.dataset.classicHtml = sub.innerHTML;
     // 韭币局 live: the button's promise changes from "20 coins" to "stake your own".
-    if (stakeEnabledSync()) sub.textContent = "韭币局 · 自选 10–200 韭币";
+    if (stakeEnabledSync()) sub.textContent = "韭币局 · 自选 10–500 韭币";
     else sub.innerHTML = sub.dataset.classicHtml;
   }
   b.setAttribute("aria-label", resume ? "继续对局" : "开一局");

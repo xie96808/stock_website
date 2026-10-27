@@ -67,11 +67,14 @@ test("result card rows: settled win, settled loss, forfeited", () => {
 });
 
 test("affordability helpers", () => {
-  assert.deepEqual(affordablePresets(60), [10, 50]);
+  assert.deepEqual(affordablePresets(60), [50]);
+  assert.deepEqual(affordablePresets(150), [50, 100]);
+  assert.deepEqual(affordablePresets(1000), [50, 100, 200, 500]);
   assert.deepEqual(affordablePresets(3), [10]);
   assert.equal(stakeAffordable(50, 49), false);
   assert.equal(stakeAffordable(50, null), true); // balance unknown → let the server decide
-  assert.equal(clampToBalance(200, 35), 35);
+  assert.equal(clampToBalance(500, 35), 35);
+  assert.equal(clampToBalance(900, 800), 500); // never above the stake cap
   assert.equal(clampToBalance(50, 5), 50); // can't afford the minimum: keep the stake, the button will say 韭币不足
 });
 

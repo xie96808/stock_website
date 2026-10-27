@@ -43,7 +43,7 @@ export function stakePayoutRows(stake) {
   ];
 }
 
-/** Digits shown on the three reels (10–200 → "010"…"200"); `dim` marks the leading zeros. */
+/** Digits shown on the three reels (10–500 → "010"…"500"); `dim` marks the leading zeros. */
 export function reelDigits(stake) {
   const text = String(Math.max(0, Math.min(999, Math.round(Number(stake) || 0)))).padStart(3, '0');
   return text.split('').map((d, i) => ({ digit: Number(d), dim: d === '0' && text.slice(0, i + 1).replace(/0/g, '') === '' && i < 2 }));

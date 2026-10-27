@@ -1,18 +1,18 @@
 /**
  * 韭币局 rules, shared by the server (create / settle) and the client (stake picker / HUD / result copy).
  * The game itself is the classic 30-day simulation; only the money around it differs:
- *   stake   10–200 韭币 (whole coins), escrowed when the game is created
+ *   stake   10–500 韭币 (whole coins), escrowed when the game is created
  *   buys    at most 2 (an opening buy plus one top-up); sells follow the position
  *   payout  stake + profit − fee, where profit = stake × return and fee = 10% of a positive profit
  * Nothing here changes the settlement maths (sim30-mtm-v1): it only turns its return into coins.
  */
 
 export const STAKE_MIN = 10;
-export const STAKE_MAX = 200;
+export const STAKE_MAX = 500;
 export const STAKE_MAX_BUYS = 2;
 export const STAKE_FEE_RATE = 0.1;
-/** Quick picks shown in the stake sheet. */
-export const STAKE_PRESETS = Object.freeze([10, 50, 100, 200]);
+/** Quick picks shown in the stake sheet (the − / ＋ buttons and the slider still move in steps of 10 from STAKE_MIN). */
+export const STAKE_PRESETS = Object.freeze([50, 100, 200, 500]);
 
 export function isValidStake(n) {
   return Number.isInteger(n) && n >= STAKE_MIN && n <= STAKE_MAX;

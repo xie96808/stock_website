@@ -4,9 +4,9 @@ import { stakeSettlement, isValidStake, clampStake, countBuys, checkStakeNextAct
 
 test("stake range", () => {
   assert.ok(isValidStake(STAKE_MIN) && isValidStake(STAKE_MAX));
-  for (const bad of [9, 201, 10.5, "50", NaN, null, undefined]) assert.equal(isValidStake(bad), false);
+  for (const bad of [9, 501, 10.5, "50", NaN, null, undefined]) assert.equal(isValidStake(bad), false);
   assert.equal(clampStake(5), 10);
-  assert.equal(clampStake(999), 200);
+  assert.equal(clampStake(999), 500);
   assert.equal(clampStake("abc"), 10);
 });
 
