@@ -15,6 +15,8 @@ export const GAME_KIND_PUZZLE = 'puzzle';
 export const GAME_KIND_ONESHOT = 'oneshot';
 export const GAME_KIND_SURVIVAL = 'survival';
 export const GAME_KIND_GHOST = 'ghost';
+/** 韭币局: classic rules, but the player stakes their own 韭币 (see shared/stake.js). */
+export const GAME_KIND_STAKE = 'stake';
 export const GAME_KINDS = Object.freeze([
   GAME_KIND_CLASSIC,
   GAME_KIND_DAILY,
@@ -23,6 +25,7 @@ export const GAME_KINDS = Object.freeze([
   GAME_KIND_ONESHOT,
   GAME_KIND_SURVIVAL,
   GAME_KIND_GHOST,
+  GAME_KIND_STAKE,
 ]);
 
 /** Default modifiers JSON for oneshot (TEXT on SQLite). */

@@ -1,4 +1,5 @@
 import { openDb } from "../db/connection.js";
+import { medalProp } from "./coinBoard.js";
 import { ensureDatasetLoaded } from "./dataset.js";
 import { RULE_VERSION, FILL_MODES } from "../../../shared/rules.js";
 import {
@@ -143,6 +144,7 @@ function publicEntry(row, { includeBusted = false } = {}) {
     avatarId: row.avatar_id,
     avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
     ...frameProp(row.avatar_frame),
+    ...medalProp(row.user_id),
     returnPpm: row.return_ppm,
     returnPct: ppmToPct(row.return_ppm),
     finishedAt: row.finished_at,

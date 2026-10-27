@@ -1,4 +1,5 @@
 import { openDb } from "../db/connection.js";
+import { medalProp } from "./coinBoard.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { runUserUnavailableHook, writeUserTombstone } from "./tombstones.js";
 import { grantRegisterBonus } from "./jiuCoin.js";
@@ -15,6 +16,7 @@ export function publicUser(row) {
     avatarId: row.avatar_id,
     avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
     ...frameProp(row.avatar_frame),
+    ...medalProp(row.id),
     ...entranceProp(row.pvp_entrance),
     role: row.role,
     status: row.status,

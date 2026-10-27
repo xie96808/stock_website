@@ -26,7 +26,8 @@ export function migrate(db = openDb()) {
     const rebuildSessions =
       file === "016_oneshot_modifiers.sql"
       || file === "017_ghost_duel.sql"
-      || file === "022_pvp_bots.sql";
+      || file === "022_pvp_bots.sql"
+      || file === "036_coin_stake.sql";
     if (rebuildSessions) db.pragma("foreign_keys = OFF");
     const tx = db.transaction(() => {
       db.exec(sql);

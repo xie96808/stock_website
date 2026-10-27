@@ -29,6 +29,9 @@ import {
 } from "../../../shared/equityCurve.js";
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { resultDto } from "./gameResultDto.js";
+import { settleStake } from "./coinStake.js";
+import { checkStakeNextAction } from "../../../shared/stake.js";
+import { GAME_KIND_STAKE } from "../../../shared/protocol.js";
 import { JIU_COIN_GAME_REWIND_COST } from "./jiuCoin.js";
 
 function hashPayload(obj) {
@@ -368,6 +371,12 @@ export function appendDecision(userId, gameId, body, commandKey) {
           details: lim.details,
         },
       };
+    }
+  }
+  if (row.game_kind === GAME_KIND_STAKE) {
+    const lim = checkStakeNextAction(prevActions, action);
+    if (!lim.ok) {
+      return { error: { status: 409, code: lim.code, message: lim.message, details: lim.details } };
     }
   }
   if (prevActions.length >= DECISION_DAYS) {
@@ -805,6 +814,7 @@ export function finishEventV1(userId, gameId, body, commandKey) {
 
       const sess = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
       const result = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
+      settleStake(db, sess, replay.returnPpm); // 韭币局: pay out inside the settle TX (no-op for other kinds)
       const responseData = resultDto(result, sess);
 
       db.prepare(

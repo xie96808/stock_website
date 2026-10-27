@@ -39,7 +39,7 @@ router.post("/games", requireUser, (req, res) => {
       historyLength: req.body.pick.historyLength,
     };
   }
-  const result = createGame(req.user.id, { fillMode, gameKind: req.body?.gameKind, createKey, pickOpts });
+  const result = createGame(req.user.id, { fillMode, gameKind: req.body?.gameKind, createKey, stake: req.body?.stake, pickOpts });
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
   }
@@ -171,6 +171,8 @@ export function gamesConfigPayload() {
       avatarFrames: !!config.avatarFramesEnabled,
       pvpCosmetics: !!config.pvpCosmeticsEnabled,
       gameReview: !!config.gameReviewEnabled,
+      coinStake: !!config.coinStakeEnabled,
+      coinBoard: !!config.coinBoardEnabled,
       pvpBattle: !!config.pvpBattleEnabled,
       pvpBots: !!(config.pvpBattleEnabled && config.pvpBotsEnabled),
       adminPublic: false,
