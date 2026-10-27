@@ -7,7 +7,7 @@ import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { getJiuCoinBalance, insertJiuCoinLedger } from "./jiuCoin.js";
 
-export const RENAME_CARD_PRICE = 300;
+export const RENAME_CARD_PRICE = 200;
 
 export function renameCardEnabled() {
   return !!config.renameCardEnabled;

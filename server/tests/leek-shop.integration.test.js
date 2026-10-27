@@ -118,7 +118,7 @@ test("a worn title shows on the 韭币榜 rows", async () => {
   assert.ok(!("userId" in mine) && !("id" in mine));
 });
 
-test("改名卡: a rename needs a card; buying one costs 300 and a rename spends it; the trail is logged", async () => {
+test("改名卡: a rename needs a card; buying one costs 200 and a rename spends it; the trail is logged", async () => {
   const auth = await register(uname("r"));
   setBal(auth.user.id, 1000);
   const first = await api("/api/v1/me");
