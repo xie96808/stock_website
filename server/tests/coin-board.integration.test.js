@@ -101,6 +101,12 @@ test("week board: counts play + daily income, ignores grants/purchases/old weeks
   ledger(b.user.id, -50, "stake_escrow"); // net loss → absent
   ledger(c.user.id, -20, "pvp_entry");
   ledger(c.user.id, 35, "pvp_reward"); // +15
+  // Coins won on the wheel count (regression: the board listed "wheel_prize", the real reason is "lucky_wheel").
+  const { WHEEL_REASON } = await import("../src/lib/luckyWheel.js");
+  const d = await register(`wd${s}`);
+  optIn(d.user.id);
+  db.prepare(`DELETE FROM jiu_coin_ledger WHERE user_id = ?`).run(d.user.id);
+  ledger(d.user.id, 300, WHEEL_REASON); // +300 → top of the board
   await as(a);
   const r = await api("/api/v1/leaderboard/coins?board=week");
   assert.equal(r.status, 200, JSON.stringify(r.json));
@@ -108,6 +114,7 @@ test("week board: counts play + daily income, ignores grants/purchases/old weeks
   assert.ok(vals.includes(80) && vals.includes(15));
   assert.ok(!vals.includes(-50) && !vals.includes(9999));
   assert.ok(vals.indexOf(80) < vals.indexOf(15));
+  assert.ok(vals.includes(300), "wheel coin prizes are part of the week net");
   assert.equal(r.json.data.me.value, 80);
   assert.ok(r.json.data.entries.every((x) => !("avatarMedal" in x)), "week board carries no plaques");
   await as(b);
