@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { stakeSettlement, isValidStake, clampStake, countBuys, checkStakeNextAction, checkStakeActionList, STAKE_MIN, STAKE_MAX } from "../shared/stake.js";
+import { stakeSettlement, isValidStake, clampStake, STAKE_MIN, STAKE_MAX } from "../shared/stake.js";
 
 test("stake range", () => {
   assert.ok(isValidStake(STAKE_MIN) && isValidStake(STAKE_MAX));
@@ -23,15 +23,4 @@ test("settlement: fee only on positive profit, payout never negative", () => {
   assert.equal(stakeSettlement(10, 150000).profit, 2); // 1.5 → 2
   assert.equal(stakeSettlement(10, -150000).profit, -2);
   assert.equal(stakeSettlement(10, 150000).fee, 0); // floor(0.2)
-});
-
-test("buy limit: two buys, the third is refused", () => {
-  assert.equal(countBuys(["buy", "hold", { action: "buy" }, "sell"]), 2);
-  assert.equal(checkStakeNextAction(["buy", "sell"], "buy").ok, true);
-  const r = checkStakeNextAction(["buy", "sell", "buy", "sell"], "buy");
-  assert.equal(r.ok, false);
-  assert.equal(r.code, "STAKE_BUY_LIMIT");
-  assert.equal(checkStakeNextAction(["buy", "sell", "buy", "sell"], "hold").ok, true);
-  assert.equal(checkStakeActionList(["buy", "sell", "buy"]).ok, true);
-  assert.equal(checkStakeActionList(["buy", "sell", "buy", "sell", "buy"]).ok, false);
 });

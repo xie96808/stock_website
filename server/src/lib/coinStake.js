@@ -9,7 +9,7 @@
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { getJiuCoinBalance, insertJiuCoinLedger } from "./jiuCoin.js";
-import { isValidStake, stakeSettlement, STAKE_MIN, STAKE_MAX, STAKE_MAX_BUYS, STAKE_FEE_RATE } from "../../../shared/stake.js";
+import { isValidStake, stakeSettlement, STAKE_MIN, STAKE_MAX, STAKE_FEE_RATE } from "../../../shared/stake.js";
 import { GAME_KIND_STAKE } from "../../../shared/protocol.js";
 
 export function coinStakeEnabled() {
@@ -17,7 +17,7 @@ export function coinStakeEnabled() {
 }
 
 export function stakeConfigPayload() {
-  return { min: STAKE_MIN, max: STAKE_MAX, maxBuys: STAKE_MAX_BUYS, feeRate: STAKE_FEE_RATE };
+  return { min: STAKE_MIN, max: STAKE_MAX, feeRate: STAKE_FEE_RATE };
 }
 
 /** Validates the create-time stake. @returns {{ok:true,stake:number}|{error}} */

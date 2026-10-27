@@ -5,7 +5,6 @@ import {
   stakePayoutRows,
   reelDigits,
   stakeHudSubtitle,
-  stakeBuysLeft,
   stakeResultView,
   affordablePresets,
   stakeAffordable,
@@ -30,25 +29,19 @@ test("reel digits: three reels, leading zeros dimmed", () => {
   assert.deepEqual(reelDigits(100).map((r) => r.dim), [false, false, false]);
 });
 
-test("HUD: stake + buys left", () => {
-  assert.equal(stakeHudSubtitle({ amount: 50 }, []), "投入 50 · 剩余买入 2 次");
-  assert.equal(stakeHudSubtitle({ amount: 50 }, ["buy", "hold", "sell"]), "投入 50 · 剩余买入 1 次");
-  assert.equal(stakeBuysLeft(["buy", "sell", "buy"]), 0);
-  const hud = formatPlayHudChrome({ gameKind: "stake", stakeSubtitle: "投入 50 · 剩余买入 2 次" });
+test("HUD: stake amount only, no buy counter", () => {
+  assert.equal(stakeHudSubtitle({ amount: 50 }), "投入 50");
+  assert.equal(stakeHudSubtitle(null), "");
+  const hud = formatPlayHudChrome({ gameKind: "stake", stakeSubtitle: "投入 50" });
   assert.equal(hud.badge, "韭币局");
   assert.equal(hud.isStake, true);
   assert.equal(hud.isOneshot, false);
 });
 
-test("validatePlayAction mirrors the server's two-buy limit", () => {
-  const base = { gameKind: "stake", currentDay: 5, gameDays: 30, position: "empty", actions: ["buy", "hold", "sell", "hold"] };
-  assert.equal(validatePlayAction({ ...base }, "buy").ok, true);
-  const used = { ...base, actions: ["buy", "sell", "buy", "sell"], currentDay: 6 };
-  const r = validatePlayAction(used, "buy");
-  assert.equal(r.ok, false);
-  assert.match(r.errorZh, /最多买入 2 次/);
-  // classic is untouched
-  assert.equal(validatePlayAction({ ...used, gameKind: null }, "buy").ok, true);
+test("validatePlayAction: a stake game has no buy-count limit", () => {
+  const base = { gameKind: "stake", currentDay: 9, gameDays: 30, position: "empty", actions: ["buy", "sell", "buy", "sell", "buy", "sell", "hold", "hold"] };
+  assert.equal(validatePlayAction(base, "buy").ok, true);
+  assert.equal(validatePlayAction({ ...base, gameKind: null }, "buy").ok, true);
 });
 
 test("result card rows: settled win, settled loss, forfeited", () => {

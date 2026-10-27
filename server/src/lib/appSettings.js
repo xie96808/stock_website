@@ -35,7 +35,7 @@ export const SETTINGS_REGISTRY = {
   avatarFramesEnabled: bool("头像框", "feature", "韭币购买 / 成就解锁；已装备的头像框显示在头像旁"),
   pvpCosmeticsEnabled: bool("对战装扮", "feature", "对战表情包与出场特效，韭币购买"),
   gameReviewEnabled: bool("付费复盘", "feature", "结算后花韭币重演最优路线（30）/ 加购死拿对照（10），按局解锁"),
-  coinStakeEnabled: bool("韭币局", "feature", "玩家自选 10–500 韭币开局，最多买入 2 次；到账 = 投入 + 盈亏 − 盈利的 10%；放弃/过期没收"),
+  coinStakeEnabled: bool("韭币局", "feature", "玩家自选 10–500 韭币开局；到账 = 投入 + 盈亏 − 盈利的 10%；放弃/过期没收"),
   coinBoardEnabled: bool("韭币榜", "feature", "余额榜 + 本周净赚榜（前 20，只算真人且开启排行榜的玩家）；余额榜前三头像带金银铜牌"),
   luckyWheelDailyFree: int("转盘每日免费次数", "feature", 1, 5, "Asia/Shanghai 自然日；当日未用不累计"),
   rewindTicketBoard: { type: "enum", label: "后悔券反悔局计入哪个榜", group: "feature", options: ["clean", "undo"], note: "clean=普通榜（默认）；undo=反悔榜。只影响之后的新反悔；已有对局用「重新归类」" },

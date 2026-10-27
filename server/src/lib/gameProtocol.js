@@ -30,7 +30,6 @@ import {
 import { invalidateLeaderboardCache } from "./leaderboard.js";
 import { resultDto } from "./gameResultDto.js";
 import { settleStake } from "./coinStake.js";
-import { checkStakeNextAction } from "../../../shared/stake.js";
 import { GAME_KIND_STAKE } from "../../../shared/protocol.js";
 import { JIU_COIN_GAME_REWIND_COST } from "./jiuCoin.js";
 
@@ -371,12 +370,6 @@ export function appendDecision(userId, gameId, body, commandKey) {
           details: lim.details,
         },
       };
-    }
-  }
-  if (row.game_kind === GAME_KIND_STAKE) {
-    const lim = checkStakeNextAction(prevActions, action);
-    if (!lim.ok) {
-      return { error: { status: 409, code: lim.code, message: lim.message, details: lim.details } };
     }
   }
   if (prevActions.length >= DECISION_DAYS) {

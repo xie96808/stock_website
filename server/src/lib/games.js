@@ -13,7 +13,6 @@ import { survivalModifiersJson } from "../../../shared/survival.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics, challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
 import { checkStakeInput, escrowStake, settleStake, forfeitStake, attachStake, coinStakeEnabled } from "./coinStake.js";
-import { checkStakeActionList } from "../../../shared/stake.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -572,13 +571,6 @@ export function finishGame(userId, gameId, body, commandKey) {
           details: lim.details,
         },
       };
-    }
-  }
-
-  if (row.game_kind === GAME_KIND_STAKE) {
-    const lim = checkStakeActionList(actions);
-    if (!lim.ok) {
-      return { error: { status: 409, code: lim.code, message: lim.message, details: lim.details } };
     }
   }
 
