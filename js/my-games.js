@@ -18,9 +18,19 @@ const GAME_KIND_LABELS = {
   survival: "生存模式",
   daily: "今日挑战",
   puzzle: "残局",
+  stake: "韭币局",
 };
 export function gameKindLabel(kind) {
   return GAME_KIND_LABELS[kind] || GAME_KIND_LABELS.classic;
+}
+
+/** 韭币局 rows: 「投入 100 → 到账 127（+27）」 under the return. Empty for every other game. */
+export function stakeNetChip(stake) {
+  if (!stake || stake.status !== "settled") return "";
+  const net = Number(stake.net) || 0;
+  const cls = net > 0 ? "pos" : net < 0 ? "neg" : "";
+  const sign = net > 0 ? "+" : "";
+  return `<div class="my-game-stake"><span>投入 ${stake.amount} → 到账 ${stake.payout}</span> <b class="${cls}">${sign}${net} 韭币</b></div>`;
 }
 
 
@@ -153,6 +163,7 @@ async function loadMyGamesPanel() {
                 <strong>${escapeHtml(g.stockName || "")} <span class="code">${escapeHtml(g.stockCode || "")}</span></strong>
                 <span class="ret ${g.returnPpm > 0 ? "pos" : g.returnPpm < 0 ? "neg" : ""}" title="收益率">${fmtPct(g.returnPpm)}</span>
               </div>
+              ${stakeNetChip(g.stake)}
               <div class="my-game-meta">
                 <span class="my-game-kind">${escapeHtml(gameKindLabel(g.gameKind))}</span> · ${g.fillMode === "same_close" ? "当日收盘" : "次日开盘"} · 成交 ${g.tradeCount} · ${escapeHtml(formatShanghaiDateTime(g.finishedAt || g.savedAt) || "—")}
               </div>

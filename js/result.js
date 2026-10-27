@@ -137,6 +137,9 @@ export function endGame() {
         } else if (view.gameKind === 'survival') {
             assistEl.hidden = false;
             assistEl.textContent = view.busted ? '玩法：活过三十日 · 爆仓日' : '玩法：活过三十日 · 活穿';
+        } else if (view.gameKind === 'stake') {
+            assistEl.hidden = false;
+            assistEl.textContent = '玩法：韭币局';
         } else if (view.gameKind === 'daily') {
             assistEl.hidden = false;
             assistEl.textContent = '玩法：今日挑战';
@@ -166,6 +169,8 @@ export function endGame() {
             }
         }
     }
+
+    import('./coin-stake-ui.js').then((m) => m.paintStakeResult()).catch(() => {});
 
     // F02 puzzle: icon stars +「残局结算」header (no giant digit / letter grade).
     if (view.gameKind === 'puzzle') {
@@ -207,6 +212,9 @@ export function endGame() {
             } else if (view.gameKind === 'survival') {
                 lbBtn.hidden = false;
                 setBtnLabel(lbBtn, '生存榜');
+            } else if (view.gameKind === 'stake') {
+                lbBtn.hidden = false;
+                setBtnLabel(lbBtn, '韭币榜');
             } else if (view.gameKind === 'daily') {
                 lbBtn.hidden = false;
                 setBtnLabel(lbBtn, '日榜');
@@ -219,11 +227,13 @@ export function endGame() {
         if (playBtn && btnLabel(playBtn).includes('残局')) {
             setBtnLabel(playBtn, '再来一局');
         }
-        if (playBtn && view.gameKind === 'oneshot') {
+        if (playBtn && view.gameKind === 'stake') {
+            setBtnLabel(playBtn, '再来一局韭币局');
+        } else if (playBtn && view.gameKind === 'oneshot') {
             setBtnLabel(playBtn, '再来一把梭');
         } else if (playBtn && view.gameKind === 'survival') {
             setBtnLabel(playBtn, '再来生存模式');
-        } else if (playBtn && (btnLabel(playBtn) === '再来一把梭' || btnLabel(playBtn) === '再来生存模式')) {
+        } else if (playBtn && (btnLabel(playBtn) === '再来一把梭' || btnLabel(playBtn) === '再来生存模式' || btnLabel(playBtn) === '再来一局韭币局')) {
             setBtnLabel(playBtn, '再来一局');
         }
     }
@@ -634,6 +644,10 @@ export function playAgain() {
         if (typeof window.showPuzzleScreen === 'function') {
             setTimeout(() => window.showPuzzleScreen(), 0);
         }
+        return;
+    }
+    if (session.gameKind === 'stake' && typeof window.startStakeGame === 'function') {
+        window.startStakeGame();
         return;
     }
     if (session.gameKind === 'survival' && typeof window.startSurvivalGame === 'function') {

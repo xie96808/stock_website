@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ok, fail } from "../lib/http.js";
 import { getLeaderboard } from "../lib/leaderboard.js";
+import { getCoinBoard } from "../lib/coinBoard.js";
 import { config } from "../lib/config.js";
 
 const router = Router();
@@ -21,6 +22,15 @@ router.get("/leaderboard", (req, res) => {
     },
     req.user || null
   );
+  if (result.error) {
+    return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
+  }
+  return ok(res, result.data, result.status);
+});
+
+/** Public GET /leaderboard/coins?board=balance|week — 韭币榜 (guests OK; logged-in users get `me`). */
+router.get("/leaderboard/coins", (req, res) => {
+  const result = getCoinBoard(String(req.query.board || "balance"), req.user || null);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
   }

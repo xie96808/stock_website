@@ -69,6 +69,7 @@ function paintSeats(view) {
     avatarId: view?.me?.avatarId || auth?.avatarId || 1,
     avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
     avatarFrame: view?.me?.avatarFrame || auth?.avatarFrame || null,
+    avatarMedal: view?.me?.avatarMedal || auth?.avatarMedal || null,
   }, "我");
   paintSeat("pvpResultOpp", view?.opponent, "对手");
   const meCard = document.getElementById("pvpResultMeCard");
@@ -337,6 +338,7 @@ function showSettle(view, celebrate) {
     avatarId: view?.me?.avatarId || auth?.avatarId || 1,
     avatarUrl: view?.me?.avatarUrl || auth?.avatarUrl || null,
     avatarFrame: view?.me?.avatarFrame || auth?.avatarFrame || null,
+    avatarMedal: view?.me?.avatarMedal || auth?.avatarMedal || null,
     returnPpm: view?.me?.returnPpm,
     coinDelta: view?.me?.coinDelta,
     mddPpm: view?.me?.mddPpm,

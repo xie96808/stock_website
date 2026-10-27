@@ -702,7 +702,7 @@ export async function showPuzzleWeeklyBoard() {
           <td>${e.rank}</td>
           <td class="puzzle-weekly-nick-cell">
             <span class="puzzle-weekly-nick-inner">
-              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame)}
+              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame, e.avatarMedal)}
               <span>${escapeHtml(e.nickname || '玩家')}</span>
             </span>
           </td>

@@ -2,6 +2,7 @@
 import { getAuthState, selectAuthChromeMode } from "./auth.js";
 import { refreshDailyChallengeFlag, isDailyChallengeEnabled } from "./daily-challenge.js";
 import { pvpEnabled } from "./pvp/transport.js";
+import { stakeEnabled, stakeEnabledSync } from "./coin-stake.js";
 
 const PANEL = {
   total: "3,586,742.63",
@@ -282,13 +283,19 @@ export function syncHomeGoLabel() {
   const title = b.querySelector("[data-ha-go-title]");
   const sub = b.querySelector("[data-ha-go-sub]");
   if (title) title.textContent = resume ? "继续对局" : "开一局";
-  if (sub) sub.hidden = !!resume;
+  if (sub) {
+    sub.hidden = !!resume;
+    if (sub.dataset.classicHtml == null) sub.dataset.classicHtml = sub.innerHTML;
+    // 韭币局 live: the button's promise changes from "20 coins" to "stake your own".
+    if (stakeEnabledSync()) sub.textContent = "韭币局 · 自选 10–200 韭币";
+    else sub.innerHTML = sub.dataset.classicHtml;
+  }
   b.setAttribute("aria-label", resume ? "继续对局" : "开一局");
   b.dataset.resume = resume ? "1" : "0";
 }
 
 /**
- * 开一局 → always classic practice (fill-mode modal).
+ * 开一局 → 韭币局 when live, else classic practice (fill-mode modal).
  * Only when an in-progress game is surfaced (resume banner → label 继续对局)
  * do we resume that exact cloud game (classic / daily / …).
  * Never route to L3 playModes / 今日挑战 from this button.
@@ -304,11 +311,17 @@ function onGoClick() {
       return;
     }
   }
-  if (typeof window.startClassicPractice === "function") {
-    window.startClassicPractice();
-    return;
-  }
-  if (typeof window.startGame === "function") window.startGame();
+  // 韭币局 is the featured mode: when it is live, 开一局 opens its stake picker (the start modal can switch
+  // to 传统模式 in one tap). Config unreadable / feature off → the classic flow, exactly as before.
+  stakeEnabled()
+    .then((on) => {
+      if (on && typeof window.startStakeGame === "function") return window.startStakeGame();
+      if (typeof window.startClassicPractice === "function") return window.startClassicPractice();
+      if (typeof window.startGame === "function") return window.startGame();
+    })
+    .catch(() => {
+      if (typeof window.startGame === "function") window.startGame();
+    });
 }
 
 function wireClicks() {
@@ -352,6 +365,7 @@ function wireClicks() {
 export function initHomeArcade() {
   if (inited) return;
   inited = true;
+  stakeEnabled().then(() => syncHomeGoLabel()).catch(() => {}); // warm the 韭币局 flag so 开一局 routes without a round trip
   const lanes = $("homeLanes");
   if (!lanes || !lanes.classList.contains("home-arcade")) return;
 

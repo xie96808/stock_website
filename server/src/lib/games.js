@@ -7,11 +7,13 @@ import { deductGameCreate, JIU_COIN_ONESHOT_CREATE_COST, JIU_COIN_SURVIVAL_CREAT
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
 import { resultDto } from "./gameResultDto.js";
-import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_SURVIVAL, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
+import { PROTOCOL_EVENT_V1, GAME_KIND_DAILY, GAME_KIND_CLASSIC, GAME_KIND_ONESHOT, GAME_KIND_SURVIVAL, GAME_KIND_STAKE, ASSIST_QUERY_SET, ASSIST_CLEAN, ASSIST_ALL } from "../../../shared/protocol.js";
 import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "../../../shared/oneshot.js";
 import { survivalModifiersJson } from "../../../shared/survival.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics, challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
+import { checkStakeInput, escrowStake, settleStake, forfeitStake, attachStake, coinStakeEnabled } from "./coinStake.js";
+import { checkStakeActionList } from "../../../shared/stake.js";
 
 const FILL_SET = new Set(FILL_MODES);
 const GAME_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -137,7 +139,7 @@ function sessionPublic(row, { includeResult = false, result = null } = {}) {
   if (includeResult && result) {
     return { ...base, ...resultDto(result, row) };
   }
-  return base;
+  return attachStake(base);
 }
 
 export { resultDto };
@@ -156,6 +158,7 @@ function expireStaleActive(db, userId, now = nowIso()) {
     ).run(userId, now);
     for (const row of stale) {
       onDailyGameClosed(db, row, "expired");
+      forfeitStake(db, row);
     }
   }
 }
@@ -199,18 +202,30 @@ function resolveCreateGameKind(raw) {
     }
     return { ok: true, kind };
   }
+  if (kind === GAME_KIND_STAKE) {
+    if (!coinStakeEnabled()) {
+      return { error: { status: 403, code: "FEATURE_DISABLED", message: "韭币局暂未开放" } };
+    }
+    return { ok: true, kind };
+  }
   return {
     error: { status: 400, code: "INVALID_GAME_KIND", message: "gameKind 无效" },
   };
 }
 
-export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {} }) {
+export function createGame(userId, { fillMode, gameKind, createKey, stake: rawStake, pickOpts = {} }) {
   if (!FILL_SET.has(fillMode)) {
     return { error: { status: 400, code: "INVALID_FILL_MODE", message: "fillMode 无效" } };
   }
   const kindRes = resolveCreateGameKind(gameKind);
   if (kindRes.error) return { error: kindRes.error };
   const kind = kindRes.kind;
+  let stake = null;
+  if (kind === GAME_KIND_STAKE) {
+    const st = checkStakeInput(rawStake);
+    if (st.error) return { error: st.error };
+    stake = st.stake;
+  }
   if (!createKey || typeof createKey !== "string" || createKey.length < 8 || createKey.length > 128) {
     return {
       error: { status: 400, code: "INVALID_IDEMPOTENCY_KEY", message: "Idempotency-Key 必填（8-128）" },
@@ -221,7 +236,9 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
   const payloadHash =
     kind === GAME_KIND_CLASSIC
       ? hashPayload({ fillMode })
-      : hashPayload({ fillMode, gameKind: kind });
+      : kind === GAME_KIND_STAKE
+        ? hashPayload({ fillMode, gameKind: kind, stake })
+        : hashPayload({ fillMode, gameKind: kind });
   const db = openDb();
   const now = nowIso();
 
@@ -308,7 +325,7 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
           proto.canonical_actions_json,
           modifiersJson
         );
-      } else if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL) {
+      } else if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL || kind === GAME_KIND_STAKE) {
         db.prepare(
           `INSERT INTO game_sessions (
             id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
@@ -366,6 +383,11 @@ export function createGame(userId, { fillMode, gameKind, createKey, pickOpts = {
       }
       // Same TX: deduct create cost on successful CREATE only (no refund on abandon).
       // Classic/survival 20 / oneshot 30. Daily uses its own path with DAILY_CHALLENGE_COST=50.
+      if (kind === GAME_KIND_STAKE) {
+        // 韭币局: the stake is escrowed instead of the create fee.
+        escrowStake(userId, id, db, stake);
+        return;
+      }
       const createCost =
         kind === GAME_KIND_ONESHOT
           ? JIU_COIN_ONESHOT_CREATE_COST
@@ -448,6 +470,7 @@ export function abandonGame(userId, gameId) {
     `UPDATE game_sessions SET status = 'abandoned', finished_at = ? WHERE id = ? AND status = 'active'`
   ).run(now, gameId);
   onDailyGameClosed(db, row, "abandoned");
+  forfeitStake(db, row);
   return { status: 204 };
 }
 
@@ -549,6 +572,13 @@ export function finishGame(userId, gameId, body, commandKey) {
           details: lim.details,
         },
       };
+    }
+  }
+
+  if (row.game_kind === GAME_KIND_STAKE) {
+    const lim = checkStakeActionList(actions);
+    if (!lim.ok) {
+      return { error: { status: 409, code: lim.code, message: lim.message, details: lim.details } };
     }
   }
 
@@ -656,6 +686,7 @@ export function finishGame(userId, gameId, body, commandKey) {
       ).run(now, gameId);
       const settledSession = db.prepare(`SELECT * FROM game_sessions WHERE id = ?`).get(gameId);
       const settledResult = db.prepare(`SELECT * FROM game_results WHERE game_id = ?`).get(gameId);
+      settleStake(db, settledSession, replay.returnPpm);
       onDailyGameSettled(db, settledSession, settledResult, now);
     });
     tx();

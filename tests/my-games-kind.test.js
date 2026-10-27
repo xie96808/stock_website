@@ -10,6 +10,7 @@ test("each game kind has a label; unknown/legacy rows read as classic", () => {
   assert.equal(gameKindLabel("survival"), "生存模式");
   assert.equal(gameKindLabel("daily"), "今日挑战");
   assert.equal(gameKindLabel("puzzle"), "残局");
+  assert.equal(gameKindLabel("stake"), "韭币局");
   assert.equal(gameKindLabel(undefined), "经典练习");
 });
 

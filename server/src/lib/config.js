@@ -176,6 +176,20 @@ export const config = {
    */
   gameReviewEnabled:
     process.env.GAME_REVIEW_ENABLED === "1" || process.env.GAME_REVIEW_ENABLED === "true",
+  /**
+   * 韭币局: classic rules, the player stakes 10–200 of their own 韭币; payout = stake + profit − 10% fee on profit.
+   * OFF: creating a stake game is FEATURE_DISABLED and the client hides the mode. Games already running still settle.
+   * Set COIN_STAKE_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  coinStakeEnabled:
+    process.env.COIN_STAKE_ENABLED === "1" || process.env.COIN_STAKE_ENABLED === "true",
+  /**
+   * 韭币榜: top-20 balance board + weekly net-earnings board, gold/silver/bronze plaque on the top three avatars.
+   * OFF: the board endpoint reports enabled:false and no avatar carries a plaque.
+   * Set COIN_BOARD_ENABLED=1, or flip it in the admin 功能开关.
+   */
+  coinBoardEnabled:
+    process.env.COIN_BOARD_ENABLED === "1" || process.env.COIN_BOARD_ENABLED === "true",
   /** Free wheel spins per Asia/Shanghai day (admin-editable 1–5). */
   luckyWheelDailyFree: Math.min(5, envInt("LUCKY_WHEEL_DAILY_FREE", 1)),
   /**
@@ -272,6 +286,8 @@ export const OVERRIDABLE_KEYS = [
   "avatarFramesEnabled",
   "pvpCosmeticsEnabled",
   "gameReviewEnabled",
+  "coinStakeEnabled",
+  "coinBoardEnabled",
   "luckyWheelDailyFree",
   "rewindTicketBoard",
   "rewindTicketDailyCap",

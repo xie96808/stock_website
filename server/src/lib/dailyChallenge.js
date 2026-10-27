@@ -3,6 +3,7 @@
  * Locked rules: docs/daily-challenge-f01.md / PRD §4.1.
  */
 import crypto from "node:crypto";
+import { medalProp } from "./coinBoard.js";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { frameProp } from "./frameProp.js";
@@ -705,6 +706,7 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
       // Same pattern as classic leaderboard: custom CDN path or null (client falls back to preset).
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
       ...frameProp(r.avatar_frame),
+      ...medalProp(r.user_id),
       returnPpm: r.return_ppm,
       returnPct: (r.return_ppm / 10000).toFixed(2),
       mddPpm: r.mdd_ppm,

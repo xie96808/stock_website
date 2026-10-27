@@ -592,7 +592,7 @@ export async function showDailyChallengeBoard() {
           <td>${e.rank}</td>
           <td class="daily-challenge-nick-cell">
             <span class="daily-challenge-nick-inner">
-              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame)}
+              ${wrapAvatarHtml(`<img class="dc-avatar" src="${escapeAttr(avatarUrl(e))}" alt="" loading="lazy" decoding="async" width="28" height="28" onerror="this.onerror=null;this.src='${escapeAttr(presetAvatarUrl(e))}'">`, e.avatarFrame, e.avatarMedal)}
               <span>${escapeHtml(e.nickname || '玩家')}</span>
             </span>
           </td>

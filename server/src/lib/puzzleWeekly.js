@@ -3,6 +3,7 @@
  * Flag: PUZZLE_WEEKLY_ENABLED (default OFF). Does not mix into classic / daily boards.
  */
 import crypto from "node:crypto";
+import { medalProp } from "./coinBoard.js";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { frameProp } from "./frameProp.js";
@@ -286,6 +287,7 @@ function queryWeeklyBoard(db, { levelKey, startIso, endIso, limit, userId }) {
       avatarCustomPath: custom,
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
       ...frameProp(r.avatar_frame),
+      ...medalProp(r.user_id),
       gameId: r.game_id,
       returnPpm: r.return_ppm,
       returnPct: formatReturnPct(r.return_ppm),

@@ -221,7 +221,7 @@ function renderPanel(data) {
         : "";
       return `<li class="leaderboard-row${survivalBoard ? (row.busted ? " lb-row-bust" : " lb-row-survive") : ""}${extraCls}">
           <span class="lb-rank">#${row.rank}</span>
-          ${wrapAvatarHtml(`<img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">`, row.avatarFrame)}
+          ${wrapAvatarHtml(`<img class="lb-avatar" src="${avatarUrl(row)}" alt="" loading="lazy" decoding="async" width="40" height="40">`, row.avatarFrame, row.avatarMedal)}
           <span class="lb-nick"><span class="lb-nick-name">${escapeHtml(row.nickname)}${extraCls ? '<small class="lb-me-tag">我</small>' : ""}${survBadge}</span><small class="lb-stats">${escapeHtml(stats)}</small></span>
           <span class="lb-ret ${cls}" title="${escapeHtml(label)}"><small class="lb-ret-label">${escapeHtml(label)}</small>${fmtPct(row.returnPpm, row.returnPct)}</span>
           <span class="lb-time">${fmtFinished(row.finishedAt)}</span>

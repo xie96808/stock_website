@@ -18,6 +18,7 @@ import {
 import { hasGameWindowDto, seedClassicFromWindow } from './game-window-seed.js';
 import { replayGame, settleGame } from '../shared/engine.js';
 import { oneshotAmmoFromActions } from '../shared/oneshot.js';
+import { countBuys, STAKE_MAX_BUYS } from '../shared/stake.js';
 export { oneshotAmmoFromActions };
 import {
   replayPuzzle,
@@ -172,6 +173,9 @@ export function validatePlayAction(session, action) {
     if (action === 'sell' && ammo.sellsLeft <= 0) {
       return { ok: false, errorZh: '一把梭卖出次数已用完' };
     }
+  }
+  if (session.gameKind === 'stake' && action === 'buy' && countBuys(session.actions) >= STAKE_MAX_BUYS) {
+    return { ok: false, errorZh: '韭币局最多买入 2 次，买入次数已用完' };
   }
   if (action === 'buy' && session.position !== 'empty') {
     return { ok: false, errorZh: '已有持仓，不能再买入' };
@@ -518,6 +522,7 @@ export function sessionPatchFromCloudFinish(data, { isPuzzle = false } = {}) {
   if (data.assistClass) savedPatch.assistClass = data.assistClass;
   if (data.undoCount != null) savedPatch.undoCount = data.undoCount;
   if (data.rewindVia) savedPatch.rewindVia = data.rewindVia;
+  if (data.stake) savedPatch.stake = data.stake; // 韭币局: settlement lines for the result screen
   if (isPuzzle) {
     savedPatch.puzzleResult = data;
     if (data.levelKey) savedPatch.puzzleLevelKey = data.levelKey;
@@ -638,6 +643,7 @@ export function seedClassicFromPack(cloud, catalog) {
     protocolVersion: cloud.protocolVersion || null,
     gameKind: cloud.gameKind || null,
     modifiers: cloud.modifiers || null,
+    stake: cloud.stake || null,
     gameDays: 30,
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,
@@ -731,6 +737,7 @@ export function evaluateRewindEligibility(session = getSession(), features = {})
   if (session.gameKind === 'daily') return { eligible: false, reason: 'daily' };
   if (session.gameKind === 'puzzle') return { eligible: false, reason: 'puzzle' };
   if (session.gameKind === 'oneshot') return { eligible: false, reason: 'oneshot' };
+  if (session.gameKind === 'stake') return { eligible: false, reason: 'stake' };
   if (session.gameKind === 'survival') return { eligible: false, reason: 'survival' };
   if (session.gameKind === 'ghost') return { eligible: false, reason: 'ghost' };
   if (session.protocolVersion !== 'event-v1') {
@@ -830,12 +837,12 @@ export async function abandonCloudSession(gameId, { abandonHttp, clearDraft } = 
 /**
  * Create cloud game then clear stale drafts (start-flow / use-case entry).
  */
-export async function createCloudSession(fillMode, { createHttp, clearDraft, gameKind } = {}) {
+export async function createCloudSession(fillMode, { createHttp, clearDraft, gameKind, stake } = {}) {
   if (typeof createHttp !== 'function') {
     throw new Error('createCloudSession requires createHttp');
   }
   const cloud = gameKind
-    ? await createHttp(fillMode, { gameKind })
+    ? await createHttp(fillMode, stake == null ? { gameKind } : { gameKind, stake })
     : await createHttp(fillMode);
   if (typeof clearDraft === 'function') clearDraft();
   return cloud;

@@ -108,6 +108,7 @@ export function seedClassicFromWindow(cloud) {
     protocolVersion: cloud.protocolVersion || null,
     gameKind: cloud.gameKind || 'classic',
     modifiers: cloud.modifiers || null,
+    stake: cloud.stake || null,
     gameDays,
     revision: cloud.revision ?? 0,
     undoCount: cloud.undoCount ?? 0,

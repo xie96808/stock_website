@@ -2,6 +2,7 @@
  * Shared result DTO mapping (legacy + event-v1 curve fields).
  */
 import { RULE_VERSION } from "../../../shared/engine.js";
+import { attachStake } from "./coinStake.js";
 
 export function resultDto(resultRow, sessionRow) {
   const valuation = resultRow.valuation_json
@@ -13,7 +14,7 @@ export function resultDto(resultRow, sessionRow) {
     ? JSON.parse(resultRow.equity_curve_json)
     : null;
   const busted = !!(valuation && (valuation.kind === "bust" || valuation.busted === true));
-  return {
+  const dto = {
     gameId: resultRow.game_id,
     ruleVersion: sessionRow?.rule_version || RULE_VERSION,
     datasetVersion: sessionRow?.dataset_version,
@@ -43,4 +44,5 @@ export function resultDto(resultRow, sessionRow) {
     // Track R2: owner-only audit fact, present only for 后悔券 rewinds (absent = coin / none, as before).
     ...(sessionRow?.rewind_via ? { rewindVia: sessionRow.rewind_via } : {}),
   };
+  return attachStake(dto);
 }

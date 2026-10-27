@@ -1,0 +1,361 @@
+/* ── 韭币局 stake picker: slot-machine cabinet ───────────────────────────────
+   While the stake picker is on screen the start dialog turns into a dark-red casino cabinet (gold trim, chasing
+   marquee bulbs, three digit reels, red chips, a glowing payout panel). Same look in light and dark theme; the
+   paper skin comes back for the loading / conflict panes and for the traditional mode (`.is-stake` is only set
+   while the picker is mounted, and every rule below is also gated on the choose pane being visible). */
+#fillModeModal.is-stake .fill-mode-backdrop { background: rgba(14, 3, 4, 0.74); }
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) {
+    --ink: #f6e7c1; --ink-soft: #e9d7a8; --mute: #c9ae72; --line: #e2b23a;
+    --card: rgba(0, 0, 0, 0.35); --paper: #3a0b0e; --paper-2: #2a080b;
+    border: 3px solid #e2b23a !important;
+    border-image: none !important;
+    border-radius: 20px !important;
+    background:
+        radial-gradient(120% 70% at 50% -10%, rgba(255, 190, 70, 0.28), transparent 60%),
+        radial-gradient(130% 90% at 50% 0%, #6c1519 0%, #3a0b0e 52%, #1d0507 100%) !important;
+    box-shadow:
+        0 0 0 2px #6b1317,
+        0 0 0 4px rgba(226, 178, 58, 0.5),
+        0 0 34px rgba(255, 190, 70, 0.32),
+        inset 0 0 44px rgba(0, 0, 0, 0.6) !important;
+    filter: none !important;
+    color: #f6e7c1 !important;
+}
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-dialog-title {
+    margin: 0 0 0.3rem;
+    text-align: center;
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
+    color: #ffd75a;
+    text-shadow: 0 2px 0 #7a1a1e, 0 0 14px rgba(255, 200, 60, 0.65);
+}
+
+.stake-picker { margin: 0 0 0.55rem; padding: 0; }
+.stake-picker[hidden] { display: none !important; }
+
+/* chasing bulbs */
+.stake-marquee {
+    position: relative;
+    height: 12px;
+    margin: 0 0 0.55rem;
+}
+.stake-marquee::before,
+.stake-marquee::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, #fff2b8 0 2.2px, #ffcf4a 2.8px, rgba(255, 190, 60, 0.35) 5px, transparent 6px) 50% 50% / 20px 12px repeat-x;
+    animation: stake-bulb 1s steps(1, end) infinite;
+}
+.stake-marquee::after { background-position: calc(50% + 10px) 50%; animation-delay: -0.5s; }
+@keyframes stake-bulb { 0% { opacity: 1; } 50% { opacity: 0.22; } }
+
+.stake-picker-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+}
+.stake-picker-title { font-weight: 800; font-size: 0.9rem; letter-spacing: 0.12em; color: #ffd75a; }
+.stake-balance { font-size: 0.78rem; color: #e9d7a8; font-variant-numeric: tabular-nums; }
+
+.stake-amount {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: 0.4rem;
+    align-items: center;
+}
+.stake-step {
+    width: 44px;
+    height: 44px;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 2px solid #7a4a05;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff0a8, #e2b23a 55%, #b87608);
+    color: #4a1a05;
+    font: 900 1.45rem/1 var(--sans);
+    box-shadow: 0 3px 0 #6b3d04, 0 0 12px rgba(255, 200, 60, 0.35);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.stake-step:active { transform: translateY(2px); box-shadow: 0 1px 0 #6b3d04, 0 0 8px rgba(255, 200, 60, 0.3); }
+.stake-step:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* the reel window */
+.stake-machine {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-width: 0;
+    cursor: text;
+}
+.stake-reels {
+    position: relative;
+    display: inline-flex;
+    gap: 3px;
+    padding: 5px;
+    font-size: clamp(1.9rem, 9.6vw, 2.7rem);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffe58a, #c8901c 55%, #8f5c08);
+    box-shadow: 0 3px 0 #5e3704, 0 0 20px rgba(255, 200, 60, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+/* ◀ ▶ pay-line pointers */
+.stake-reels::before,
+.stake-reels::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 0;
+    height: 0;
+    margin-top: -6px;
+    border: 6px solid transparent;
+}
+.stake-reels::before { left: -10px; border-left-color: #ff4d3d; border-right-width: 0; filter: drop-shadow(0 0 4px rgba(255, 77, 61, 0.8)); }
+.stake-reels::after { right: -10px; border-right-color: #ff4d3d; border-left-width: 0; filter: drop-shadow(0 0 4px rgba(255, 77, 61, 0.8)); }
+.stake-reel {
+    position: relative;
+    display: block;
+    width: 0.74em;
+    height: 1.25em;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #fbf3dc;
+    box-shadow: inset 0 0 0 1px rgba(60, 30, 5, 0.55);
+}
+.stake-reel::after { /* glass: shaded top/bottom like a curved drum */
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(40, 15, 5, 0.55) 0%, rgba(40, 15, 5, 0) 30%, rgba(40, 15, 5, 0) 70%, rgba(40, 15, 5, 0.55) 100%);
+}
+.stake-reel.is-dim .stake-reel-strip { opacity: 0.3; }
+.stake-reel-strip {
+    display: block;
+    --cell: 10;
+    transform: translateY(calc(var(--cell) * -1.25em));
+    will-change: transform;
+}
+.stake-reel.is-rolling .stake-reel-strip { filter: blur(0.9px); }
+.stake-reel-cell {
+    display: block;
+    height: 1.25em;
+    text-align: center;
+    color: #2b1208;
+    font: 900 1em/1.25em var(--mono);
+}
+.stake-unit { margin-left: 0.9rem; font-size: 0.8rem; font-weight: 700; color: #ffd75a; letter-spacing: 0.05em; }
+.stake-machine input { /* invisible but live: tap the reels to type a number */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    font-size: 16px;
+    cursor: text;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.stake-machine input::-webkit-outer-spin-button,
+.stake-machine input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stake-machine:focus-within .stake-reels { outline: 2px dashed #fff; outline-offset: 3px; }
+
+.stake-range { width: 100%; margin: 0.55rem 0 0.35rem; accent-color: #ffd75a; }
+
+/* one row of red casino chips */
+.stake-presets {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+    gap: 0.45rem;
+    padding: 0 3px;
+}
+.stake-preset {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0;
+    border: 2px dashed rgba(255, 255, 255, 0.7);
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 38%, #d83a3a, #a3161a 70%);
+    color: #fff4d2;
+    font: 800 0.95rem var(--mono);
+    box-shadow: 0 0 0 2px #7a1217, 0 3px 0 2px #4e0a0d;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.stake-preset:active { transform: translateY(2px); }
+.stake-preset.is-on {
+    border-color: rgba(122, 74, 5, 0.75);
+    background: radial-gradient(circle at 50% 35%, #fff0a8, #e2b23a 62%, #c8901c);
+    color: #4a1a05;
+    box-shadow: 0 0 0 2px #7a4a05, 0 3px 0 2px #5e3704, 0 0 14px rgba(255, 200, 60, 0.55);
+}
+.stake-preset:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+/* 预期本金加奖金总和 */
+.stake-payout {
+    margin-top: 0.8rem;
+    padding: 0.45rem 0.7rem 0.55rem;
+    border: 1.5px solid rgba(226, 178, 58, 0.65);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.38);
+    box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.5);
+}
+.stake-payout-title {
+    text-align: center;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #ffd75a;
+}
+.stake-payout-rows { margin-top: 0.25rem; }
+.stake-payout-rows[hidden] { display: none !important; }
+.stake-payout-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.1rem 0;
+    font-size: 0.82rem;
+    color: #e9d7a8;
+    font-variant-numeric: tabular-nums;
+}
+.stake-payout-row span { flex: 1 1 auto; }
+.stake-payout-row b { font: 900 1.3rem/1.2 var(--mono); }
+.stake-payout-row i { font-style: normal; font-size: 0.72rem; color: #c9ae72; }
+.stake-payout-row.is-up b { color: #ff8f7e; text-shadow: 0 0 10px rgba(255, 90, 70, 0.55); }
+.stake-payout-row.is-down b { color: #7ee0a3; text-shadow: 0 0 10px rgba(80, 220, 140, 0.4); }
+.stake-payout-row.is-up span::before { content: "▲ "; color: #ff8f7e; }
+.stake-payout-row.is-down span::before { content: "▼ "; color: #7ee0a3; }
+.stake-payout.is-warn { border-color: #ff6b5e; }
+.stake-preview { margin: 0.35rem 0 0; font-size: 0.82rem; text-align: center; color: #e9d7a8; }
+.stake-preview[hidden] { display: none !important; }
+.stake-preview.is-warn { color: #ffb4a8; font-weight: 700; }
+
+.stake-rules {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.3rem;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+.stake-rules li {
+    padding: 0.18rem 0.5rem;
+    border: 1px solid rgba(226, 178, 58, 0.5);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.28);
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: #f0d79a;
+    white-space: nowrap;
+}
+
+/* traditional fill-mode radios → two compact gold-trim toggles while staking */
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin: 0.7rem 0 0.4rem;
+}
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option {
+    position: relative;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0.4rem 0.3rem;
+    border: 1.5px solid rgba(226, 178, 58, 0.45);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: none;
+    text-align: center;
+}
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option strong {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #e9d7a8;
+}
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option small { display: none; }
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option:has(input:checked) {
+    border-color: #ffd75a;
+    background: rgba(226, 178, 58, 0.2);
+    box-shadow: 0 0 10px rgba(255, 200, 60, 0.3);
+}
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option:has(input:checked) strong { color: #fff; }
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-option:has(input:focus-visible) { outline: 2px solid #fff; outline-offset: 2px; }
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-option input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* action row: pinned to the bottom of the scrolling dialog so 下注 is always reachable */
+#fillModeModal.is-stake .fill-mode-dialog:has(#fillModeChoosePane:not([hidden])) .fill-mode-actions {
+    position: sticky;
+    bottom: -1.1rem;
+    z-index: 2;
+    margin-top: 0.4rem;
+    padding: 0.6rem 0 0.2rem;
+    background: linear-gradient(to bottom, transparent, #2a080b 32%);
+}
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-secondary {
+    background-image: none !important;
+    background-color: rgba(0, 0, 0, 0.35) !important;
+    border: 1.5px solid rgba(226, 178, 58, 0.6) !important;
+    border-radius: 999px !important;
+    color: #f0d79a !important;
+    min-height: 44px;
+}
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-primary {
+    background-image: linear-gradient(180deg, #fff0a8, #f0b92e 50%, #c8860c) !important;
+    background-color: #e2b23a !important;
+    border-radius: 999px !important;
+    color: #4a1a05 !important;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    min-height: 46px;
+    box-shadow: 0 4px 0 #6b3d04, 0 0 20px rgba(255, 200, 60, 0.55) !important;
+    animation: stake-glow 1.6s ease-in-out infinite;
+}
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-primary .ctl-label { color: inherit !important; }
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #6b3d04, 0 0 12px rgba(255, 200, 60, 0.4) !important; }
+#fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-primary:disabled {
+    background-image: none !important;
+    background-color: #6b5a3a !important;
+    color: #bfae88 !important;
+    box-shadow: 0 3px 0 #3d3220 !important;
+    animation: none;
+    filter: saturate(0.5);
+}
+@keyframes stake-glow {
+    0%, 100% { box-shadow: 0 4px 0 #6b3d04, 0 0 14px rgba(255, 200, 60, 0.4); }
+    50% { box-shadow: 0 4px 0 #6b3d04, 0 0 26px rgba(255, 210, 90, 0.85); }
+}
+#fillModeModal.is-stake .stake-switch { color: #cdb273; }
+#fillModeModal.is-stake .stake-switch:hover { color: #f0d79a; }
+
+@media (prefers-reduced-motion: reduce) {
+    .stake-marquee::before, .stake-marquee::after { animation: none; }
+    .stake-marquee::after { opacity: 0.45; }
+    #fillModeModal.is-stake .fill-mode-dialog .fill-mode-btn.ctl-primary { animation: none; }
+    .stake-reel.is-rolling .stake-reel-strip { filter: none; }
+}
+@media (max-width: 360px) {
+    .stake-amount { grid-template-columns: 40px minmax(0, 1fr) 40px; gap: 0.3rem; }
+    .stake-step { width: 40px; height: 40px; }
+    .stake-rules li { font-size: 0.68rem; padding: 0.16rem 0.4rem; }
+    .stake-unit { font-size: 0.72rem; }
+}
