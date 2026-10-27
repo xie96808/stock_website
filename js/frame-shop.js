@@ -7,7 +7,7 @@ import { api, getAuthState, selectIsAuthenticated, displayAvatarUrl, applyAuthUs
 import { showStampToast } from "./controls.js";
 import { refreshJiuCoinStatus } from "./jiu-coin.js";
 import { wrapAvatarHtml } from "./avatar-frame-pure.js";
-import { actionForBalance, captionFor, sortFrames, buyToast, errorToast, tierOf } from "./frame-shop-pure.js";
+import { actionForBalance, captionFor, sortFrames, buyToast, errorToast, tierOf, poorToast } from "./frame-shop-pure.js";
 
 let state = null;
 let inflight = null;
@@ -70,6 +70,7 @@ export function mountFramesPanel(el, hooks = {}) {
     if (!f) return;
     const a = actionForBalance(f, state.balance, armedId === id);
     if (a.disabled) return;
+    if (a.kind === "poor") { showStampToast(poorToast(f.price, state.balance), "error"); return; }
     if (a.kind === "buy") {
       armedId = id;
       window.clearTimeout(armTimer);

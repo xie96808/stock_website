@@ -57,3 +57,19 @@ test("shop tabs only import modules that exist, and the old frame entry is gone"
   const auth = readFileSync(new URL("../js/auth.js", import.meta.url), "utf8");
   assert.ok(!auth.includes("settingsFrameBtn"));
 });
+
+test("shop layout: tabs never scroll or clip, captions have one fixed height", () => {
+  const css = readFileSync(new URL("../css/leek-shop.css", import.meta.url), "utf8");
+  const tabs = css.match(/\.leek-shop-tabs \{[^}]*\}/)[0];
+  assert.ok(!/overflow/.test(tabs) && !/border-bottom/.test(tabs));
+  const frame = readFileSync(new URL("../css/avatar-frame.css", import.meta.url), "utf8");
+  assert.match(frame.match(/\.frame-cap \{[^}]*\}/)[0], /min-height: 3\.75em;[\s\S]*max-height: 3\.75em/);
+  assert.match(frame.match(/\.frame-btn \{[^}]*\}/)[0], /margin-top: auto/);
+});
+
+test("no shop button spells out 还差", () => {
+  for (const f of ["frame-shop", "cosmetic-shop", "title-shop", "rename-card-shop"]) {
+    const src = readFileSync(new URL(`../js/${f}.js`, import.meta.url), "utf8");
+    assert.ok(!/还差/.test(src), f);
+  }
+});

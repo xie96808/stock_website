@@ -15,20 +15,28 @@ export function actionFor(frame, armed = false) {
       : { kind: "equip", label: "装备", disabled: false };
   }
   if (!frame.buyable) return { kind: "locked", label: "成就解锁", disabled: true };
-  if (!frame.affordable) return { kind: "poor", label: "韭币不足", disabled: true };
+  // Too poor: the button looks like any other 购买 (same width, same label); tapping it says how much is missing.
+  if (!frame.affordable) return { kind: "poor", label: `购买 ${frame.price}`, disabled: false };
   return armed
     ? { kind: "confirm", label: `确认 -${frame.price}`, disabled: false }
     : { kind: "buy", label: `购买 ${frame.price}`, disabled: false };
 }
 
-/** Same as actionFor but the "poor" label says how many coins are missing. */
+/** Same as actionFor; a "poor" action also carries `short`, the coins still missing (shown only in the toast). */
 export function actionForBalance(frame, balance, armed = false) {
   const a = actionFor(frame, armed);
-  if (a.kind === "poor") {
-    const short = Math.max(0, (Number(frame.price) || 0) - (Number(balance) || 0));
-    return { ...a, label: short > 0 ? `还差 ${short}` : a.label };
-  }
+  if (a.kind === "poor") return { ...a, short: shortBy(frame.price, balance) };
   return a;
+}
+
+export function shortBy(price, balance) {
+  return Math.max(0, (Number(price) || 0) - (Number(balance) || 0));
+}
+
+/** Toast for tapping 购买 without enough coins. */
+export function poorToast(price, balance) {
+  const short = shortBy(price, balance);
+  return short > 0 ? `韭币不足，还差 ${short}` : "韭币不足";
 }
 
 /** Small caption under the name: price, how to get it, or status. */

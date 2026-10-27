@@ -5,6 +5,7 @@
 import { api, getAuthState, selectIsAuthenticated, applyAuthUser } from "./auth.js";
 import { showStampToast } from "./controls.js";
 import { refreshJiuCoinStatus } from "./jiu-coin.js";
+import { poorToast } from "./frame-shop-pure.js";
 
 let state = null;
 let inflight = null;
@@ -40,13 +41,13 @@ export function mountRenamePanel(el, hooks = {}) {
     if (!state) { el.innerHTML = ""; return; }
     hooks.balance?.(state.balance);
     const poor = state.balance < state.price;
-    const label = poor ? `还差 ${state.price - state.balance}` : armed ? `确认 -${state.price}` : `购买 ${state.price}`;
+    const label = armed && !poor ? `确认 -${state.price}` : `购买 ${state.price}`;
     const kind = poor ? "poor" : armed ? "confirm" : "buy";
     el.innerHTML = `<div class="rename-card">
       <div class="rename-ticket" aria-hidden="true"><span>改名卡</span><small>NAME CARD</small></div>
       <p class="rename-have">我的改名卡 <strong>${Number(state.cards)}</strong> 张</p>
       <p class="rename-now">当前昵称：${esc(state.nickname)}</p>
-      <button type="button" class="frame-btn frame-btn--${kind}" data-rename-buy ${poor ? "disabled" : ""}>${esc(label)}</button>
+      <button type="button" class="frame-btn frame-btn--${kind}" data-rename-buy>${esc(label)}</button>
       <ul class="rename-rules">
         <li>改一次昵称消耗 1 张改名卡；保存同样的昵称、改头像和签名都不用卡。</li>
         <li>买好后：点右上角头像 → 修改昵称 → 保存。</li>
@@ -58,7 +59,7 @@ export function mountRenamePanel(el, hooks = {}) {
   el.addEventListener("click", async (e) => {
     const b = e.target.closest ? e.target.closest("[data-rename-buy]") : null;
     if (!b || busy || !state) return;
-    if (state.balance < state.price) return;
+    if (state.balance < state.price) { showStampToast(poorToast(state.price, state.balance), "error"); return; }
     if (!armed) {
       armed = true;
       window.clearTimeout(armTimer);

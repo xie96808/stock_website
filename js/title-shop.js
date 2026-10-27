@@ -5,7 +5,7 @@
 import { api, getAuthState, selectIsAuthenticated, applyAuthUser } from "./auth.js";
 import { showStampToast } from "./controls.js";
 import { refreshJiuCoinStatus } from "./jiu-coin.js";
-import { actionForBalance } from "./frame-shop-pure.js";
+import { actionForBalance, poorToast } from "./frame-shop-pure.js";
 import { titleChipHtml } from "./title-pure.js";
 
 let state = null;
@@ -67,6 +67,7 @@ export function mountTitlesPanel(el, hooks = {}) {
     if (!t) return;
     const a = actionForBalance(t, state.balance, armedId === id);
     if (a.disabled) return;
+    if (a.kind === "poor") { showStampToast(poorToast(t.price, state.balance), "error"); return; }
     if (a.kind === "buy") {
       armedId = id;
       window.clearTimeout(armTimer);

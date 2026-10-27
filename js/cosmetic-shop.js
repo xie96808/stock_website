@@ -9,7 +9,7 @@ import { showStampToast } from "./controls.js";
 import { refreshJiuCoinStatus } from "./jiu-coin.js";
 import { stickerSvg } from "./sticker-art-pure.js";
 import { playEntranceFx } from "./entrance-fx.js";
-import { actionForBalance, cosBuyToast, errorToast, entranceCaption, packCaption } from "./cosmetic-pure.js";
+import { actionForBalance, poorToast, cosBuyToast, errorToast, entranceCaption, packCaption } from "./cosmetic-pure.js";
 
 let state = null;
 let fetchedAt = 0;
@@ -105,6 +105,7 @@ export function mountCosmeticsPanel(el, hooks = {}) {
     if (!item) return;
     const a = actionForBalance(item, state.balance, armedId === id);
     if (a.disabled) return;
+    if (a.kind === "poor") { showStampToast(poorToast(item.price, state.balance), "error"); return; }
     if (a.kind === "buy") {
       armedId = id;
       window.clearTimeout(armTimer);

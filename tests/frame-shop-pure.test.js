@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { actionFor, actionForBalance, captionFor, sortFrames, buyToast, errorToast } from "../js/frame-shop-pure.js";
+import { actionFor, actionForBalance, poorToast, captionFor, sortFrames, buyToast, errorToast } from "../js/frame-shop-pure.js";
 
 const shop = (o = {}) => ({ id: "gold", name: "金边", kind: "shop", price: 1500, owned: false, equipped: false, buyable: true, affordable: true, desc: "d", ...o });
 
@@ -9,12 +9,15 @@ test("action: buy → confirm (second tap) for an affordable unowned shop frame"
   assert.deepEqual(actionFor(shop(), true), { kind: "confirm", label: "确认 -1500", disabled: false });
 });
 
-test("action: poor says how many coins are missing", () => {
+test("action: poor looks like a normal 购买 and only the toast says how much is missing", () => {
   const f = shop({ affordable: false });
   assert.equal(actionFor(f).kind, "poor");
-  assert.equal(actionFor(f).disabled, true);
-  assert.equal(actionForBalance(f, 1200).label, "还差 300");
-  assert.equal(actionForBalance(f, 99999).label, "韭币不足", "label from actionFor when called with an unusual flag");
+  assert.equal(actionFor(f).disabled, false, "stays tappable so the tap can explain");
+  assert.equal(actionFor(f).label, "购买 1500", "same label (and width) as an affordable card");
+  assert.equal(actionForBalance(f, 1200).short, 300);
+  assert.equal(poorToast(1500, 1200), "韭币不足，还差 300");
+  assert.equal(poorToast(1500, 99999), "韭币不足");
+  assert.ok(!/还差/.test(actionForBalance(f, 1200).label));
 });
 
 test("action: owned → equip / unequip; achievement-only → locked", () => {

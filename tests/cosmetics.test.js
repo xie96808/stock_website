@@ -118,7 +118,7 @@ test("captions, buy button and toasts", () => {
   assert.equal(entranceCaption({ desc: "一团浓墨" }), "一团浓墨");
   assert.deepEqual(
     (({ kind, label }) => ({ kind, label }))(actionForBalance(state.packs[1], 250)),
-    { kind: "poor", label: "还差 50" }
+    { kind: "poor", label: "购买 300" }
   );
   const rich = { ...state.packs[1], affordable: true };
   assert.equal(actionForBalance(rich, 400).label, "购买 300");

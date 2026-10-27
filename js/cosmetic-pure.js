@@ -2,7 +2,7 @@
  * 对战装扮 — pure view helpers (no DOM, node-testable). `state` is GET /api/v1/me/cosmetics.
  * Buy / equip button logic is the same shape as the frame shop's, so it is reused from there.
  */
-export { actionForBalance } from "./frame-shop-pure.js";
+export { actionForBalance, poorToast } from "./frame-shop-pure.js";
 
 /** Sticker ids the player may send: every sticker of every owned pack, in pack order. */
 export function ownedStickerIds(state) {

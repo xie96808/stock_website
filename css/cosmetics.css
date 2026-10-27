@@ -496,3 +496,15 @@
   border-color: var(--paper, #efe6d4);
   color: var(--ink, #1c1a16);
 }
+
+/* entrance cards: same rhythm as the frame cards — fixed 3-line caption, button pinned to the bottom */
+.cos-grid .cos-card--fx .cos-cap {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 3.9em;
+  max-height: 3.9em;
+  overflow: hidden;
+}
+.cos-grid .cos-card--fx .cos-btn {
+  margin-top: auto;
+}
