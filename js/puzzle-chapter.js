@@ -112,7 +112,7 @@ export async function refreshPuzzleChapterCard() {
     const summary = chapterProgressSummary(chapterCache);
     if (stateEl) {
       stateEl.hidden = false;
-      stateEl.textContent = `进度 ${summary.cleared}/${summary.total} · 星 ${summary.starsEarned}/${summary.starsMax}`;
+      stateEl.textContent = `进度\u00a0${summary.cleared}/${summary.total} · 星\u00a0${summary.starsEarned}/${summary.starsMax}`;
     }
   } catch {
     if (stateEl) stateEl.textContent = '残局加载失败';

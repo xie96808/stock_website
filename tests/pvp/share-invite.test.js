@@ -60,8 +60,10 @@ test("Android shell sends the invite image straight to WeChat ShareImgUI with a 
   const manifest = await readFile(new URL("../../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
   assert.match(manifest, /<queries>\s*<package android:name="com\.tencent\.mm" \/>\s*<\/queries>/);
   const gradle = await readFile(new URL("../../android-app/app/build.gradle.kts", import.meta.url), "utf8");
-  assert.match(gradle, /versionCode = 22/);
-  assert.match(gradle, /versionName = "1\.1\.7"/);
+  // 版本号每次发版都会变；这里只要求它存在且不低于带微信直发的 1.1.7（versionCode 22）。
+  const code = Number(gradle.match(/versionCode = (\d+)/)?.[1]);
+  assert.ok(code >= 22, `versionCode ${code} should be >= 22`);
+  assert.match(gradle, /versionName = "\d+\.\d+\.\d+"/);
 });
 
 test("A-03: shell reports the screen that really opened; chooser copy fits both fallbacks", async () => {
