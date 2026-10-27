@@ -12,9 +12,10 @@
  * Motion lives in css/avatar-frame.css (classes `avf-sway`, `avf-sheen`, `avf-twinkle`, `avf-pulse`); every moving part
  * is a `<g>` with one of those classes, and `prefers-reduced-motion` switches them all off.
  */
-export const FRAME_IDS = Object.freeze(["ink_ring", "bamboo", "cinnabar", "gold", "laurel", "crown"]);
+export const FRAME_IDS = Object.freeze(["jiu_huang", "ink_ring", "bamboo", "cinnabar", "gold", "laurel", "crown"]);
 
 export const FRAME_NAMES = Object.freeze({
+  jiu_huang: "韭皇",
   ink_ring: "墨圈",
   bamboo: "青竹",
   cinnabar: "朱砂",
@@ -47,6 +48,18 @@ function leaf(x, y, rot, L, W, fill, vein) {
     `<g transform="translate(${x} ${y}) rotate(${r1(rot)})">` +
     `<path d="${leafPath(L, W)}" fill="${fill}" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/>` +
     `<path d="M${r1(L * 0.12)} 0L${r1(L * 0.86)} 0" stroke="${vein}" stroke-width=".7" stroke-linecap="round"/></g>`
+  );
+}
+
+/** A blank red seal (闲章) centred on (cx,cy): a square with an inner border and a window-lattice mark — no characters. */
+function chop(cx, cy, size) {
+  const h = size / 2;
+  const i = h - size * 0.17;
+  const m = size * 0.2;
+  return (
+    `<rect x="${r1(cx - h)}" y="${r1(cy - h)}" width="${size}" height="${size}" rx="${r1(size * 0.14)}" fill="#c8321f" stroke="${INK}" stroke-width=".85"/>` +
+    `<rect x="${r1(cx - i)}" y="${r1(cy - i)}" width="${r1(i * 2)}" height="${r1(i * 2)}" rx="1" fill="none" stroke="#fff4e0" stroke-width=".6" opacity=".85"/>` +
+    `<path d="M${r1(cx - m)} ${r1(cy)}L${r1(cx + m)} ${r1(cy)}M${r1(cx)} ${r1(cy - m)}L${r1(cx)} ${r1(cy + m)}" stroke="#fff4e0" stroke-width=".75" stroke-linecap="round" opacity=".9"/>`
   );
 }
 
@@ -90,8 +103,7 @@ function inkRing() {
     drop(a0 - 11, R + 8.6, 1.7) + drop(a0 - 19, R + 6.2, 1) + drop(a0 + 7, R + 9.2, 0.8) +
     `</g>` +
     `<g class="avf-pulse" transform="rotate(5 ${gx} ${gy})">` +
-    `<rect x="${r1(gx - 5.2)}" y="${r1(gy - 5.2)}" width="10.4" height="10.4" rx="1.6" fill="#c8321f" stroke="${INK}" stroke-width=".8"/>` +
-    `<text x="${gx}" y="${r1(gy + 3.1)}" text-anchor="middle" font-size="8.4" font-weight="700" fill="#fff4e0" font-family="serif">韭</text></g>`
+    chop(gx, gy, 10.4) + `</g>`
   );
 }
 
@@ -147,7 +159,7 @@ function cloud(deg) {
   );
 }
 
-/** 朱砂 — vermilion seal-ink ring with 祥云 scrolls, glowing red beads and a 韭 chop. */
+/** 朱砂 — vermilion seal-ink ring with 祥云 scrolls, glowing red beads and a blank chop. */
 function cinnabar() {
   const beads = [-45, -135, 45, 135];
   let dots = "";
@@ -162,9 +174,8 @@ function cinnabar() {
     `<circle cx="50" cy="50" r="51.2" fill="none" stroke="#f4906c" stroke-width="1" opacity=".85"/>` +
     cloud(-90) + cloud(180) + cloud(0) + dots +
     `<g class="avf-pulse" transform="rotate(-6 ${sx} ${sy})">` +
-    `<rect x="${r1(sx - 7)}" y="${r1(sy - 6.6)}" width="14" height="14" rx="2" fill="#c8321f" stroke="${INK}" stroke-width=".9"/>` +
-    `<rect x="${r1(sx - 5.2)}" y="${r1(sy - 4.8)}" width="10.4" height="10.4" rx="1" fill="none" stroke="#fff4e0" stroke-width=".6" opacity=".8"/>` +
-    `<text x="${sx}" y="${r1(sy + 4.1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff4e0" font-family="serif">韭</text></g>`
+    chop(sx + 0.2, sy + 0.4, 14) +
+    `</g>`
   );
 }
 
@@ -271,7 +282,23 @@ function crown() {
   );
 }
 
-const ART = { ink_ring: inkRing, bamboo, cinnabar, gold, laurel, crown };
+/** 韭皇 — the starter frame and the only one that carries the character: a leek-green ring with a red 韭皇 plaque. */
+function jiuHuang() {
+  const R = 52.5;
+  const [px, py] = polar(90, R + 3);
+  return (
+    `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${INK}" stroke-width="5.6"/>` +
+    `<circle cx="50" cy="50" r="${R}" fill="none" stroke="#4aa84d" stroke-width="3.8"/>` +
+    `<circle cx="50" cy="50" r="${R - 1.2}" fill="none" stroke="#b8e8a0" stroke-width=".9" opacity=".9"/>` +
+    leaf(r1(px - 15), r1(py - 4), 200, 11, 3.8, "#58b955", "#c9f0a2") +
+    leaf(r1(px + 15), r1(py - 4), -20, 11, 3.8, "#58b955", "#c9f0a2") +
+    `<g class="avf-pulse"><rect x="${r1(px - 15)}" y="${r1(py - 7.4)}" width="30" height="14.8" rx="3.4" fill="#c8321f" stroke="${INK}" stroke-width=".95"/>` +
+    `<rect x="${r1(px - 13)}" y="${r1(py - 5.4)}" width="26" height="10.8" rx="2" fill="none" stroke="#f3c53a" stroke-width=".8"/>` +
+    `<text x="${px}" y="${r1(py + 3.5)}" text-anchor="middle" font-size="9.6" font-weight="700" letter-spacing=".6" fill="#ffe27a" font-family="serif">韭皇</text></g>`
+  );
+}
+
+const ART = { jiu_huang: jiuHuang, ink_ring: inkRing, bamboo, cinnabar, gold, laurel, crown };
 
 /** The overlay `<svg>` for a frame id, or "" for anything unknown. */
 export function frameSvg(id) {

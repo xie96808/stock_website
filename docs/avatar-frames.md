@@ -7,6 +7,7 @@ and no `avatarFrame` property is emitted anywhere (see `frameProp`).
 ## Catalogue (`server/src/lib/frameDefs.js`)
 | id | 名称 | 来源 |
 | --- | --- | --- |
+| `jiu_huang` | 韭皇 | 100 韭币（入门款，唯一把「韭」字写在框上的） |
 | `ink_ring` | 墨圈 | 300 韭币，或成就「七日成瘾」(连续登录 3 个 7 天周期) 免费解锁 |
 | `bamboo` | 青竹 | 500 韭币 |
 | `cinnabar` | 朱砂 | 800 韭币 |
@@ -34,9 +35,10 @@ Client wraps `<img>` avatars with `wrapAvatarHtml` / `applyFrameToImg` (`js/avat
 ## Art (v2)
 Woodblock-print style, all code-drawn SVG in `js/avatar-frame-pure.js`: flat colour + thin ink outline + one highlight.
 No gradients / filters / ids (nothing collides when a frame appears many times, a hidden copy cannot break a visible one).
-- 墨圈 — one brush stroke (圆相) with dry-brush streaks, ink drops and a red 韭 seal; ink flips to light in the dark theme
+- 韭皇 — starter frame: leek-green ring with a red plaque reading 韭皇 (the only art that contains the character 韭; a test enforces it)
+- 墨圈 — one brush stroke (圆相) with dry-brush streaks, ink drops and a blank red chop; ink flips to light in the dark theme
 - 青竹 — jointed bamboo stalk with two swaying sprigs
-- 朱砂 — vermilion ring, 祥云 scrolls, glowing beads, 韭 chop
+- 朱砂 — vermilion ring, 祥云 scrolls, glowing beads, blank chop
 - 金边 — gilded band, beads, four crest diamonds, a highlight that travels round the ring
 - 月桂 — two-branch wreath with berries and a red ribbon
 - 韭王冠 — crown made of five leek blades on a gold band with a ruby

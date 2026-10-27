@@ -6,6 +6,7 @@
  * Some achievement-unlocked frames are also sold (owning it either way is enough).
  */
 export const FRAMES = Object.freeze([
+  { id: "jiu_huang", name: "韭皇", desc: "入门款：绿环红牌，金字写着「韭皇」", kind: "shop", price: 100 },
   { id: "ink_ring", name: "墨圈", desc: "一笔圆相，墨色未干，缺口盖一枚韭印", kind: "shop", price: 300, hint: "也可通过成就「七日成瘾」免费获得" },
   { id: "bamboo", name: "青竹", desc: "弯竹成环，节节向上，竹叶随风轻摆", kind: "shop", price: 500 },
   { id: "cinnabar", name: "朱砂", desc: "祥云托着朱印，一圈红火", kind: "shop", price: 800 },

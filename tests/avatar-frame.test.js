@@ -4,7 +4,7 @@ import { FRAME_IDS, FRAME_NAMES, isFrameId, frameSvg, wrapAvatarHtml } from "../
 import { readFileSync } from "node:fs";
 
 test("every frame id has a name and non-empty art", () => {
-  assert.equal(FRAME_IDS.length, 6);
+  assert.equal(FRAME_IDS.length, 7);
   for (const id of FRAME_IDS) {
     assert.ok(FRAME_NAMES[id], `name of ${id}`);
     const svg = frameSvg(id);
@@ -74,4 +74,11 @@ test("PvP paints the viewer's own frame: seat painters carry avatarFrame", () =>
   }
   const lobby = readFileSync(new URL("../js/pvp/lobby.js", import.meta.url), "utf8");
   assert.equal((lobby.match(/avatarFrame: auth\.avatarFrame/g) || []).length, 2);
+});
+
+test("only the starter frame 韭皇 carries the character 韭 inside its art", () => {
+  for (const id of FRAME_IDS) {
+    const hasChar = frameSvg(id).includes("韭");
+    assert.equal(hasChar, id === "jiu_huang", `${id}: 韭 in art`);
+  }
 });
