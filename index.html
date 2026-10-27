@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="css/invite.css">
     <link rel="stylesheet" href="css/achievements.css">
     <link rel="stylesheet" href="css/avatar-frame.css">
+    <link rel="stylesheet" href="css/leek-shop.css">
     <link rel="stylesheet" href="css/cosmetics.css">
     <link rel="stylesheet" href="css/coin-stake.css">
     <link rel="stylesheet" href="css/route-replay.css">
@@ -94,6 +95,7 @@
     <!-- Reserved chrome: avoid late JS insert shifting controls -->
     <div class="auth-chip" id="authChip">
         <button type="button" class="announcements-btn" id="announcementsBtn" title="系统公告" aria-label="系统公告">公告</button>
+        <button type="button" class="announcements-btn shop-btn" id="shopBtn" data-shop-open hidden title="韭菜商店" aria-label="韭菜商店">商店</button>
         <button type="button" class="auth-login-btn" id="authLoginBtn" hidden>登录 / 注册</button>
         <button type="button" class="auth-user-btn" id="authUserBtn" hidden>
             <img class="auth-avatar" id="authAvatarImg" alt="">
@@ -1566,6 +1568,7 @@
         import { initInvite } from './js/invite.js';
         import { initAchievements } from './js/achievements.js';
         import { initFrameShop } from './js/frame-shop.js';
+        import { initLeekShop } from './js/leek-shop.js';
         import { initCosmeticShop } from './js/cosmetic-shop.js';
         import { initRouteReplay } from './js/route-replay.js';
         import { initFeedback } from './js/feedback.js';
@@ -1696,6 +1699,7 @@
         try { initInvite(); } catch (e) { console.warn('invite', e); }
         try { initAchievements(); } catch (e) { console.warn('achievements', e); }
         try { initFrameShop(); } catch (e) { console.warn('frame shop', e); }
+        try { initLeekShop(); } catch (e) { console.warn('leek shop', e); }
         try { initCosmeticShop(); } catch (e) { console.warn('cosmetic shop', e); }
         try { initRouteReplay(); } catch (e) { console.warn('route replay', e); }
         try { initP4Controls(); } catch (e) { console.warn('p4 controls', e); }

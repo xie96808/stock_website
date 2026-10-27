@@ -4,7 +4,7 @@ import { FRAME_IDS, FRAME_NAMES, isFrameId, frameSvg, wrapAvatarHtml } from "../
 import { readFileSync } from "node:fs";
 
 test("every frame id has a name and non-empty art", () => {
-  assert.equal(FRAME_IDS.length, 7);
+  assert.equal(FRAME_IDS.length, 9);
   for (const id of FRAME_IDS) {
     assert.ok(FRAME_NAMES[id], `name of ${id}`);
     const svg = frameSvg(id);
@@ -54,11 +54,11 @@ test("art is self-contained: no gradients, filters or ids that could collide bet
 
 test("moving parts opt in through known classes only (so reduced-motion can switch them off)", () => {
   const css = readFileSync(new URL("../css/avatar-frame.css", import.meta.url), "utf8");
-  const known = new Set(["avf-sheen", "avf-sway", "avf-twinkle", "avf-pulse"]);
+  const known = new Set(["avf-sheen", "avf-sway", "avf-twinkle", "avf-pulse", "avf-k", "avf-flap", "avf-breathe"]);
   for (const id of FRAME_IDS) {
     for (const m of frameSvg(id).matchAll(/class="(avf-[a-z-]+(?: avf-[a-z-]+)*)"/g)) {
       for (const c of m[1].split(" ")) {
-        if (c === "avf-art" || c === "avf-ink" || c === "avf-ink-halo" || c === "avf-sway--slow") continue;
+        if (c === "avf-art" || c === "avf-ink" || c === "avf-ink-halo" || c === "avf-sway--slow" || c === "avf-twinkle--slow") continue;
         assert.ok(known.has(c), `${id}: unknown class ${c}`);
       }
     }
@@ -81,4 +81,28 @@ test("only the starter frame 韭皇 carries the character 韭 inside its art", (
     const hasChar = frameSvg(id).includes("韭");
     assert.equal(hasChar, id === "jiu_huang", `${id}: 韭 in art`);
   }
+});
+
+test("premium frames: K线环 (1000) and 鎏金凤翼 (2000) move, sparkle and sweep light", () => {
+  const k = frameSvg("kline");
+  assert.equal((k.match(/class="avf-k"/g) || []).length, 28, "28 breathing candles");
+  assert.ok(k.includes("#e23a2b") && k.includes("#2f9e5b"), "red up-days and green down-days");
+  assert.ok(k.includes("avf-sheen") && k.includes("avf-twinkle"));
+  const p = frameSvg("phoenix");
+  assert.equal((p.match(/class="avf-flap"/g) || []).length, 2, "one wing each side");
+  assert.ok(p.includes("avf-breathe") && p.includes("avf-twinkle") && p.includes("avf-sheen"));
+  const css = readFileSync(new URL("../css/avatar-frame.css", import.meta.url), "utf8");
+  for (const needle of [".avf--kline::after", ".avf--phoenix::after", "@keyframes avf-k", "@keyframes avf-flap", "@keyframes avf-glow", "conic-gradient"]) {
+    assert.ok(css.includes(needle), needle);
+  }
+  const reduced = css.slice(css.indexOf("prefers-reduced-motion"));
+  for (const needle of [".avf-art .avf-k", ".avf-art .avf-flap", ".avf--phoenix::after", ".avf--kline::after"]) {
+    assert.ok(reduced.includes(needle), `${needle} is switched off for reduced motion`);
+  }
+});
+
+test("the price ladder is smooth: 100 → 300 → 500 → 800 → 1000 → 1500 → 2000", () => {
+  const src = readFileSync(new URL("../server/src/lib/frameDefs.js", import.meta.url), "utf8");
+  const prices = [...src.matchAll(/kind: "shop", price: (\d+)/g)].map((m) => Number(m[1])).sort((a, b) => a - b);
+  assert.deepEqual(prices, [100, 300, 500, 800, 1000, 1500, 2000]);
 });

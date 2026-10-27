@@ -30,7 +30,7 @@ export function shapeItem(kind, def, { owned, equipped = false, balance }) {
     equipped: !!equipped,
     buyable: !owned,
     affordable: !owned ? balance >= def.price : false,
-    ...(kind === "pack" ? { stickers: [...def.stickers] } : {}),
+    ...(kind === "pack" ? { stickers: [...def.stickers], tier: def.tier || "basic" } : {}),
   };
 }
 

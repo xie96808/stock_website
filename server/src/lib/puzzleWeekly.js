@@ -4,6 +4,7 @@
  */
 import crypto from "node:crypto";
 import { medalProp } from "./coinBoard.js";
+import { titleProp } from "./titleProp.js";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { frameProp } from "./frameProp.js";
@@ -288,6 +289,7 @@ function queryWeeklyBoard(db, { levelKey, startIso, endIso, limit, userId }) {
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
       ...frameProp(r.avatar_frame),
       ...medalProp(r.user_id),
+      ...titleProp(r.user_id),
       gameId: r.game_id,
       returnPpm: r.return_ppm,
       returnPct: formatReturnPct(r.return_ppm),

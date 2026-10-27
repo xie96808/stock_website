@@ -1,10 +1,11 @@
 /**
- * 对战装扮商店 client. Server flag: pvpCosmeticsEnabled (GET /me/cosmetics → { enabled:false } hides every entry).
- * Sticker packs + entrance effects, bought with 韭币 (two taps: "购买 N" arms "确认 -N"). The sheet reuses the
- * announcements dialog shell. Reached from the PvP lobby and from the in-match sticker tray.
+ * 对战装扮 tab of the 韭菜商店 (js/leek-shop.js hosts it). Server flag: pvpCosmeticsEnabled
+ * (GET /me/cosmetics → { enabled:false } hides the tab and every entry).
+ * Sticker packs + entrance effects, bought with 韭币 (two taps: "购买 N" arms "确认 -N").
+ * Also reached from the PvP lobby and from the in-match sticker tray ("去解锁" → this tab).
  */
-import { api, getAuthState, selectIsAuthenticated, closeAuthModal, applyAuthUser } from "./auth.js";
-import { openCtlOverlay, closeCtlOverlay, showStampToast } from "./controls.js";
+import { api, getAuthState, selectIsAuthenticated, applyAuthUser } from "./auth.js";
+import { showStampToast } from "./controls.js";
 import { refreshJiuCoinStatus } from "./jiu-coin.js";
 import { stickerSvg } from "./sticker-art-pure.js";
 import { playEntranceFx } from "./entrance-fx.js";
@@ -12,9 +13,6 @@ import { actionForBalance, cosBuyToast, errorToast, entranceCaption, packCaption
 
 let state = null;
 let fetchedAt = 0;
-let busy = false;
-let armedId = null;
-let armTimer = 0;
 let inflight = null;
 const listeners = new Set();
 const $ = (id) => document.getElementById(id);
@@ -53,132 +51,119 @@ export async function fetchCosmetics({ force = false } = {}) {
   return inflight;
 }
 
-function ensureModal() {
-  if ($("cosModal")) return;
-  const t = document.createElement("template");
-  t.innerHTML = `<div class="announcements-modal cos-modal" id="cosModal" hidden aria-hidden="true">
-    <div class="announcements-dialog cos-dialog" role="dialog" aria-modal="true" aria-labelledby="cosTitle">
-      <button type="button" class="announcements-close-x" id="cosCloseX" aria-label="关闭">×</button>
-      <h2 id="cosTitle">对战装扮</h2>
-      <p class="cos-sub" id="cosSub"></p>
-      <div class="cos-body" id="cosBody"></div>
-    </div>
-  </div>`.trim();
-  document.body.appendChild(t.content.firstElementChild);
-}
-
-function btnHtml(item) {
+function btnHtml(item, armedId) {
   const a = actionForBalance(item, state.balance, armedId === item.id);
   return `<button type="button" class="cos-btn cos-btn--${a.kind}" data-cos-act="${esc(item.id)}" ${a.disabled ? "disabled" : ""}>${esc(a.label)}</button>`;
 }
 
-function packHtml(p) {
+function packHtml(p, armedId) {
   const minis = (p.stickers || []).map((id) => `<span class="cos-mini">${stickerSvg(id)}</span>`).join("");
-  return `<div class="cos-card cos-card--pack${p.owned ? " is-owned" : ""}" data-id="${esc(p.id)}">
-    <div class="cos-pack-head"><strong class="cos-name">${esc(p.name)}</strong><span class="cos-cap">${esc(packCaption(p))}</span></div>
+  return `<div class="cos-card cos-card--pack cos-card--${esc(p.tier || "basic")}${p.owned ? " is-owned" : ""}" data-id="${esc(p.id)}">
+    <div class="cos-pack-head"><strong class="cos-name">${esc(p.name)}</strong>${tierBadge(p.tier)}<span class="cos-cap">${esc(packCaption(p))}</span></div>
     <div class="cos-minis">${minis}</div>
-    ${btnHtml(p)}
+    ${btnHtml(p, armedId)}
   </div>`;
 }
 
-function entranceHtml(e) {
+function tierBadge(tier) {
+  if (tier === "grand") return `<span class="cos-tier cos-tier--grand">动态 · 镇店</span>`;
+  if (tier === "fine") return `<span class="cos-tier cos-tier--fine">精品</span>`;
+  return "";
+}
+
+function entranceHtml(e, armedId) {
   return `<div class="cos-card cos-card--fx${e.equipped ? " is-equipped" : ""}${e.owned ? " is-owned" : ""}" data-id="${esc(e.id)}">
     <div class="cos-stage" data-cos-stage="${esc(e.id)}"><span class="cos-stage-dot"></span></div>
     <strong class="cos-name">${esc(e.name)}</strong>
     <span class="cos-cap">${esc(entranceCaption(e))}</span>
     <button type="button" class="cos-try" data-cos-try="${esc(e.id)}">试看</button>
-    ${btnHtml(e)}
+    ${btnHtml(e, armedId)}
   </div>`;
 }
 
-function paint() {
-  if (!state || !$("cosBody")) return;
-  $("cosSub").textContent = `我的韭币 ${state.balance}`;
-  $("cosBody").innerHTML =
-    `<h3 class="cos-h">表情包<small>对战中发给对手</small></h3>${state.packs.map(packHtml).join("")}` +
-    `<h3 class="cos-h">出场特效<small>开局时在你的座位上播放，双方都看得到</small></h3><div class="cos-grid">${state.entrances.map(entranceHtml).join("")}</div>`;
-}
+/**
+ * Mount the tab into `el`. hooks.balance(n) keeps the shop header in step with a purchase.
+ * @returns {{ refresh: () => Promise<void>, leave: () => void }}
+ */
+export function mountCosmeticsPanel(el, hooks = {}) {
+  let busy = false;
+  let armedId = null;
+  let armTimer = 0;
+  const disarm = () => { armedId = null; window.clearTimeout(armTimer); };
 
-function disarm() {
-  armedId = null;
-  window.clearTimeout(armTimer);
-}
+  const paint = () => {
+    if (!state) { el.innerHTML = ""; return; }
+    hooks.balance?.(state.balance);
+    el.innerHTML =
+      `<h3 class="cos-h">表情包<small>对战中发给对手 · 价高的会动</small></h3>${[...state.packs].sort((a, b) => a.price - b.price).map((p) => packHtml(p, armedId)).join("")}` +
+      `<h3 class="cos-h">出场特效<small>开局时在你的座位上播放，双方都看得到</small></h3><div class="cos-grid">${[...state.entrances].sort((a, b) => a.price - b.price).map((e) => entranceHtml(e, armedId)).join("")}</div>`;
+  };
 
-async function act(id) {
-  if (busy || !state) return;
-  const item = [...state.packs, ...state.entrances].find((x) => x.id === id);
-  if (!item) return;
-  const a = actionForBalance(item, state.balance, armedId === id);
-  if (a.disabled) return;
-  if (a.kind === "buy") {
-    armedId = id;
-    window.clearTimeout(armTimer);
-    armTimer = window.setTimeout(() => { armedId = null; paint(); }, 3500);
-    paint();
-    return;
-  }
-  disarm();
-  busy = true;
-  try {
-    let data;
-    if (a.kind === "confirm") {
-      ({ data } = await api(`/me/cosmetics/${encodeURIComponent(id)}/buy`, { method: "POST", body: {} }));
-      showStampToast(cosBuyToast(item), "success");
-      refreshJiuCoinStatus().catch(() => {});
-    } else {
-      ({ data } = await api("/me/cosmetics/equip-entrance", { method: "POST", body: { id: a.kind === "equip" ? id : null } }));
-      if (data.user) applyAuthUser(data.user);
+  const act = async (id) => {
+    if (busy || !state) return;
+    const item = [...state.packs, ...state.entrances].find((x) => x.id === id);
+    if (!item) return;
+    const a = actionForBalance(item, state.balance, armedId === id);
+    if (a.disabled) return;
+    if (a.kind === "buy") {
+      armedId = id;
+      window.clearTimeout(armTimer);
+      armTimer = window.setTimeout(() => { armedId = null; paint(); }, 3500);
+      paint();
+      return;
     }
-    setState({ ...data.state, enabled: true });
-  } catch (e) {
-    showStampToast(errorToast(e), "error");
-    await fetchCosmetics({ force: true });
-  } finally {
-    busy = false;
-    paint();
-  }
-}
+    disarm();
+    busy = true;
+    try {
+      let data;
+      if (a.kind === "confirm") {
+        ({ data } = await api(`/me/cosmetics/${encodeURIComponent(id)}/buy`, { method: "POST", body: {} }));
+        showStampToast(cosBuyToast(item), "success");
+        refreshJiuCoinStatus().catch(() => {});
+      } else {
+        ({ data } = await api("/me/cosmetics/equip-entrance", { method: "POST", body: { id: a.kind === "equip" ? id : null } }));
+        if (data.user) applyAuthUser(data.user);
+      }
+      setState({ ...data.state, enabled: true });
+    } catch (e) {
+      showStampToast(errorToast(e), "error");
+      await fetchCosmetics({ force: true });
+    } finally {
+      busy = false;
+      paint();
+    }
+  };
 
-export function closeCosmeticShop() {
-  disarm();
-  const m = $("cosModal");
-  if (m) closeCtlOverlay(m);
-}
-
-function wire() {
-  const modal = $("cosModal");
-  if (!modal || modal.dataset.wired) return;
-  modal.dataset.wired = "1";
-  $("cosCloseX").addEventListener("click", closeCosmeticShop);
-  $("cosBody").addEventListener("click", (e) => {
+  el.addEventListener("click", (e) => {
     const t = e.target.closest ? e.target : null;
     const tryBtn = t && t.closest("[data-cos-try]");
     if (tryBtn) {
       const id = tryBtn.getAttribute("data-cos-try");
-      const stage = $("cosBody").querySelector(`[data-cos-stage="${id}"] .cos-stage-dot`);
+      const stage = el.querySelector(`[data-cos-stage="${id}"] .cos-stage-dot`);
       playEntranceFx(id, stage).catch(() => {});
       return;
     }
     const b = t && t.closest("[data-cos-act]");
     if (b) act(b.getAttribute("data-cos-act"));
   });
-  modal.addEventListener("click", (e) => { if (e.target === modal) closeCosmeticShop(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.hidden) closeCosmeticShop(); });
+
+  return {
+    async refresh() {
+      disarm();
+      await fetchCosmetics({ force: true });
+      paint();
+    },
+    leave: disarm,
+  };
 }
 
-export async function openCosmeticShop() {
-  const s = await fetchCosmetics({ force: true });
-  if (!s) {
-    showStampToast("对战装扮暂未开放", "error");
-    return;
-  }
-  const authModal = $("authModal");
-  if (authModal && !authModal.hidden) closeAuthModal();
-  ensureModal();
-  wire();
-  disarm();
-  paint();
-  openCtlOverlay($("cosModal"));
+/** Is the tab available (flag on, signed in)? */
+export async function probeCosmetics() {
+  return !!(await fetchCosmetics());
+}
+
+export function openCosmeticShop() {
+  return import("./leek-shop.js").then((m) => m.openLeekShop("cos"));
 }
 
 /** Show / hide the static entry points from flag + login. */

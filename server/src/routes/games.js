@@ -170,6 +170,8 @@ export function gamesConfigPayload() {
       achievements: !!config.achievementsEnabled,
       avatarFrames: !!config.avatarFramesEnabled,
       pvpCosmetics: !!config.pvpCosmeticsEnabled,
+      titleShop: !!config.titleShopEnabled,
+      renameCard: !!config.renameCardEnabled,
       gameReview: !!config.gameReviewEnabled,
       coinStake: !!config.coinStakeEnabled,
       coinBoard: !!config.coinBoardEnabled,

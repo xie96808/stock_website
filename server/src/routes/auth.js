@@ -21,6 +21,8 @@ import {
 import { requireUser } from "../middleware/request.js";
 import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
 import { wheelSummary } from "../lib/luckyWheel.js";
+import { openDb } from "../db/connection.js";
+import { spendRenameCard } from "../lib/renameCards.js";
 import { recordInviteRedemption } from "../lib/invite.js";
 import {
   readMultipartAvatar, saveAvatarBuffer, isSafeAvatarId, avatarFilePath, detectImageMime,
@@ -168,7 +170,18 @@ router.patch("/me", requireUser, (req, res) => {
     if (sig == null) return fail(res, 400, "INVALID_SIGNATURE", "个性签名最多 40 字");
     patch.signature = sig;
   }
-  const updated = updateUserProfile(req.user.id, patch);
+  const db = openDb();
+  let blocked = null;
+  let updated = null;
+  db.transaction(() => {
+    // A real nickname change spends a 改名卡 (flag on); the card and the rename commit or roll back together.
+    if (patch.nickname != null && patch.nickname !== req.user.nickname) {
+      blocked = spendRenameCard(req.user.id, req.user.nickname, patch.nickname, db);
+      if (blocked) return;
+    }
+    updated = updateUserProfile(req.user.id, patch);
+  })();
+  if (blocked) return fail(res, blocked.error.status, blocked.error.code, blocked.error.message, blocked.error.details);
   return ok(res, { user: publicUser(updated) });
 });
 

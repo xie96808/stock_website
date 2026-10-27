@@ -5,6 +5,8 @@ import { runUserUnavailableHook, writeUserTombstone } from "./tombstones.js";
 import { grantRegisterBonus } from "./jiuCoin.js";
 import { frameProp } from "./frameProp.js";
 import { entranceProp } from "./cosmeticProp.js";
+import { titlePropFromRaw } from "./titleProp.js";
+import { renameCardEnabled } from "./renameCards.js";
 
 export function publicUser(row) {
   if (!row) return null;
@@ -18,6 +20,8 @@ export function publicUser(row) {
     ...frameProp(row.avatar_frame),
     ...medalProp(row.id),
     ...entranceProp(row.pvp_entrance),
+    ...titlePropFromRaw(row.title),
+    ...(renameCardEnabled() ? { renameCards: Number(row.rename_cards) || 0 } : {}),
     role: row.role,
     status: row.status,
     leaderboardOptIn: !!row.leaderboard_opt_in,

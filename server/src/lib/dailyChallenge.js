@@ -4,6 +4,7 @@
  */
 import crypto from "node:crypto";
 import { medalProp } from "./coinBoard.js";
+import { titleProp } from "./titleProp.js";
 import { openDb } from "../db/connection.js";
 import { config } from "./config.js";
 import { frameProp } from "./frameProp.js";
@@ -707,6 +708,7 @@ export function getDailyLeaderboard({ date = null, limit = 50 } = {}) {
       avatarUrl: custom ? `/api/v1/avatars/${encodeURIComponent(custom)}` : null,
       ...frameProp(r.avatar_frame),
       ...medalProp(r.user_id),
+      ...titleProp(r.user_id),
       returnPpm: r.return_ppm,
       returnPct: (r.return_ppm / 10000).toFixed(2),
       mddPpm: r.mdd_ppm,

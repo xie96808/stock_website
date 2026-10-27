@@ -10,6 +10,12 @@ export function ownedStickerIds(state) {
   return packs.filter((p) => p.owned).flatMap((p) => p.stickers || []);
 }
 
+/** The packs the player owns, cheapest first (the order the tray shows its tabs in). */
+export function ownedPacks(state) {
+  const packs = Array.isArray(state?.packs) ? state.packs : [];
+  return packs.filter((p) => p.owned).sort((a, b) => (a.price || 0) - (b.price || 0));
+}
+
 /** The packs the player does not own yet (what the tray advertises). */
 export function lockedPacks(state) {
   const packs = Array.isArray(state?.packs) ? state.packs : [];

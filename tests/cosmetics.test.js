@@ -3,22 +3,43 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { STICKER_ART, STICKER_IDS, isStickerId, stickerSvg, stickerLabel } from "../js/sticker-art-pure.js";
 import { ENTRANCE_IDS, ENTRANCE_NAMES, isEntranceId, inkBlobPath, droplets, rayPath, bladePath, rainDrops, rng } from "../js/entrance-fx-pure.js";
-import { ownedStickerIds, lockedPacks, entranceCaption, packCaption, shouldPlayEntrance, cosBuyToast, errorToast, actionForBalance } from "../js/cosmetic-pure.js";
+import { ownedStickerIds, ownedPacks, lockedPacks, entranceCaption, packCaption, shouldPlayEntrance, cosBuyToast, errorToast, actionForBalance } from "../js/cosmetic-pure.js";
 
 const serverSrc = readFileSync(new URL("../server/src/lib/cosmeticDefs.js", import.meta.url), "utf8");
 
 test("every sticker is drawn: svg, two-character label, no broken numbers, no refs", () => {
-  assert.equal(STICKER_IDS.length, 16);
+  assert.equal(STICKER_IDS.length, 48);
   for (const id of STICKER_IDS) {
     assert.equal(isStickerId(id), true);
     const svg = stickerSvg(id);
-    assert.match(svg, /^<svg class="stk" viewBox="0 0 100 100"/);
+    assert.match(svg, /^<svg class="stk( stk--(face|fine|grand))?" viewBox="0 0 100 100"/);
     assert.equal([...stickerLabel(id)].length, 2, `${id} label is two characters`);
     assert.ok(svg.includes(`>${stickerLabel(id)}</text>`), id);
     assert.ok(!/NaN|undefined/.test(svg), id);
     assert.ok(!/\sid=|url\(#|<(linearGradient|filter|clipPath|defs)\b/.test(svg), `${id} must be self-contained`);
   }
-  assert.equal(new Set(STICKER_IDS.map(stickerSvg)).size, 16, "all stickers look different");
+  assert.equal(new Set(STICKER_IDS.map((id) => stickerSvg(id))).size, 48, "all stickers look different");
+});
+
+test("premium kinds: faces, medallions and animated medallions carry the right classes and motion hooks", () => {
+  for (const id of STICKER_IDS) {
+    const a = STICKER_ART[id];
+    const svg = stickerSvg(id);
+    if (a.kind) assert.ok(svg.includes(`stk--${a.kind}`), id);
+    else assert.ok(!svg.includes("stk--"), id);
+    const moves = /class="stk-/.test(svg);
+    if (a.kind === "grand") assert.ok(moves, `${id} (grand) animates`);
+    if (!a.kind) assert.ok(!moves, `${id} (seal) is still`);
+  }
+  const grand = STICKER_IDS.filter((id) => STICKER_ART[id].kind === "grand");
+  const fine = STICKER_IDS.filter((id) => STICKER_ART[id].kind === "fine");
+  const faces = STICKER_IDS.filter((id) => STICKER_ART[id].kind === "face");
+  assert.deepEqual([grand.length, fine.length, faces.length], [8, 8, 8]);
+  // every animation class used by the art has a keyframes rule in the stylesheet
+  const css = readFileSync(new URL("../css/cosmetics.css", import.meta.url), "utf8");
+  const used = new Set(STICKER_IDS.flatMap((id) => [...stickerSvg(id).matchAll(/class="(stk-[a-z-]+)"/g)].map((m) => m[1])));
+  for (const cls of used) assert.ok(css.includes(`.stk .${cls}`), `css for ${cls}`);
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*animation: none !important/);
 });
 
 test("unknown sticker ids draw nothing", () => {
@@ -77,6 +98,16 @@ test("tray helpers: owned stickers in pack order, locked packs listed", () => {
   assert.deepEqual(lockedPacks(state).map((p) => p.id), ["pack_b"]);
   assert.deepEqual(ownedStickerIds(null), []);
   assert.deepEqual(lockedPacks({}), []);
+});
+
+test("tray tabs: owned packs cheapest first", () => {
+  const two = { packs: [
+    { id: "p2", price: 800, owned: true, stickers: ["bull"] },
+    { id: "p1", price: 200, owned: true, stickers: ["limit_up"] },
+    { id: "p3", price: 300, owned: false, stickers: ["got_cut"] },
+  ] };
+  assert.deepEqual(ownedPacks(two).map((p) => p.id), ["p1", "p2"]);
+  assert.deepEqual(ownedPacks(null), []);
 });
 
 test("captions, buy button and toasts", () => {

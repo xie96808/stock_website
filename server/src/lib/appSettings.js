@@ -34,6 +34,8 @@ export const SETTINGS_REGISTRY = {
   achievementsEnabled: bool("成就", "feature", "进度由现有数据推算；玩家手动领取韭币 / 头像框解锁"),
   avatarFramesEnabled: bool("头像框", "feature", "韭币购买 / 成就解锁；已装备的头像框显示在头像旁"),
   pvpCosmeticsEnabled: bool("对战装扮", "feature", "对战表情包与出场特效，韭币购买"),
+  titleShopEnabled: bool("称号", "feature", "韭币购买的称号，显示在昵称旁（排行榜 / 对战）"),
+  renameCardEnabled: bool("改名卡", "feature", "开启后改昵称需消耗 1 张改名卡（商店 300 韭币）；管理员 / 机器人免卡"),
   gameReviewEnabled: bool("付费复盘", "feature", "结算后花韭币重演最优路线（30）/ 加购死拿对照（10），按局解锁"),
   coinStakeEnabled: bool("韭币局", "feature", "玩家自选 10–500 韭币开局；到账 = 投入 + 盈亏 − 盈利的 10%；放弃/过期没收"),
   coinBoardEnabled: bool("韭币榜", "feature", "余额榜 + 本周净赚榜（前 20，只算真人且开启排行榜的玩家）；余额榜前三头像带金银铜牌"),

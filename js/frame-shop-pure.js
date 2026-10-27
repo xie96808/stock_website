@@ -50,6 +50,14 @@ export function sortFrames(frames) {
   });
 }
 
+/** Visual tier of a card: 'prime' (≥ 2000), 'fine' (≥ 1000), otherwise 'plain'. Achievement-only frames are 'plain'. */
+export function tierOf(frame) {
+  const price = frame && frame.kind === "shop" ? Number(frame.price) || 0 : 0;
+  if (price >= 2000) return "prime";
+  if (price >= 1000) return "fine";
+  return "plain";
+}
+
 export function buyToast(name, price) {
   return `已购买「${name}」-${price} 韭币，点「装备」戴上`;
 }

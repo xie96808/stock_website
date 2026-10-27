@@ -30,7 +30,7 @@ export function findValidSession(sessionToken) {
   if (!sessionToken) return null;
   const tokenHash = sha256Hex(sessionToken);
   const row = openDb()
-    .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.avatar_custom_path, u.avatar_frame, u.pvp_entrance, u.role, u.status,
+    .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.avatar_custom_path, u.avatar_frame, u.pvp_entrance, u.title, u.rename_cards, u.role, u.status,
       u.leaderboard_opt_in, u.signature, u.jiu_coin_balance, u.created_at, u.updated_at, u.password_hash, u.recovery_code_hash,
       s.token_hash, s.expires_at, s.last_seen_at, s.revoked_at, s.user_id, s.admin_verified_at, s.created_at AS session_created_at
       FROM sessions s JOIN users u ON u.id = s.user_id

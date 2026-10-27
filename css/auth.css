@@ -168,3 +168,4 @@
 }
 #authSettingsPanel .pvp-settings-title { margin: 0; font-size: 12px; opacity: .7; }
 #authSettingsPanel .pvp-settings-rank { margin: 2px 0 0; font-size: 1.1rem; letter-spacing: 0.1em; }
+.auth-nick-hint{display:block;margin-top:4px;font-size:.72rem;font-weight:400;color:var(--mute,#7a7066)}
