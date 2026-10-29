@@ -264,8 +264,7 @@ html:not([data-theme="dark"]) :is(.chart-stage, .chart-container) {
 .ha-daily > button::after,
 .auth-tab::after,
 #dailyChallengeBoardBtn::after,
-.sg-tut__btn::after,
-#indicatorsToggle::after {
+.sg-tut__btn::after {
     content: "";
     position: absolute;
     top: calc(-1 * var(--hit-slop-top, 7px));
@@ -280,4 +279,3 @@ html:not([data-theme="dark"]) :is(.chart-stage, .chart-container) {
 .auth-tab { --hit-slop-top: 6px; --hit-slop-bottom: 6px; }
 #dailyChallengeBoardBtn { --hit-slop-top: 11px; --hit-slop-bottom: 11px; }
 /* Not extended: ⓘ (#rlHintToggle) and 快进 — any slop on ⓘ reached into 快进. */
-#indicatorsToggle { --hit-slop-top: 5px; --hit-slop-bottom: 5px; }

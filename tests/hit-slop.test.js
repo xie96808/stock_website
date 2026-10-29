@@ -6,7 +6,7 @@ const css = readFileSync(new URL("../css/controls-p5.css", import.meta.url), "ut
 const block = css.slice(css.indexOf("/* M-02 · Tap-target hit-slop"));
 
 test("each small control gets a transparent ::after hit area", () => {
-  for (const sel of ["#announcementsBtn", "#jiuCoinDailyBtn", "#authLoginBtn", "#authUserBtn", ".ha-daily > button", ".auth-tab", "#dailyChallengeBoardBtn", ".sg-tut__btn", "#indicatorsToggle"]) {
+  for (const sel of ["#announcementsBtn", "#jiuCoinDailyBtn", "#authLoginBtn", "#authUserBtn", ".ha-daily > button", ".auth-tab", "#dailyChallengeBoardBtn", ".sg-tut__btn"]) {
     assert.ok(block.includes(sel + "::after"), sel);
   }
   assert.match(block, /content: "";\s*position: absolute;/);

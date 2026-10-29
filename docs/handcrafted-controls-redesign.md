@@ -648,7 +648,7 @@ pointerdown → press 视觉（≤120ms）
 
 ## 11. 附录 B：控件 ID 速查（实施用）
 
-单人：`buyBtn` `sellBtn` `holdBtn` `fastForwardBtn` `finishBtn` `rewindBtn` `indicatorsToggle`  
+单人：`buyBtn` `sellBtn` `holdBtn` `fastForwardBtn` `finishBtn` `rewindBtn`  
 PvP：`pvpTradePrimary` `pvpHold` `pvpMsgOpen` `pvpReadyBtn` `pvpCancelReadyBtn` `pvpRoomLeave` `pvpLeaveStay` `pvpLeaveLobby` `pvpLeaveForfeit` `pvpInviteAccept` `pvpInviteDecline` `pvpInviteIgnore` `pvpLobbyLogin` `pvpShareBtn` …  
 Auth/反馈：`authLoginBtn` `authModal` inputs `feedbackSubmit` `feedbackBody`  
 等待：`pvpLobbyLoading` `fillModeLoadingPane` `authToastHost`

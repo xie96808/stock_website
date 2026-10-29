@@ -965,8 +965,6 @@ body.ctl-scroll-lock {
 .fill-mode-btn.ctl-danger:active { background-image: url("../assets/controls/ctl-danger-press.webp?v=20261013s") !important; }
 
 /* ----- P2: checkbox / radio ----- */
-#indicatorPanel input[type="checkbox"],
-.indicator-panel input[type="checkbox"],
 .auth-check input[type="checkbox"],
 .ctl-checkbox,
 .fill-mode-option input[type="radio"],
@@ -984,8 +982,6 @@ body.ctl-scroll-lock {
   vertical-align: middle;
   transition: transform 70ms linear;
 }
-#indicatorPanel input[type="checkbox"]:checked,
-.indicator-panel input[type="checkbox"]:checked,
 .auth-check input[type="checkbox"]:checked,
 .ctl-checkbox:checked { background-image: url("../assets/controls/ctl-checkbox-on.png?v=20261013s"); }
 .fill-mode-option input[type="radio"],
@@ -994,13 +990,9 @@ body.ctl-scroll-lock {
 .ctl-radio:checked { background-image: url("../assets/controls/ctl-radio-on.png?v=20261013s"); }
 .ctl-checkbox:active, .ctl-radio:active,
 .fill-mode-option input[type="radio"]:active,
-#indicatorPanel input[type="checkbox"]:active,
-.indicator-panel input[type="checkbox"]:active,
 .auth-check input[type="checkbox"]:active { transform: translate(1px, 1px); }
 .fill-mode-option input[type="radio"]:focus-visible,
 .ctl-checkbox:focus-visible, .ctl-radio:focus-visible,
-#indicatorPanel input[type="checkbox"]:focus-visible,
-.indicator-panel input[type="checkbox"]:focus-visible,
 .auth-check input[type="checkbox"]:focus-visible { outline: 2px dashed var(--ctl-ink); outline-offset: 2px; }
 
 /* ----- P2: 纸/墨 switch ----- */
@@ -1463,7 +1455,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .play-again-btn.ctl, .ar-btn.ctl, .quiz-nav-btn.ctl, .announcements-primary.ctl,
 .announcements-secondary.ctl, .auth-secondary.ctl, .auth-danger.ctl,
 .feedback-primary.ctl, .feedback-secondary.ctl, .feedback-attach-btn.ctl,
-.my-games-refresh.ctl, .hub-board-link.ctl, .indicator-toggle.ctl,
+.my-games-refresh.ctl, .hub-board-link.ctl,
 .pvp-report-toggle.ctl, .pvp-msg-line.ctl, .pvp-btn.ctl-primary, .pvp-btn.ctl-secondary, .pvp-btn.ctl-danger {
   border: none !important;
   border-radius: 0 !important;
@@ -1482,10 +1474,10 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .feedback-primary.ctl-primary.is-busy { background-image: url("../assets/controls/ctl-primary-loading.webp?v=20261013s") !important; }
 .play-again-btn.ctl-secondary, .ar-btn.ctl-secondary, .announcements-secondary.ctl-secondary, .auth-secondary.ctl-secondary,
 .feedback-secondary.ctl-secondary, .feedback-attach-btn.ctl-secondary, .my-games-refresh.ctl-secondary, .hub-board-link.ctl-secondary,
-.indicator-toggle.ctl-secondary, .pvp-msg-line.ctl-secondary, .pvp-btn.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
+.pvp-msg-line.ctl-secondary, .pvp-btn.ctl-secondary { background-image: url("../assets/controls/ctl-secondary-default.webp?v=20261013s") !important; color: var(--ctl-ink) !important; }
 .play-again-btn.ctl-secondary:active, .ar-btn.ctl-secondary:active, .announcements-secondary.ctl-secondary:active, .auth-secondary.ctl-secondary:active,
 .feedback-secondary.ctl-secondary:active, .feedback-attach-btn.ctl-secondary:active, .my-games-refresh.ctl-secondary:active, .hub-board-link.ctl-secondary:active,
-.indicator-toggle.ctl-secondary:active, .pvp-msg-line.ctl-secondary:active, .pvp-btn.ctl-secondary:active:not(:disabled) { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; }
+.pvp-msg-line.ctl-secondary:active, .pvp-btn.ctl-secondary:active:not(:disabled) { background-image: url("../assets/controls/ctl-secondary-press.webp?v=20261013s") !important; }
 .auth-danger.ctl-danger, .pvp-report-toggle.ctl-danger, .pvp-btn.ctl-danger { background-image: url("../assets/controls/ctl-danger-default.webp?v=20261013s") !important; color: #a83232 !important; }
 .auth-danger.ctl-danger:active:not(:disabled), .pvp-report-toggle.ctl-danger:active, .pvp-btn.ctl-danger:active:not(:disabled) { background-image: url("../assets/controls/ctl-danger-press.webp?v=20261013s") !important; }
 .auth-danger.ctl-danger.is-busy { opacity: 0.72; }
@@ -1499,7 +1491,6 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .feedback-primary.ctl, .feedback-secondary.ctl { width: min(150px, 46%); height: 46px; }
 .feedback-attach-btn.ctl, .my-games-refresh.ctl { width: auto; min-width: 104px; height: 40px; min-height: 40px; font-size: 0.88rem; letter-spacing: 0.1em; }
 .hub-board-link.ctl { width: 112px; height: 40px; min-height: 40px; font-size: 0.86rem; letter-spacing: 0.1em; margin: 0 4px 6px 0 !important; }
-.indicator-toggle.ctl { width: auto; min-width: 84px; height: 36px; min-height: 36px; font-size: 0.8rem; letter-spacing: 0.08em; }
 .pvp-report-toggle.ctl { width: 96px; height: 40px; min-height: 40px; font-size: 0.86rem; }
 .pvp-msg-line.ctl { width: 100%; height: auto; min-height: 44px; justify-content: flex-start; padding: 0 1rem !important; font-size: 0.88rem; letter-spacing: 0.04em; font-weight: 600; }
 .pvp-msg-line.ctl .ctl-label { letter-spacing: 0.04em; text-align: left; }
@@ -1507,7 +1498,7 @@ html:not([data-theme="dark"]) .theme-toggle .pill[data-mode="light"]::before { b
 .pvp-invite .pvp-btn.ctl { width: auto; min-width: 76px; flex: 0 0 auto; }
 .pvp-block-item .pvp-btn.ctl { width: auto; min-width: 96px; }
 [data-theme="dark"] .play-again-btn.ctl, [data-theme="dark"] .ar-btn.ctl, [data-theme="dark"] .quiz-nav-btn.ctl,
-[data-theme="dark"] .hub-board-link.ctl, [data-theme="dark"] .indicator-toggle.ctl, [data-theme="dark"] .my-games-refresh.ctl,
+[data-theme="dark"] .hub-board-link.ctl, [data-theme="dark"] .my-games-refresh.ctl,
 [data-theme="dark"] .pvp-msg-line.ctl, [data-theme="dark"] .pvp-btn.ctl-primary, [data-theme="dark"] .pvp-btn.ctl-secondary { color: #3a3530 !important; }
 /* jiu-coin family × → ctl-close-x (all dialogs reusing .jiu-coin-close-x) */
 .jiu-coin-close-x {
