@@ -2,7 +2,19 @@
  * 对战装扮 — pure view helpers (no DOM, node-testable). `state` is GET /api/v1/me/cosmetics.
  * Buy / equip button logic is the same shape as the frame shop's, so it is reused from there.
  */
-export { actionForBalance, poorToast } from "./frame-shop-pure.js";
+import { actionForBalance as frameAction } from "./frame-shop-pure.js";
+export { poorToast } from "./frame-shop-pure.js";
+
+/**
+ * Button for a pack or an entrance effect. A sticker pack is owned forever and has nothing to equip (the tray
+ * offers every sticker of every owned pack), so an owned pack shows a quiet 「已拥有」; only entrance effects
+ * are equipped / unequipped. (An owned pack used to get the frame shop's 「装备」, which asked the server to
+ * equip a pack id as an entrance effect and failed with 「操作失败」.)
+ */
+export function actionForBalance(item, balance, armed = false) {
+  if (item && item.kind === "pack" && item.owned) return { kind: "owned", label: "已拥有", disabled: true };
+  return frameAction(item, balance, armed);
+}
 
 /** Sticker ids the player may send: every sticker of every owned pack, in pack order. */
 export function ownedStickerIds(state) {

@@ -105,6 +105,7 @@ export function mountCosmeticsPanel(el, hooks = {}) {
     if (!item) return;
     const a = actionForBalance(item, state.balance, armedId === id);
     if (a.disabled) return;
+    if (item.kind === "pack" && (a.kind === "equip" || a.kind === "unequip")) return;
     if (a.kind === "poor") { showStampToast(poorToast(item.price, state.balance), "error"); return; }
     if (a.kind === "buy") {
       armedId = id;
