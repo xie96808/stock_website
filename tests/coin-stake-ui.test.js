@@ -106,8 +106,17 @@ test("my-games: stake rows show net coins; other rows show nothing", async () =>
 
 test("markup wiring: picker, fold toggle and result box exist; classic card stays reachable", () => {
   const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
-  for (const id of ["stakePicker", "stakeInput", "stakeRange", "stakePresets", "stakeSwitchBtn", "stakeModeCard", "classicFoldToggle", "classicModeCard", "stakeResultBox"]) {
+  for (const id of ["stakePicker", "stakeInput", "stakeRange", "stakePresets", "stakeSwitchBtn", "stakeModeCard", "classicFoldToggle", "classicModeCard", "stakeResultBox", "stakeResultModal", "stakeInfoBtn"]) {
     assert.match(html, new RegExp(`id="${id}"`), id);
   }
   assert.match(html, /css\/coin-stake\.css/);
+});
+
+test("result page: stake box lives inside the popup, re-open button sits beside (not inside) the grade title", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const modal = html.slice(html.indexOf('id="stakeResultModal"'));
+  assert.ok(modal.indexOf('id="stakeResultBox"') > 0 && modal.indexOf('id="stakeResultBox"') < 600, "box inside modal");
+  assert.match(html, /<div class="grade-title" id="gradeTitle">[^<]*<\/div>\s*<button[^>]*id="stakeInfoBtn"/);
+  const hero = html.slice(html.indexOf('class="result-hero"'), html.indexOf('id="puzzleDebrief"'));
+  assert.ok(!hero.includes('stakeResultBox'), "no inline stake box in hero");
 });

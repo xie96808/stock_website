@@ -1085,7 +1085,10 @@
                         <div class="grade-medal__letter" id="gradeLetter">S</div>
                         <div class="grade-medal__ring"></div>
                     </div>
-                    <div class="grade-title" id="gradeTitle">交易之神</div>
+                    <div class="grade-title-row">
+                        <div class="grade-title" id="gradeTitle">交易之神</div>
+                        <button type="button" class="stake-info-btn" id="stakeInfoBtn" hidden aria-label="查看韭币盈亏" aria-haspopup="dialog"></button>
+                    </div>
                     <div class="grade-verdict" id="gradeVerdict">完美操作，教科书级别的走势把握。</div>
                     <p class="cloud-save-status" id="cloudSaveStatus" hidden></p>
                 </div>
@@ -1101,7 +1104,6 @@
                         <div class="final-return-label">收益率</div>
                         <div class="final-return positive" id="finalReturn">+12.34%</div>
                     </div>
-                    <div class="stake-result" id="stakeResultBox" hidden aria-live="polite"></div>
                     <div class="result-stats-grid">
                         <div class="result-stat">
                             <div class="result-stat__label">总交易次数</div>
@@ -1407,6 +1409,14 @@
         </section>
     </div>
 
+
+    <!-- 韭币局结算弹窗：结算后自动弹出，关掉后点等级旁的韭币图标可再打开 -->
+    <div class="jiu-coin-modal stake-result-modal" id="stakeResultModal" hidden aria-hidden="true">
+        <div class="jiu-coin-dialog stake-result-dialog" role="dialog" aria-modal="true" aria-label="韭币盈亏">
+            <button type="button" class="jiu-coin-close-x" data-stake-result-close aria-label="关闭">×</button>
+            <div class="stake-result" id="stakeResultBox" hidden aria-live="polite"></div>
+        </div>
+    </div>
 
     <!-- F11 daily quiz settlement modal (纸墨, mirrors jiu-coin claim) -->
     <div class="jiu-coin-modal daily-quiz-result-modal" id="dailyQuizResultModal" hidden>

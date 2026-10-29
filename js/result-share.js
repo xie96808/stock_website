@@ -202,8 +202,8 @@ export function updateShareRankHint() {
         return;
     }
     if (share.cloudMode && share.saveStatus === 'saving') {
-        el.hidden = false;
-        el.textContent = '战绩保存后分享图可带超越比例';
+        el.hidden = true; // 说明性文字不再占结算页位置
+        el.textContent = '';
         return;
     }
     if (lastVerdict && lastVerdict.kind === 'best') {
@@ -211,13 +211,9 @@ export function updateShareRankHint() {
         el.textContent = lastVerdict.text;
         return;
     }
-    if (share.cloudMode && share.saveStatus === 'saved') {
-        el.hidden = false;
-        el.textContent = '暂无上榜超越数据，分享图将使用简明文案';
-        return;
-    }
-    el.hidden = false;
-    el.textContent = '游客/练习局可用简明文案；登录并上榜后分享图可带超越比例';
+    // 没有名次/超越比例可说时什么都不显示（以前这里是“游客/练习局可用简明文案…”之类的说明）。
+    el.hidden = true;
+    el.textContent = '';
 }
 
 function ensureResultShareSheet() {

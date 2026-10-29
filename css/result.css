@@ -1047,3 +1047,151 @@
 @media (prefers-reduced-motion: reduce) {
     .zs-grip-pill, .zs-grip-win { transition: none; }
 }
+
+/* ===== 结算页：紧凑英雄区 =====
+   勋章 + 评级/点评；一行“股票名 · 区间”；大号收益率；4 项统计一行；按钮。
+   “成交方式 / 玩法 / 云端保存 / 分享提示”这类说明文字不再占位（元素仍在 DOM 里，分享图要读）；
+   韭币赚亏明细放进弹窗（#stakeResultModal），标题旁的韭币图标可重新打开。
+   左右两个容器用 display:contents 拆开，让里面的块直接按网格排列（不改任何元素 id / 渲染代码）。 */
+
+/* 评级标题 + 韭币图标 */
+.grade-title-row {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+}
+.grade-title-row .grade-title { min-width: 0; }
+
+/* 不再展示的说明文字（元素保留，分享图/脚本仍会读写它们） */
+#resultScreen .result-fill-mode,
+#resultScreen .result-assist-label,
+#resultScreen .result-share-hint { display: none !important; }
+/* 云端保存：正常（保存中/已保存/本地练习）不显示；失败、重试时仍要让人看见并能重试 */
+#resultScreen .cloud-save-status.status-saved,
+#resultScreen .cloud-save-status.status-saving,
+#resultScreen .cloud-save-status.status-idle { display: none; }
+
+@media (max-width: 900px) {
+    .result-hero {
+        grid-template-columns: 76px repeat(4, minmax(0, 1fr));
+        column-gap: 8px;
+        row-gap: 8px;
+        align-items: center;
+        padding: 14px 14px 12px;
+        margin-bottom: 12px;
+        text-align: left;
+    }
+    .result-hero__left,
+    .result-hero__right { display: contents; }
+
+    /* 勋章缩小，评级 + 点评放在它右边 */
+    .grade-medal { width: 76px; height: 76px; grid-column: 1; grid-row: span 2; justify-self: center; }
+    .grade-medal__letter { font-size: 2.3rem; }
+    .grade-medal.grade-medal--puzzle { min-width: 76px; min-height: 56px; padding: 4px 6px; }
+    .grade-medal.grade-medal--puzzle .grade-medal__stars { font-size: 1.5rem; }
+    .grade-title-row { grid-column: 2 / -1; align-self: end; justify-content: flex-start; }
+    .grade-title {
+        text-align: left;
+        font-size: 1.1rem;
+        letter-spacing: 0.1em;
+        line-height: 1.25;
+    }
+    .grade-verdict {
+        grid-column: 2 / -1;
+        align-self: start;
+        text-align: left;
+        font-size: 0.8rem;
+        line-height: 1.5;
+    }
+
+    /* 保存失败提示（仅失败/重试时出现） */
+    .result-hero .cloud-save-status {
+        grid-column: 1 / -1;
+        order: 5;
+        margin: -2px 0 0;
+        font-size: 0.74rem;
+        line-height: 1.3;
+    }
+    .result-stock-info,
+    .final-return-block,
+    .result-stats-grid,
+    .result-actions,
+    .result-invite-link { grid-column: 1 / -1; }
+
+    /* 股票名 + 区间 */
+    .result-stock-info {
+        order: 4;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 8px;
+        padding-top: 10px;
+        border-top: 1.2px dashed var(--line);
+    }
+    .result-stock-name { flex: 1 0 100%; font-size: 1.15rem; letter-spacing: 0.06em; line-height: 1.3; }
+    .result-date-range { margin: 0; font-size: 0.74rem; color: var(--mute); opacity: 1; line-height: 1.4; }
+
+    /* 收益率：整页最醒目的数字 */
+    .final-return-block {
+        order: 6;
+        margin: 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .final-return-label { margin: 0; font-size: 0.8rem; }
+    .final-return { font-size: 2.8rem; letter-spacing: -0.04em; line-height: 1.05; }
+
+    /* 4 项统计一行 */
+    .result-stats-grid { order: 7; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .result-stat { padding: 5px 2px 6px; text-align: center; }
+    .result-stat__label { margin-bottom: 1px; font-size: 0.62rem; letter-spacing: 0; white-space: nowrap; }
+    .result-stat__value { font-size: 0.98rem; line-height: 1.25; }
+
+    /* 按钮：再来一局 + 返回首页 / 保存图片 + 复制文案 + 排行榜 两排（样式待与用户讨论后重排） */
+    .result-actions { order: 8; margin-top: 0; gap: 6px; max-width: none; }
+    .result-actions .play-again-btn.ctl.result-act { height: 40px !important; min-height: 40px; font-size: 0.86rem; }
+    .result-actions .play-again-btn.ctl.result-act--primary { font-size: 0.98rem; }
+    .result-invite-link { order: 10; margin: 0; padding: 2px 0; font-size: 0.76rem; }
+
+    /* 下面几块同步收紧，少滑几屏 */
+    .bs-report { margin-top: 12px; padding: 12px 14px; }
+    .bs-score-header { margin-bottom: 6px; }
+    .bs-report-items { gap: 0; }
+    .bs-report-item { padding: 5px 0; font-size: 0.8rem; gap: 8px; }
+    .bs-comment { margin-top: 8px; padding: 8px 10px; font-size: 0.8rem; line-height: 1.55; }
+    .chart-container { padding: 12px 10px; margin-bottom: 12px; }
+    #result-kline-chart { height: 420px !important; }
+    .analysis-container { padding: 14px; margin-top: 12px; }
+}
+
+/* 桌面：右栏 = 股票信息一行 / 收益率 / 统计一行 / 按钮一排 */
+@media (min-width: 901px) {
+    .result-hero { grid-template-columns: 230px minmax(0, 1fr); gap: 24px; align-items: start; padding: 20px 24px; }
+    .grade-title { letter-spacing: 0.1em; }
+    .result-hero__left { gap: 8px; padding-top: 4px; }
+    .result-hero__right { gap: 12px; }
+    .result-stock-info {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 10px;
+    }
+    .result-stock-name { flex: 1 0 100%; }
+    .result-date-range { margin: 0; font-size: 0.8rem; color: var(--mute); opacity: 1; }
+    .final-return-block { margin: 0; }
+    .result-actions {
+        display: flex;
+        flex-wrap: wrap;
+        max-width: none;
+        margin: 0;
+        gap: 8px;
+        justify-content: flex-start;
+    }
+    .result-actions .play-again-btn.ctl.result-act { width: auto !important; flex: 0 0 auto; padding: 0 16px !important; }
+    .result-actions .play-again-btn.ctl.result-act--primary { padding: 0 26px !important; }
+    .result-invite-link { margin: 0; padding: 2px 0; }
+}
