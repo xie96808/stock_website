@@ -245,6 +245,7 @@ function pvpSignalMarks(bars, historyLength, bestPoints) {
  *
  * @param {object} vm
  * @param {object[]} vm.bars - visible / full OHLC bars
+ * @param {number} [vm.windowSize=0] - show only the last N bars (live game / battle: KLINE_WINDOW); 0 = every bar
  * @param {number} vm.historyLength - pre-game history bar count (for trade day coords)
  * @param {object[]} [vm.trades]
  * @param {{ buys: object[], sells: object[] }|null} [vm.bestPoints] - result review markers
@@ -268,9 +269,24 @@ export const MA_LINE_WIDTH = 1.6;
 export const CLEAN_PRICE_BOTTOM = '27%';
 export const CLEAN_VOLUME_TOP = '77%';
 
+/**
+ * 滑动窗口：对局中的 K 线只画最近 `KLINE_WINDOW` 根——每多走一天，最左边那一天就同步移出，
+ * 画面里永远是 30 根大 K 线（结算 / 复盘图不开窗口，仍然是完整的 60 根）。
+ * 均线、MACD 仍按完整数据计算后再截取，所以窗口左端的均线值是连续的、不会“重新起算”。
+ */
+export const KLINE_WINDOW = 30;
+
+/** How many of the oldest bars are hidden when only the last `size` of `total` are shown (0 = show all). */
+export function windowOffset(total, size) {
+    const t = Number(total) || 0;
+    const s = Math.floor(Number(size) || 0);
+    return s > 0 && t > s ? t - s : 0;
+}
+
 export function buildKlineOption(vm) {
     const {
-        bars,
+        bars: allBars,
+        windowSize = 0,
         historyLength = 0,
         trades = [],
         bestPoints = null,
@@ -288,6 +304,9 @@ export function buildKlineOption(vm) {
 
     const isResult = mode === 'result';
     const isPvp = mode === 'pvp';
+    // Review markers (best-route pins) index into the full series, so a chart that carries them never windows.
+    const offset = isResult || bestPoints ? 0 : windowOffset(allBars.length, windowSize);
+    const bars = offset ? allBars.slice(offset) : allBars;
     const paperChart = isResult || isPvp;
     const bottomMode = isPvp && (pvpBottom === 'macd' || pvpBottom === 'volume') ? pvpBottom : null;
     const pvpTwoPane = !!bottomMode;
@@ -298,17 +317,21 @@ export function buildKlineOption(vm) {
     const clean = !isResult && (!isPvp || pvpTwoPane);
     const dayLabels = isPvp
         ? bars.map((bar, index) => (bar && bar.label) || String(index + 1))
-        : buildDayIndexLabels(bars.length);
+        : buildDayIndexLabels(allBars.length).slice(offset);
     const startDayLabel = String(historyLength + 1);
     const ohlc = bars.map(d => [d.open, d.close, d.low, d.high]);
     const volumes = bars.map(d => d.volume);
     const volumeColors = bars.map(d => d.close >= d.open ? '#e05252' : '#3db86a');
 
-    const ma5 = calculateMA(bars, 5);
-    const ma10 = calculateMA(bars, 10);
-    const ma20 = calculateMA(bars, 20);
-    const ma30 = calculateMA(bars, 30);
-    const macd = isPvp ? calculateMACD(bars) : null;
+    const cut = (list) => (offset ? list.slice(offset) : list);
+    const ma5 = cut(calculateMA(allBars, 5));
+    const ma10 = cut(calculateMA(allBars, 10));
+    const ma20 = cut(calculateMA(allBars, 20));
+    const ma30 = cut(calculateMA(allBars, 30));
+    const macdFull = isPvp ? calculateMACD(allBars) : null;
+    const macd = macdFull && offset
+        ? { dif: cut(macdFull.dif), dea: cut(macdFull.dea), hist: cut(macdFull.hist) }
+        : macdFull;
 
     const markPoints = isPvp
         ? [...pvpMarkerPoints(bars, pvpMarks), ...pvpSignalMarks(bars, historyLength, bestPoints)]
@@ -319,12 +342,12 @@ export function buildKlineOption(vm) {
             itemStyle: {
                 color: trade.type === 'buy' ? '#e05252' : '#3db86a'
             }
-        })).filter(p => Number(p.coord[0]) <= bars.length);
+        })).filter(p => Number(p.coord[0]) <= allBars.length && Number(p.coord[0]) > offset);
 
     if (!isPvp && !isResult) {
         for (const m of extraMarks || []) {
             const idx = historyLength + Number(m.day);
-            if (!(idx >= 1 && idx <= bars.length) || !Number.isFinite(Number(m.price))) continue;
+            if (!(idx >= offset + 1 && idx <= allBars.length) || !Number.isFinite(Number(m.price))) continue;
             markPoints.push({
                 name: m.text,
                 coord: [String(idx), Number(m.price)],
@@ -336,7 +359,7 @@ export function buildKlineOption(vm) {
         }
     }
 
-    if (valuation) {
+    if (valuation && historyLength + valuation.day > offset) {
         markPoints.push({
             name: '期末估值',
             coord: [String(historyLength + valuation.day), valuation.price],
@@ -445,14 +468,15 @@ export function buildKlineOption(vm) {
 
     // 清爽布局没有横轴日期了，所以用一条金色虚线 + 「第1天」标签，告诉用户左边是开局前的历史行情、
     // 右边是正式开始交易的日子。线画在最后一根历史 K 线与第 1 天之间。
-    if (!isResult && historyLength > 0 && bars.length > historyLength) {
-        const nearRight = historyLength / bars.length > 0.78;
+    const historyShown = historyLength - offset; // history bars still inside the window
+    if (!isResult && historyShown > 0 && bars.length > historyShown) {
+        const nearRight = historyShown / bars.length > 0.78;
         candleSeries.markLine = {
             silent: true,
             symbol: 'none',
             animation: false,
             data: [{
-                xAxis: historyLength - 0.5,
+                xAxis: historyShown - 0.5,
                 label: {
                     show: true,
                     formatter: nearRight ? '开局 ▸' : '▸ 第1天',

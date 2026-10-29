@@ -531,50 +531,6 @@
     color: var(--mute);
 }
 
-.stage-tools { position: relative; }
-
-.indicator-toggle {
-    padding: 6px 12px;
-    border-radius: 12px 18px 10px 16px;
-    border: 1.5px solid var(--line);
-    background: var(--chip-bg);
-    color: var(--ink);
-    font-family: var(--kaiti);
-    font-size: 0.8rem;
-    letter-spacing: 0.12em;
-    cursor: pointer;
-    box-shadow: 1px 1px 0 var(--line);
-    white-space: nowrap;
-}
-.indicator-toggle:hover { transform: translate(-1px, -1px); }
-
-.indicator-panel {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    width: 160px;
-    background: var(--card);
-    border: 1.6px solid var(--line);
-    border-radius: 14px 18px 12px 16px;
-    padding: 10px 12px;
-    display: none;
-    flex-direction: column;
-    gap: 6px;
-    z-index: 20;
-    box-shadow: 2px 2px 0 var(--line);
-}
-.indicator-panel.open { display: flex; }
-
-.indicator-panel label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.82rem;
-    color: var(--ink);
-    cursor: pointer;
-}
-.indicator-panel input[type="checkbox"] { accent-color: var(--terra); }
-
 .chart-stage {
     flex: 1;
     min-height: 0;
@@ -1331,4 +1287,27 @@
 #gameScreen.is-cloud-syncing #tradeCount,
 #gameScreen.is-cloud-syncing .action-zone {
     visibility: hidden;
+}
+
+/* ===== K 线舞台：删掉「指标」和「身份隐藏中」之后，标题栏只剩一行，外框也收紧，K 线框更大 ===== */
+.market-stage { padding: 10px 10px 10px; }
+.market-stage-header { margin-bottom: 8px; align-items: center; }
+.market-stage-header .stage-kicker { display: none; }
+.market-stage-header .stage-title { margin: 0; }
+
+/* 波段分析 / 实时交易日志：沉到页面最下方，默认收起，不再占主界面 */
+.intel-dock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+@media (min-width: 801px) {
+    .market-stage .chart-stage { height: clamp(460px, 68vh, 720px); }
+}
+@media (max-width: 600px) {
+    .market-stage { padding: 8px 6px 6px; }
+    .market-stage-header { margin-bottom: 4px; padding: 0 4px; }
+    #kline-chart { min-height: clamp(250px, calc(100dvh - 514px), 440px); }
 }

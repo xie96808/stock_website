@@ -177,3 +177,84 @@ test('no day-1 marker before the first day exists', () => {
   const opt = buildKlineOption({ bars: kline.slice(0, HIST_LEN), historyLength: HIST_LEN, mode: 'game' });
   assert.equal(opt.series[0].markLine, undefined);
 });
+
+test('windowOffset: only the last N bars are shown, never negative', async () => {
+  const { windowOffset, KLINE_WINDOW } = await import('../js/kline-option.js');
+  assert.equal(KLINE_WINDOW, 30);
+  assert.equal(windowOffset(30, 30), 0);
+  assert.equal(windowOffset(31, 30), 1);
+  assert.equal(windowOffset(45, 30), 15);
+  assert.equal(windowOffset(60, 30), 30);
+  assert.equal(windowOffset(12, 30), 0, 'short series (puzzle) shows everything');
+  assert.equal(windowOffset(60, 0), 0, 'no window requested');
+  assert.equal(windowOffset(60, undefined), 0);
+});
+
+test('game window: 30 bars, oldest drops each day, labels / MA / markers stay aligned to the full series', async () => {
+  const { KLINE_WINDOW } = await import('../js/kline-option.js');
+  const kline = makeAnalysisKline();
+  const hist = HIST_LEN;
+  for (const day of [1, 5, 17, 30]) {
+    const bars = kline.slice(0, hist + day);
+    const opt = buildKlineOption({
+      bars, historyLength: hist, mode: 'game', windowSize: KLINE_WINDOW,
+      trades: [{ type: 'buy', day: 1, price: 10 }, { type: 'sell', day, price: 11 }],
+    });
+    const n = Math.min(bars.length, KLINE_WINDOW);
+    const off = bars.length - n;
+    const candle = opt.series[0];
+    assert.equal(candle.data.length, n, `day ${day}: ${n} candles`);
+    assert.equal(opt.xAxis[0].data.length, n);
+    // the last candle is always today; the first label is the (off+1)-th day of the full series
+    assert.equal(opt.xAxis[0].data[0], String(off + 1));
+    assert.equal(opt.xAxis[0].data[n - 1], String(bars.length));
+    assert.deepEqual(candle.data[n - 1], [bars[bars.length - 1].open, bars[bars.length - 1].close, bars[bars.length - 1].low, bars[bars.length - 1].high]);
+    // MAs are cut from the full-series values, not recomputed from the window
+    const full = buildKlineOption({ bars, historyLength: hist, mode: 'game' });
+    for (const name of ['5日线', '10日线', '20日线', '30日线']) {
+      const w = opt.series.find((s) => s.name === name).data;
+      const f = full.series.find((s) => s.name === name).data;
+      assert.deepEqual(w, f.slice(off), name);
+    }
+    assert.equal(opt.series.find((s) => s.name === '成交量').data.length, n);
+    // markers outside the window are dropped, those inside keep their day-index coordinate
+    const labels = candle.markPoint.data.map((p) => p.coord[0]);
+    assert.ok(labels.every((l) => Number(l) > off && Number(l) <= bars.length), `day ${day}: ${labels}`);
+    const sellCoord = String(hist + day);
+    assert.ok(labels.includes(sellCoord));
+    assert.equal(labels.includes(String(hist + 1)), hist + 1 > off, 'first buy only while its bar is still visible');
+    // 开局 divider sits between the last visible history bar and day 1, and leaves once history is gone
+    const histShown = hist - off;
+    if (histShown > 0) assert.equal(candle.markLine.data[0].xAxis, histShown - 0.5);
+    else assert.equal(candle.markLine, undefined);
+  }
+});
+
+test('result / review charts never window', async () => {
+  const kline = makeAnalysisKline().slice(0, HIST_LEN + 30);
+  const res = buildKlineOption({ bars: kline, historyLength: HIST_LEN, mode: 'result', windowSize: 30 });
+  assert.equal(res.series[0].data.length, kline.length);
+  const withBest = buildKlineOption({
+    bars: kline, historyLength: HIST_LEN, mode: 'game', windowSize: 30,
+    bestPoints: { buys: [{ day: 3 }], sells: [{ day: 9 }] },
+  });
+  assert.equal(withBest.series[0].data.length, kline.length, 'review markers index the full series');
+});
+
+test('battle window: markers outside the window disappear and the price series only holds visible bars', () => {
+  const bars = Array.from({ length: 50 }, (_, i) => ({
+    label: i < 30 ? `h${i + 1}` : `d${i - 29}`,
+    open: 10, close: 10.2, low: i === 0 ? 1 : 9.5, high: i === 0 ? 99 : 11, volume: 1,
+  }));
+  const opt = buildKlineOption({
+    mode: 'pvp', bars, historyLength: 30, windowSize: 30, resetDataZoom: true,
+    pvpMarks: [{ label: 'h2', kind: 'buy', side: 'me' }, { label: 'd3', kind: 'buy', side: 'me' }, { label: 'd20', kind: 'sell', side: 'opp' }],
+    pvpBottom: 'volume',
+  });
+  assert.equal(opt.series[0].data.length, 30);
+  assert.equal(opt.xAxis[0].data[0], 'h21');
+  const coords = opt.series[0].markPoint.data.map((p) => p.coord[0]);
+  assert.deepEqual(coords.sort(), ['d20', 'd3']);
+  // the 1..99 outlier bar (h1) scrolled out, so the series ECharts autoscales on holds only visible prices
+  assert.ok(opt.series[0].data.every((c) => c[2] >= 9.5 && c[3] <= 11));
+});

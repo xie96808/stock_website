@@ -12,7 +12,7 @@ import {
     selectTodayBar,
 } from './game-session.js';
 import { applyChartTheme, onThemeChange, getTheme } from './theme.js';
-import { buildKlineOption } from './kline-option.js';
+import { buildKlineOption, KLINE_WINDOW, windowOffset } from './kline-option.js';
 import { endGame } from './result.js';
 import {
     persistCurrentCloudDraft,
@@ -94,9 +94,8 @@ export function readFillModeFromUi() {
 }
 
 
-/** On phone, collapse 波段分析 / 交易日志 so K-line + sticky actions share the viewport. */
+/** 波段分析 / 交易日志 live in a dock at the very bottom of the page and start folded on every new game. */
 function syncMobileIntelDefaults() {
-    if (!window.matchMedia('(max-width: 900px)').matches) return;
     document.querySelectorAll('#gameScreen details.intel-card').forEach((el) => {
         el.open = false;
     });
@@ -300,7 +299,8 @@ export async function initChart() {
         if (dataIndex == null) return;
         const session = getSession();
         const visibleData = selectVisibleKline(session);
-        const d = visibleData[dataIndex];
+        // The chart only draws the last KLINE_WINDOW bars, so its index is relative to that window.
+        const d = visibleData[dataIndex + windowOffset(visibleData.length, KLINE_WINDOW)];
         if (!d) return;
         document.getElementById('hoverLabel').textContent = label;
         document.getElementById('hoverDate').textContent = d.date;
@@ -327,7 +327,6 @@ export async function initChart() {
         resetOHLCToToday();
     });
 
-    bindMAToggles();
     // Defer first heavy setOption one frame so enter-game chrome stays responsive.
     requestAnimationFrame(function () {
         if (!chartRefs.klineChart) return;
@@ -337,21 +336,6 @@ export async function initChart() {
         }, 50);
     });
     return true;
-}
-
-let maTogglesBound = false;
-function bindMAToggles() {
-    if (maTogglesBound) return;
-    maTogglesBound = true;
-    ['indicatorMA5', 'indicatorMA10', 'indicatorMA20', 'indicatorMA30'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => updateChart());
-    });
-}
-
-function maChecked(id) {
-    const el = document.getElementById(id);
-    return el ? el.checked : true;
 }
 
 function resetOHLCToToday() {
@@ -372,13 +356,6 @@ export function updateChart() {
     const histLen = session.historyLength;
     const visibleData = selectVisibleKline(session);
 
-    const maSelected = {
-        '5日线': maChecked('indicatorMA5'),
-        '10日线': maChecked('indicatorMA10'),
-        '20日线': maChecked('indicatorMA20'),
-        '30日线': maChecked('indicatorMA30'),
-    };
-
     const zoomKey = `${visibleData.length}:${histLen}:${session.currentDay || 1}`;
     const resetDataZoom = zoomKey !== lastChartZoomKey;
     lastChartZoomKey = zoomKey;
@@ -388,7 +365,7 @@ export function updateChart() {
         historyLength: histLen,
         trades: session.tradeHistory,
         mode: 'game',
-        maSelected,
+        windowSize: KLINE_WINDOW,
         resetDataZoom,
         showDataZoomSlider: false,
         syncHover: (kd) => {
@@ -1021,8 +998,6 @@ export function updateUI() {
     // Chart subtitle — mask identity until endGame
     const subtitle = document.getElementById('chartSubtitle');
     if (subtitle) subtitle.textContent = '股票代码: ******';
-    const subtitleInner = document.getElementById('chartSubtitleInner');
-    if (subtitleInner) subtitleInner.textContent = '身份隐藏中';
 
     // ── Return ratio (judging standard). Engine still uses starting cash internally. ──
     const displayReturn = (session.totalReturn - 1) * 100;
@@ -1347,11 +1322,6 @@ export function renderWaveAnalysis() {
         else text += ` 成交量较为平稳，市场情绪中性。`;
         textEl.innerHTML = text;
     }
-}
-
-export function toggleIndicatorPanel() {
-    const panel = document.getElementById('indicatorPanel');
-    if (panel) panel.classList.toggle('open');
 }
 
 fastForward = createFastForwardController({

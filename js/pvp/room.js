@@ -2,7 +2,7 @@ import { setPvpAvatar } from "./bot-art.js";
 import { displayAvatarUrl, getAuthState } from "../auth.js";
 import { ensureEcharts } from "../echarts-loader.js";
 import { coinIconHtml, refreshJiuCoinStatus } from "../jiu-coin.js";
-import { buildKlineOption, relaxPvpMarkers } from "../kline-option.js";
+import { buildKlineOption, relaxPvpMarkers, KLINE_WINDOW } from "../kline-option.js";
 import { Route, prepareScreen, activateScreen, setRouteHash } from "../screen-router.js";
 import {
   formatPpm,
@@ -684,6 +684,7 @@ async function paintChart() {
     const option = buildKlineOption({
       mode: "pvp",
       bars,
+      windowSize: KLINE_WINDOW,
       historyLength: market.historyLength || 0,
       pvpMarks: marksFromView(view),
       showDataZoomSlider: false,

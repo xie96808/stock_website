@@ -155,11 +155,6 @@
     min-height: 44px;
   }
 
-  /* Indicator toggles */
-  .indicator-toggle {
-    min-height: 44px;
-    padding: 10px 14px;
-  }
 }
 
 @media (max-width: 420px) {

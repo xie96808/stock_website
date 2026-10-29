@@ -1039,16 +1039,6 @@
                             <div>
                                 <div class="stage-kicker" id="stageKicker">MARKET · K-LINE</div>
                                 <h3 class="stage-title" id="stageTitle">实时走势</h3>
-                                <div class="stage-subtitle" id="chartSubtitleInner">--</div>
-                            </div>
-                            <div class="stage-tools">
-                                <button class="indicator-toggle ctl ctl-secondary" id="indicatorsToggle" data-ctl-kind="secondary" data-state="default" onclick="toggleIndicatorPanel()"><span class="ctl-label">指标 ▾</span></button>
-                                <div class="indicator-panel" id="indicatorPanel">
-                                    <label><input type="checkbox" id="indicatorMA5" checked><span>5日线</span></label>
-                                    <label><input type="checkbox" id="indicatorMA10" checked><span>10日线</span></label>
-                                    <label><input type="checkbox" id="indicatorMA20" checked><span>20日线</span></label>
-                                    <label><input type="checkbox" id="indicatorMA30" checked><span>30日线</span></label>
-                                </div>
                             </div>
                         </div>
                         <div class="chart-stage">
@@ -1056,27 +1046,30 @@
                         </div>
                     </div>
 
-                    <!-- 波段分析 -->
-                    <details class="intel-card" open>
-                        <summary><span>波段分析</span><span id="waveAnalysisTags"></span></summary>
-                        <div class="intel-body">
-                            <div class="wave-analysis-text" id="waveAnalysisText">暂无分析数据，随着行情展开将自动生成。</div>
-                        </div>
-                    </details>
-
-                    <!-- 交易日志 -->
-                    <details class="intel-card" open>
-                        <summary><span>实时交易日志</span><span id="tradeLogCount">暂无记录</span></summary>
-                        <div class="intel-body">
-                            <div class="history-list" id="historyList">
-                                <div class="log-item empty">暂无交易记录</div>
-                            </div>
-                        </div>
-                    </details>
-
                 </div><!-- /.dashboard-main -->
 
             </div><!-- /.dashboard-layout -->
+
+            <!-- 波段分析 / 交易日志：不抢主界面，沉在页面最下方，默认收起 -->
+            <div class="intel-dock" id="intelDock">
+                <!-- 波段分析 -->
+                <details class="intel-card">
+                    <summary><span>波段分析</span><span id="waveAnalysisTags"></span></summary>
+                    <div class="intel-body">
+                        <div class="wave-analysis-text" id="waveAnalysisText">暂无分析数据，随着行情展开将自动生成。</div>
+                    </div>
+                </details>
+
+                <!-- 交易日志 -->
+                <details class="intel-card">
+                    <summary><span>实时交易日志</span><span id="tradeLogCount">暂无记录</span></summary>
+                    <div class="intel-body">
+                        <div class="history-list" id="historyList">
+                            <div class="log-item empty">暂无交易记录</div>
+                        </div>
+                    </div>
+                </details>
+            </div>
 
         </section>
 
@@ -1540,7 +1533,7 @@
     <script type="module">
         import { gameState, chartRefs, quizState } from './js/state.js';
         import { toggleTheme } from './js/theme.js';
-        import { startGame, handleAction, finishSettle, toggleIndicatorPanel, openRewindConfirm, leaveGameScreen } from './js/game.js';
+        import { startGame, handleAction, finishSettle, openRewindConfirm, leaveGameScreen } from './js/game.js';
         import { attachDeferredStart } from "./js/start-flow.js";
         import {
             Route,
@@ -1620,7 +1613,6 @@
         window.finishSettle = finishSettle;
         window.leaveGameScreen = leaveGameScreen;
         window.openRewindConfirm = openRewindConfirm;
-        window.toggleIndicatorPanel = toggleIndicatorPanel;
         window.resetGame = resetGame;
         window.playAgain = playAgain;
         window.closePuzzleSettleModal = closePuzzleSettleModal;
