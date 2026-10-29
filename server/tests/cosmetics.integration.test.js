@@ -157,3 +157,12 @@ test("sendSticker: ownership of the pack, playing only, rate limit, unknown ids"
   assert.equal(sendSticker(fakeDb({ status: "settled", owned: ["pack_market"] }), { matchId: "m2", fromUserId: 1, stickerId: "limit_up", now: 20_000 }).status, 409);
   assert.equal(sendSticker(mine, { matchId: "m1", fromUserId: 9, stickerId: "limit_up", now: 30_000 }).status, 404);
 });
+
+test("a sticker pack cannot be equipped as an entrance effect (the client must not offer it)", async () => {
+  const auth = await register(uname("pk"));
+  const packs = (await state()).packs;
+  assert.equal((await buy(auth, packs[0].id)).status, 200);
+  const r = await equip(auth, packs[0].id);
+  assert.equal(r.status, 404);
+  assert.equal(r.json.error.code, "UNKNOWN_ITEM");
+});

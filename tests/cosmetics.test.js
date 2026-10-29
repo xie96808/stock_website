@@ -120,6 +120,14 @@ test("captions, buy button and toasts", () => {
     (({ kind, label }) => ({ kind, label }))(actionForBalance(state.packs[1], 250)),
     { kind: "poor", label: "购买 300" }
   );
+  // An owned pack has nothing to equip: quiet, disabled 「已拥有」 (it used to say 装备 and fail on tap).
+  const owned = actionForBalance(state.packs[0], 250);
+  assert.deepEqual(owned, { kind: "owned", label: "已拥有", disabled: true });
+  assert.equal(actionForBalance({ ...state.packs[0], equipped: true }, 250).kind, "owned");
+  // entrance effects still equip / unequip
+  const fx = { id: "ink_splash", kind: "entrance", price: 400, owned: true, equipped: false, buyable: false };
+  assert.equal(actionForBalance(fx, 250).kind, "equip");
+  assert.equal(actionForBalance({ ...fx, equipped: true }, 250).kind, "unequip");
   const rich = { ...state.packs[1], affordable: true };
   assert.equal(actionForBalance(rich, 400).label, "购买 300");
   assert.equal(actionForBalance(rich, 400, true).label, "确认 -300");
