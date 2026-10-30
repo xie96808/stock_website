@@ -790,6 +790,20 @@
 }
 .result-share-sheet__kline[hidden] { display: none; }
 
+.result-share-sheet__slogan {
+    margin: 6px 0 12px;
+    padding: 10px 14px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.5;
+    color: var(--terra);
+    background: var(--paper-2);
+    border: 1.3px dashed var(--line);
+    border-radius: 12px 16px 10px 14px;
+}
+
 /* Poster footer: QR + invite code (the code line is the thing people type into the register form). */
 .result-share-sheet__foot {
     display: flex;

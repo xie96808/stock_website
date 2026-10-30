@@ -6,6 +6,7 @@ import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
 import { posterFooter } from './invite-pure.js';
 import { shareWindowBars, drawShareKline } from './share-kline.js';
+import { pickShareSlogan } from './share-slogan.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -134,6 +135,7 @@ function ensureResultShareSheet() {
     parts.push('<div class="result-share-sheet__ret-label">收益率</div>');
     parts.push('<div class="result-share-sheet__return" id="rssReturn"></div>');
     parts.push('<canvas class="result-share-sheet__kline" id="rssKline" width="1168" height="560"></canvas>');
+    parts.push('<div class="result-share-sheet__slogan" id="rssSlogan"></div>');
     parts.push(
         '<div class="result-share-sheet__foot">' +
             '<img class="result-share-sheet__qr" id="rssQr" alt="" width="96" height="96">' +
@@ -226,6 +228,7 @@ async function populateResultShareSheet() {
     sheet.querySelector('#rssStock').textContent = stock;
     sheet.querySelector('#rssMeta').textContent = dateRange;
     retEl.textContent = ret;
+    sheet.querySelector('#rssSlogan').textContent = pickShareSlogan(ret, pct);
     paintShareKline(sheet);
     const invite = await loadPosterInvite();
     lastPosterFoot = await fillPosterFooter(sheet, invite);
