@@ -4,7 +4,8 @@ import { shareBoardQuery, planShareRank, bestGameText } from './lb-verdict.js';
 import { api, getAuthState } from './auth.js';
 import { showLeaderboard } from './leaderboard.js';
 import { showDailyChallengeBoard } from './daily-challenge.js';
-import { posterFooter, buildInviteLink } from './invite-pure.js';
+import { posterFooter } from './invite-pure.js';
+import { shareWindowBars, drawShareKline } from './share-kline.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
 const SHARE_SITE_HOST = 'stockgame.xieyw.top';
@@ -65,102 +66,6 @@ function buildResultPromoCaption() {
         '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
         '，快来挑战！'
     );
-}
-
-function buildResultShareCopyText() {
-    const share = selectShareView();
-    const opening = '我在「' + SHARE_SITE_NAME + '」用真实 A 股数据练了一局';
-    const ret = formatReturnPctDisplay();
-    const rank = share.shareRank;
-    const beat = share.shareBeatPct;
-    const ranked = rank != null || beat != null;
-    if (ranked) {
-        const bits = [];
-        if (rank != null) bits.push('目前排在第 ' + rank + ' 名');
-        if (beat != null && beat > 0) bits.push('超越约 ' + beat + '% 的玩家');
-        const mid = bits.join('／');
-        if (mid) return opening + '，收益率 ' + ret + '，' + mid + '。不服来战：\n' + SHARE_SITE_URL;
-    }
-    return opening + '，收益率 ' + ret + '。你也来试试？\n' + SHARE_SITE_URL;
-}
-
-function showShareToast(message, kind) {
-    let host = document.getElementById('authToastHost');
-    if (!host) {
-        host = document.createElement('div');
-        host.className = 'auth-toast-host';
-        host.id = 'authToastHost';
-        host.setAttribute('aria-live', 'polite');
-        document.body.appendChild(host);
-    }
-    const toast = document.createElement('div');
-    toast.className = 'auth-toast auth-toast--' + (kind || 'success');
-    toast.setAttribute('role', 'status');
-    toast.textContent = message;
-    host.appendChild(toast);
-    requestAnimationFrame(function () { toast.classList.add('show'); });
-    setTimeout(function () {
-        toast.classList.remove('show');
-        setTimeout(function () { toast.remove(); }, 280);
-    }, 2600);
-}
-
-function copyTextToClipboard(text) {
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
-        return navigator.clipboard.writeText(text).then(function () {
-            return true;
-        }).catch(function () {
-            return fallbackCopyText(text);
-        });
-    }
-    return Promise.resolve(fallbackCopyText(text));
-}
-
-function fallbackCopyText(text) {
-    try {
-        const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        ta.setSelectionRange(0, text.length);
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        return !!ok;
-    } catch (e) {
-        return false;
-    }
-}
-
-export async function copyResultShareText() {
-    let text = buildResultShareCopyText();
-    try {
-        const st = (await import('./invite.js')).inviteState();
-        if (st && st.code) text += ' 邀请码 ' + st.code + '：' + buildInviteLink(st.code);
-    } catch (e) { /* plain text is fine */ }
-    const btn = document.getElementById('resultShareCopyBtn');
-    const orig = btn ? (btn.querySelector('.ctl-label') || btn).textContent : '';
-    if (btn) btn.disabled = true;
-    try {
-        const ok = await copyTextToClipboard(text);
-        if (ok) {
-            showShareToast('已复制，去粘贴吧', 'success');
-        } else {
-            showShareToast('复制失败，请手动长按选择文案', 'error');
-            console.warn('share copy failed; text:', text);
-        }
-    } catch (err) {
-        console.error('复制分享文案失败', err);
-        showShareToast('复制失败，请稍后再试', 'error');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            if (orig) (btn.querySelector('.ctl-label') || btn).textContent = orig;
-        }
-    }
 }
 
 export async function refreshShareRankMeta() {
@@ -224,15 +129,14 @@ function ensureResultShareSheet() {
     sheet.className = 'result-share-sheet';
     sheet.setAttribute('aria-hidden', 'true');
     const parts = [];
-    parts.push('<div class="result-share-sheet__brand">' + SHARE_SITE_NAME + '</div>');
     parts.push('<div class="result-share-sheet__stock" id="rssStock"></div>');
     parts.push('<div class="result-share-sheet__meta" id="rssMeta"></div>');
+    parts.push('<div class="result-share-sheet__ret-label">收益率</div>');
     parts.push('<div class="result-share-sheet__return" id="rssReturn"></div>');
-    parts.push('<div class="result-share-sheet__grade" id="rssGrade"></div>');
-    parts.push('<div class="result-share-sheet__promo" id="rssPromo"></div>');
+    parts.push('<canvas class="result-share-sheet__kline" id="rssKline" width="1168" height="560"></canvas>');
     parts.push(
         '<div class="result-share-sheet__foot">' +
-            '<img class="result-share-sheet__qr" id="rssQr" alt="" width="120" height="120">' +
+            '<img class="result-share-sheet__qr" id="rssQr" alt="" width="96" height="96">' +
             '<div class="result-share-sheet__foot-words">' +
                 '<div class="result-share-sheet__foot-1" id="rssFoot1"></div>' +
                 '<div class="result-share-sheet__foot-code" id="rssFoot2"></div>' +
@@ -240,7 +144,6 @@ function ensureResultShareSheet() {
             '</div>' +
         '</div>'
     );
-    parts.push('<div class="result-share-sheet__url" id="rssUrl">' + SHARE_SITE_URL + '</div>');
     sheet.innerHTML = parts.join('');
     document.body.appendChild(sheet);
     return sheet;
@@ -266,7 +169,6 @@ async function fillPosterFooter(sheet, invite) {
     f2.textContent = foot.line2;
     f2.classList.toggle('is-code', !!foot.code);
     sheet.querySelector('#rssFoot3').textContent = foot.line3;
-    sheet.querySelector('#rssUrl').textContent = foot.code ? foot.link : SHARE_SITE_URL;
     const img = sheet.querySelector('#rssQr');
     try {
         const { qrDataUrl } = await import('./share-image.js');
@@ -280,6 +182,31 @@ async function fillPosterFooter(sheet, invite) {
     return foot;
 }
 
+function cssVar(name, fallback) {
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+}
+
+/** Paint the 30 played bars (+ 买/卖 marks) onto the sheet's canvas. Returns false when there is no data. */
+function paintShareKline(sheet) {
+    const canvas = sheet.querySelector('#rssKline');
+    if (!canvas) return false;
+    const view = getSession();
+    const bars = shareWindowBars(view.gameKline, view.historyLength, view.gameDays || 30);
+    canvas.hidden = bars.length === 0;
+    if (!bars.length) return false;
+    return drawShareKline(canvas, bars, view.tradeHistory, {
+        up: cssVar('--gain-color', '#e05252'),
+        down: cssVar('--loss-color', '#3db86a'),
+        grid: cssVar('--line', '#3a3530') + '55',
+        text: cssVar('--mute', '#8a7f70'),
+        buy: cssVar('--terra', '#c45c3a'),
+        sell: cssVar('--ink', '#2b2622'),
+        markInk: cssVar('--card', '#f7f1e3'),
+        font: 'system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif',
+    }, 2);
+}
+
 async function populateResultShareSheet() {
     const sheet = ensureResultShareSheet();
     const share = selectShareView();
@@ -289,10 +216,7 @@ async function populateResultShareSheet() {
         : ((stockEl && stockEl.textContent) || '');
     const dateEl = document.getElementById('dateRange');
     const dateRange = (dateEl && dateEl.textContent) || '';
-    const fill = fillModeBoardLabel(share.fillMode) + '成交';
     const ret = formatReturnPctDisplay();
-    const gradeEl = document.getElementById('gradeTitle');
-    const gradeTitle = (gradeEl && gradeEl.textContent) || '';
     const retEl = sheet.querySelector('#rssReturn');
     const pct = share.returnPct != null
         ? parseFloat(share.returnPct)
@@ -300,10 +224,9 @@ async function populateResultShareSheet() {
     retEl.className = 'result-share-sheet__return ' +
         (pct > 0 ? 'positive' : pct < 0 ? 'negative' : 'zero');
     sheet.querySelector('#rssStock').textContent = stock;
-    sheet.querySelector('#rssMeta').textContent = dateRange + ' · ' + fill;
-    retEl.textContent = '收益率 ' + ret;
-    sheet.querySelector('#rssGrade').textContent = gradeTitle;
-    sheet.querySelector('#rssPromo').textContent = buildResultPromoCaption();
+    sheet.querySelector('#rssMeta').textContent = dateRange;
+    retEl.textContent = ret;
+    paintShareKline(sheet);
     const invite = await loadPosterInvite();
     lastPosterFoot = await fillPosterFooter(sheet, invite);
     return sheet;
@@ -318,7 +241,6 @@ async function populateResultShareSheet() {
  * navigator.share → <a download>, a shutter-style preview as proof, and a retry toast on failure. */
 const SAVE_LOAD_TIMEOUT_MS = 10000;
 const SAVE_RENDER_TIMEOUT_MS = 20000;
-const SAVE_PREVIEW_MS = 1500;
 let saveImageBusy = false;
 let lastPosterFoot = null;
 
@@ -357,43 +279,125 @@ async function renderShareSheetCanvas(sheet, bg) {
     }), SAVE_RENDER_TIMEOUT_MS, 'render');
 }
 
-/** Screenshot-style preview: white flash, the card drops in, auto-closes (~1.5s) or on tap. */
-function showSavePreview(canvas, how) {
-    const old = document.getElementById('resultSavePreview');
-    if (old) old.remove();
-    const copy = {
-        'bridge-saved': '已保存到相册',
-        'bridge-shared': '已打开系统分享',
-        shared: '已打开分享',
-        downloaded: '图片已保存',
-    }[how] || '图片已保存';
-    const root = document.createElement('div');
-    root.id = 'resultSavePreview';
-    root.className = 'result-save-preview';
-    root.setAttribute('role', 'status');
+/* ---------- 截图特效 ----------
+ * 像手机截屏：画面一闪（白闪 + 轻震动）→ 刚拍下的图放大停一下 → 缩成左下角缩略图，
+ * 缩略图下面先是“保存中…”，交付完成后变成“✓ 已保存”，约 2.6 秒后滑出；点缩略图可放大查看。 */
+const THUMB_HOLD_MS = 2600;
+
+function reducedMotion() {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+}
+
+function playCaptureFlash() {
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* no haptics */ }
+    if (reducedMotion()) return;
     const flash = document.createElement('div');
-    flash.className = 'result-save-preview__flash';
-    const card = document.createElement('div');
-    card.className = 'result-save-preview__card';
+    flash.className = 'result-capture-flash';
+    flash.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(flash);
+    window.setTimeout(function () { flash.remove(); }, 400);
+}
+
+function openCaptureEnlarged(src) {
+    if (!src || document.getElementById('resultCaptureBig')) return;
+    const root = document.createElement('div');
+    root.id = 'resultCaptureBig';
+    root.className = 'result-capture-big';
+    root.setAttribute('role', 'dialog');
+    root.setAttribute('aria-label', '分享图预览');
     const img = document.createElement('img');
     img.alt = '分享图预览';
-    try { img.src = canvas.toDataURL('image/png'); } catch (e) { /* tainted: caption only */ }
-    const cap = document.createElement('div');
-    cap.className = 'result-save-preview__cap';
-    cap.textContent = '✓ ' + copy;
-    card.append(img, cap);
-    root.append(flash, card);
-    document.body.appendChild(root);
-    let closed = false;
-    const close = function () {
-        if (closed) return;
-        closed = true;
-        root.classList.add('is-out');
-        window.setTimeout(function () { root.remove(); }, 180);
-    };
+    img.src = src;
+    root.appendChild(img);
+    const close = function () { root.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = function (e) { if (e.key === 'Escape') close(); };
     root.addEventListener('click', close);
-    window.setTimeout(close, SAVE_PREVIEW_MS);
-    return root;
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(root);
+}
+
+/**
+ * Show the flash + thumbnail for a freshly rendered canvas.
+ * @returns {{ saved(how: string): void, dismiss(): void }}
+ */
+function playCaptureEffect(canvas) {
+    const old = document.getElementById('resultCaptureThumb');
+    if (old) old.remove();
+    let src = '';
+    try { src = canvas.toDataURL('image/png'); } catch (e) { /* tainted canvas: caption only */ }
+    playCaptureFlash();
+
+    const root = document.createElement('div');
+    root.id = 'resultCaptureThumb';
+    root.className = 'result-capture-thumb';
+    root.setAttribute('role', 'status');
+    const frame = document.createElement('button');
+    frame.type = 'button';
+    frame.className = 'result-capture-thumb__frame';
+    frame.setAttribute('aria-label', '查看刚保存的分享图');
+    const img = document.createElement('img');
+    img.alt = '';
+    if (src) img.src = src;
+    frame.appendChild(img);
+    const cap = document.createElement('div');
+    cap.className = 'result-capture-thumb__cap';
+    cap.textContent = '保存中…';
+    root.append(frame, cap);
+    document.body.appendChild(root);
+
+    let timer = 0;
+    let gone = false;
+    const dismiss = function () {
+        if (gone) return;
+        gone = true;
+        window.clearTimeout(timer);
+        if (reducedMotion() || !root.animate) { root.remove(); return; }
+        root.animate(
+            [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-130%)', opacity: 0 }],
+            { duration: 220, easing: 'ease-in', fill: 'forwards' }
+        ).onfinish = function () { root.remove(); };
+    };
+    frame.addEventListener('click', function () {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(dismiss, THUMB_HOLD_MS * 2);
+        openCaptureEnlarged(src);
+    });
+
+    // 飞入：先在屏幕中央放大停一下，再缩到左下角。
+    if (!reducedMotion() && root.animate) {
+        const r = root.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const scale = Math.min(3.2, (vw * 0.62) / Math.max(r.width, 1), (vh * 0.5) / Math.max(r.height, 1));
+        const dx = vw / 2 - (r.left + r.width / 2);
+        const dy = vh / 2 - (r.top + r.height / 2);
+        const mid = 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ') rotate(-1.5deg)';
+        root.animate(
+            [
+                { transform: mid, opacity: 0, offset: 0 },
+                { transform: mid, opacity: 1, offset: 0.12 },
+                { transform: mid, opacity: 1, offset: 0.5 },
+                { transform: 'none', opacity: 1, offset: 1 },
+            ],
+            { duration: 820, easing: 'cubic-bezier(.22,.8,.24,1)' }
+        );
+    }
+
+    return {
+        saved: function (how) {
+            const copy = {
+                'bridge-saved': '已保存到相册',
+                'bridge-shared': '已打开系统分享',
+                shared: '已打开分享',
+                downloaded: '图片已保存',
+            }[how] || '图片已保存';
+            cap.textContent = '✓ ' + copy;
+            root.classList.add('is-saved');
+            window.clearTimeout(timer);
+            timer = window.setTimeout(dismiss, THUMB_HOLD_MS);
+        },
+        dismiss: dismiss,
+    };
 }
 
 /** Error toast with a 重试 button (no browser dialog). Stays ~6s; own element so showStampToast's 2.2s timer can't remove it. */
@@ -439,6 +443,7 @@ export async function saveResultShareImage() {
         labelEl.textContent = '生成中…';
     }
     let sheet = null;
+    let capture = null;
     try {
         sheet = await populateResultShareSheet();
         sheet.classList.add('capturing');
@@ -448,6 +453,7 @@ export async function saveResultShareImage() {
             || '#f7f1e3';
         const canvas = await renderShareSheetCanvas(sheet, bg);
         sheet.classList.remove('capturing');
+        capture = playCaptureEffect(canvas);
         const shareStock = selectShareView().currentStock;
         const code = (shareStock && shareStock.code) || 'game';
         const safeCode = String(code).replace(/[\\\/:*?"<>|]/g, '_');
@@ -463,13 +469,14 @@ export async function saveResultShareImage() {
             ? buildResultPromoCaption() + ' 邀请码 ' + lastPosterFoot.code + ' ' + lastPosterFoot.link
             : buildResultPromoCaption();
         const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: caption });
-        if (how === 'cancelled') return;
+        if (how === 'cancelled') { capture.dismiss(); return; }
         // In the Android shell, a bridge that did not report "saved" means nothing reached the album
         // and WebView ignores <a download>: do not claim success.
         if (hasBridge && how === 'downloaded') throw new Error('bridge-save-failed');
-        showSavePreview(canvas, how);
+        capture.saved(how);
     } catch (err) {
         console.error('结算分享图失败', err);
+        if (capture) capture.dismiss();
         showSaveRetryToast('保存图片失败，请重试', function () { void saveResultShareImage(); });
     } finally {
         if (sheet) sheet.classList.remove('capturing');

@@ -1126,7 +1126,6 @@
                         <button type="button" class="play-again-btn result-act result-act--primary ctl ctl-primary" data-ctl-kind="primary" data-state="default" onclick="playAgain()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.6 12.4c-.3 4.1-3.6 7-7.6 6.8-3.9-.2-6.9-3.3-6.8-7.2.1-3.8 3.1-6.8 7-6.8 1.9 0 3.5.7 4.7 1.9"/><path d="M17.2 3.6l.5 4.3-4.2.2"/></svg><span class="ctl-label">再来一局</span></button>
                         <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" data-ctl-kind="secondary" data-state="default" onclick="resetGame()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.4 11.6L12.1 4l8.5 7.7"/><path d="M5.7 10.4l.2 9.3 12.2.1.1-9.4"/><path d="M10 19.8l.1-5.6 3.9-.1.1 5.8"/></svg><span class="ctl-label">返回首页</span></button>
                         <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultShareImageBtn" data-ctl-kind="secondary" data-state="default" onclick="saveResultShareImage()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.7 8.2l3.6-.1 1.6-2.4 6.3.1 1.5 2.3 3.5.2.2 10.2-16.5-.1z"/><path d="M12.2 10.2c2.1-.1 3.6 1.4 3.6 3.2 0 1.9-1.6 3.4-3.5 3.3-1.9 0-3.4-1.5-3.3-3.3 0-1.7 1.4-3.1 3.2-3.2z"/></svg><span class="ctl-label">保存图片</span></button>
-                        <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultShareCopyBtn" data-ctl-kind="secondary" data-state="default" onclick="copyResultShareText()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.2 4.6l-3.1.1.2 15.6 10.9-.1.1-3.2"/><path d="M9.4 3.7l9.9.1.1 12.4-10 .1z"/><path d="M12.2 8.2l4.6.1M12.3 11.6l4.4.1"/></svg><span class="ctl-label">复制文案</span></button>
                         <button type="button" class="play-again-btn play-again-btn--ghost result-act ctl ctl-secondary" id="resultLeaderboardBtn" data-ctl-kind="secondary" data-state="default" onclick="openResultLeaderboard()"><svg class="result-act__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7.4 4.3l9.4.1c.1 3-.3 6.9-4.6 7.4-4.2-.5-4.9-4.5-4.8-7.5z"/><path d="M7.4 6.1c-2.1-.4-3.3.3-3.1 2.1.3 1.9 1.9 2.7 3.5 2.8M16.8 6.1c2.1-.4 3.3.3 3.1 2.1-.3 1.9-1.9 2.7-3.5 2.8"/><path d="M12.2 11.8l.1 4.2M8.2 19.6l8.3.1M9.4 16.1l5.5.1.4 3.4"/></svg><span class="ctl-label">排行榜</span></button>
                     </div>
                     <p class="result-share-hint" id="resultShareHint" hidden></p>
@@ -1554,7 +1553,7 @@
             activateScreen,
             setRouteHash,
         } from './js/screen-router.js';
-        import { resetGame, playAgain, saveResultShareImage, copyResultShareText, openResultLeaderboard } from './js/result.js';
+        import { resetGame, playAgain, saveResultShareImage, openResultLeaderboard } from './js/result.js';
         import { closePuzzleSettleModal, returnToPuzzleListFromSettleModal } from './js/puzzle-settle-modal.js';
         import { showAcademy, hideAcademy, switchTab, enterKnowledgeZone, enterTrainingZone, backToAcademyLanding, onDailyQuizCardClick, selectDailyQuizAnswer, dailyQuizNext, closeDailyQuizResultModal, goSimFromDailyQuizResult } from './js/academy.js';
         import { selectAnswer, quizNext } from './js/quiz.js';
@@ -1628,7 +1627,6 @@
         window.closePuzzleSettleModal = closePuzzleSettleModal;
         window.returnToPuzzleListFromSettleModal = returnToPuzzleListFromSettleModal;
         window.saveResultShareImage = saveResultShareImage;
-        window.copyResultShareText = copyResultShareText;
         window.openResultLeaderboard = openResultLeaderboard;
         window.showAcademy = showAcademy;
         window.hideAcademy = hideAcademy;
