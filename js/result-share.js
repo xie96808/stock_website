@@ -9,7 +9,6 @@ import { shareWindowBars, drawShareKline } from './share-kline.js';
 import { pickShareSlogan } from './share-slogan.js';
 
 const SHARE_SITE_NAME = '早知道当初不炒了';
-const SHARE_SITE_HOST = 'stockgame.xieyw.top';
 const SHARE_SITE_URL = 'https://stockgame.xieyw.top';
 
 let lastVerdict = null;
@@ -45,28 +44,11 @@ function formatReturnPctDisplay() {
     return (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
 }
 
-function buildResultPromoCaption() {
-    const share = selectShareView();
-    const ret = formatReturnPctDisplay();
-    const board = rankBoardLabel(share);
-    const beat = share.shareBeatPct;
-    if (beat != null && beat > 0) {
-        return (
-            '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
-            '，在' + board + '榜上超越了 ' + beat + '% 的玩家，你也来试试吧！'
-        );
-    }
-    if (beat === 0) {
-        // last place on the board: no "超越 0%" fragment
-        return (
-            '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
-            '，登上了' + board + '榜，你也来试试吧！'
-        );
-    }
-    return (
-        '我在' + SHARE_SITE_NAME + '（' + SHARE_SITE_HOST + '）模拟炒股，本局收益率 ' + ret +
-        '，快来挑战！'
-    );
+/** 分享文字 = 图上那句邀战话 + 邀请链接 / 站点地址（图上和系统分享文案保持同一句）。 */
+export function buildShareCaption(slogan, foot) {
+    const line = String(slogan || '').trim() || ('来「' + SHARE_SITE_NAME + '」挑战我的收益率');
+    if (foot && foot.code) return line + ' 邀请码 ' + foot.code + ' ' + foot.link;
+    return line + ' ' + SHARE_SITE_URL;
 }
 
 export async function refreshShareRankMeta() {
@@ -228,7 +210,8 @@ async function populateResultShareSheet() {
     sheet.querySelector('#rssStock').textContent = stock;
     sheet.querySelector('#rssMeta').textContent = dateRange;
     retEl.textContent = ret;
-    sheet.querySelector('#rssSlogan').textContent = pickShareSlogan(ret, pct);
+    lastSlogan = pickShareSlogan(ret, pct);
+    sheet.querySelector('#rssSlogan').textContent = lastSlogan;
     paintShareKline(sheet);
     const invite = await loadPosterInvite();
     lastPosterFoot = await fillPosterFooter(sheet, invite);
@@ -246,6 +229,7 @@ const SAVE_LOAD_TIMEOUT_MS = 10000;
 const SAVE_RENDER_TIMEOUT_MS = 20000;
 let saveImageBusy = false;
 let lastPosterFoot = null;
+let lastSlogan = '';
 
 function withTimeout(promise, ms, tag) {
     let timer = 0;
@@ -468,9 +452,7 @@ export async function saveResultShareImage() {
             function () { return import('./share-image.js'); },
             function () { return new URL('./share-image.js', import.meta.url).href; }
         ), SAVE_LOAD_TIMEOUT_MS, 'deliver-load');
-        const caption = lastPosterFoot && lastPosterFoot.code
-            ? buildResultPromoCaption() + ' 邀请码 ' + lastPosterFoot.code + ' ' + lastPosterFoot.link
-            : buildResultPromoCaption();
+        const caption = buildShareCaption(lastSlogan, lastPosterFoot);
         const how = await deliverImage(canvas, filename, { title: SHARE_SITE_NAME, text: caption });
         if (how === 'cancelled') { capture.dismiss(); return; }
         // In the Android shell, a bridge that did not report "saved" means nothing reached the album

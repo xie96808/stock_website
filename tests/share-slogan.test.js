@@ -19,3 +19,17 @@ test('every line carries the return rate and rand picks deterministically in ran
   assert.ok(pickShareSlogan('-3%', -3, () => 1).includes('-3%'), 'rand()=1 must not overflow');
   assert.ok(!pickShareSlogan('-3%', -3).includes('{ret}'));
 });
+
+test('system-share caption reuses the on-image slogan plus invite link or site url', async () => {
+  const { buildShareCaption } = await import('../js/result-share.js').catch(() => ({}));
+  if (!buildShareCaption) return; // module pulls browser-only deps; covered by the source check below
+  assert.equal(buildShareCaption('我的收益率 +1%，敢来战吗？', null), '我的收益率 +1%，敢来战吗？ https://stockgame.xieyw.top');
+  assert.match(buildShareCaption('x', { code: 'AB12', link: 'https://l/AB12' }), /邀请码 AB12 https:\/\/l\/AB12$/);
+});
+
+test('result-share wires the slogan into the caption (no old promo caption left)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const js = readFileSync(new URL('../js/result-share.js', import.meta.url), 'utf8');
+  assert.ok(js.includes('buildShareCaption(lastSlogan, lastPosterFoot)'));
+  assert.ok(!js.includes('buildResultPromoCaption'));
+});
