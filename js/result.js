@@ -24,7 +24,6 @@ import {
     refreshShareRankMeta,
     updateShareRankHint,
     saveResultShareImage,
-    copyResultShareText,
     openResultLeaderboard,
 } from './result-share.js';
 import {
@@ -44,7 +43,7 @@ onThemeChange((theme) => {
     if (resultOption) applySliderTheme(chartRefs.resultChart, theme, resultOption);
 });
 
-export { saveResultShareImage, copyResultShareText, openResultLeaderboard };
+export { saveResultShareImage, openResultLeaderboard };
 if (typeof window !== 'undefined') window.retrySettleSave = () => retrySettleSave();
 
 /** Paint result hero for puzzle: icon stars +「残局结算」(no giant digit). */
@@ -228,12 +227,12 @@ export function endGame() {
             setBtnLabel(playBtn, '再来一局');
         }
         if (playBtn && view.gameKind === 'stake') {
-            setBtnLabel(playBtn, '再来一局韭币局');
+            setBtnLabel(playBtn, '再来一局');
         } else if (playBtn && view.gameKind === 'oneshot') {
             setBtnLabel(playBtn, '再来一把梭');
         } else if (playBtn && view.gameKind === 'survival') {
             setBtnLabel(playBtn, '再来生存模式');
-        } else if (playBtn && (btnLabel(playBtn) === '再来一把梭' || btnLabel(playBtn) === '再来生存模式' || btnLabel(playBtn) === '再来一局韭币局')) {
+        } else if (playBtn && (btnLabel(playBtn) === '再来一把梭' || btnLabel(playBtn) === '再来生存模式')) {
             setBtnLabel(playBtn, '再来一局');
         }
     }

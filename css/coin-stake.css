@@ -164,3 +164,32 @@
 .my-game-stake b { font-family: var(--mono); }
 .my-game-stake b.pos { color: var(--gain-color); }
 .my-game-stake b.neg { color: var(--loss-color); }
+
+/* ── 结算页：韭币盈亏弹窗 + 等级旁的重新打开按钮 ───────────────── */
+.stake-result-dialog { width: min(340px, 100%); padding: 26px 20px 18px; }
+.stake-result-dialog .stake-result { margin: 0; padding: 0; border: 0; background: transparent; }
+.stake-result-dialog .stake-result-head { margin: 0 0 0.6rem; font-family: var(--kaiti); font-size: 1.4rem; letter-spacing: 0.06em; text-align: center; }
+.stake-result-dialog .stake-result-row { padding: 0.3rem 0; font-size: 0.95rem; }
+.stake-result-dialog .stake-result-row:last-child { margin-top: 0.3rem; padding-top: 0.55rem; font-size: 1.02rem; }
+.stake-result-dialog .stake-result-wait { text-align: center; }
+
+.stake-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1.5px solid #1f6b3a;
+    border-radius: 50%;
+    background: rgba(61, 184, 106, 0.12);
+    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.stake-info-btn[hidden] { display: none !important; }
+.stake-info-btn:hover { background: rgba(61, 184, 106, 0.22); }
+.stake-info-btn:active { transform: translate(1px, 1px); box-shadow: none; }
+.stake-info-btn:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+[data-theme="dark"] .stake-info-btn { border-color: #7dcea0; background: rgba(125, 206, 160, 0.14); }

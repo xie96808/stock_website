@@ -13,11 +13,11 @@ test('result actions keep every original handler/id and gain an icon + label spa
         'onclick="playAgain()"',
         'onclick="resetGame()"',
         'id="resultShareImageBtn"', 'onclick="saveResultShareImage()"',
-        'id="resultShareCopyBtn"', 'onclick="copyResultShareText()"',
         'id="resultLeaderboardBtn"', 'onclick="openResultLeaderboard()"',
     ]) assert.ok(block.includes(needle), `missing ${needle}`);
     const buttons = block.match(/<button[\s\S]*?<\/button>/g) || [];
-    assert.equal(buttons.length, 5);
+    assert.equal(buttons.length, 4);
+    assert.ok(!block.includes('resultShareCopyBtn'), '复制文案 removed');
     for (const b of buttons) {
         assert.ok(b.includes('<svg class="result-act__icon"'), 'icon');
         assert.ok(b.includes('<span class="ctl-label">'), 'label span');
