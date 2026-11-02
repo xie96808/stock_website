@@ -370,7 +370,7 @@ export async function showLeaderboard(preferred) {
       <div class="leaderboard-wrap">
         <div class="sg-backbar" data-sg-back="leaderboard"></div>
         <div class="leaderboard-head">
-          <h2>排行榜</h2>
+          <h2>龙虎榜</h2>
         </div>
         <div class="leaderboard-kind-tabs" id="leaderboardKindTabs" role="tablist" aria-label="玩法榜" hidden>
           <button type="button" class="leaderboard-kind-tab active" data-kind="classic" role="tab" aria-selected="true">经典练习</button>
