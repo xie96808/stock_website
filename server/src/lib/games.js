@@ -12,6 +12,7 @@ import { checkOneshotActionList, parseModifiers, oneshotModifiersJson } from "..
 import { survivalModifiersJson } from "../../../shared/survival.js";
 import { onDailyGameSettled, onDailyGameClosed, dailySettleMetrics, challengeNow } from "./dailyChallenge.js";
 import { windowFromSessionRow } from "./gameWindowDto.js";
+import { isGuestUser, GUEST_MAX_GAMES } from "./users.js";
 import { checkStakeInput, escrowStake, settleStake, forfeitStake, attachStake, coinStakeEnabled } from "./coinStake.js";
 
 const FILL_SET = new Set(FILL_MODES);
@@ -212,9 +213,17 @@ function resolveCreateGameKind(raw) {
   };
 }
 
+export { GUEST_MAX_GAMES };
+
 export function createGame(userId, { fillMode, gameKind, createKey, stake: rawStake, pickOpts = {} }) {
   if (!FILL_SET.has(fillMode)) {
     return { error: { status: 400, code: "INVALID_FILL_MODE", message: "fillMode 无效" } };
+  }
+  // Read from the DB (not the request) so no caller can forget the guest rules. Checked before the kind's own
+  // feature flag so a guest is always told "register", never "this mode is off".
+  const guest = isGuestUser(userId);
+  if (guest && gameKind != null && gameKind !== "" && String(gameKind) !== GAME_KIND_CLASSIC) {
+    return { error: { status: 403, code: "GUEST_RESTRICTED", message: "游客只能玩经典局，请先注册" } };
   }
   const kindRes = resolveCreateGameKind(gameKind);
   if (kindRes.error) return { error: kindRes.error };
@@ -281,6 +290,15 @@ export function createGame(userId, { fillMode, gameKind, createKey, stake: rawSt
         err.activeId = active.id;
         err.activeGame = sessionPublic(active);
         throw err;
+      }
+      if (guest) {
+        // Inside the TX that inserts the game, so two parallel creates cannot both slip through.
+        const used = db.prepare(`SELECT COUNT(*) AS n FROM game_sessions WHERE user_id = ?`).get(userId).n;
+        if (used >= GUEST_MAX_GAMES) {
+          const err = new Error("GUEST_GAME_LIMIT");
+          err.code = "GUEST_GAME_LIMIT";
+          throw err;
+        }
       }
       const proto = config.protocolEventV1Enabled ? eventV1CreateColumns({ gameKind: kind }) : null;
       const modifiersJson =
@@ -407,6 +425,15 @@ export function createGame(userId, { fillMode, gameKind, createKey, stake: rawSt
             balance: e.balance ?? null,
             required: e.required ?? 10,
           },
+        },
+      };
+    }
+    if (e.code === "GUEST_GAME_LIMIT") {
+      return {
+        error: {
+          status: 403,
+          code: "GUEST_GAME_LIMIT",
+          message: "游客只能体验 1 局，请先注册后继续",
         },
       };
     }

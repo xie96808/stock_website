@@ -64,6 +64,8 @@ export async function startTestServer() {
   config.rateLimit.loginFailPerIp = 10_000;
   config.rateLimit.registerPerIpHour = 10_000;
   config.rateLimit.registerPerIpDay = 10_000;
+  config.rateLimit.guestPerIpHour = 10_000;
+  config.rateLimit.guestPerIpDay = 10_000;
   config.rateLimit.createGamePerUserMinute = 10_000;
   config.rateLimit.createGamePerUserDay = 10_000;
   config.rateLimit.feedbackPerUserHour = 10_000;

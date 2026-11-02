@@ -3,7 +3,7 @@
  *  Source of truth is GET /games/active (server also expires stale sessions there) — nothing is
  *  cached across users. 继续 = same start path as the start dialog's 继续游戏 (no cost);
  *  放弃 = ctlConfirm (hand-drawn sheet, no browser dialog) then POST /games/:id/abandon (non-refundable). */
-import { api, getAuthState, showToast } from './auth.js';
+import { api, getAuthState, showToast, selectPlayer, selectIsGuest } from './auth.js';
 import { ctlConfirm } from './controls.js';
 import { loadCloudGameDraft, abandonCloudGame } from './game-sync.js';
 import { isResumableActive, resumeDay, resumeMetaText } from './resume-meta.js';
@@ -16,9 +16,11 @@ let debounce = 0;
 
 const $ = (id) => document.getElementById(id);
 
+/** The account that may have a resumable game: a registered user, or the guest playing their one free game. */
 function userId() {
   const a = getAuthState();
-  return a && a.user && a.status === 'authenticated' ? a.user.id : null;
+  const p = a && (a.status === 'authenticated' || a.status === 'guest') ? selectPlayer(a) : null;
+  return p ? p.id : null;
 }
 
 function gameScreenBusy() {
@@ -144,8 +146,9 @@ async function onAbandon() {
   if (busy || !current) return;
   const id = current.gameId;
   const daily = (current.gameKind || '') === 'daily';
+  const guestLine = selectIsGuest(getAuthState()) ? '游客只有 1 局，放弃后要注册才能继续玩。' : '';
   const ok = await ctlConfirm(
-    '放弃后这局作废，已消耗的韭币不退还，也不会计入榜单和战绩。' + (daily ? '今日挑战的机会不会恢复。' : ''),
+    '放弃后这局作废，已消耗的韭币不退还，也不会计入榜单和战绩。' + (daily ? '今日挑战的机会不会恢复。' : '') + guestLine,
     { title: '放弃这局？', okLabel: '确认放弃', cancelLabel: '再想想', danger: true },
   );
   if (!ok || !current || current.gameId !== id) return;
@@ -174,7 +177,7 @@ export function initResumeBanner() {
   const a = $('resumeGameAbandonBtn');
   if (c) c.addEventListener('click', () => { void onContinue(); });
   if (a) a.addEventListener('click', () => { void onAbandon(); });
-  const rawUid = () => { const a = getAuthState(); return (a && a.user && a.user.id) || null; };
+  const rawUid = () => { const p = selectPlayer(getAuthState()); return (p && p.id) || null; };
   let lastUid = rawUid();
   document.addEventListener('stockgame:auth-changed', () => {
     const uid = rawUid();

@@ -3,7 +3,7 @@
  * attachDeferredStart still sets window.startGame as the modal wrapper (playAgain depends on it).
  */
 
-import { getAuthState, openAuthModal, refreshMe, showToast } from './auth.js';
+import { getAuthState, openAuthModal, refreshMe, showToast, ensureGuestSession, selectPlayer, selectIsGuest } from './auth.js';
 import { openCtlSheet, closeCtlSheet, shakeError, ensureCastbar } from './controls.js';
 import { conflictProgressText } from './resume-meta.js';
 import {
@@ -26,6 +26,8 @@ import {
 import { amountWithCoinHtml } from './jiu-coin.js';
 import { mountStakePicker, getStake, stakeEnabled } from './coin-stake.js';
 import { stakeAffordable } from './coin-stake-pure.js';
+import { guestPlayEnabled } from './guest-play.js';
+import { planStart, START_PLAN, GUEST_AUTH_REASON } from './guest-play-pure.js';
 
 function perfEnabled() {
   try {
@@ -181,6 +183,11 @@ export function attachDeferredStart(startGame, gameState) {
   function syncCreateCostNote() {
     const note = document.getElementById('playModeGuestNote');
     if (!note) return;
+    if (guestRun) {
+      // 游客先玩: no price tag, the one free game is the promise.
+      note.textContent = '游客可免费体验 1 局经典局，不用注册。打完后注册，战绩和韭币都会保留。';
+      return;
+    }
     const cost = pendingGameKind === 'oneshot' ? 30 : 20; // survival also 20
     note.innerHTML =
       '云端对局每次新建消耗 ' +
@@ -192,7 +199,7 @@ export function attachDeferredStart(startGame, gameState) {
   async function syncStakeSwitch() {
     const btn = document.getElementById('stakeSwitchBtn');
     if (!btn) return;
-    const swappable = pendingGameKind === 'stake' || pendingGameKind === 'classic';
+    const swappable = (pendingGameKind === 'stake' || pendingGameKind === 'classic') && !guestRun;
     const on = swappable && (await stakeEnabled());
     btn.hidden = !on;
     if (on) {
@@ -256,6 +263,21 @@ export function attachDeferredStart(startGame, gameState) {
   }
 
   let pendingGameKind = 'classic';
+  /** True while the start modal is playing the guest's one free game (no price, no 韭币局 switch). */
+  let guestRun = false;
+
+  /** Where a tap on a start button goes for this visitor (registered / guest / login / register). */
+  async function resolveStartPlan(kind, auth) {
+    const enabled = await guestPlayEnabled();
+    return planStart({ kind, enabled, status: auth.status, guest: auth.guest });
+  }
+
+  /** Close the start sheet (if open) and ask for a sign-up with the right explanation. */
+  function askRegister(reason) {
+    const modal = modalEl();
+    if (modal && !modal.hidden) closeModal();
+    openAuthModal('register', { reason });
+  }
 
   async function openStartModal(gameKind) {
     pendingGameKind =
@@ -266,10 +288,23 @@ export function attachDeferredStart(startGame, gameState) {
     if (!auth.ready || auth.status === 'refreshing' || auth.status === 'unknown') {
       try { auth = await refreshMe(); } catch { /* refreshMe settles locally */ }
     }
-    if (!auth.user || auth.status !== 'authenticated') {
+    const plan = await resolveStartPlan(pendingGameKind, auth);
+    if (plan === START_PLAN.LOGIN) {
+      guestRun = false;
       openAuthModal('login');
       return;
     }
+    if (plan === START_PLAN.REGISTER_LIMIT) {
+      guestRun = false;
+      askRegister(GUEST_AUTH_REASON.LIMIT);
+      return;
+    }
+    if (plan === START_PLAN.REGISTER_FEATURE) {
+      guestRun = false;
+      askRegister(GUEST_AUTH_REASON.FEATURE);
+      return;
+    }
+    guestRun = plan === START_PLAN.GUEST_PLAY;
     openModal();
   }
 
@@ -324,11 +359,40 @@ export function attachDeferredStart(startGame, gameState) {
       if (!auth.ready || auth.status === 'refreshing' || auth.status === 'unknown') {
         try { auth = await refreshMe(); } catch { /* settled in refreshMe */ }
       }
-      if (!auth.user || auth.status !== 'authenticated') {
-        openAuthModal('login');
-        const cancelErr = new Error('请先登录');
+      const cancelStart = (message) => {
+        const cancelErr = new Error(message);
         cancelErr.code = 'USER_CANCELLED';
-        throw cancelErr;
+        return cancelErr;
+      };
+      const plan = await resolveStartPlan(pendingGameKind, auth);
+      if (plan === START_PLAN.LOGIN) {
+        openAuthModal('login');
+        throw cancelStart('请先登录');
+      }
+      if (plan === START_PLAN.REGISTER_LIMIT || plan === START_PLAN.REGISTER_FEATURE) {
+        askRegister(plan === START_PLAN.REGISTER_LIMIT ? GUEST_AUTH_REASON.LIMIT : GUEST_AUTH_REASON.FEATURE);
+        throw cancelStart('请先注册');
+      }
+      if (plan === START_PLAN.GUEST_PLAY && !selectIsGuest(auth)) {
+        // 游客先玩: the guest account is created only now, when the visitor actually starts (not when they merely
+        // opened the sheet), so idle visitors never leave an account behind.
+        setProgress(6, '准备游客体验…');
+        try {
+          auth = await ensureGuestSession();
+        } catch (e) {
+          if (e && e.code === 'RATE_LIMITED') {
+            showToast(e.message || '当前网络开局过于频繁，请注册后再玩', 'error');
+            askRegister(GUEST_AUTH_REASON.LIMIT);
+          } else {
+            openAuthModal('login'); // GUEST_DISABLED / old server / network: exactly today's behaviour
+          }
+          throw cancelStart('游客体验暂不可用');
+        }
+      }
+      const player = selectPlayer(auth);
+      if (!player) {
+        openAuthModal('login');
+        throw cancelStart('请先登录');
       }
       const wantCloud = true;
       const stake = pendingGameKind === 'stake' ? getStake() : null;
@@ -364,6 +428,12 @@ export function attachDeferredStart(startGame, gameState) {
         try {
           cloud = await cloudPromise;
         } catch (e) {
+          if (e && (e.code === 'GUEST_GAME_LIMIT' || e.code === 'GUEST_RESTRICTED')) {
+            // Our view of the guest was stale (e.g. the free game was used on another tab): resync, then ask to register.
+            try { await refreshMe(); } catch { /* ignore */ }
+            askRegister(e.code === 'GUEST_GAME_LIMIT' ? GUEST_AUTH_REASON.LIMIT : GUEST_AUTH_REASON.FEATURE);
+            throw cancelStart('请先注册');
+          }
           if (e && e.code === 'ACTIVE_GAME_EXISTS') {
             let active = e.details && e.details.game ? e.details.game : null;
             if (!active || !active.gameId) {
@@ -373,10 +443,11 @@ export function attachDeferredStart(startGame, gameState) {
 
             const draft = loadCloudGameDraft({
               gameId: active.gameId,
-              userId: auth.user && auth.user.id,
+              userId: player.id,
             });
             const decided = draft && draft.actions ? draft.actions.length : 0;
-            const choice = await askActiveGameConflict({
+            // A guest has exactly one game: "重新开始" would burn it, so a guest always continues.
+            const choice = selectIsGuest(auth) ? 'continue' : await askActiveGameConflict({
               fillMode: active.fillMode,
               stockName: active.stockName,
               stockCode: active.stockCode,

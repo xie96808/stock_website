@@ -6,6 +6,7 @@ import { expireDueReady, expirePendingChallenges } from "./lib/pvp/challenges.js
 import { tickBots } from "./lib/pvp/bots.js";
 import { pruneHeartbeats, scanDueMatches } from "./lib/pvp/match.js";
 import { prunePresence } from "./lib/pvp/presence.js";
+import { startGuestCleanup } from "./lib/guestCleanup.js";
 import { attachPvpRealtime, noteLobbyChanged, noteMatchChanged, sweepPvpTickets } from "./lib/pvp/realtime.js";
 
 const app = createApp({ skipStatic: config.skipStatic });
@@ -38,6 +39,7 @@ const scanTimer = setInterval(() => {
   }
 }, 1000);
 scanTimer.unref();
+startGuestCleanup();
 
 server.listen(config.port, "127.0.0.1", () => {
   console.log(`stockgame server on http://127.0.0.1:${config.port}`);

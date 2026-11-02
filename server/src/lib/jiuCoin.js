@@ -3,6 +3,8 @@ import { findUserById } from "./users.js";
 import { writeAuditLog } from "./audit.js";
 
 export const JIU_COIN_REGISTER_GRANT = 500;
+/** 游客先玩: start coins for a guest account. A guest may open ONE classic game, so most of it is carried over to registration. */
+export const JIU_COIN_GUEST_GRANT = 100;
 export const JIU_COIN_GAME_CREATE_COST = 20;
 /** Oneshot (一把梭) create cost — higher than classic. */
 export const JIU_COIN_ONESHOT_CREATE_COST = 30;
@@ -62,6 +64,31 @@ export function grantRegisterBonus(userId, db) {
       delta: JIU_COIN_REGISTER_GRANT,
       balanceAfter: next,
       reason: "register_grant",
+      refType: "user",
+      refId: String(userId),
+    });
+  } catch (e) {
+    if (String(e.message || "").includes("UNIQUE")) {
+      return { unchanged: true, balance: getJiuCoinBalance(userId, db) };
+    }
+    throw e;
+  }
+  db.prepare(
+    `UPDATE users SET jiu_coin_balance = ?, updated_at = datetime('now') WHERE id = ?`
+  ).run(next, userId);
+  return { unchanged: false, balance: next };
+}
+
+/** 游客先玩: one-time start grant for a guest account. Idempotent via the partial unique index on reason=guest_grant. */
+export function grantGuestBonus(userId, db) {
+  const cur = getJiuCoinBalance(userId, db);
+  const next = cur + JIU_COIN_GUEST_GRANT;
+  try {
+    insertLedger(db, {
+      userId,
+      delta: JIU_COIN_GUEST_GRANT,
+      balanceAfter: next,
+      reason: "guest_grant",
       refType: "user",
       refId: String(userId),
     });

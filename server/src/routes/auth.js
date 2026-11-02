@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { Router } from "express";
 import {
   hashPassword, verifyPassword,
@@ -8,7 +9,7 @@ import {
 } from "../lib/validate.js";
 import {
   findUserByUsername, insertUser, publicUser, updatePassword, softDeleteUser, findUserById, updateUserProfile,
-  updateAvatarCustomPath,
+  updateAvatarCustomPath, insertGuest, upgradeGuestToUser, purgeGuestUsers, withGuestFields,
 } from "../lib/users.js";
 import {
   createSession, setSessionCookie, clearSessionCookie, revokeSessionToken, revokeAllUserSessions,
@@ -16,7 +17,7 @@ import {
 import { ok, fail } from "../lib/http.js";
 import { config } from "../lib/config.js";
 import {
-  clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, rateLimitFail,
+  clientIp, checkLoginFailLimits, recordLoginFailure, checkRegisterLimits, checkGuestLimits, rateLimitFail,
 } from "../lib/rateLimit.js";
 import { requireUser } from "../middleware/request.js";
 import { claimDaily, dailyClaimStatus } from "../lib/jiuCoin.js";
@@ -33,6 +34,29 @@ const router = Router();
 function randomAvatarId() {
   return 1 + Math.floor(Math.random() * 12);
 }
+
+/**
+ * 游客先玩: create a temporary account so a stranger can play ONE classic game without signing up.
+ * Idempotent for a visitor who already holds a guest session (returns it, 200). Registering later upgrades the same row.
+ */
+router.post("/auth/guest", (req, res) => {
+  if (!config.guestPlayEnabled || !config.registrationEnabled || !config.cloudGamesEnabled) {
+    return fail(res, 403, "GUEST_DISABLED", "暂未开放游客体验，请注册后游玩");
+  }
+  if (req.user) {
+    if (req.user.isGuest) return ok(res, { user: req.user, csrfToken: req.csrfToken });
+    return fail(res, 409, "ALREADY_SIGNED_IN", "已登录，无需游客体验");
+  }
+  const limit = checkGuestLimits(clientIp(req));
+  if (limit.limited) return rateLimitFail(res, limit.retryAfterSec, limit.message);
+  const user = insertGuest({
+    nickname: `游客${crypto.randomInt(1000, 10000)}`,
+    avatarId: randomAvatarId(),
+  });
+  const sess = createSession(user.id, { guest: true });
+  setSessionCookie(res, sess.sessionToken, { guest: true });
+  return ok(res, { user: withGuestFields(publicUser(user)), csrfToken: sess.csrfToken }, 201);
+});
 
 router.post("/auth/register", async (req, res) => {
   if (!config.registrationEnabled) {
@@ -65,9 +89,14 @@ router.post("/auth/register", async (req, res) => {
   const leaderboardOptIn = req.body?.leaderboardOptIn == null
     ? true
     : !!req.body.leaderboardOptIn;
-  let user;
+  let user = null;
   try {
-    user = insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn });
+    // 游客先玩: a visitor holding a guest session is upgraded in place (same user id, so games / coins / history stay).
+    if (req.user?.isGuest) {
+      user = upgradeGuestToUser(req.user.id, { username, passwordHash, nickname, avatarId, leaderboardOptIn });
+      if (user && req.sessionToken) revokeSessionToken(req.sessionToken);
+    }
+    if (!user) user = insertUser({ username, passwordHash, nickname, avatarId, leaderboardOptIn });
   } catch (e) {
     if (String(e.message || "").includes("UNIQUE")) return fail(res, 409, "USERNAME_TAKEN", "用户名已被占用");
     throw e;
@@ -109,9 +138,18 @@ router.post("/auth/login", async (req, res) => {
     recordLoginFailure(username || "_", ip);
     return fail(res, 401, "INVALID_CREDENTIALS", "账号或密码错误");
   }
+  const guestId = req.user?.isGuest ? req.user.id : null;
   if (req.sessionToken) revokeSessionToken(req.sessionToken);
   const sess = createSession(row.id);
   setSessionCookie(res, sess.sessionToken);
+  // 游客先玩: logging in to an existing account does not merge the guest's data; it is discarded.
+  if (guestId != null) {
+    try {
+      purgeGuestUsers({ ids: [guestId] });
+    } catch (e) {
+      console.error("[guest] discard on login failed", e && e.message ? e.message : e);
+    }
+  }
   return ok(res, { user: publicUser(row), csrfToken: sess.csrfToken });
 });
 
