@@ -19,6 +19,7 @@ import { renderStarIcons } from './puzzle-settle-copy.js';
 import { showToast } from './auth.js';
 import { Route, prepareScreen, activateScreen } from './screen-router.js';
 import { hideReviewEntry, refreshReviewEntry } from './route-replay.js';
+import { paintRegretCard } from './regret-card.js';
 import {
     clearShareRankMeta,
     refreshShareRankMeta,
@@ -336,6 +337,8 @@ export function endGame() {
     clearShareRankMeta();
     updateShareRankHint();
     hideReviewEntry();
+    // 遗憾值 + 炒股性格：本机用复盘引擎算，只在经典局出现；出错只隐藏卡片，不影响结算页。
+    runResultStep('regretCard', () => paintRegretCard());
     if (shouldPersistCloudSettle(settled)) {
         // Single settle→persist hook (use-case); HTTP/retry remain in game-sync.
         persistSettledCloudGame({ finishCloud: finishCloudGame }).then(async (res) => {

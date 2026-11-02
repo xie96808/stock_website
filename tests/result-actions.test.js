@@ -11,12 +11,12 @@ const block = html.slice(html.indexOf('class="result-actions"'), html.indexOf('r
 test('result actions keep every original handler/id and gain an icon + label span', () => {
     for (const needle of [
         'onclick="playAgain()"',
-        'onclick="resetGame()"',
         'id="resultShareImageBtn"', 'onclick="saveResultShareImage()"',
         'id="resultLeaderboardBtn"', 'onclick="openResultLeaderboard()"',
     ]) assert.ok(block.includes(needle), `missing ${needle}`);
     const buttons = block.match(/<button[\s\S]*?<\/button>/g) || [];
-    assert.equal(buttons.length, 4);
+    assert.equal(buttons.length, 3, '返回首页 moved to the fixed top bar (返回主页)');
+    assert.ok(!block.includes('onclick="resetGame()"'));
     assert.ok(!block.includes('resultShareCopyBtn'), '复制文案 removed');
     for (const b of buttons) {
         assert.ok(b.includes('<svg class="result-act__icon"'), 'icon');
@@ -25,7 +25,9 @@ test('result actions keep every original handler/id and gain an icon + label spa
 });
 
 test('playAgain stays the first .play-again-btn (result.js picks it via querySelector)', () => {
-    assert.ok(block.indexOf('playAgain()') < block.indexOf('resetGame()'));
+    assert.ok(block.indexOf('playAgain()') < block.indexOf('saveResultShareImage()'));
+    assert.equal((block.match(/class="play-again-btn/g) || []).length, 3);
+    assert.ok(block.indexOf('class="play-again-btn result-act result-act--primary') < block.indexOf('result-act ctl ctl-secondary'));
 });
 
 test('result.js relabels via the label span, never wiping icons with textContent on the button', () => {
