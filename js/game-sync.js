@@ -165,6 +165,15 @@ export async function finishCloudGame() {
       patchSession(sessionPatchFromCloudFinish(data, { isPuzzle }));
       if (data && data.stake) import("./coin-stake-ui.js").then((m) => m.afterStakeSettled()).catch(() => {});
       import("./achievements.js").then((m) => m.refreshAchievements({ force: true })).catch(() => {});
+      if (isPuzzle && data) {
+        // 残局首通 / 三星奖励：每笔各弹一张「获得韭币」卡片（回放不会重复发，卡片也按关卡去重）
+        import("./coin-gain-pure.js")
+          .then(({ puzzleGains }) => {
+            const gains = puzzleGains(data);
+            if (gains.length) return import("./jiu-coin.js").then((m) => m.announceCoinGains(gains));
+          })
+          .catch(() => {});
+      }
       if (data && data.inviteReward) {
         import("./invite.js").then((m) => m.onInviteReward(data.inviteReward)).catch(() => {});
       }

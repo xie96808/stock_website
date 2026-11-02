@@ -5,9 +5,10 @@
  */
 import { api, getAuthState, selectIsAuthenticated } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay, showStampToast } from "./controls.js";
-import { refreshJiuCoinStatus } from "./jiu-coin.js";
+import { refreshJiuCoinStatus, announceCoinGain } from "./jiu-coin.js";
+import { achievementGain, achievementUnlocks } from "./coin-gain-pure.js";
 import {
-  sections, progressPct, progressLabel, rewardLabel, pillModel, claimAllLabel, subText, claimToast,
+  sections, progressPct, progressLabel, rewardLabel, pillModel, claimAllLabel, subText, unlockName,
 } from "./achievements-pure.js";
 
 let state = null;
@@ -141,8 +142,11 @@ async function doClaim(key) {
     const { data } = await api(path, { method: "POST", body: {} });
     state = data.state;
     fetchedAt = Date.now();
-    const msg = claimToast(data);
-    if (msg) showStampToast(msg, "success");
+    // 「获得韭币」卡片（一次点击领的算一笔）；领到的解锁项（头像框等）仍用提示条说一声
+    const gain = achievementGain(data);
+    if (gain) announceCoinGain({ ...gain, balance: gain.balance ?? data.state?.balance }).catch(() => {});
+    const unlocked = achievementUnlocks(data, unlockName);
+    if (unlocked) showStampToast(unlocked, "success");
     refreshJiuCoinStatus().catch(() => {});
   } catch (e) {
     if (e && e.status === 409) await refreshAchievements({ force: true });

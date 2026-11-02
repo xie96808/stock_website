@@ -5,10 +5,11 @@
  */
 import { api, getAuthState, selectIsAuthenticated, closeAuthModal } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay, showStampToast } from "./controls.js";
-import { refreshJiuCoinStatus } from "./jiu-coin.js";
+import { announceCoinGain } from "./jiu-coin.js";
+import { inviteGain } from "./coin-gain-pure.js";
 import {
   parseInviteFromSearch, stripInviteFromUrl, writePendingInvite, buildInviteLink, statsLine, earnedLine,
-  ruleLines, shareText, rewardToast,
+  ruleLines, shareText,
 } from "./invite-pure.js";
 
 let state = null;
@@ -162,10 +163,9 @@ export async function openInviteModal() {
 
 /** Finish response carried `inviteReward` → toast + refresh coins. */
 export function onInviteReward(reward) {
-  const msg = rewardToast(reward);
-  if (!msg) return;
-  showStampToast(msg, "success");
-  refreshJiuCoinStatus().catch(() => {});
+  const gain = inviteGain(reward);
+  if (!gain) return;
+  announceCoinGain(gain).catch(() => {}); // 「获得韭币」卡片；它会顺带刷新余额
 }
 
 /** Show/hide every static entry point (result-screen link, settings button) according to flag + login. */

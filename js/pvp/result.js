@@ -615,6 +615,15 @@ export function showPvpResult(view, { celebrate = false } = {}) {
     try { history.replaceState(null, "", `#/pvp/${view.matchId}`); } catch { /* ignore */ }
   }
   paintResultBody(view, { celebrate });
+  // 刚打完的对局（celebrate）赢了才弹「获得韭币」；翻看历史对局、平局/取消退款都不弹
+  if (celebrate) {
+    Promise.all([import("../coin-gain-pure.js"), import("../jiu-coin.js")])
+      .then(([{ pvpGain }, { announceCoinGain }]) => {
+        const gain = pvpGain(view);
+        if (gain) return announceCoinGain(gain);
+      })
+      .catch(() => {});
+  }
   // Completed matches must carry all 30 bars. If the first payload omitted them,
   // refetch once so 段位分 / 复盘 / K 线 do not stay blank.
   if (marketMissing(view)) {
