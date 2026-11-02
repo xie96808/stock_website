@@ -212,15 +212,12 @@ export function endGame() {
             } else if (view.gameKind === 'survival') {
                 lbBtn.hidden = false;
                 setBtnLabel(lbBtn, '生存榜');
-            } else if (view.gameKind === 'stake') {
-                lbBtn.hidden = false;
-                setBtnLabel(lbBtn, '韭币榜');
             } else if (view.gameKind === 'daily') {
                 lbBtn.hidden = false;
                 setBtnLabel(lbBtn, '日榜');
             } else {
                 lbBtn.hidden = false;
-                setBtnLabel(lbBtn, '排行榜');
+                setBtnLabel(lbBtn, '龙虎榜'); // classic + 韭币局 both open the 龙虎榜 (the 韭币榜 stays behind the balance chip)
             }
         }
         const playBtn = document.querySelector('#resultScreen .play-again-btn');
