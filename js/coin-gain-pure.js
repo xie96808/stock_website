@@ -2,7 +2,7 @@
  * 韭币到账弹窗 — pure decisions + copy (no DOM, no audio, no network), so every branch is unit-testable.
  *
  * Rule of the product: whenever 韭币 is EARNED (not refunded, not an admin adjustment) the player gets the same
- * 「获得韭币」card, a coin-shower sound and a short haptic tick. Each gain gets its own card (no merging); cards queue and
+ * 「获得韭币」card, a coin sound and a short haptic tick. Each gain gets its own card (no merging); cards queue and
  * show one after the other, on top of everything else.
  */
 
@@ -100,70 +100,12 @@ export function createGainQueue({ maxKeys = 300 } = {}) {
   };
 }
 
-/* ------------------------------------------------------------------ sound design (pure score; coin-sfx.js plays it) */
+/* ------------------------------------------------------------------ sound (the recording itself lives in assets/sfx) */
 
-/**
- * 金钱哗啦啦: a pile of coins pouring onto a pile of coins.
- * The score is data — a swell of metallic rustle ("哗") plus dozens of tiny coin clinks ("啦啦") that start dense and
- * thin out as the pile settles. Bigger gains pour longer and denser. Each clink is a small inharmonic bell (coin
- * partials) with its own pitch / loudness / ring. Generated from a seeded PRNG, so a test (or an offline render you can
- * listen to) is repeatable; live play passes a random seed so no two showers sound identical.
- */
-export const COIN_PARTIALS = Object.freeze([
-  { ratio: 1, amp: 1, decay: 1 },
-  { ratio: 2.32, amp: 0.5, decay: 0.6 },
-  { ratio: 4.25, amp: 0.22, decay: 0.35 },
-]);
-
-/** Small deterministic PRNG (mulberry32): seed → () => [0, 1). */
-export function seededRandom(seed) {
-  let a = (Number(seed) || 0) >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** How long the pour lasts (s) and how many clinks it holds, by amount: 20 → ~0.8 s / 14, 150 → ~1.0 s / 21, 800 → ~1.2 s / 27. */
-export function showerShape(amount) {
+/** Playback volume 0.7 … 1.0: a small gain is a touch softer than a big one (1 coin → 0.7, 1000+ → 1.0). */
+export function coinSoundVolume(amount) {
   const n = Math.max(1, Number(amount) || 1);
-  const L = Math.log10(n);
-  const duration = Math.min(1.5, Math.max(0.7, 0.55 + 0.23 * L));
-  const clinks = Math.min(34, Math.max(10, Math.round(7 + 7 * L)));
-  return { duration, clinks };
-}
-
-export function showerScore(amount, seed = Number(amount) || 1) {
-  const { duration, clinks } = showerShape(amount);
-  const rnd = seededRandom(seed);
-  const list = [];
-  for (let i = 0; i < clinks; i++) {
-    const u = (i + rnd() * 0.9) / clinks; // 0…1 through the pour
-    const at = duration * Math.pow(u, 1.55); // dense at first, thinning out
-    const fade = 1 - 0.62 * u; // the pile settles → quieter
-    list.push({
-      at,
-      freq: 1900 + rnd() * 1900, // 1.9 – 3.8 kHz, the "ting" of a coin
-      ring: 0.05 + rnd() * 0.1,
-      gain: (0.2 + rnd() * 0.3) * fade,
-      tick: 0.05 + rnd() * 0.12, // the little "clack" under each clink
-    });
-  }
-  // the first coin lands a touch harder and brighter: it makes the start feel like a hit, not a hiss
-  list[0] = { ...list[0], at: 0, freq: 2900, ring: 0.16, gain: 0.55, tick: 0.2 };
-  list.sort((x, y) => x.at - y.at);
-  const rustle = { at: 0, attack: 0.05, hold: duration * 0.45, release: duration * 0.7, freq: 4600, q: 0.55, gain: 0.1 };
-  const rustleEnd = rustle.at + rustle.attack + rustle.hold + rustle.release; // the swell's tail is part of the sound too
-  const end = Math.max(duration + 0.16, rustleEnd, ...list.map((c) => c.at + c.ring)) + 0.05;
-  return { clinks: list, rustle, partials: COIN_PARTIALS, master: 1.0, duration, end };
-}
-
-/** Time the whole sound needs (s), used to size an offline render. */
-export function showerDuration(amount) {
-  return showerScore(amount).end;
+  return Math.round((0.7 + 0.3 * Math.min(1, Math.log10(n) / 3)) * 1000) / 1000;
 }
 
 /* ------------------------------------------------------------------ per-source builders (response → showCoinGain input)

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   GAIN_TITLE, GAIN_SOURCES, normalizeGain, countUpMs, flyCoinCount, easeOutCubic, createGainQueue,
-  showerScore, showerShape, showerDuration, seededRandom, COIN_PARTIALS,
+  coinSoundVolume,
   REGISTER_GRANT_COINS, GUEST_GRANT_COINS,
   dailyGain, streakGain, achievementGain, achievementUnlocks, inviteGain, registerGain, guestGain,
   puzzleGains, stakeGain, pvpGain, quizGain,
@@ -147,53 +147,12 @@ test('builders: quiz — only the settle that just paid', () => {
   assert.deepEqual(quizGain({ rewardAmount: 30, rewardUnchanged: false, balance: 630 }, 'a1'), { amount: 30, source: 'quiz', balance: 630, key: 'quiz:a1' });
 });
 
-/* ------------------------------------------------------------------ sound design (金钱哗啦啦) */
+/* ------------------------------------------------------------------ sound */
 
-test('seededRandom is deterministic and stays in [0, 1)', () => {
-  const a = seededRandom(7), b = seededRandom(7), c = seededRandom(8);
-  const xa = Array.from({ length: 50 }, a), xb = Array.from({ length: 50 }, b), xc = Array.from({ length: 50 }, c);
-  assert.deepEqual(xa, xb);
-  assert.notDeepEqual(xa, xc);
-  for (const x of xa) assert.ok(x >= 0 && x < 1);
-});
-
-test('coin shower: bigger gains pour longer and denser, always short', () => {
-  const small = showerShape(20), mid = showerShape(150), big = showerShape(800), huge = showerShape(10 ** 9);
-  assert.ok(small.duration < mid.duration && mid.duration < big.duration);
-  assert.ok(small.clinks < mid.clinks && mid.clinks < big.clinks);
-  assert.ok(small.duration >= 0.7 && huge.duration <= 1.5);
-  assert.ok(small.clinks >= 10 && huge.clinks <= 34);
-  assert.deepEqual(showerShape('junk'), showerShape(1));
-});
-
-test('coin shower score: the right number of clinks, dense first then thinning, quieter as the pile settles', () => {
-  for (const amount of [20, 150, 800]) {
-    const sc = showerScore(amount, 7);
-    assert.equal(sc.clinks.length, showerShape(amount).clinks);
-    assert.ok(sc.end > 0.8 && sc.end < 1.9, `end ${sc.end}`);
-    assert.ok(sc.master > 0 && sc.master <= 1);
-    assert.equal(sc.clinks[0].at, 0, 'the first coin lands at once');
-    let prev = -1;
-    for (const c of sc.clinks) {
-      assert.ok(c.at >= prev, 'sorted'); prev = c.at;
-      assert.ok(c.at <= sc.duration + 1e-9);
-      assert.ok(c.freq >= 1800 && c.freq <= 3800);
-      assert.ok(c.ring >= 0.05 && c.ring <= 0.16 + 1e-9);
-      assert.ok(c.gain > 0 && c.gain <= 0.6);
-      assert.ok(c.at + c.ring <= sc.end);
-    }
-    const half = sc.duration / 2;
-    const early = sc.clinks.filter((c) => c.at < half).length;
-    assert.ok(early > sc.clinks.length - early, `front-loaded: ${early} of ${sc.clinks.length} in the first half`);
-    const r = sc.rustle;
-    assert.ok(r.attack + r.hold + r.release <= sc.end, 'the rustle never outlasts the sound');
-  }
-});
-
-test('coin shower: same seed = same sound, a different seed = a different pour', () => {
-  assert.deepEqual(showerScore(150, 5), showerScore(150, 5));
-  assert.notDeepEqual(showerScore(150, 5).clinks, showerScore(150, 6).clinks);
-  assert.equal(showerDuration(20), showerScore(20).end);
-  assert.ok(COIN_PARTIALS.length >= 3 && COIN_PARTIALS[0].ratio === 1);
-  assert.equal(showerScore('junk').clinks.length, showerShape(1).clinks);
+test('coinSoundVolume: 0.7 … 1.0, louder for bigger gains, junk-safe', () => {
+  assert.equal(coinSoundVolume(1), 0.7);
+  assert.equal(coinSoundVolume(1000), 1);
+  assert.equal(coinSoundVolume(10 ** 9), 1);
+  assert.ok(coinSoundVolume(20) < coinSoundVolume(150) && coinSoundVolume(150) < coinSoundVolume(800));
+  for (const v of ['junk', null, -5, 0, NaN]) assert.equal(coinSoundVolume(v), 0.7);
 });

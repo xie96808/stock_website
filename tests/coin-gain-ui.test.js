@@ -68,10 +68,11 @@ test('each card is dismissible (button, Esc / Enter, backdrop) and guards agains
   assert.match(js, /aria-modal/);
 });
 
-test('sound: synthesized, no audio files, no settings switch, never schedules on a context that is not running', () => {
-  assert.doesNotMatch(sfx, /new Audio\(|\.mp3|\.wav|\.ogg|fetch\(/);
+test('sound: a recorded clip, no settings switch, never starts on a context that is not running, fails silent', () => {
+  assert.match(sfx, /assets\/sfx\/coin-gain\.mp3/);
   assert.match(sfx, /state === 'running'/);
   assert.match(sfx, /navigator\.vibrate\(14\)/);
+  assert.doesNotMatch(sfx, /createOscillator/, 'the synthesised chime / shower is gone');
   for (const f of ['index.html', 'js/settings.js', 'js/auth.js']) {
     if (!existsSync(new URL('../' + f, import.meta.url))) continue;
     assert.doesNotMatch(read(f), /音效开关|soundToggle|sfx-toggle/i);
@@ -92,7 +93,7 @@ test('every earning site is wired to the card; every refund path is not', () => 
     'js/lucky-wheel.js': /playGainFeedback\(Number\(copy\.amount\)\)/,
   };
   for (const [f, re] of Object.entries(wired)) assert.match(read(f), re, `${f} must show the coin card`);
-  // the wheel only chimes for coin results, not for 后悔券 / spins
+  // the wheel only plays the coin sound for coin results, not for 后悔券 / spins
   assert.match(read('js/lucky-wheel.js'), /if \(copy\.kind === "coin"\) playGainFeedback/);
   // the PvP card is only for a fresh result (celebrate), never when re-opening an old match from history
   assert.match(read('js/pvp/result.js'), /if \(celebrate\) \{\s*Promise\.all\(\[import\("\.\.\/coin-gain-pure\.js"\)/);

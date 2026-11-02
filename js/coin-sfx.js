@@ -1,18 +1,25 @@
 /**
  * 韭币到账音效 + 触感。
  *
- * 「金钱哗啦啦」is synthesised with WebAudio (no audio file, 0 bytes of assets) from the score in coin-gain-pure.js:
- * a swell of metallic rustle plus a few dozen tiny coin clinks that start dense and thin out; bigger gains pour longer.
+ * The sound is a recorded clip (assets/sfx/coin-gain.mp3: coins poured into a bag, ~1.8 s, faded out at the end),
+ * decoded once into a WebAudio buffer so the tap-to-sound delay stays tiny on phones.
  *
  * Browsers only let an AudioContext make sound after the visitor has touched the page once. We therefore create and
- * resume the context on the first tap / key press anywhere (installAudioUnlock), and playCoinSound() never schedules a
- * note on a context that is not running — a sound that arrives late, after an unlock, would be worse than silence.
- * The Android app's WebView allows autoplay, so it is not affected. There is deliberately no settings switch.
+ * resume the context on the first tap / key press anywhere (installAudioUnlock), and playCoinSound() never starts the
+ * clip on a context that is not running — a sound that arrives late, after an unlock, would be worse than silence.
+ * If the clip is missing or cannot be decoded the game simply stays silent. The Android app's WebView allows autoplay.
+ * There is deliberately no settings switch (yet).
  */
-import { showerScore } from './coin-gain-pure.js';
+import { coinSoundVolume } from './coin-gain-pure.js';
+
+const SAMPLE_URL = 'assets/sfx/coin-gain.mp3?v=20261102a';
+/** A play request older than this when the audio finally becomes ready is dropped (silence beats a late sound). */
+const FRESH_MS = 700;
 
 let ctx = null;
 let unlockInstalled = false;
+const sample = { promise: null, buffer: null };
+let current = null; // the clip that is playing now: { src, gain }
 
 function AudioCtor() {
   if (typeof window === 'undefined') return null;
@@ -31,82 +38,65 @@ function ensureContext() {
   return ctx;
 }
 
-/**
- * Schedule one coin shower on any BaseAudioContext (live or Offline) — also used by the tests / the preview render.
- * @returns {number} the time (s) at which the sound has faded out
- */
-export function renderShower(audio, destination, startAt, score) {
-  const master = audio.createGain();
-  master.gain.value = score.master;
-  master.connect(destination);
+/** Fetch + decode the clip once. Resolves to the buffer, or null when it cannot be had (a later play retries). */
+function loadSample(c) {
+  if (sample.buffer) return Promise.resolve(sample.buffer);
+  if (sample.promise) return sample.promise;
+  sample.promise = Promise.resolve()
+    .then(() => fetch(SAMPLE_URL))
+    .then((r) => {
+      if (!r || !r.ok) throw new Error('coin sound unavailable');
+      return r.arrayBuffer();
+    })
+    .then(
+      (bytes) =>
+        new Promise((resolve, reject) => {
+          // older Safari only has the callback form; newer browsers return a promise as well
+          const p = c.decodeAudioData(bytes, resolve, reject);
+          if (p && typeof p.then === 'function') p.then(resolve, reject);
+        })
+    )
+    .then((buf) => {
+      sample.buffer = buf;
+      return buf;
+    })
+    .catch(() => {
+      sample.promise = null;
+      return null;
+    });
+  return sample.promise;
+}
 
-  // one shared noise bed: the rustle ("哗") and every clink's tiny clack read slices of it
-  const sr = audio.sampleRate;
-  const frames = Math.max(1, Math.floor(sr * (score.end + 0.2)));
-  const bed = audio.createBuffer(1, frames, sr);
-  const data = bed.getChannelData(0);
-  let seed = 12345; // deterministic, so an offline render is repeatable
-  for (let i = 0; i < frames; i++) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    data[i] = (seed / 0xffffffff) * 2 - 1;
-  }
+/** Start downloading + decoding the clip in the background (the context may still be suspended: that is fine). */
+export function preloadCoinSound() {
+  const c = ensureContext();
+  if (c) loadSample(c);
+}
 
-  // the rustle: a band of noise that swells, holds and trails off while the coins pour
-  {
-    const r = score.rustle;
-    const src = audio.createBufferSource();
-    src.buffer = bed;
-    const bp = audio.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = r.freq;
-    bp.Q.value = r.q;
-    const g = audio.createGain();
-    const t0 = startAt + r.at;
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(r.gain, t0 + r.attack);
-    g.gain.setValueAtTime(r.gain, t0 + r.attack + r.hold);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + r.attack + r.hold + r.release);
-    src.connect(bp);
-    bp.connect(g);
-    g.connect(master);
-    src.start(t0);
-  }
-
-  // the clinks: each a small inharmonic bell plus a short clack
-  let slice = 0.3;
-  for (const c of score.clinks) {
-    const t = startAt + c.at;
-    for (const p of score.partials) {
-      const len = c.ring * p.decay;
-      const osc = audio.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = c.freq * p.ratio;
-      const g = audio.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, c.gain * p.amp * 0.5), t + 0.002);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.01);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + len + 0.04);
+function startClip(c, buffer, amount) {
+  try {
+    if (current) {
+      // two gains never stack into a roar: the earlier clip fades out as the new one begins
+      const t = c.currentTime;
+      current.gain.gain.setValueAtTime(current.gain.gain.value, t);
+      current.gain.gain.linearRampToValueAtTime(0, t + 0.06);
+      current.src.stop(t + 0.08);
     }
-    const src = audio.createBufferSource();
-    src.buffer = bed;
-    const bp = audio.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = Math.min(9000, c.freq * 1.7);
-    bp.Q.value = 1.4;
-    const tg = audio.createGain();
-    tg.gain.setValueAtTime(c.gain * 0.55, t);
-    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
-    src.connect(bp);
-    bp.connect(tg);
-    tg.connect(master);
-    src.start(t, slice % Math.max(0.1, score.end));
-    slice += 0.037;
+  } catch {
+    /* already ended */
   }
-
-  return startAt + score.end;
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  const gain = c.createGain();
+  gain.gain.value = coinSoundVolume(amount);
+  src.connect(gain);
+  gain.connect(c.destination);
+  const mine = { src, gain };
+  current = mine;
+  src.onended = () => {
+    if (current === mine) current = null;
+  };
+  src.start(c.currentTime + 0.01);
 }
 
 /** Create + resume the context inside the first user gesture (and keep trying until it is running). */
@@ -144,36 +134,29 @@ export function installAudioUnlock(target) {
   unlockInstalled = true;
 }
 
-/** Play the coin shower for a gain of `amount`. @returns {boolean} true when it was scheduled right now. */
+/** Play the coin sound for a gain of `amount`. @returns {boolean} true when it started right now. */
 export function playCoinSound(amount) {
   const c = ensureContext();
   if (!c) return false;
-  const go = () => {
+  if (c.state === 'running' && sample.buffer) {
+    startClip(c, sample.buffer, amount);
+    return true;
+  }
+  // not ready yet (still unlocking and/or still decoding): start it if everything is ready soon enough
+  const asked = typeof performance !== 'undefined' ? performance.now() : 0;
+  const ready = [loadSample(c)];
+  if (c.state !== 'running') {
     try {
-      renderShower(c, c.destination, c.currentTime + 0.02, showerScore(amount, Math.floor(Math.random() * 4294967296)));
+      const p = c.resume();
+      if (p && typeof p.then === 'function') ready.push(p.catch(() => {}));
     } catch {
       /* ignore */
     }
-  };
-  if (c.state === 'running') {
-    go();
-    return true;
   }
-  const asked = typeof performance !== 'undefined' ? performance.now() : 0;
-  try {
-    const p = c.resume();
-    if (p && typeof p.then === 'function') {
-      p.then(
-        () => {
-          const fresh = typeof performance === 'undefined' || performance.now() - asked < 700;
-          if (c.state === 'running' && fresh) go();
-        },
-        () => {}
-      );
-    }
-  } catch {
-    /* ignore */
-  }
+  Promise.all(ready).then(([buf]) => {
+    const fresh = typeof performance === 'undefined' || performance.now() - asked < FRESH_MS;
+    if (buf && fresh && c.state === 'running') startClip(c, buf, amount);
+  });
   return false;
 }
 
@@ -186,8 +169,17 @@ export function hapticCoin() {
   }
 }
 
-/** Everything the player feels when 韭币 lands: the coin shower and the tick. */
+/** Everything the player feels when 韭币 lands: the coin sound and the tick. */
 export function playGainFeedback(amount) {
   playCoinSound(amount);
   hapticCoin();
+}
+
+/** Test hook: forget the context and the decoded clip. */
+export function __resetCoinSfxForTests() {
+  ctx = null;
+  unlockInstalled = false;
+  sample.promise = null;
+  sample.buffer = null;
+  current = null;
 }

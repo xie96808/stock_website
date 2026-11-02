@@ -1,6 +1,6 @@
 # 韭币到账弹窗 + 音效 (coin gain)
 
-Whenever 韭币 is **earned**, the player gets the same 「获得韭币」card, a coin-shower sound (金钱哗啦啦) and a light haptic tick.
+Whenever 韭币 is **earned**, the player gets the same 「获得韭币」card, a coin sound (recorded clip) and a light haptic tick.
 
 ## Rules (decided with the product owner)
 - One card **per gain** — no merging. Several gains queue and show one after another (`createGainQueue`).
@@ -8,13 +8,13 @@ Whenever 韭币 is **earned**, the player gets the same 「获得韭币」card, 
 - Refunds (押注退回本金、对战平局/取消退款) and admin grants/adjustments **never** pop a card.
 - The coin in the middle spins continuously (CSS 3D, hand-built: 7 stacked rim discs + a front and a back face, traced from the drawn coin art). `prefers-reduced-motion` freezes it.
 - Dismissing sends small coins flying to the balance chip in the top bar, which bumps as they land. No chip on screen → the coins just rise and fade.
-- Sound: 「金钱哗啦啦」— synthesised with WebAudio (no files), **no settings switch**: a swell of metallic rustle plus 14–27 tiny coin clinks that start dense and thin out as the pile settles; bigger gains pour longer (≈0.8 s → 1.2 s). Seeded PRNG: tests are repeatable, live play uses a random seed so no two sound identical. Browsers need one user tap before audio may play; `installAudioUnlock()` handles it, and a sound is never scheduled on a context that is not running (silence beats a late sound). The Android app's WebView allows autoplay.
+- Sound: a **recorded clip** (`assets/sfx/coin-gain.mp3`, ~1.8 s of coins poured into a bag, faded out at the end, ~30 KB), decoded once into a WebAudio buffer; volume 0.7–1.0 by amount. **No settings switch yet.** Browsers need one user tap before audio may play; `installAudioUnlock()` handles it, and the clip is never started on a context that is not running or that became ready >0.7 s late (silence beats a late sound). A missing / undecodable clip stays silent. The Android app's WebView allows autoplay.
 - Haptic: `navigator.vibrate(14)`. Needs `android.permission.VIBRATE` in the APK (added to the manifest — takes effect with the next APK release; Chrome on Android works already; iOS has no vibration API).
 
 ## Code
 | file | role |
 | --- | --- |
-| `js/coin-gain-pure.js` | copy per source, `normalizeGain`, queue + key dedupe, timings, the coin-shower **score**, and one builder per earning site (`streakGain`, `puzzleGains`, `stakeGain`, `pvpGain`, `quizGain`, …) |
+| `js/coin-gain-pure.js` | copy per source, `normalizeGain`, queue + key dedupe, timings, the coin-sound volume rule, and one builder per earning site (`streakGain`, `puzzleGains`, `stakeGain`, `pvpGain`, `quizGain`, …) |
 | `js/coin-sfx.js` | plays the score (`renderShower` works on any `BaseAudioContext`, live or offline), audio unlock, `hapticCoin`, `playGainFeedback` |
 | `js/coin-gain.js` | `showCoinGain({amount, source, sub?, balance?, key?})` — DOM card, count-up, fly-to-balance, focus / Esc / ghost-tap guard |
 | `css/coin-gain.css` | card (reuses the lucky wheel's `lw-result-card` / `lw-go-*` art), 3D coin, halo, stars, bump |
@@ -24,7 +24,7 @@ Whenever 韭币 is **earned**, the player gets the same 「获得韭币」card, 
 | source | trigger | caption |
 | --- | --- | --- |
 | 每日领取 (wheel off) | `POST /me/jiu-coin/daily` | 每日领取 |
-| 签到转盘 | the wheel's own pop-up (shower sound + haptic added) | — |
+| 签到转盘 | the wheel's own pop-up (coin sound + haptic added) | — |
 | 连续登录 | `POST /me/streak/claim` | 连续登录第 N 天 [· 转盘 +N 次] |
 | 成就 | claim / claim-all (one click = one card; unlocks stay a toast) | 成就「name」/ 领取 N 个成就 |
 | 好友邀请 | finish response `inviteReward` | 好友邀请奖励 |

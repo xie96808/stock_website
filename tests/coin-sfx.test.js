@@ -1,70 +1,81 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderShower } from '../js/coin-sfx.js';
-import { showerScore } from '../js/coin-gain-pure.js';
+import { statSync } from 'node:fs';
+import { playCoinSound, preloadCoinSound, __resetCoinSfxForTests } from '../js/coin-sfx.js';
+import { coinSoundVolume } from '../js/coin-gain-pure.js';
 
-/** A minimal recording stand-in for a BaseAudioContext (node has no WebAudio). */
-function fakeAudio(sampleRate = 44100) {
-  const log = { osc: [], gains: [], filters: [], sources: [], buffers: [] };
-  const param = (init = 0) => {
-    const p = { value: init, calls: [] };
-    p.setValueAtTime = (v, t) => { p.calls.push(['set', v, t]); };
-    p.exponentialRampToValueAtTime = (v, t) => { p.calls.push(['ramp', v, t]); };
-    return p;
-  };
-  const node = (extra = {}) => ({ connect(n) { this.out = n; return n; }, ...extra });
-  const ctx = {
-    sampleRate,
-    createGain() { const g = node({ gain: param(1) }); log.gains.push(g); return g; },
-    createOscillator() { const o = node({ type: '', frequency: param(0), start(t) { this.t0 = t; }, stop(t) { this.t1 = t; } }); log.osc.push(o); return o; },
-    createBiquadFilter() { const f = node({ type: '', frequency: param(0), Q: param(0) }); log.filters.push(f); return f; },
-    createBuffer(ch, n) { const d = new Float32Array(n); const b = { getChannelData: () => d, length: n }; log.buffers.push(b); return b; },
-    createBufferSource() { const s = node({ start(t) { this.t0 = t; } }); log.sources.push(s); return s; },
-  };
-  return { ctx, log };
+/** A recording stand-in for AudioContext + fetch (node has neither). */
+function setup({ state = 'running', fetchOk = true } = {}) {
+  const log = { ctx: 0, fetches: [], decodes: 0, sources: [], gains: [], resumes: 0 };
+  const param = (v = 1) => ({ value: v, setValueAtTime() {}, linearRampToValueAtTime() {} });
+  class FakeCtx {
+    constructor() { log.ctx++; this.state = state; this.currentTime = 5; this.destination = { name: 'dest' }; }
+    resume() { log.resumes++; this.state = 'running'; return Promise.resolve(); }
+    decodeAudioData(bytes) { log.decodes++; return Promise.resolve({ duration: 1.8, tag: 'decoded' }); }
+    createGain() { const g = { gain: param(), connect(n) { g.out = n; } }; log.gains.push(g); return g; }
+    createBufferSource() { const s = { connect(n) { s.out = n; }, start(t) { s.t0 = t; }, stop(t) { s.t1 = t; } }; log.sources.push(s); return s; }
+  }
+  globalThis.window = { AudioContext: FakeCtx };
+  globalThis.fetch = async (url) => { log.fetches.push(url); return { ok: fetchOk, arrayBuffer: async () => new ArrayBuffer(8) }; };
+  __resetCoinSfxForTests();
+  return log;
 }
+const settle = () => new Promise((r) => setTimeout(r, 15));
 
-test('renderShower builds exactly the score: clinks × partials oscillators, a rustle + one clack per clink, all routed to the destination', () => {
-  for (const amount of [20, 150, 800]) {
-    const score = showerScore(amount, 3);
-    const { ctx, log } = fakeAudio();
-    const dest = { name: 'dest' };
-    const end = renderShower(ctx, dest, 1.0, score);
-    assert.equal(log.osc.length, score.clinks.length * score.partials.length);
-    assert.equal(log.sources.length, 1 + score.clinks.length, 'rustle + one clack per clink');
-    assert.equal(log.filters.length, 1 + score.clinks.length);
-    assert.ok(Math.abs(end - (1.0 + score.end)) < 1e-9);
-    assert.equal(log.gains[0].out, dest, 'master gain feeds the destination');
-    assert.equal(log.buffers.length, 1, 'one shared noise bed');
-    assert.ok(log.buffers[0].length >= Math.floor(44100 * score.end), 'the bed covers the whole sound');
-    for (const o of log.osc) {
-      assert.equal(o.type, 'sine');
-      assert.ok(o.t0 >= 1.0, 'never scheduled before the start time');
-      assert.ok(o.t1 > o.t0, 'every oscillator is stopped (no leak)');
-      assert.ok(o.t1 <= end + 0.1);
-    }
-    for (const s of log.sources) assert.ok(s.t0 >= 1.0);
-  }
+test('the recorded clip ships with the site, short and light', () => {
+  const st = statSync(new URL('../assets/sfx/coin-gain.mp3', import.meta.url));
+  assert.ok(st.size > 5_000 && st.size < 80_000, `${st.size} bytes`);
 });
 
-test('every envelope starts silent and ends silent (no clicks, no hanging tone); nothing exceeds full scale', () => {
-  const { ctx, log } = fakeAudio();
-  renderShower(ctx, {}, 0, showerScore(800, 3));
-  const clinkEnv = log.gains.filter((g) => g.gain.calls.length === 3 && g.gain.calls[1][0] === 'ramp' && g.gain.calls[0][1] < 0.001);
-  assert.ok(clinkEnv.length >= 3 * 27, `${clinkEnv.length} clink envelopes`);
-  for (const g of clinkEnv) {
-    const [[, v0], [, peak], [, v1]] = g.gain.calls;
-    assert.ok(v0 < 0.001 && v1 < 0.001);
-    assert.ok(peak > 0 && peak <= 0.5, `peak ${peak}`);
-  }
-  const rustle = log.gains.find((g) => g.gain.calls.length === 4);
-  assert.ok(rustle, 'the rustle envelope (swell, hold, trail off)');
-  assert.ok(rustle.gain.calls[0][1] < 0.001 && rustle.gain.calls[3][1] < 0.001);
-  assert.ok(rustle.gain.calls[1][1] <= 0.2, 'the rustle stays a bed, never the loudest thing');
+test('first play on a running context loads the clip, then starts it (routed to the speakers, volume by amount)', async () => {
+  const log = setup();
+  assert.equal(playCoinSound(150), false, 'the clip is not decoded yet: nothing starts synchronously');
+  await settle();
+  assert.equal(log.fetches.length, 1);
+  assert.match(log.fetches[0], /assets\/sfx\/coin-gain\.mp3/);
+  assert.equal(log.sources.length, 1, 'it still plays (the request was fresh)');
+  assert.equal(log.sources[0].buffer.tag, 'decoded');
+  assert.equal(log.sources[0].out, log.gains[0]);
+  assert.equal(log.gains[0].out.name, 'dest');
+  assert.equal(log.gains[0].gain.value, coinSoundVolume(150));
+  assert.ok(log.sources[0].t0 > 5, 'scheduled just after now');
 });
 
-test('the noise bed is deterministic (an offline render is repeatable)', () => {
-  const a = fakeAudio(); renderShower(a.ctx, {}, 0, showerScore(20, 3));
-  const b = fakeAudio(); renderShower(b.ctx, {}, 0, showerScore(20, 3));
-  assert.deepEqual(Array.from(a.log.buffers[0].getChannelData(0).slice(0, 64)), Array.from(b.log.buffers[0].getChannelData(0).slice(0, 64)));
+test('once decoded, later plays start at once; the clip is fetched and decoded only one time', async () => {
+  const log = setup();
+  preloadCoinSound();
+  await settle();
+  assert.equal(log.sources.length, 0, 'preload alone makes no sound');
+  assert.equal(playCoinSound(20), true);
+  assert.equal(playCoinSound(800), true);
+  assert.equal(log.fetches.length, 1);
+  assert.equal(log.decodes, 1);
+  assert.equal(log.sources.length, 2);
+  assert.ok(log.sources[0].t1 > 5, 'the earlier clip is faded out as the next begins (no stacking roar)');
+});
+
+test('a context that is still suspended is resumed; the sound plays only if it becomes running in time', async () => {
+  const log = setup({ state: 'suspended' });
+  preloadCoinSound();
+  await settle();
+  assert.equal(playCoinSound(20), false);
+  await settle();
+  assert.equal(log.resumes, 1);
+  assert.equal(log.sources.length, 1);
+});
+
+test('a missing / broken clip stays silent and does not throw; a later play tries again', async () => {
+  const log = setup({ fetchOk: false });
+  assert.doesNotThrow(() => playCoinSound(20));
+  await settle();
+  assert.equal(log.sources.length, 0);
+  playCoinSound(20);
+  await settle();
+  assert.equal(log.fetches.length, 2, 'retried');
+});
+
+test('no AudioContext at all (old browser): silently does nothing', () => {
+  globalThis.window = {};
+  __resetCoinSfxForTests();
+  assert.equal(playCoinSound(20), false);
 });
