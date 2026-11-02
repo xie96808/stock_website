@@ -47,6 +47,7 @@ const runs = [
   ["node", ["--test", "server/tests/oneshot.integration.test.js"]],
   ["node", ["--test", "server/tests/oneshot-off.integration.test.js"]],
   ["node", ["--test", "server/tests/coin-stake.integration.test.js"]],
+  ["node", ["--test", "server/tests/stake-on-leaderboard.integration.test.js"]],
   ["node", ["--test", "server/tests/coin-stake-off.integration.test.js"]],
   ["node", ["--test", "server/tests/coin-board.integration.test.js"]],
   ["node", ["--test", "server/tests/leek-shop.integration.test.js"]],

@@ -16,7 +16,7 @@ A classic 30-day game played with the player's own coins instead of the fixed 20
 | Cap | none on the upside; the loss is at most the stake (`payout ≥ 0`) |
 | Abandon / expiry | the escrow is not returned |
 | Rewind / 后悔券 | not available |
-| Boards | not on the 龙虎榜 (the old 练习榜; its queries filter `game_kind = 'classic'`). The result page's board button opens the 龙虎榜 for every classic-style game incl. 韭币局; the 韭币榜 is opened from the 韭币 balance chip |
+| Boards | **on the 龙虎榜** (the old 练习榜) together with classic games: one board, one seat per player (best game / average over both kinds), no marker on the rows. Stake sessions are stored as `assist_class = 'clean'` (no rewind ⇒ 纯净), migration `039_stake_on_leaderboard.sql` backfills the older ones, and `/me/stats` + 「我的战绩」 use the same scope (`CLASSIC_BOARD_KINDS_SQL` in `server/src/lib/leaderboard.js`). The result page's board button opens the 龙虎榜; the 韭币榜 is opened from the 韭币 balance chip |
 
 Because payouts are whole coins, a small stake with a small move can round to zero profit (10 coins at +4% → 0). The result card says so ("涨跌不足 1 韭币，本金原样退回").
 

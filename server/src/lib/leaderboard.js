@@ -286,18 +286,25 @@ function seatsCte(metric, board) {
     .replaceAll("__SEAT_ORDER__", seatOrderSql(board));
 }
 
+/**
+ * The 龙虎榜 (default / classic board) counts classic practice games AND 韭币局 games: a stake game runs the same
+ * 30-day classic rules (no rewind, no trade cap), so its return is directly comparable. Kept in one place so the
+ * board, "my recent games" and /me/stats can never drift apart.
+ */
+export const CLASSIC_BOARD_KINDS_SQL = "s.game_kind IN ('classic', 'stake')";
+
 function kindAssistSql(board) {
   const kind = board.gameKind || GAME_KIND_CLASSIC;
   if (kind === GAME_KIND_ONESHOT || kind === GAME_KIND_SURVIVAL) {
     return " AND s.game_kind = ?";
   }
   // Classic practice board — oneshot/survival/daily/puzzle never mix in.
-  if (!board.assistClass) return " AND s.game_kind = 'classic'";
+  if (!board.assistClass) return ` AND ${CLASSIC_BOARD_KINDS_SQL}`;
   if (board.assistClass === ASSIST_ALL) {
     // 总榜: clean ∪ undo (post-migration; no legacy population advertised).
-    return " AND s.game_kind = 'classic' AND s.assist_class IN ('clean', 'undo')";
+    return ` AND ${CLASSIC_BOARD_KINDS_SQL} AND s.assist_class IN ('clean', 'undo')`;
   }
-  return " AND s.assist_class = ? AND s.game_kind = 'classic'";
+  return ` AND s.assist_class = ? AND ${CLASSIC_BOARD_KINDS_SQL}`;
 }
 
 function boardBinds(board) {
@@ -656,11 +663,12 @@ function loadMyRecent(db, viewer, board, bestGameId) {
               r.leaderboard_hidden AS hidden, r.validity AS validity
        FROM game_sessions s
        JOIN game_results r ON r.game_id = s.id
-       WHERE s.user_id = ? AND s.status = 'settled' AND s.fill_mode = ? AND s.game_kind = ?
+       WHERE s.user_id = ? AND s.status = 'settled' AND s.fill_mode = ?
+         AND ${kind === GAME_KIND_CLASSIC ? CLASSIC_BOARD_KINDS_SQL : "s.game_kind = ?"}
        ORDER BY s.finished_at DESC, s.id DESC
        LIMIT ?`
     )
-    .all(viewer.id, board.fillMode, kind, RECENT_N);
+    .all(...[viewer.id, board.fillMode, ...(kind === GAME_KIND_CLASSIC ? [] : [kind]), RECENT_N]);
   const optIn = viewer.leaderboardOptIn != null ? !!viewer.leaderboardOptIn : true;
   const assistOk = (a) => {
     if (kind !== GAME_KIND_CLASSIC || !board.assistClass) return true;

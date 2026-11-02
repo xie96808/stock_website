@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { openDb } from "../db/connection.js";
 import { pickRandomWindow, ensureDatasetLoaded, sha256Text } from "./dataset.js";
 import { settleGame, RULE_VERSION, DECISION_DAYS, FILL_MODES } from "../../../shared/engine.js";
-import { invalidateLeaderboardCache } from "./leaderboard.js";
+import { invalidateLeaderboardCache, CLASSIC_BOARD_KINDS_SQL } from "./leaderboard.js";
 import { deductGameCreate, JIU_COIN_ONESHOT_CREATE_COST, JIU_COIN_SURVIVAL_CREATE_COST, JIU_COIN_GAME_CREATE_COST } from "./jiuCoin.js";
 import { config } from "./config.js";
 import { eventV1CreateColumns, finishEventV1 } from "./gameProtocol.js";
@@ -348,8 +348,8 @@ export function createGame(userId, { fillMode, gameKind, createKey, stake: rawSt
             id, user_id, create_key, create_payload_hash, rule_version, dataset_version,
             fill_mode, stock_code, stock_name, stock_index, window_start, history_length,
             game_days, snapshot_json, snapshot_sha256, status, started_at, expires_at,
-            game_kind, modifiers
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?)`
+            game_kind, modifiers, assist_class
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)`
         ).run(
           id,
           userId,
@@ -369,7 +369,9 @@ export function createGame(userId, { fillMode, gameKind, createKey, stake: rawSt
           now,
           expiresAt,
           kind,
-          modifiersJson
+          modifiersJson,
+          // 韭币局 has no rewind, so it is a 纯净 game from the start and sits on the 龙虎榜; oneshot / survival keep the default
+          kind === GAME_KIND_STAKE ? ASSIST_CLEAN : "legacy"
         );
       } else {
         db.prepare(
@@ -899,13 +901,14 @@ export function myStats(userId, query = {}) {
     sql += ` AND s.fill_mode = ?`;
     params.push(fillMode);
   }
+  // Same scope as the 龙虎榜: classic + 韭币局 games.
   if (assistClass === ASSIST_ALL) {
-    sql += ` AND s.game_kind = 'classic' AND s.assist_class IN ('clean', 'undo')`;
+    sql += ` AND ${CLASSIC_BOARD_KINDS_SQL} AND s.assist_class IN ('clean', 'undo')`;
   } else if (assistClass) {
-    sql += ` AND s.assist_class = ? AND s.game_kind = 'classic'`;
+    sql += ` AND s.assist_class = ? AND ${CLASSIC_BOARD_KINDS_SQL}`;
     params.push(assistClass);
   } else {
-    sql += ` AND s.game_kind = 'classic'`;
+    sql += ` AND ${CLASSIC_BOARD_KINDS_SQL}`;
   }
 
   const allRows = db.prepare(sql).all(...params);
