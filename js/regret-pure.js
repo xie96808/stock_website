@@ -17,9 +17,13 @@ export const BUSY_BUYS = 5;
 /** Below this return a "nothing special" game is 摸索中, not 稳扎稳打. */
 export const STEADY_FLOOR_PCT = -3;
 
-/** Which game kinds get the card: plain classic only (other modes have their own caps / rules, so "optimal" differs). */
+/**
+ * Which game kinds get the card: classic and 韭币局 (开一局). A stake game plays the classic rules (30 days, no rewind,
+ * no cap on buys), so the optimal route is the same one. Other modes have their own caps / rules, so "optimal" differs.
+ */
+const REGRET_KINDS = new Set(['classic', 'stake']);
 export function regretEligible({ gameKind, maxOrders } = {}) {
-  if (gameKind && gameKind !== 'classic') return false;
+  if (gameKind && !REGRET_KINDS.has(gameKind)) return false;
   if (maxOrders != null) return false;
   return true;
 }

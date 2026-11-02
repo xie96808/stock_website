@@ -34,11 +34,12 @@ const down = mkBars(line(10, 7));
 
 /* ---------- eligibility / window ---------- */
 
-test('only plain classic games get the card', () => {
+test('classic and 韭币局 (开一局) get the card; the capped / special modes do not', () => {
   assert.equal(regretEligible({ gameKind: null }), true);
   assert.equal(regretEligible({}), true);
   assert.equal(regretEligible({ gameKind: 'classic' }), true);
-  for (const k of ['oneshot', 'survival', 'stake', 'daily', 'puzzle', 'ghost']) {
+  assert.equal(regretEligible({ gameKind: 'stake' }), true, '开一局 = 韭币局 when live: same rules as classic');
+  for (const k of ['oneshot', 'survival', 'daily', 'puzzle', 'ghost']) {
     assert.equal(regretEligible({ gameKind: k }), false, k);
   }
   assert.equal(regretEligible({ gameKind: null, maxOrders: 2 }), false, 'capped-order games have a different optimum');
