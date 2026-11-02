@@ -22,6 +22,7 @@ import {
   parseRouteHash,
 } from "./screen-router.js";
 import { primeStakeFlag } from "./coin-stake.js";
+import { primeGuestPlayFlag } from "./guest-play.js";
 
 function playModesEl() {
   return document.getElementById("playModes");
@@ -163,6 +164,7 @@ async function refreshPlayModesFlags() {
   setPlayModesLoading(false);
   revealClassicMode();
   primeStakeFlag(features);
+  primeGuestPlayFlag(features);
   import("./coin-board.js").then((m) => { m.primeCoinBoardFlag(features); return m.wireCoinBoardEntry(); }).catch(() => {});
   bindClassicFold();
   applyStakeLayout(!!features.coinStake);

@@ -48,7 +48,7 @@ import { amountWithCoinHtml, refreshJiuCoinStatus } from './jiu-coin.js';
 import { unitIconsHtml, coinAmountHtml, ticketAmountHtml } from './unit-icons.js';
 import { getRewindTickets, refreshRewindTickets, setRewindTickets } from './rewind-tickets.js';
 import { rewindButtonMode, defaultPayWith, ticketConfirmCopy, rewindToast } from './rewind-tickets-pure.js';
-import { getAuthState, showToast, refreshMe } from './auth.js';
+import { getAuthState, showToast, refreshMe, selectIsGuest } from './auth.js';
 import { shakeError, openCtlSheet, closeCtlSheet } from './controls.js';
 import { Route, prepareScreen, activateScreen, setHeaderChrome } from './screen-router.js';
 import { formatPuzzlePlayTip, formatPlayHudChrome } from './puzzle-goals-copy.js';
@@ -658,6 +658,7 @@ let rewindSheetCtx = null;
 export async function openRewindConfirm() {
     const session = getSession();
     const feats = await ensureRewindFeatures();
+    if (selectIsGuest(getAuthState())) return; // 游客先玩: 反悔 is a registered-only feature
     if (!evaluateRewindEligibility(session, feats).eligible) return;
 
     const auth = getAuthState();
@@ -1126,7 +1127,7 @@ export function updateUI() {
     // F03 rewind: eligibility from use-case; button chrome stays in view.
     void (async () => {
         const feats = await ensureRewindFeatures();
-        const eligible = evaluateRewindEligibility(session, feats).eligible;
+        const eligible = !selectIsGuest(getAuthState()) && evaluateRewindEligibility(session, feats).eligible;
         if (rewindBtn) {
             rewindBtn.hidden = !eligible;
             rewindBtn.dataset.eligible = eligible ? '1' : '';

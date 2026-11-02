@@ -18,6 +18,7 @@ const int = (label, group, min, max, note = "") => ({ type: "int", label, group,
 
 export const SETTINGS_REGISTRY = {
   registrationEnabled: bool("开放注册", "site"),
+  guestPlayEnabled: bool("游客先玩", "site", "未登录玩家可免注册玩 1 局经典局，之后必须注册；关闭后首页恢复为先登录"),
   cloudGamesEnabled: bool("云端新开局", "site", "关闭后已开局仍可完成"),
   leaderboardEnabled: bool("排行榜", "site"),
   quizRewardsEnabled: bool("每日答题奖励", "feature"),

@@ -6,18 +6,26 @@ function isoAfter(ms) {
   return new Date(Date.now() + ms).toISOString();
 }
 
-function absoluteExpiryIso(createdAtMs) {
-  return new Date(createdAtMs + config.sessionAbsoluteMs).toISOString();
+/** Guest sessions live as long as the guest account does (idle == absolute); everyone else keeps the normal limits. */
+function limitsFor(isGuest) {
+  return isGuest
+    ? { absoluteMs: config.guestSessionMs, idleMs: config.guestSessionMs }
+    : { absoluteMs: config.sessionAbsoluteMs, idleMs: config.sessionIdleMs };
 }
 
-export function createSession(userId) {
+function absoluteExpiryIso(createdAtMs, absoluteMs) {
+  return new Date(createdAtMs + absoluteMs).toISOString();
+}
+
+export function createSession(userId, { guest = false } = {}) {
   const sessionToken = randomToken(32);
   const csrfToken = deriveCsrfToken(sessionToken);
   const tokenHash = sha256Hex(sessionToken);
   const csrfHash = sha256Hex(csrfToken);
   const createdMs = Date.now();
-  const absoluteIso = absoluteExpiryIso(createdMs);
-  const idleIso = isoAfter(config.sessionIdleMs);
+  const limits = limitsFor(guest);
+  const absoluteIso = absoluteExpiryIso(createdMs, limits.absoluteMs);
+  const idleIso = isoAfter(limits.idleMs);
   const expiresAt = Date.parse(idleIso) <= Date.parse(absoluteIso) ? idleIso : absoluteIso;
   openDb()
     .prepare(`INSERT INTO sessions (token_hash, user_id, csrf_token_hash, expires_at)
@@ -31,7 +39,7 @@ export function findValidSession(sessionToken) {
   const tokenHash = sha256Hex(sessionToken);
   const row = openDb()
     .prepare(`SELECT u.id AS id, u.username_normalized, u.nickname, u.avatar_id, u.avatar_custom_path, u.avatar_frame, u.pvp_entrance, u.title, u.rename_cards, u.role, u.status,
-      u.leaderboard_opt_in, u.signature, u.jiu_coin_balance, u.created_at, u.updated_at, u.password_hash, u.recovery_code_hash,
+      u.leaderboard_opt_in, u.signature, u.jiu_coin_balance, u.is_guest, u.created_at, u.updated_at, u.password_hash, u.recovery_code_hash,
       s.token_hash, s.expires_at, s.last_seen_at, s.revoked_at, s.user_id, s.admin_verified_at, s.created_at AS session_created_at
       FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = ?`)
@@ -43,18 +51,23 @@ export function findValidSession(sessionToken) {
   const now = Date.now();
   const createdMs = Date.parse(row.session_created_at);
   if (!Number.isFinite(createdMs)) return null;
-  const absoluteMs = createdMs + config.sessionAbsoluteMs;
+  const limits = limitsFor(!!row.is_guest);
+  const absoluteMs = createdMs + limits.absoluteMs;
   if (now >= absoluteMs) return null;
   if (Date.parse(row.expires_at) <= now) return null;
 
   const last = Date.parse(row.last_seen_at);
   if (now - last > 5 * 60 * 1000) {
-    const idleExp = now + config.sessionIdleMs;
+    const idleExp = now + limits.idleMs;
     const capped = Math.min(idleExp, absoluteMs);
     const newExp = new Date(capped).toISOString();
     openDb()
       .prepare("UPDATE sessions SET last_seen_at = datetime('now'), expires_at = ? WHERE token_hash = ?")
       .run(newExp, tokenHash);
+    // The 30-day guest cleanup keys on this, so a guest who keeps coming back is never purged.
+    if (row.is_guest) {
+      openDb().prepare("UPDATE users SET last_active_at = datetime('now') WHERE id = ? AND is_guest = 1").run(row.id);
+    }
     row.expires_at = newExp;
   }
   return row;
@@ -78,14 +91,14 @@ export function sessionStillValidByHash(tokenHash, now = Date.now()) {
   if (!tokenHash) return null;
   const row = openDb()
     .prepare(
-      `SELECT u.id AS id, u.status, s.token_hash, s.expires_at, s.revoked_at, s.created_at AS session_created_at
+      `SELECT u.id AS id, u.status, u.is_guest, s.token_hash, s.expires_at, s.revoked_at, s.created_at AS session_created_at
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.token_hash = ?`
     )
     .get(tokenHash);
   if (!row || row.revoked_at || row.status !== "active") return null;
   const createdMs = Date.parse(row.session_created_at);
-  if (!Number.isFinite(createdMs) || now >= createdMs + config.sessionAbsoluteMs) return null;
+  if (!Number.isFinite(createdMs) || now >= createdMs + limitsFor(!!row.is_guest).absoluteMs) return null;
   if (Date.parse(row.expires_at) <= now) return null;
   return row;
 }
@@ -107,13 +120,13 @@ export function revokeAllUserSessions(userId) {
   emitSessionRevoke({ userId, all: true });
 }
 
-export function setSessionCookie(res, sessionToken) {
+export function setSessionCookie(res, sessionToken, { guest = false } = {}) {
   res.cookie(config.cookieName, sessionToken, {
     httpOnly: true,
     secure: config.cookieSecure,
     sameSite: "lax",
     path: "/",
-    maxAge: config.sessionAbsoluteMs,
+    maxAge: limitsFor(guest).absoluteMs,
   });
 }
 

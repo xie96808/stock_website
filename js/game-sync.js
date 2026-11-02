@@ -2,7 +2,7 @@
  * Save-status DOM is injectable (default paints #cloudSaveStatus). Session finish
  * body/patch shaping lives in game-play-usecase (Wave C · C2).
  */
-import { api, getAuthState } from "./auth.js";
+import { api, getAuthState, selectPlayer } from "./auth.js";
 import { gameState } from "./state.js";
 import { getSession, patchSession } from "./game-session.js";
 import {
@@ -58,10 +58,10 @@ async function apiWithHeaders(path, { method = "GET", body, headers = {} } = {})
   return { ok: true, status: res.status, data: json.data, requestId: json.requestId };
 }
 
-/** Create a cloud game for the logged-in user. */
+/** Create a cloud game for the logged-in user (or the guest playing their one free game). */
 export async function createCloudGame(fillMode, { gameKind, stake } = {}) {
   const auth = getAuthState();
-  if (!auth.user) throw new Error("未登录，无法创建云端对局");
+  if (!selectPlayer(auth)) throw new Error("未登录，无法创建云端对局");
   const key = newIdempotencyKey();
   const body = { fillMode };
   if (gameKind && gameKind !== "classic") body.gameKind = gameKind;
@@ -215,14 +215,14 @@ export async function fetchMyStats(params = {}) {
 /** Active cloud session metadata (seed), or null. */
 export async function fetchActiveCloudGame() {
   const auth = getAuthState();
-  if (!auth.user) return null;
+  if (!selectPlayer(auth)) return null;
   const { data } = await api("/games/active");
   return data?.gameId ? data : null;
 }
 
 export async function abandonCloudGame(gameId) {
   const auth = getAuthState();
-  if (!auth.user || !gameId) return null;
+  if (!selectPlayer(auth) || !gameId) return null;
   await api(`/games/${gameId}/abandon`, { method: "POST" });
   clearCloudGameDraft(gameId);
   return gameId;
@@ -230,7 +230,7 @@ export async function abandonCloudGame(gameId) {
 
 export async function abandonActiveCloudGame() {
   const auth = getAuthState();
-  if (!auth.user) return null;
+  if (!selectPlayer(auth)) return null;
   const data = await fetchActiveCloudGame();
   if (!data?.gameId) return null;
   return abandonCloudGame(data.gameId);
@@ -241,11 +241,11 @@ export async function abandonActiveCloudGame() {
  * Adapter only — localStorage I/O stays in cloud-draft (single writer). */
 export function persistCurrentCloudDraft() {
   if (!gameState.cloudMode || !gameState.cloudGameId) return false;
-  const auth = getAuthState();
-  if (!auth.user?.id) return false;
+  const player = selectPlayer(getAuthState());
+  if (!player?.id) return false;
   return saveCloudGameDraft({
     gameId: gameState.cloudGameId,
-    userId: auth.user.id,
+    userId: player.id,
     fillMode: gameState.fillMode,
     actions: gameState.actions,
     ruleVersion: gameState.ruleVersion,

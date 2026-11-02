@@ -6,6 +6,8 @@ import {
   isUnauthorized,
   selectIsAuthenticated,
   selectAuthChromeMode,
+  selectPlayer,
+  selectIsGuest,
 } from "./auth-state.js";
 import { apiRequest, apiMultipartRequest } from "./auth-http.js";
 import { showStampToast, openCtlOverlay, closeCtlOverlay, setCtlState, initControls } from "./controls.js";
@@ -13,6 +15,7 @@ import { installAvatarFallback } from "./avatar-fallback.js";
 import { emojiArtHtml } from "./emoji-art.js";
 import { applyFrameToImg } from "./avatar-frame.js";
 import { readPendingInvite, clearPendingInvite, registerNote, registerToast } from "./invite-pure.js";
+import { guestRegisterNote, guestLoginWarning, guestRegisteredToast, GUEST_AUTH_REASON } from "./guest-play-pure.js";
 
 function inviteStore() {
   try { return window.localStorage; } catch { return null; }
@@ -49,6 +52,7 @@ function applyAuth(event) {
   const next = transitionAuth(authState, event);
   authState.status = next.status;
   authState.user = next.user;
+  authState.guest = next.guest ?? null;
   authState.csrfToken = next.csrfToken;
   authState.ready = next.ready;
   authState.error = next.error;
@@ -144,7 +148,7 @@ export async function api(path, { method = "GET", body, csrf } = {}) {
     }
     // Session gone — clear chrome so UI never looks logged-in without a cookie.
     // Do not clear on INVALID_CREDENTIALS / BAD_PASSWORD (login / password forms).
-    if (isUnauthorized(err) && authState.user) {
+    if (isUnauthorized(err) && (authState.user || authState.guest)) {
       clearSessionLocal("api_401");
       renderAuthChrome();
     }
@@ -165,7 +169,7 @@ export async function apiMultipart(path, formData, { method = "POST", csrf } = {
     if (err && err.status != null) {
       perfLog("api " + method + " " + path, performance.now() - t0, { status: err.status });
     }
-    if (isUnauthorized(err) && authState.user) {
+    if (isUnauthorized(err) && (authState.user || authState.guest)) {
       clearSessionLocal("api_multipart_401");
       renderAuthChrome();
     }
@@ -177,7 +181,7 @@ export function getAuthState() {
   return authState;
 }
 
-export { AUTH_STATUS, selectIsAuthenticated, selectAuthChromeMode };
+export { AUTH_STATUS, selectIsAuthenticated, selectAuthChromeMode, selectPlayer, selectIsGuest };
 
 async function refreshMeOnce() {
   applyAuth({ type: "REFRESH_START" });
@@ -207,6 +211,20 @@ export async function refreshMe() {
     refreshInflight = null;
   });
   return refreshInflight;
+}
+
+/**
+ * 游客先玩: make sure the visitor holds a session that may play the one free classic game.
+ * Returns the current auth state when it already is a guest / registered session; otherwise asks the server for a
+ * guest account (POST /auth/guest, idempotent). Throws the API error (code GUEST_DISABLED, RATE_LIMITED, …) so
+ * the caller can fall back to the login modal.
+ */
+export async function ensureGuestSession() {
+  if (selectIsAuthenticated(authState) || selectIsGuest(authState)) return authState;
+  const { data } = await api("/auth/guest", { method: "POST" });
+  applyAuth({ type: "SESSION_ESTABLISHED", user: data.user, csrfToken: data.csrfToken });
+  renderAuthChrome();
+  return authState;
 }
 
 function el(html) {
@@ -294,6 +312,7 @@ function ensureAuthDom() {
         <h2 id="authModalTitle">账号</h2>
         <p class="auth-error" id="authError" hidden></p>
         <p class="auth-success" id="authSuccess" hidden></p>
+        <p class="auth-guest-note" id="authGuestNote" hidden></p>
         <form id="authLoginForm" class="auth-form">
           <label>用户名<input name="username" autocomplete="username" required></label>
           <label>密码<input name="password" type="password" autocomplete="current-password" required minlength="4"></label>
@@ -361,7 +380,8 @@ function ensureAuthDom() {
   if (ensureAuthDom._bound) return;
   ensureAuthDom._bound = true;
 
-  document.getElementById("authLoginBtn").onclick = () => openAuthModal("login");
+  // The header button: a guest most likely wants to register (their game and coins carry over); tabs let them switch.
+  document.getElementById("authLoginBtn").onclick = () => openAuthModal("login", selectIsGuest(authState) ? { reason: GUEST_AUTH_REASON.SAVE } : {});
   document.getElementById("authUserBtn").onclick = () => openAuthModal("settings");
   document.getElementById("authCloseBtn").onclick = closeAuthModal;
   // Backdrop click must NOT close the auth modal (product feedback).
@@ -374,7 +394,7 @@ function ensureAuthDom() {
     }
   });
   document.querySelectorAll("#authGuestTabs .auth-tab").forEach((btn) => {
-    btn.addEventListener("click", () => openAuthModal(btn.dataset.tab));
+    btn.addEventListener("click", () => openAuthModal(btn.dataset.tab, { keepTab: true }));
   });
   document.getElementById("authLoginForm").onsubmit = onLogin;
   document.getElementById("authRegisterForm").onsubmit = onRegister;
@@ -578,6 +598,17 @@ function showForms(tab) {
     inviteNote.hidden = !pending;
     inviteNote.textContent = pending ? registerNote(pending) : "";
   }
+  // 游客先玩: tell a guest why they are being asked to sign up (register tab) / what login would cost them (login tab).
+  const guestNote = document.getElementById("authGuestNote");
+  if (guestNote) {
+    let text = "";
+    if (selectIsGuest(authState)) {
+      if (tab === "register") text = guestRegisterNote(pendingGuestReason);
+      else if (tab === "login") text = guestLoginWarning(authState.guest);
+    }
+    guestNote.hidden = !text;
+    guestNote.textContent = text;
+  }
   document.querySelectorAll("#authGuestTabs .auth-tab").forEach((b) => {
     b.classList.toggle("active", b.dataset.tab === tab);
   });
@@ -585,10 +616,24 @@ function showForms(tab) {
     tab === "settings" ? "资料设置" : tab === "register" ? "注册" : "登录";
 }
 
-export function openAuthModal(tab = "login") {
+/** Why the auth modal was opened for a guest (drives the note above the register form). */
+let pendingGuestReason = null;
+
+/**
+ * @param {"login"|"register"|"settings"} tab
+ * @param {{reason?: string, keepTab?: boolean}} [opts] reason: a GUEST_AUTH_REASON; keepTab: do not redirect a guest's "login" to "register".
+ */
+export function openAuthModal(tab = "login", opts = {}) {
   ensureAuthDom();
   setError("");
   setSuccess("");
+  pendingGuestReason = opts && opts.reason ? opts.reason : null;
+  // A guest hitting a registered-only feature (every gate calls openAuthModal("login")) should see "register" with
+  // an explanation, not an unrelated login form. Switching tabs inside the modal passes keepTab to opt out.
+  if (tab === "login" && selectIsGuest(authState) && !(opts && opts.keepTab)) {
+    tab = "register";
+    if (!pendingGuestReason) pendingGuestReason = GUEST_AUTH_REASON.FEATURE;
+  }
   if (tab === "settings") {
     if (!authState.user) {
       tab = "login";
@@ -665,6 +710,7 @@ function renderAuthChrome() {
     document.dispatchEvent(new CustomEvent("stockgame:auth-changed", {
       detail: {
         user: authState.user,
+        guest: authState.guest,
         status: authState.status,
         ready: authState.ready,
       },
@@ -731,6 +777,7 @@ async function onRegister(ev) {
   setFormBusy(form, true, "注册中…");
   const t0 = performance.now();
   const pendingInviteCode = readPendingInvite(inviteStore());
+  const wasGuest = selectIsGuest(authState);
   try {
     const { data } = await api("/auth/register", {
       method: "POST",
@@ -767,7 +814,8 @@ async function onRegister(ev) {
     }
     renderAuthChrome();
     closeAuthModal();
-    showToast(registerToast(data.invite) || "注册成功", "success");
+    const baseToast = registerToast(data.invite) || "注册成功";
+    showToast(wasGuest ? guestRegisteredToast(baseToast) : baseToast, "success");
     perfLog("auth.register.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);

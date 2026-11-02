@@ -280,6 +280,10 @@ function acceptUpgrade(req, socket, head) {
     rejectUpgrade(socket, 401, "Unauthorized");
     return;
   }
+  if (session.is_guest) {
+    rejectUpgrade(socket, 403, "Forbidden");
+    return;
+  }
   if (liveSockets(session.id) >= PER_USER_SOCKETS || liveSockets() >= config.pvpMaxWs) {
     rejectUpgrade(socket, 429, "Too Many Requests");
     return;

@@ -1,5 +1,7 @@
 /** Homepage arcade (C2 r6): decorative hero, guest-only CTA bounce, CTA wiring. */
 import { getAuthState, selectAuthChromeMode } from "./auth.js";
+import { guestPlayEnabled, guestPlayEnabledSync } from "./guest-play.js";
+import { homeGuestState, GUEST_GO } from "./guest-play-pure.js";
 import { refreshDailyChallengeFlag, isDailyChallengeEnabled } from "./daily-challenge.js";
 import { pvpEnabled } from "./pvp/transport.js";
 import { stakeEnabled, stakeEnabledSync } from "./coin-stake.js";
@@ -282,16 +284,22 @@ export function syncHomeGoLabel() {
   const resume = banner && !banner.hidden;
   const title = b.querySelector("[data-ha-go-title]");
   const sub = b.querySelector("[data-ha-go-sub]");
-  if (title) title.textContent = resume ? "继续对局" : "开一局";
+  // 游客先玩: a visitor who is not a registered user sees the guest promise instead of a price.
+  const auth = getAuthState();
+  const guestMode = resume ? null : homeGuestState({ enabled: guestPlayEnabledSync(), status: auth.status, guest: auth.guest });
+  const goTitle = resume ? "继续对局" : guestMode ? GUEST_GO[guestMode].title : "开一局";
+  if (title) title.textContent = goTitle;
   if (sub) {
     sub.hidden = !!resume;
     if (sub.dataset.classicHtml == null) sub.dataset.classicHtml = sub.innerHTML;
+    if (guestMode) sub.textContent = GUEST_GO[guestMode].sub;
     // 韭币局 live: the button's promise changes from "20 coins" to "stake your own".
-    if (stakeEnabledSync()) sub.textContent = "韭币局 · 自选 10–500 韭币";
+    else if (stakeEnabledSync()) sub.textContent = "韭币局 · 自选 10–500 韭币";
     else sub.innerHTML = sub.dataset.classicHtml;
   }
-  b.setAttribute("aria-label", resume ? "继续对局" : "开一局");
+  b.setAttribute("aria-label", goTitle);
   b.dataset.resume = resume ? "1" : "0";
+  b.dataset.guest = guestMode || "";
 }
 
 /**
@@ -310,6 +318,12 @@ function onGoClick() {
       cont.click();
       return;
     }
+  }
+  // 游客先玩: a visitor who is not registered goes straight to the classic game (a guest can only play that one);
+  // the start flow itself decides between "play as guest" and "register to continue".
+  if (b && b.dataset.guest && typeof window.startGame === "function") {
+    window.startGame();
+    return;
   }
   // 韭币局 is the featured mode: when it is live, 开一局 opens its stake picker (the start modal can switch
   // to 传统模式 in one tap). Config unreadable / feature off → the classic flow, exactly as before.
@@ -366,6 +380,7 @@ export function initHomeArcade() {
   if (inited) return;
   inited = true;
   stakeEnabled().then(() => syncHomeGoLabel()).catch(() => {}); // warm the 韭币局 flag so 开一局 routes without a round trip
+  guestPlayEnabled().then(() => syncHomeGoLabel()).catch(() => {}); // same for 游客先玩: decides the button copy
   const lanes = $("homeLanes");
   if (!lanes || !lanes.classList.contains("home-arcade")) return;
 
@@ -381,6 +396,7 @@ export function initHomeArcade() {
   wireClicks();
   applyAuthChrome();
   document.addEventListener("stockgame:auth-changed", applyAuthChrome);
+  document.addEventListener("stockgame:auth-changed", syncHomeGoLabel);
 
   syncHomeGoLabel();
   const banner = $("resumeGameBanner");

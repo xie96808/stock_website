@@ -169,3 +169,16 @@
 #authSettingsPanel .pvp-settings-title { margin: 0; font-size: 12px; opacity: .7; }
 #authSettingsPanel .pvp-settings-rank { margin: 2px 0 0; font-size: 1.1rem; letter-spacing: 0.1em; }
 .auth-nick-hint{display:block;margin-top:4px;font-size:.72rem;font-weight:400;color:var(--mute,#7a7066)}
+
+/* 游客先玩：登录 / 注册框顶部的说明（为什么要注册 / 登录会丢掉游客战绩） */
+.auth-guest-note {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink, #2a2a2a);
+  background: var(--paper-2, #efe4cc);
+  border: 1px dashed var(--line, #3a3530);
+  border-radius: 10px;
+}
+.auth-guest-note[hidden] { display: none; }

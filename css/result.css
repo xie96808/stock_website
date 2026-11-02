@@ -1147,6 +1147,38 @@
 /* 排行榜入口隐藏（如残局）时，保存图片独占一行居中 */
 #resultScreen .result-actions #resultShareImageBtn:has(+ #resultLeaderboardBtn[hidden]) { grid-column: 1 / -1; }
 
+/* 游客先玩：结算页「保存战绩」横幅（只有游客可见） */
+.result-guest-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 460px;
+    margin: 6px auto 0;
+    padding: 10px 12px;
+    border: 1.5px solid var(--line);
+    border-radius: 14px 18px 12px 16px;
+    background: var(--card);
+    box-shadow: 2px 3px 0 var(--line);
+}
+.result-guest-banner[hidden] { display: none; }
+.result-guest-banner__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+.result-guest-banner__title { font-size: 0.98rem; letter-spacing: 0.04em; color: var(--ink); }
+.result-guest-banner__sub { font-size: 0.74rem; line-height: 1.4; color: var(--ink-soft); }
+.result-guest-banner__btn {
+    flex: none;
+    min-height: 36px;
+    padding: 0 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    background: var(--accent-blue);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+.result-guest-banner__btn:active { transform: translateY(1px); }
+
 /* 不再展示的说明文字（元素保留，分享图/脚本仍会读写它们） */
 #resultScreen .result-fill-mode,
 #resultScreen .result-assist-label,
@@ -1201,6 +1233,7 @@
     .final-return-block,
     .result-stats-grid,
     .result-actions,
+    .result-guest-banner,
     .result-invite-link { grid-column: 1 / -1; }
 
     /* 股票名 + 区间 */
@@ -1227,6 +1260,7 @@
     .result-stat__value { font-size: 0.98rem; line-height: 1.25; }
 
     .result-actions { order: 8; }
+    .result-guest-banner { order: 9; margin: 0; width: 100%; max-width: none; }
 
     .result-invite-link { order: 10; margin: 0; padding: 2px 0; font-size: 0.76rem; }
 

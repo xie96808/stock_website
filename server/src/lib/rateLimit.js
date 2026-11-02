@@ -174,6 +174,28 @@ export function checkRegisterLimits(ip) {
   return { limited: false };
 }
 
+/** 游客先玩: anonymous guest creation, per IP hour + day (separate buckets from 注册). */
+export function checkGuestLimits(ip) {
+  const cfg = config.rateLimit;
+  const hour = consumeRateLimit(`guest:h:${ip}`, cfg.guestPerIpHour, cfg.registerHourMs);
+  if (!hour.ok) {
+    return {
+      limited: true,
+      retryAfterSec: hour.retryAfterSec,
+      message: "当前网络开局过于频繁，请注册后再玩",
+    };
+  }
+  const day = consumeRateLimit(`guest:d:${ip}`, cfg.guestPerIpDay, cfg.registerDayMs);
+  if (!day.ok) {
+    return {
+      limited: true,
+      retryAfterSec: day.retryAfterSec,
+      message: "当前网络今日游客体验次数已达上限，请注册后再玩",
+    };
+  }
+  return { limited: false };
+}
+
 /** Lucky wheel spin attempts: per user + per IP per minute (replays count too). */
 export function checkWheelSpinLimits(userId, ip) {
   const cfg = config.rateLimit;

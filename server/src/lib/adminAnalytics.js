@@ -13,7 +13,8 @@ import { shanghaiDay, ONLINE_WINDOW_MS } from "./activity.js";
 
 const DAY_MS = 86400000;
 const HOUR_MS = 3600000;
-const USER_OK = `u.role = 'user' AND u.status != 'deleted'`;
+// 游客先玩: guests are not registered users, so they never count toward users / DAU / retention / games.
+const USER_OK = `u.role = 'user' AND u.status != 'deleted' AND u.is_guest = 0`;
 
 const num = (v) => Number(v || 0);
 const rate = (a, b) => (b > 0 ? a / b : null);
@@ -179,6 +180,28 @@ export function getAdminAnalytics({ days = 30, now = Date.now() } = {}, db = ope
     `SELECT COUNT(*) AS n FROM users u WHERE ${USER_OK} AND EXISTS(SELECT 1 FROM game_sessions g WHERE g.user_id = u.id)`
   ).get()?.n);
 
+  // ---- 游客 → 注册 funnel ---------------------------------------------------------------------------
+  // A guest that registered is an ordinary row again (is_guest = 0) but keeps its guest_grant ledger row, which is how
+  // it is recognised here. Guests purged after 30 idle days are gone, so "created" counts only guests still on record.
+  const gf = db.prepare(
+    `SELECT COUNT(*) AS created,
+            SUM(CASE WHEN u.is_guest = 0 THEN 1 ELSE 0 END) AS converted,
+            SUM(EXISTS(SELECT 1 FROM game_sessions g WHERE g.user_id = u.id)) AS played,
+            SUM(EXISTS(SELECT 1 FROM game_sessions g WHERE g.user_id = u.id AND g.status = 'settled')) AS settled
+       FROM users u
+      WHERE u.role = 'user' AND u.status != 'deleted'
+        AND (u.is_guest = 1 OR EXISTS(SELECT 1 FROM jiu_coin_ledger l WHERE l.user_id = u.id AND l.reason = 'guest_grant'))`
+  ).get();
+  const guests = {
+    created: num(gf?.created),
+    played: num(gf?.played),
+    settled: num(gf?.settled),
+    converted: num(gf?.converted),
+    waiting: num(gf?.created) - num(gf?.converted),
+    conversionRate: rate(num(gf?.converted), num(gf?.created)),
+    playedToRegisterRate: rate(num(gf?.converted), num(gf?.settled)),
+  };
+
   // ---- games / pvp ------------------------------------------------------------------------------
   const kindRows = db.prepare(
     `SELECT g.game_kind AS kind, COUNT(*) AS started, SUM(CASE WHEN g.status = 'settled' THEN 1 ELSE 0 END) AS settled
@@ -224,6 +247,7 @@ export function getAdminAnalytics({ days = 30, now = Date.now() } = {}, db = ope
     today,
     tracking: { since: sinceRow?.d || null, users: lifetime.length },
     online: { now: onlineNow, last10min: online10m, windowSeconds: ONLINE_WINDOW_MS / 1000 },
+    guests,
     users: {
       total: totalUsers,
       active: num(u?.active),

@@ -54,6 +54,14 @@ export const config = {
    * Set to 0/false to disable. Closing new cloud games does not block finish of existing games.
    */
   registrationEnabled: process.env.REGISTRATION_ENABLED !== "0" && process.env.REGISTRATION_ENABLED !== "false",
+  /**
+   * 游客先玩: POST /auth/guest creates a temporary account that may play ONE classic game before it must register.
+   * OFF: the endpoint answers 403 GUEST_DISABLED and /config reports features.guestPlay=false, so the client
+   * falls back to the login modal. Flip it in the admin 功能开关, or set GUEST_PLAY_ENABLED=0.
+   */
+  guestPlayEnabled: process.env.GUEST_PLAY_ENABLED !== "0" && process.env.GUEST_PLAY_ENABLED !== "false",
+  /** A guest session (and its cookie) lives this long; both idle and absolute, so an untouched guest expires at once. */
+  guestSessionMs: envDaysMs("GUEST_SESSION_DAYS", 30),
   cloudGamesEnabled: process.env.CLOUD_GAMES_ENABLED !== "0" && process.env.CLOUD_GAMES_ENABLED !== "false",
   leaderboardEnabled: process.env.LEADERBOARD_ENABLED !== "0" && process.env.LEADERBOARD_ENABLED !== "false",
   /**
@@ -254,6 +262,9 @@ export const config = {
     registerPerIpHour: envInt("RATE_REGISTER_PER_IP_HOUR", 5),
     registerPerIpDay: envInt("RATE_REGISTER_PER_IP_DAY", 20),
     registerHourMs: envInt("RATE_REGISTER_HOUR_MS", 60 * 60 * 1000),
+    /** Guest creation is anonymous, so it gets its own per-IP buckets (not shared with 注册). */
+    guestPerIpHour: envInt("RATE_GUEST_PER_IP_HOUR", 10),
+    guestPerIpDay: envInt("RATE_GUEST_PER_IP_DAY", 30),
     registerDayMs: envInt("RATE_REGISTER_DAY_MS", 24 * 60 * 60 * 1000),
     createGamePerUserMinute: envInt("RATE_CREATE_GAME_PER_USER_MINUTE", 10),
     createGamePerUserDay: envInt("RATE_CREATE_GAME_PER_USER_DAY", 100),
@@ -282,6 +293,7 @@ export function newRequestId() {
 const settingOverrides = new Map();
 export const OVERRIDABLE_KEYS = [
   "registrationEnabled",
+  "guestPlayEnabled",
   "cloudGamesEnabled",
   "leaderboardEnabled",
   "quizRewardsEnabled",

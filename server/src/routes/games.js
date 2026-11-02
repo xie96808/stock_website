@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireUser } from "../middleware/request.js";
+import { requireUser, requireUserOrGuest } from "../middleware/request.js";
 import { ok, fail } from "../lib/http.js";
 import {
   createGame,
@@ -21,7 +21,7 @@ import { maybeRewardInvite } from "../lib/invite.js";
 
 const router = Router();
 
-router.post("/games", requireUser, (req, res) => {
+router.post("/games", requireUserOrGuest, (req, res) => {
   if (!config.cloudGamesEnabled) {
     return fail(res, 403, "CLOUD_GAMES_DISABLED", "当前暂停新建云端对局（已有对局仍可完成结算）");
   }
@@ -46,11 +46,11 @@ router.post("/games", requireUser, (req, res) => {
   return ok(res, result.data, result.status);
 });
 
-router.get("/games/active", requireUser, (req, res) => {
+router.get("/games/active", requireUserOrGuest, (req, res) => {
   return ok(res, getActiveGame(req.user.id));
 });
 
-router.post("/games/:id/abandon", requireUser, (req, res) => {
+router.post("/games/:id/abandon", requireUserOrGuest, (req, res) => {
   const result = abandonGame(req.user.id, req.params.id);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
@@ -58,7 +58,7 @@ router.post("/games/:id/abandon", requireUser, (req, res) => {
   return ok(res, null, 204);
 });
 
-router.post("/games/:id/finish", requireUser, (req, res) => {
+router.post("/games/:id/finish", requireUserOrGuest, (req, res) => {
   const body = {
     actions: req.body?.actions,
     finish: req.body?.finish,
@@ -87,7 +87,7 @@ router.post("/games/:id/rewind", requireUser, (req, res) => {
   return ok(res, result.data, result.status);
 });
 
-router.get("/games/:id/state", requireUser, (req, res) => {
+router.get("/games/:id/state", requireUserOrGuest, (req, res) => {
   const result = getGameState(req.user.id, req.params.id);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message, result.error.details);
@@ -95,7 +95,7 @@ router.get("/games/:id/state", requireUser, (req, res) => {
   return ok(res, result.data, result.status);
 });
 
-router.post("/games/:id/decisions", requireUser, (req, res) => {
+router.post("/games/:id/decisions", requireUserOrGuest, (req, res) => {
   const commandKey = req.get("idempotency-key") || req.get("Idempotency-Key");
   const result = appendDecision(req.user.id, req.params.id, req.body || {}, commandKey);
   if (result.error) {
@@ -104,7 +104,7 @@ router.post("/games/:id/decisions", requireUser, (req, res) => {
   return ok(res, result.data, result.status);
 });
 
-router.get("/games/:id", requireUser, (req, res) => {
+router.get("/games/:id", requireUserOrGuest, (req, res) => {
   const result = getGameForOwner(req.user.id, req.params.id);
   if (result.error) {
     return fail(res, result.error.status, result.error.code, result.error.message);
@@ -154,6 +154,7 @@ export function gamesConfigPayload() {
     passwordMinLength: 4,
     features: {
       registration: !!config.registrationEnabled,
+      guestPlay: !!(config.guestPlayEnabled && config.registrationEnabled && config.cloudGamesEnabled),
       cloudGames: !!config.cloudGamesEnabled,
       leaderboard: !!config.leaderboardEnabled,
       protocolEventV1: !!config.protocolEventV1Enabled,
