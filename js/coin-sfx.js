@@ -1,15 +1,15 @@
 /**
  * 韭币到账音效 + 触感。
  *
- * The chime is synthesised with WebAudio (no audio file, 0 bytes of assets) from the score in coin-gain-pure.js:
- * a metallic click and a rising two-note bell "叮—铃", with one or two sparkle notes on top for bigger gains.
+ * 「金钱哗啦啦」is synthesised with WebAudio (no audio file, 0 bytes of assets) from the score in coin-gain-pure.js:
+ * a swell of metallic rustle plus a few dozen tiny coin clinks that start dense and thin out; bigger gains pour longer.
  *
  * Browsers only let an AudioContext make sound after the visitor has touched the page once. We therefore create and
- * resume the context on the first tap / key press anywhere (installAudioUnlock), and playCoinChime() never schedules a
- * note on a context that is not running — a chime that arrives late, after an unlock, would be worse than silence.
+ * resume the context on the first tap / key press anywhere (installAudioUnlock), and playCoinSound() never schedules a
+ * note on a context that is not running — a sound that arrives late, after an unlock, would be worse than silence.
  * The Android app's WebView allows autoplay, so it is not affected. There is deliberately no settings switch.
  */
-import { chimeScore } from './coin-gain-pure.js';
+import { showerScore } from './coin-gain-pure.js';
 
 let ctx = null;
 let unlockInstalled = false;
@@ -32,56 +32,79 @@ function ensureContext() {
 }
 
 /**
- * Schedule one chime on any BaseAudioContext (live or Offline) — also used by the tests / the preview render.
- * @returns {number} the time (s) at which the last note has faded out
+ * Schedule one coin shower on any BaseAudioContext (live or Offline) — also used by the tests / the preview render.
+ * @returns {number} the time (s) at which the sound has faded out
  */
-export function renderChime(audio, destination, startAt, score) {
+export function renderShower(audio, destination, startAt, score) {
   const master = audio.createGain();
   master.gain.value = score.master;
   master.connect(destination);
 
-  for (const note of score.notes) {
-    for (const p of score.partials) {
-      const len = note.ring * p.decay;
-      const t = startAt + note.at;
-      const osc = audio.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.value = note.freq * p.ratio;
-      const g = audio.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, note.gain * p.amp * 0.5), t + 0.004);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.02);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + len + 0.06);
-    }
-  }
-
-  // the coin "click": a few ms of band-passed noise
-  const tick = score.tick;
-  const frames = Math.max(1, Math.floor(audio.sampleRate * (tick.ring + 0.01)));
-  const buf = audio.createBuffer(1, frames, audio.sampleRate);
-  const data = buf.getChannelData(0);
+  // one shared noise bed: the rustle ("哗") and every clink's tiny clack read slices of it
+  const sr = audio.sampleRate;
+  const frames = Math.max(1, Math.floor(sr * (score.end + 0.2)));
+  const bed = audio.createBuffer(1, frames, sr);
+  const data = bed.getChannelData(0);
   let seed = 12345; // deterministic, so an offline render is repeatable
   for (let i = 0; i < frames; i++) {
     seed = (seed * 1664525 + 1013904223) >>> 0;
     data[i] = (seed / 0xffffffff) * 2 - 1;
   }
-  const src = audio.createBufferSource();
-  src.buffer = buf;
-  const bp = audio.createBiquadFilter();
-  bp.type = 'bandpass';
-  bp.frequency.value = tick.freq;
-  bp.Q.value = 1.6;
-  const tg = audio.createGain();
-  const tt = startAt + tick.at;
-  tg.gain.setValueAtTime(tick.gain, tt);
-  tg.gain.exponentialRampToValueAtTime(0.0001, tt + tick.ring);
-  src.connect(bp);
-  bp.connect(tg);
-  tg.connect(master);
-  src.start(tt);
+
+  // the rustle: a band of noise that swells, holds and trails off while the coins pour
+  {
+    const r = score.rustle;
+    const src = audio.createBufferSource();
+    src.buffer = bed;
+    const bp = audio.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = r.freq;
+    bp.Q.value = r.q;
+    const g = audio.createGain();
+    const t0 = startAt + r.at;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(r.gain, t0 + r.attack);
+    g.gain.setValueAtTime(r.gain, t0 + r.attack + r.hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + r.attack + r.hold + r.release);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(master);
+    src.start(t0);
+  }
+
+  // the clinks: each a small inharmonic bell plus a short clack
+  let slice = 0.3;
+  for (const c of score.clinks) {
+    const t = startAt + c.at;
+    for (const p of score.partials) {
+      const len = c.ring * p.decay;
+      const osc = audio.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = c.freq * p.ratio;
+      const g = audio.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, c.gain * p.amp * 0.5), t + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.01);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + len + 0.04);
+    }
+    const src = audio.createBufferSource();
+    src.buffer = bed;
+    const bp = audio.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = Math.min(9000, c.freq * 1.7);
+    bp.Q.value = 1.4;
+    const tg = audio.createGain();
+    tg.gain.setValueAtTime(c.gain * 0.55, t);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.014);
+    src.connect(bp);
+    bp.connect(tg);
+    tg.connect(master);
+    src.start(t, slice % Math.max(0.1, score.end));
+    slice += 0.037;
+  }
 
   return startAt + score.end;
 }
@@ -121,13 +144,13 @@ export function installAudioUnlock(target) {
   unlockInstalled = true;
 }
 
-/** Play the chime for a gain of `amount`. @returns {boolean} true when it was scheduled right now. */
-export function playCoinChime(amount) {
+/** Play the coin shower for a gain of `amount`. @returns {boolean} true when it was scheduled right now. */
+export function playCoinSound(amount) {
   const c = ensureContext();
   if (!c) return false;
   const go = () => {
     try {
-      renderChime(c, c.destination, c.currentTime + 0.02, chimeScore(amount));
+      renderShower(c, c.destination, c.currentTime + 0.02, showerScore(amount, Math.floor(Math.random() * 4294967296)));
     } catch {
       /* ignore */
     }
@@ -163,8 +186,8 @@ export function hapticCoin() {
   }
 }
 
-/** Everything the player feels when 韭币 lands: the chime and the tick. */
+/** Everything the player feels when 韭币 lands: the coin shower and the tick. */
 export function playGainFeedback(amount) {
-  playCoinChime(amount);
+  playCoinSound(amount);
   hapticCoin();
 }

@@ -2,7 +2,7 @@
  * 韭币到账弹窗 — pure decisions + copy (no DOM, no audio, no network), so every branch is unit-testable.
  *
  * Rule of the product: whenever 韭币 is EARNED (not refunded, not an admin adjustment) the player gets the same
- * 「获得韭币」card, a coin chime and a short haptic tick. Each gain gets its own card (no merging); cards queue and
+ * 「获得韭币」card, a coin-shower sound and a short haptic tick. Each gain gets its own card (no merging); cards queue and
  * show one after the other, on top of everything else.
  */
 
@@ -103,32 +103,67 @@ export function createGainQueue({ maxKeys = 300 } = {}) {
 /* ------------------------------------------------------------------ sound design (pure score; coin-sfx.js plays it) */
 
 /**
- * The coin chime as data: a short metallic "tick" + a rising two-note bell (G6 → C7, "叮—铃"); bigger gains add one
- * or two sparkle notes on top (E7, G7). Each note is a bell: a few inharmonic partials with their own decay.
- * Kept as a score so a test can assert its length / loudness and an offline render can be listened to without a browser.
+ * 金钱哗啦啦: a pile of coins pouring onto a pile of coins.
+ * The score is data — a swell of metallic rustle ("哗") plus dozens of tiny coin clinks ("啦啦") that start dense and
+ * thin out as the pile settles. Bigger gains pour longer and denser. Each clink is a small inharmonic bell (coin
+ * partials) with its own pitch / loudness / ring. Generated from a seeded PRNG, so a test (or an offline render you can
+ * listen to) is repeatable; live play passes a random seed so no two showers sound identical.
  */
-export const BELL_PARTIALS = Object.freeze([
+export const COIN_PARTIALS = Object.freeze([
   { ratio: 1, amp: 1, decay: 1 },
-  { ratio: 2.76, amp: 0.34, decay: 0.55 },
-  { ratio: 5.4, amp: 0.14, decay: 0.3 },
+  { ratio: 2.32, amp: 0.5, decay: 0.6 },
+  { ratio: 4.25, amp: 0.22, decay: 0.35 },
 ]);
 
-export function chimeScore(amount) {
-  const n = Math.max(0, Number(amount) || 0);
-  const notes = [
-    { at: 0.0, freq: 1568.0, ring: 0.2, gain: 0.5 }, // G6  叮
-    { at: 0.085, freq: 2093.0, ring: 0.55, gain: 0.62 }, // C7  铃 (the long one)
-  ];
-  if (n >= 100) notes.push({ at: 0.19, freq: 2637.0, ring: 0.42, gain: 0.36 }); // E7 sparkle
-  if (n >= 500) notes.push({ at: 0.29, freq: 3136.0, ring: 0.5, gain: 0.3 }); // G7 sparkle
-  const tick = { at: 0.0, freq: 5200, ring: 0.03, gain: 0.22 }; // the coin "click"
-  const end = Math.max(...notes.map((x) => x.at + x.ring)) + 0.1;
-  return { notes, tick, partials: BELL_PARTIALS, master: 1.0, end };
+/** Small deterministic PRNG (mulberry32): seed → () => [0, 1). */
+export function seededRandom(seed) {
+  let a = (Number(seed) || 0) >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-/** Duration the score needs (s), used to size an offline render. */
-export function chimeDuration(amount) {
-  return chimeScore(amount).end;
+/** How long the pour lasts (s) and how many clinks it holds, by amount: 20 → ~0.8 s / 14, 150 → ~1.0 s / 21, 800 → ~1.2 s / 27. */
+export function showerShape(amount) {
+  const n = Math.max(1, Number(amount) || 1);
+  const L = Math.log10(n);
+  const duration = Math.min(1.5, Math.max(0.7, 0.55 + 0.23 * L));
+  const clinks = Math.min(34, Math.max(10, Math.round(7 + 7 * L)));
+  return { duration, clinks };
+}
+
+export function showerScore(amount, seed = Number(amount) || 1) {
+  const { duration, clinks } = showerShape(amount);
+  const rnd = seededRandom(seed);
+  const list = [];
+  for (let i = 0; i < clinks; i++) {
+    const u = (i + rnd() * 0.9) / clinks; // 0…1 through the pour
+    const at = duration * Math.pow(u, 1.55); // dense at first, thinning out
+    const fade = 1 - 0.62 * u; // the pile settles → quieter
+    list.push({
+      at,
+      freq: 1900 + rnd() * 1900, // 1.9 – 3.8 kHz, the "ting" of a coin
+      ring: 0.05 + rnd() * 0.1,
+      gain: (0.2 + rnd() * 0.3) * fade,
+      tick: 0.05 + rnd() * 0.12, // the little "clack" under each clink
+    });
+  }
+  // the first coin lands a touch harder and brighter: it makes the start feel like a hit, not a hiss
+  list[0] = { ...list[0], at: 0, freq: 2900, ring: 0.16, gain: 0.55, tick: 0.2 };
+  list.sort((x, y) => x.at - y.at);
+  const rustle = { at: 0, attack: 0.05, hold: duration * 0.45, release: duration * 0.7, freq: 4600, q: 0.55, gain: 0.1 };
+  const rustleEnd = rustle.at + rustle.attack + rustle.hold + rustle.release; // the swell's tail is part of the sound too
+  const end = Math.max(duration + 0.16, rustleEnd, ...list.map((c) => c.at + c.ring)) + 0.05;
+  return { clinks: list, rustle, partials: COIN_PARTIALS, master: 1.0, duration, end };
+}
+
+/** Time the whole sound needs (s), used to size an offline render. */
+export function showerDuration(amount) {
+  return showerScore(amount).end;
 }
 
 /* ------------------------------------------------------------------ per-source builders (response → showCoinGain input)

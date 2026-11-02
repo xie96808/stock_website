@@ -6,7 +6,7 @@
  * - One card per gain, shown strictly one after another, on top of everything (z-index above toasts and dialogs).
  * - The coin in the middle is a hand-drawn vector coin with a real rim that spins continuously (CSS 3D), with a
  *   breathing halo, a sweeping shine and four twinkling stars. prefers-reduced-motion: it holds still.
- * - Opening plays the coin chime and a light haptic tick (coin-sfx.js).
+ * - Opening plays the coin-shower sound (金钱哗啦啦) and a light haptic tick (coin-sfx.js).
  * - Dismissing sends a handful of small coins flying to the balance in the top bar, which bumps as they land.
  * Pure decisions (copy, queue, timings, sound score) live in coin-gain-pure.js.
  */
