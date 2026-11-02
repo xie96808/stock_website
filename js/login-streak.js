@@ -5,8 +5,9 @@
  */
 import { api, getAuthState, selectIsAuthenticated } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay, showStampToast } from "./controls.js";
-import { coinIconHtml, refreshJiuCoinStatus } from "./jiu-coin.js";
-import { chipModels, claimLabel, subText, noteText, pillModel, claimToast, shouldAutoOpen } from "./login-streak-pure.js";
+import { coinIconHtml, announceCoinGain } from "./jiu-coin.js";
+import { streakGain } from "./coin-gain-pure.js";
+import { chipModels, claimLabel, subText, noteText, pillModel, shouldAutoOpen } from "./login-streak-pure.js";
 
 const SEEN_KEY = "stockgame.streak.autoshown";
 let state = null;
@@ -121,8 +122,7 @@ async function claim() {
     const { data } = await api("/me/streak/claim", { method: "POST", body: {} });
     state = data.state;
     fetchedAt = Date.now();
-    showStampToast(claimToast(data.claimed), "success");
-    refreshJiuCoinStatus().catch(() => {});
+    announceCoinGain(streakGain(data.claimed)).catch(() => {}); // 「获得韭币」卡片（带当前余额）；转盘次数写在卡片说明里
   } catch (e) {
     if (e && e.status === 409) {
       await refreshStreak({ force: true }); // another tab already claimed today

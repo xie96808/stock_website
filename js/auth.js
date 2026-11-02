@@ -15,6 +15,8 @@ import { installAvatarFallback } from "./avatar-fallback.js";
 import { emojiArtHtml } from "./emoji-art.js";
 import { applyFrameToImg } from "./avatar-frame.js";
 import { readPendingInvite, clearPendingInvite, registerNote, registerToast } from "./invite-pure.js";
+import { showCoinGain } from "./coin-gain.js";
+import { guestGain, registerGain } from "./coin-gain-pure.js";
 import { guestRegisterNote, guestLoginWarning, guestRegisteredToast, GUEST_AUTH_REASON } from "./guest-play-pure.js";
 
 function inviteStore() {
@@ -224,6 +226,8 @@ export async function ensureGuestSession() {
   const { data } = await api("/auth/guest", { method: "POST" });
   applyAuth({ type: "SESSION_ESTABLISHED", user: data.user, csrfToken: data.csrfToken });
   renderAuthChrome();
+  // 游客启动币 +100：不挡开局流程（不 await），玩家点「好的」即可
+  showCoinGain(guestGain(data.user));
   return authState;
 }
 
@@ -816,6 +820,7 @@ async function onRegister(ev) {
     closeAuthModal();
     const baseToast = registerToast(data.invite) || "注册成功";
     showToast(wasGuest ? guestRegisteredToast(baseToast) : baseToast, "success");
+    showCoinGain(registerGain(data.user)); // 注册礼包 +500（游客升级也一样）
     perfLog("auth.register.total", performance.now() - t0);
   } catch (e) {
     setError(e.message);

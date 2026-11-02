@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- 韭币到账时的轻震动 (navigator.vibrate in the WebView needs this normal, auto-granted permission) -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Android 11+ package visibility: 发给微信好友 checks WeChat is installed. -->
     <queries>

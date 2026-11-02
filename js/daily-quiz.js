@@ -211,6 +211,16 @@ export function selectDailyQuizAnswer(optionId) {
   renderDailyQuestion();
 }
 
+/** 答完整套题、奖励刚发放时弹「获得韭币」卡片（旧记录 rewardUnchanged 不弹）。 */
+function announceQuizReward(settled) {
+  Promise.all([import('./coin-gain-pure.js'), import('./jiu-coin.js')])
+    .then(([{ quizGain }, { announceCoinGain }]) => {
+      const gain = quizGain(settled, flow.attemptId);
+      if (gain) return announceCoinGain(gain);
+    })
+    .catch(() => {});
+}
+
 /** POST pending selection to lock permanently. Returns settled payload or null on failure/no-op. */
 async function lockPendingSelection() {
   const q = flow.questions[flow.index];
@@ -261,6 +271,7 @@ export async function dailyQuizNext() {
     }
     if (locked.settled) {
       await showDailyQuizResults(flow.attemptId, locked.settled);
+      announceQuizReward(locked.settled);
       return;
     }
   }

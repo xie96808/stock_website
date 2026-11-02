@@ -1,0 +1,241 @@
+/* 韭币到账弹窗 (js/coin-gain.js). Same card + button art as the lucky wheel's result pop-up (assets/lucky-wheel). */
+
+.cg-overlay {
+  --cg-ink: #26211d;
+  --cg-kraft: #f3ead8;
+  --cg-outline: -2px 0 0 #26211d, 2px 0 0 #26211d, 0 -2px 0 #26211d, 0 2px 0 #26211d, -1.5px -1.5px 0 #26211d, 1.5px -1.5px 0 #26211d, -1.5px 1.5px 0 #26211d, 1.5px 1.5px 0 #26211d, 2px 3px 0 #26211d;
+  position: fixed;
+  inset: 0;
+  z-index: 190; /* above toasts (180) and every dialog; below only the first-game tutorial (12000) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: rgba(26, 22, 18, 0.46);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  color: var(--cg-ink);
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.cg-overlay.is-open { opacity: 1; }
+.cg-overlay.is-leaving { opacity: 0; transition-duration: 180ms; pointer-events: none; }
+
+.cg-wrap { position: relative; width: min(320px, calc(100vw - 20px)); margin-top: 34px; }
+
+.cg-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 380px;
+  border-color: var(--cg-kraft); /* only visible if the frame art ever fails to load */
+  border-style: solid;
+  border-width: 78px 56px 44px 56px;
+  border-image-source: url("../assets/lucky-wheel/lw-result-card@2x.webp?v=20261019w");
+  border-image-slice: 156 112 88 112 fill;
+  border-image-width: 78px 56px 44px 56px;
+  border-image-repeat: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0;
+  text-align: center;
+  transform: scale(0.88) translateY(14px);
+  opacity: 0;
+  transition: transform 340ms cubic-bezier(0.2, 1.2, 0.3, 1), opacity 180ms ease-out;
+}
+.cg-overlay.is-open .cg-card { transform: none; opacity: 1; }
+.cg-overlay.is-leaving .cg-card { transform: scale(0.96) translateY(4px); opacity: 0; transition: transform 160ms ease-in, opacity 160ms ease-in; }
+
+.cg-title {
+  position: absolute;
+  left: -30px;
+  right: -30px;
+  top: -74px;
+  height: 56px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 23px;
+  letter-spacing: 0.14em;
+  text-indent: 0.14em;
+  color: var(--cg-kraft);
+  text-shadow: var(--cg-outline);
+  z-index: 2;
+}
+
+/* ---- the disc and the spinning coin ---- */
+.cg-disc {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 3px solid var(--cg-ink);
+  box-shadow: 3px 3px 0 var(--cg-ink);
+  background: #f3db93;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cg-overlay.is-open .cg-disc { animation: cg-disc-pop 520ms cubic-bezier(0.2, 1.3, 0.3, 1) 120ms both; }
+@keyframes cg-disc-pop { 0% { transform: scale(0.4); } 100% { transform: scale(1); } }
+
+.cg-halo {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 247, 200, 0.95) 0%, rgba(255, 226, 130, 0.55) 46%, rgba(255, 226, 130, 0) 72%);
+  pointer-events: none;
+  animation: cg-halo 1.7s ease-in-out infinite;
+}
+@keyframes cg-halo {
+  0%, 100% { transform: scale(0.86); opacity: 0.55; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.cg-stage {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: 84px;
+  perspective: 520px;
+  animation: cg-bob 2.6s ease-in-out infinite;
+}
+@keyframes cg-bob { 0%, 100% { transform: translateY(1.5px); } 50% { transform: translateY(-2.5px); } }
+
+.cg-coin3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(-14deg) rotateY(0deg);
+  animation: cg-spin 2.4s linear infinite;
+  will-change: transform;
+}
+@keyframes cg-spin {
+  from { transform: rotateX(-14deg) rotateY(0deg); }
+  to { transform: rotateX(-14deg) rotateY(360deg); }
+}
+
+.cg-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #3a3530;
+  transform: translateZ(var(--z, 0px));
+}
+.cg-rim:nth-child(even) { background: #5a4d42; } /* milled edge: alternating dark / lighter ridges */
+.cg-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.cg-face svg { display: block; width: 100%; height: 100%; }
+.cg-face--front { transform: translateZ(3.6px); }
+.cg-face--back { transform: rotateY(180deg) translateZ(3.6px); }
+/* a bright band sweeps over each face once per turn */
+.cg-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0) 38%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 62%);
+  background-size: 280% 100%;
+  background-position: 130% 0;
+  animation: cg-shine 2.4s linear infinite;
+  pointer-events: none;
+}
+@keyframes cg-shine {
+  0% { background-position: 130% 0; }
+  45%, 100% { background-position: -40% 0; }
+}
+
+.cg-star {
+  position: absolute;
+  z-index: 2;
+  width: 15px;
+  height: 15px;
+  background: #fffbe6;
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  opacity: 0;
+  pointer-events: none;
+  animation: cg-twinkle 1.9s ease-in-out infinite;
+}
+.cg-star--1 { right: -7px; top: 8px; animation-delay: 0.2s; }
+.cg-star--2 { left: -8px; bottom: 22px; width: 12px; height: 12px; animation-delay: 0.75s; }
+.cg-star--3 { right: 14px; bottom: -8px; width: 11px; height: 11px; animation-delay: 1.25s; }
+.cg-star--4 { left: 16px; top: -8px; width: 13px; height: 13px; animation-delay: 1.65s; }
+@keyframes cg-twinkle {
+  0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+  40% { transform: scale(1.15) rotate(45deg); opacity: 1; }
+  70% { transform: scale(0.5) rotate(90deg); opacity: 0.6; }
+}
+
+/* ---- amount, caption, balance, button ---- */
+.cg-amount { display: flex; align-items: baseline; justify-content: center; gap: 6px; font-weight: 900; line-height: 1.05; margin-top: 4px; }
+.cg-plus { font-size: 24px; }
+.cg-num { font-size: 46px; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.cg-unit { display: inline-flex; font-size: 18px; position: relative; flex: none; }
+.cg-unit .jiu-coin-icon { width: 1.4em; height: 1.4em; }
+.cg-sub { font-weight: 900; font-size: 18px; line-height: 1.25; padding: 0 8px; }
+.cg-bal { font-size: 13px; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
+.cg-actions { display: flex; flex-direction: column; align-items: center; margin-top: 6px; width: 100%; }
+.cg-ok {
+  width: 200px;
+  height: 46px;
+  max-width: 100%;
+  padding: 0 0 5px;
+  border: 0;
+  background-color: transparent;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-image: url("../assets/lucky-wheel/lw-go-default@2x.webp?v=20261019w");
+  color: #fff;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  text-indent: 0.1em;
+  text-shadow: var(--cg-outline);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cg-ok[data-state="press"], .cg-ok:active { background-image: url("../assets/lucky-wheel/lw-go-press@2x.webp?v=20261019w"); }
+.cg-ok:focus, .cg-ok:focus-visible { outline: none; }
+
+/* ---- coins flying to the balance ---- */
+.cg-fly-layer { position: fixed; inset: 0; z-index: 195; pointer-events: none; overflow: hidden; }
+.cg-fly-coin { position: absolute; left: 0; top: 0; width: 20px; height: 20px; display: block; will-change: transform, opacity; filter: drop-shadow(0 1px 1px rgba(38, 33, 29, 0.45)); }
+.cg-fly-coin .jiu-coin-icon { width: 20px; height: 20px; }
+.jiu-coin-balance.cg-bump { animation: cg-bump 420ms cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes cg-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.22); filter: drop-shadow(0 0 6px rgba(255, 214, 90, 0.95)); }
+  100% { transform: scale(1); }
+}
+
+/* ---- reduced motion: everything holds still, the card just fades in ---- */
+@media (prefers-reduced-motion: reduce) {
+  .cg-overlay, .cg-overlay.is-leaving { transition-duration: 100ms; }
+  .cg-card, .cg-overlay.is-leaving .cg-card { transform: none; transition: opacity 120ms linear; }
+  .cg-overlay.is-open .cg-disc { animation: none; }
+  .cg-halo { animation: none; opacity: 0.8; transform: none; }
+  .cg-stage { animation: none; }
+  .cg-coin3d { animation: none; transform: none; }
+  .cg-face::after { animation: none; opacity: 0; }
+  .cg-star { animation: none; opacity: 0; }
+  .jiu-coin-balance.cg-bump { animation: none; }
+}
+
+/* short screens: js/coin-gain.js fitWrap() scales .cg-wrap down so the ribbon and the button are never cut off */

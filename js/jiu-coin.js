@@ -2,6 +2,8 @@
 import { api, getAuthState, showToast, selectIsAuthenticated } from "./auth.js";
 import { importWithRetry } from "./lazy-import.js";
 import { coinIconHtml, installIconArtFallback, preloadIconArt } from "./icon-art.js";
+import { showCoinGain } from "./coin-gain.js";
+import { dailyGain } from "./coin-gain-pure.js";
 
 /** Shared coin markup (auth chrome, price badges, modals): drawn art in the old 0.95em box, SVG fallback. */
 export { coinIconHtml };
@@ -13,6 +15,36 @@ export function amountWithCoinHtml(amount, { size = 12 } = {}) {
 }
 
 let claimBusy = false;
+
+/**
+ * Show one 「获得韭币」 card per gain, in order. Gains whose response did not carry the new balance get it from a status
+ * refresh (done once, capped at 0.9 s so a slow network never delays the cards). With several cards, each shows the
+ * balance as it stood after THAT gain (the last card = the current balance).
+ */
+export async function announceCoinGains(list) {
+  const gains = (Array.isArray(list) ? list : [list]).filter(Boolean);
+  if (!gains.length) return;
+  let finalBalance = gains[gains.length - 1].balance;
+  if (finalBalance == null || finalBalance === "") {
+    try {
+      await Promise.race([refreshJiuCoinStatus(), new Promise((r) => window.setTimeout(r, 900))]);
+    } catch { /* the cards still show, just without the balance line */ }
+    const u = getAuthState().user;
+    finalBalance = u ? u.jiuCoinBalance : null;
+  }
+  const fin = finalBalance == null || finalBalance === "" ? NaN : Number(finalBalance);
+  let after = fin;
+  const withBal = new Array(gains.length);
+  for (let i = gains.length - 1; i >= 0; i--) {
+    withBal[i] = { ...gains[i], balance: Number.isFinite(after) ? after : null };
+    if (Number.isFinite(after)) after -= Math.max(0, Math.floor(Number(gains[i].amount) || 0));
+  }
+  await Promise.all(withBal.map((g) => showCoinGain(g)));
+}
+
+export function announceCoinGain(input) {
+  return announceCoinGains([input]);
+}
 
 /* ---- 幸运转盘 entry (replaces the 每日领取 button in place while the server flag is ON) ----
  * `wheelMode` is true only when GET /me/jiu-coin returned `wheel.enabled`; an API without the field keeps the legacy flow.
@@ -479,7 +511,7 @@ async function onDailyClaimConfirm() {
       setDailyBtnLabel(btn, "claimed");
       btn.classList.add("is-claimed");
     }
-    openSuccessModal(data.amount);
+    showCoinGain(dailyGain(data)); // 统一的「获得韭币」卡片（旧的「领取成功」小弹窗已不再使用）
   } catch (e) {
     if (e?.status === 410 || e?.code === "DAILY_REPLACED_BY_WHEEL") {
       // the server switched 每日领取 to the lucky wheel while this page was open

@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="css/auth.css">
     <link rel="stylesheet" href="css/jiu-coin.css">
     <link rel="stylesheet" href="css/lucky-wheel.css">
+    <link rel="stylesheet" href="css/coin-gain.css">
     <link rel="stylesheet" href="css/announcements.css">
     <link rel="stylesheet" href="css/login-streak.css">
     <link rel="stylesheet" href="css/invite.css">
@@ -1597,6 +1598,7 @@
         import { initAnnouncements } from './js/announcements.js';
         import { initLoginStreak } from './js/login-streak.js';
         import { initInvite } from './js/invite.js';
+        import { initCoinGain } from './js/coin-gain.js';
         import { initAchievements } from './js/achievements.js';
         import { initFrameShop } from './js/frame-shop.js';
         import { initLeekShop } from './js/leek-shop.js';
@@ -1725,6 +1727,7 @@
           .then(() => { initJiuCoin(); refreshHomeArcadeChrome(); try { usageHeartbeat && usageHeartbeat.tick(); } catch (e) { /* best effort */ } })
           .catch((e) => console.warn('auth init', e));
         initAnnouncements().catch((e) => console.warn('announcements init', e));
+        try { initCoinGain(); } catch (e) { console.warn('coin gain', e); }
         try { initLoginStreak(); } catch (e) { console.warn('login streak', e); }
         try { initInvite(); } catch (e) { console.warn('invite', e); }
         try { initAchievements(); } catch (e) { console.warn('achievements', e); }

@@ -104,4 +104,11 @@ export async function afterStakeSettled() {
     const { refreshMe } = await import('./auth.js');
     await refreshMe();
   } catch { /* balance chip catches up on the next refresh */ }
+  // 盈利才算「获得」：本金退回、亏损都不弹卡片
+  try {
+    const s = getSession();
+    const [{ stakeGain }, { announceCoinGain }] = await Promise.all([import('./coin-gain-pure.js'), import('./jiu-coin.js')]);
+    const gain = stakeGain(s.stake, s.cloudGameId);
+    if (gain) announceCoinGain(gain).catch(() => {});
+  } catch { /* the result box already shows the payout */ }
 }

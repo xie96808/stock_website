@@ -8,6 +8,7 @@
  */
 import { api, getAuthState, showToast } from "./auth.js";
 import { openCtlOverlay, closeCtlOverlay } from "./controls.js";
+import { playGainFeedback } from "./coin-sfx.js";
 import * as P from "./lucky-wheel-pure.js";
 import { getRewindTickets, refreshRewindTickets } from "./rewind-tickets.js";
 import { coinArtSrcset, coinIconHtml, coinSvgHtml, ticketIconHtml } from "./icon-art.js";
@@ -879,6 +880,7 @@ function openPop(res, jackpot) {
   void pop.offsetWidth;
   pop.classList.add("is-open");
   if (copy.kind === "coin" && !prefersReduced()) countUp($(".lw-num", pop), Number(copy.amount));
+  if (copy.kind === "coin") playGainFeedback(Number(copy.amount)); // 转盘抽到韭币：同样的叮铃声 + 轻震动
   if (res.isJackpot && !prefersReduced()) startJackpotBurst({ fromStage: false });
   window.setTimeout(() => {
     try { $("#lwPopOk", pop)?.focus(); } catch { /* ignore */ }
