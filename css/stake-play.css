@@ -1,0 +1,192 @@
+/* 开一局（韭币局）进场后的界面：纸墨手绘底子 + 一点老虎机点缀（金色内线、跑马灯、转轮收益率、街机按钮）。
+   只在 #gameScreen.game-screen--stake 下生效（js/game.js 按 hud.isStake 打开）；经典局 / 一把梭 / 生存等完全不受影响。
+   白天 = 纸色；黑夜 = 现有的墨色主题，金色换成偏暗的铜金。红涨绿跌沿用 --gain-color / --loss-color。 */
+
+#gameScreen.game-screen--stake,
+#resultScreen.result-screen--stake {
+    --sp-gold: #d99a1e;
+    --sp-gold-hi: #f2c04a;
+    --sp-gold-line: #e2b23a;
+    --sp-window: #fffdf6;
+    --sp-window-2: #efe3c7;
+    --sp-divider: rgba(138, 90, 10, 0.32);
+    --sp-badge-bg: #4a4238;
+    --sp-badge-ink: #fbf5e6;
+}
+[data-theme="dark"] #gameScreen.game-screen--stake,
+[data-theme="dark"] #resultScreen.result-screen--stake {
+    --sp-gold: #c9951c;
+    --sp-gold-hi: #e2b23a;
+    --sp-gold-line: #a97b18;
+    --sp-window: #15110c;
+    --sp-window-2: #2b251b;
+    --sp-divider: rgba(226, 178, 58, 0.28);
+    --sp-badge-bg: #e2b23a;
+    --sp-badge-ink: #231a05;
+}
+
+/* ---------- 1. 收益率框（顶部进度卡） ---------- */
+#gameScreen.game-screen--stake .game-progress-shell {
+    position: relative;
+    padding-top: 22px;
+    box-shadow: 2px 2px 0 var(--line), inset 0 0 0 3px var(--card), inset 0 0 0 5px var(--sp-gold-line);
+}
+
+/* 一排跑马灯：亮、暗两种灯每 0.7 秒互换，只占 8px，不挡任何控件 */
+#gameScreen.game-screen--stake .game-progress-shell::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 9px;
+    height: 8px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 8px 50%, var(--sp-gold) 0 2px, transparent 3px),
+        radial-gradient(circle at 24px 50%, color-mix(in srgb, var(--sp-gold) 30%, transparent) 0 2px, transparent 3px);
+    background-size: 32px 8px;
+    background-repeat: repeat-x;
+    animation: spBulbs 1.4s steps(1) infinite;
+}
+@keyframes spBulbs {
+    0%   { background-position: 0 50%; }
+    50%  { background-position: 16px 50%; }
+}
+
+#gameScreen.game-screen--stake .game-mode-badge[data-kind="stake"] {
+    background: var(--sp-badge-bg);
+    color: var(--sp-badge-ink);
+    border-color: var(--line);
+}
+
+/* 收益率：转轮数字窗。等宽字体下每个字符恰好占 1ch，用重复渐变画出格与格之间的分隔线，不需要 JS 拆字。 */
+#gameScreen.game-screen--stake .rl-card #rlCardPnl {
+    --cell: calc(1ch + 0.14em);
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 6px;
+    border: 2px solid var(--line);
+    border-radius: 8px;
+    letter-spacing: 0.14em;
+    background:
+        repeating-linear-gradient(90deg, transparent 0 calc(var(--cell) - 1px), var(--sp-divider) calc(var(--cell) - 1px) var(--cell)),
+        linear-gradient(180deg, var(--sp-window-2) 0%, var(--sp-window) 50%, var(--sp-window-2) 100%);
+    background-origin: content-box, padding-box;
+    background-clip: content-box, padding-box;
+    box-shadow: inset 0 2px 4px rgba(60, 40, 10, 0.18);
+}
+[data-theme="dark"] #gameScreen.game-screen--stake .rl-card #rlCardPnl {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 0 8px color-mix(in srgb, currentColor 45%, transparent);
+}
+
+#gameScreen.game-screen--stake #dayProgressFill {
+    background: linear-gradient(180deg, var(--sp-gold-hi), var(--sp-gold));
+}
+
+/* ---------- 2. 实时走势框：只加金色内线，图表本身一概不动 ---------- */
+#gameScreen.game-screen--stake .market-stage {
+    box-shadow: 2px 2px 0 var(--line), inset 0 0 0 3px var(--card), inset 0 0 0 5px var(--sp-gold-line);
+}
+
+/* ---------- 3. 买入 / 卖出 / 观望 / 快进：CSS 画的街机按钮（盖掉手绘贴图），按下会陷下去 ---------- */
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl:is(.buy, .sell, .hold, .ff) {
+    background-image: none !important;
+    border: 2.5px solid var(--line) !important;
+    border-radius: 999px !important;
+    padding: 0 0.6rem !important;
+    box-shadow: 0 4px 0 var(--line) !important;
+    transition: transform 70ms ease-out, box-shadow 70ms ease-out;
+}
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl:is(.buy, .sell, .hold, .ff)::after { display: none; }
+
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl.buy  { background-color: #f8d6d2 !important; color: #a8302a !important; }
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl.sell { background-color: #cfeeda !important; color: #14532d !important; }
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl.hold { background-color: var(--card) !important; color: var(--ink) !important; }
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl.ff {
+    background-color: var(--sp-gold-line) !important;
+    background-image: linear-gradient(180deg, #f7d56b, #e2b23a) !important;
+    color: #2a1a05 !important;
+    border-radius: 14px !important;
+}
+[data-theme="dark"] #gameScreen.game-screen--stake .action-zone .action-btn.ctl.buy  { background-color: #4a2623 !important; color: #ff9a90 !important; }
+[data-theme="dark"] #gameScreen.game-screen--stake .action-zone .action-btn.ctl.sell { background-color: #1f3a2a !important; color: #8fe0aa !important; }
+[data-theme="dark"] #gameScreen.game-screen--stake .action-zone .action-btn.ctl.hold { background-color: #2f2a20 !important; color: var(--ink) !important; }
+[data-theme="dark"] #gameScreen.game-screen--stake .action-zone .action-btn.ctl.ff {
+    background-image: linear-gradient(180deg, #d9ab35, #b98a1c) !important;
+    color: #231a05 !important;
+}
+
+/* 按下：往下陷 3px，阴影收成 1px */
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl:is(.buy, .sell, .hold, .ff):active:not(:disabled):not([data-state="disabled"]):not([data-state="locked"]),
+#gameScreen.game-screen--stake .action-zone #holdBtn.ctl.is-fast-forwarding {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 var(--line) !important;
+    filter: none;
+}
+
+/* 不可用（已持仓不能买、T+1 当天不能卖、结算中）：变灰、虚线框、阴影压平 */
+#gameScreen.game-screen--stake .action-zone .action-btn.ctl:is(.buy, .sell, .hold, .ff):is(:disabled, [data-state="disabled"], [data-state="locked"]) {
+    background-color: #e7dcc0 !important;
+    background-image: none !important;
+    border-style: dashed !important;
+    border-color: #8a7a5a !important;
+    color: #5f5030 !important;
+    opacity: 0.85;
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #cdbd92 !important;
+}
+[data-theme="dark"] #gameScreen.game-screen--stake .action-zone .action-btn.ctl:is(.buy, .sell, .hold, .ff):is(:disabled, [data-state="disabled"], [data-state="locked"]) {
+    background-color: #1d1a14 !important;
+    border-color: #6b6150 !important;
+    color: #8f8468 !important;
+    box-shadow: 0 2px 0 #3a3426 !important;
+}
+
+/* ---------- 结算页（开一局）：只把顶部英雄卡点缀一下——金色内线、跑马灯、收益率转轮；其余保持纸墨 ---------- */
+#resultScreen.result-screen--stake .result-hero {
+    position: relative;
+    padding-top: 28px;
+    box-shadow: 2px 2px 0 var(--line), inset 0 0 0 3px var(--card), inset 0 0 0 5px var(--sp-gold-line);
+}
+#resultScreen.result-screen--stake .result-hero::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 10px;
+    height: 8px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 8px 50%, var(--sp-gold) 0 2px, transparent 3px),
+        radial-gradient(circle at 24px 50%, color-mix(in srgb, var(--sp-gold) 30%, transparent) 0 2px, transparent 3px);
+    background-size: 32px 8px;
+    background-repeat: repeat-x;
+    animation: spBulbs 1.4s steps(1) infinite;
+}
+#resultScreen.result-screen--stake .final-return {
+    --cell: calc(1ch + 0.06em);
+    font-family: var(--mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    letter-spacing: 0.06em;
+    background:
+        repeating-linear-gradient(90deg, transparent 0 calc(var(--cell) - 1px), var(--sp-divider) calc(var(--cell) - 1px) var(--cell)),
+        linear-gradient(180deg, var(--sp-window-2) 0%, var(--sp-window) 50%, var(--sp-window-2) 100%);
+    background-origin: content-box, padding-box;
+    background-clip: content-box, padding-box;
+    box-shadow: inset 0 2px 5px rgba(60, 40, 10, 0.18);
+}
+[data-theme="dark"] #resultScreen.result-screen--stake .final-return {
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 0 10px color-mix(in srgb, currentColor 45%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #resultScreen.result-screen--stake .result-hero::before { animation: none; }
+    #gameScreen.game-screen--stake .game-progress-shell::before { animation: none; }
+    #gameScreen.game-screen--stake .action-zone .action-btn.ctl { transition: none; }
+}

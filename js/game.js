@@ -891,6 +891,7 @@ export function updateUI() {
         gameScreenEl.classList.toggle('game-screen--puzzle', hud.isPuzzle);
         gameScreenEl.classList.toggle('game-screen--oneshot', !!hud.isOneshot);
         gameScreenEl.classList.toggle('game-screen--survival', !!hud.isSurvival);
+        gameScreenEl.classList.toggle('game-screen--stake', !!hud.isStake); // 开一局: slot-cabinet accents (css/stake-play.css)
         gameScreenEl.classList.toggle(
           'game-screen--classic',
           !hud.isPuzzle && !hud.isOneshot && !hud.isSurvival && !hud.isGhost

@@ -124,7 +124,7 @@ export function formatPlayHudChrome(input = {}) {
       isGhost: false,
       isStake: true,
       kind: 'stake',
-      badge: '韭币局',
+      badge: '开一局',
       subtitle: input.stakeSubtitle || '',
       mood: '韭币局 · 赚到的归你，亏的也是你的',
       dayLead: '第',
