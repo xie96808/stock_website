@@ -7,7 +7,7 @@ Whenever 韭币 is **earned**, the player gets the same 「获得韭币」card, 
 - The card sits **on top of everything** (`z-index: 190`: above toasts 180 / dialogs 150–170; only the first-game tutorial, 12000, is higher). It is never held back behind another dialog.
 - Refunds (押注退回本金、对战平局/取消退款) and admin grants/adjustments **never** pop a card.
 - The coin in the middle spins continuously (CSS 3D, hand-built: 7 stacked rim discs + a front and a back face, traced from the drawn coin art). `prefers-reduced-motion` freezes it.
-- Dismissing sends small coins flying to the balance chip in the top bar, which bumps as they land. No chip on screen → the coins just rise and fade.
+- Dismissing sends small coins flying to the balance chip in the top bar, which bumps as they land. No chip on screen (guests have no wallet in the top bar) → no flying coins at all; the card just fades.
 - Sound: a **recorded clip** (`assets/sfx/coin-gain.mp3`, ~1.8 s of coins poured into a bag, faded out at the end, ~30 KB), decoded once into a WebAudio buffer; volume 0.7–1.0 by amount. **No settings switch yet.** Browsers need one user tap before audio may play; `installAudioUnlock()` handles it, and the clip is never started on a context that is not running or that became ready >0.7 s late (silence beats a late sound). A missing / undecodable clip stays silent. The Android app's WebView allows autoplay.
 - Haptic: `navigator.vibrate(14)`. Needs `android.permission.VIBRATE` in the APK (added to the manifest — takes effect with the next APK release; Chrome on Android works already; iOS has no vibration API).
 

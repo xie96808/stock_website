@@ -247,20 +247,22 @@ function bump(el) {
 
 function flyCoinsToBalance(fromRect, amount) {
   if (!fromRect || prefersReduced()) return;
+  // No balance chip on screen (a guest has no wallet in the top bar, or this screen hides it): nothing to fly to, so the
+  // coins simply go with the card instead of drifting off in some arbitrary direction.
   const target = balanceTarget();
+  if (!target) return;
   const n = flyCoinCount(amount);
   const layer = document.createElement('div');
   layer.className = 'cg-fly-layer';
   document.body.appendChild(layer);
   const sx = fromRect.left + fromRect.width / 2;
   const sy = fromRect.top + fromRect.height / 2;
-  // no balance chip on this screen: the coins rise and fade where the card was (nothing is left hanging)
-  const tx = target ? target.x : sx;
-  const ty = target ? target.y : sy - 120;
+  const tx = target.x;
+  const ty = target.y;
   let landed = 0;
   const done = () => {
     landed += 1;
-    if (target) bump(target.el);
+    bump(target.el);
     if (landed >= n) window.setTimeout(() => layer.remove(), 60);
   };
   for (let i = 0; i < n; i++) {
@@ -293,7 +295,6 @@ function flyCoinsToBalance(fromRect, amount) {
     };
     anim.oncancel = () => c.remove();
   }
-  if (!target) window.setTimeout(() => layer.remove(), 900 + n * 50);
 }
 
 /** Wire the audio unlock and warm the card art. Safe to call more than once. */
