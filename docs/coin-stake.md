@@ -39,6 +39,21 @@ Because payouts are whole coins, a small stake with a small move can round to ze
 * Result screen shows 投入 / 盈亏 / 对局费 / 到账, and the top balance refreshes.
 * A stake game in progress is resumable from the home banner (the coins are at stake).
 
+## 开一局的界面皮肤（折中风格）
+
+进场后的界面与结算页保持纸墨手绘底子，只在 `css/stake-play.css` 里加了「老虎机」点缀，且**只**在
+`#gameScreen.game-screen--stake` / `#resultScreen.result-screen--stake` 下生效（`js/game.js`、`js/result.js` 按 stake 打开 class；
+`tests/stake-play-skin.test.js` 断言每条规则都带这个作用域）：
+
+- 收益率框 / 结算英雄卡：金色内线 + 一排跑马灯 + 收益率转轮窗（等宽字体，用重复渐变画格线，无 JS）。
+- 收益率变化时数字像老虎机转轮一样逐位滚动、左边先停（`js/stake-reel-pure.js` 算转动计划，`js/stake-reel.js` 监听 `#rlCardPnl` / `#finalReturn`；
+  元素的 textContent 始终等于显示的文字，滚动字符放在 `data-strip` 由 CSS 画出；`prefers-reduced-motion` 下不转）。
+- 实时走势卡：只加金色内线，图表本身不动。
+- 买入 / 卖出 / 观望 / 快进：用 CSS 画的街机按钮盖掉手绘贴图（旧规则有 `!important`，所以这里也要 `!important`），
+  按下下陷 3px，不可用（已持仓 / T+1 / 结算中）变灰 + 虚线框。
+- 白天 = 纸色；黑夜 = 现有墨色主题 + 偏暗的铜金。红涨绿跌沿用 `--gain-color` / `--loss-color`。
+- HUD 徽章文案是「开一局」（`formatPlayHudChrome`）。韭币盈亏弹窗保持不变。
+
 ## 韭币榜
 
 Opened by tapping the 韭币余额 chip at the top. `GET /api/v1/leaderboard/coins?board=balance|week`.

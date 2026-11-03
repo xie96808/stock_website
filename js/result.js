@@ -129,6 +129,7 @@ export function endGame() {
             : '成交：次日开盘';
     }
 
+    document.getElementById('resultScreen')?.classList.toggle('result-screen--stake', view.gameKind === 'stake'); // 开一局 hero accents (css/stake-play.css)
     const assistEl = document.getElementById('assistClassLabel');
     if (assistEl) {
         if (view.gameKind === 'oneshot') {

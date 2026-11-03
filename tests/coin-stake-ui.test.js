@@ -33,7 +33,7 @@ test("HUD: stake amount only, no buy counter", () => {
   assert.equal(stakeHudSubtitle({ amount: 50 }), "投入 50");
   assert.equal(stakeHudSubtitle(null), "");
   const hud = formatPlayHudChrome({ gameKind: "stake", stakeSubtitle: "投入 50" });
-  assert.equal(hud.badge, "韭币局");
+  assert.equal(hud.badge, "开一局");
   assert.equal(hud.isStake, true);
   assert.equal(hud.isOneshot, false);
 });

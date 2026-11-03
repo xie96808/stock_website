@@ -3,6 +3,7 @@ import { chartRefs } from './state.js';
 import { hideResumeBanner } from './resume-banner.js';
 import { initActionZoneSync } from './action-zone-sync.js';
 import { initReturnsLayout } from './returns-layout.js';
+import { initStakeReel } from './stake-reel.js';
 import {
     getSession,
     getStocksCatalog,
@@ -125,6 +126,7 @@ export async function startGame(options = {}) {
     syncMobileIntelDefaults();
     initActionZoneSync();
     initReturnsLayout();
+    initStakeReel(); // 开一局: 收益率像老虎机转轮一样转动 (css/stake-play.css .sp-cell)
 
     // Clear leftover 波段分析 from a previous run
     const tagsEl = document.getElementById('waveAnalysisTags');
@@ -891,6 +893,7 @@ export function updateUI() {
         gameScreenEl.classList.toggle('game-screen--puzzle', hud.isPuzzle);
         gameScreenEl.classList.toggle('game-screen--oneshot', !!hud.isOneshot);
         gameScreenEl.classList.toggle('game-screen--survival', !!hud.isSurvival);
+        gameScreenEl.classList.toggle('game-screen--stake', !!hud.isStake); // 开一局: slot-cabinet accents (css/stake-play.css)
         gameScreenEl.classList.toggle(
           'game-screen--classic',
           !hud.isPuzzle && !hud.isOneshot && !hud.isSurvival && !hud.isGhost
