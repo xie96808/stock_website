@@ -299,6 +299,7 @@ export function buildKlineOption(vm) {
         showDataZoomSlider,
         showLegend,
         pvpBottom = null, // 'volume' | 'macd' — battle two-pane indicator toggle
+        hideYAxis = false, // game mode only: 开一局 doesn't care about absolute price → no price labels, grid reclaims the left gutter
         extraMarks = [], // game mode only: grey 「我买/我卖」 pins ({ day, price, text }) — 最优路线重演 shows the player's own trades
     } = vm;
 
@@ -412,7 +413,8 @@ export function buildKlineOption(vm) {
         const hi = Math.max(Number(d.high) || 0, Number(d.open) || 0, Number(d.close) || 0);
         return Math.max(m, hi.toFixed(2).length);
     }, 4);
-    const yAxisLeftPx = Math.round(12 + maxPriceChars * 6.3);
+    const noYLabels = !!hideYAxis && clean && !isPvp && !isResult;
+    const yAxisLeftPx = noYLabels ? 10 : Math.round(12 + maxPriceChars * 6.3);
     const pvpTickChars = isPvp ? Math.max(...[-1, 1].map(toward => String(pvpAxisBound({
         min: Math.min(...bars.map(bar => bar.low)),
         max: Math.max(...bars.map(bar => bar.high)),
@@ -915,7 +917,9 @@ export function buildKlineOption(vm) {
                 nameGap: 36,
                 nameTextStyle: undefined,
                 splitNumber: clean ? 3 : 5,
-                axisLabel: { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
+                axisLabel: noYLabels
+                    ? { show: false }
+                    : { color: axisLabelColor, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 10 },
                 axisLine: { show: false },
                 axisTick: { show: !clean },
                 splitLine: { lineStyle: { color: splitLineColor, ...(clean ? { type: 'dashed' } : {}) } },
