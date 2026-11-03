@@ -84,9 +84,41 @@
     background: linear-gradient(180deg, var(--sp-gold-hi), var(--sp-gold));
 }
 
-/* ---------- 2. 实时走势框：只加金色内线，图表本身一概不动 ---------- */
+/* ---------- 2. 紧凑首屏：手机上进场就能同时看到 K 线和成交量，不用下滑 ----------
+   · 退出对局 与 顶部卡片之间的缝收紧；
+   · 去掉走势区外面那层带金色内线的卡片（里面本来就有一层手绘图表框，重复了）；
+   · 「实时走势」标题只留给读屏（视觉隐藏），K 线整体上移；
+   · 图表框高度由 js/stake-chart-fit.js 按「视口 − 顶边 − 按钮栏」算好写进 --sp-chart-h；价格纵轴在 js/kline-option.js 里不画。 */
+#gameScreen.game-screen--stake > .sg-backbar { margin-bottom: -8px; }
+
 #gameScreen.game-screen--stake .market-stage {
-    box-shadow: 2px 2px 0 var(--line), inset 0 0 0 3px var(--card), inset 0 0 0 5px var(--sp-gold-line);
+    padding: 0;
+    min-height: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+#gameScreen.game-screen--stake .market-stage-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+@media (max-width: 600px) {
+    #gameScreen.game-screen--stake .market-stage .chart-stage {
+        flex: none;
+        height: var(--sp-chart-h, 360px);
+    }
+    #gameScreen.game-screen--stake .market-stage #kline-chart {
+        height: 100%;
+        min-height: 0;
+    }
 }
 
 /* ---------- 3. 买入 / 卖出 / 观望 / 快进：CSS 画的街机按钮（盖掉手绘贴图），按下会陷下去 ---------- */

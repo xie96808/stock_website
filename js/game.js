@@ -4,6 +4,7 @@ import { hideResumeBanner } from './resume-banner.js';
 import { initActionZoneSync } from './action-zone-sync.js';
 import { initReturnsLayout } from './returns-layout.js';
 import { initStakeReel } from './stake-reel.js';
+import { initStakeChartFit } from './stake-chart-fit.js';
 import {
     getSession,
     getStocksCatalog,
@@ -126,6 +127,7 @@ export async function startGame(options = {}) {
     syncMobileIntelDefaults();
     initActionZoneSync();
     initReturnsLayout();
+    initStakeChartFit(); // 开一局: K 线 + 成交量首屏看全 (css/stake-play.css --sp-chart-h)
     initStakeReel(); // 开一局: 收益率像老虎机转轮一样转动 (css/stake-play.css .sp-cell)
 
     // Clear leftover 波段分析 from a previous run
@@ -370,6 +372,7 @@ export function updateChart() {
         windowSize: KLINE_WINDOW,
         resetDataZoom,
         showDataZoomSlider: false,
+        hideYAxis: session.gameKind === 'stake', // 开一局: price level is irrelevant, only the shape + volume matter
         syncHover: (kd) => {
             document.getElementById('hoverLabel').textContent = '点选/悬停';
             document.getElementById('hoverDate').textContent = kd.date;
