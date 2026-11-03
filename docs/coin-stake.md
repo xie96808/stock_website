@@ -46,6 +46,8 @@ Because payouts are whole coins, a small stake with a small move can round to ze
 `tests/stake-play-skin.test.js` 断言每条规则都带这个作用域）：
 
 - 收益率框 / 结算英雄卡：金色内线 + 一排跑马灯 + 收益率转轮窗（等宽字体，用重复渐变画格线，无 JS）。
+- 收益率变化时数字像老虎机转轮一样逐位滚动、左边先停（`js/stake-reel-pure.js` 算转动计划，`js/stake-reel.js` 监听 `#rlCardPnl` / `#finalReturn`；
+  元素的 textContent 始终等于显示的文字，滚动字符放在 `data-strip` 由 CSS 画出；`prefers-reduced-motion` 下不转）。
 - 实时走势卡：只加金色内线，图表本身不动。
 - 买入 / 卖出 / 观望 / 快进：用 CSS 画的街机按钮盖掉手绘贴图（旧规则有 `!important`，所以这里也要 `!important`），
   按下下陷 3px，不可用（已持仓 / T+1 / 结算中）变灰 + 虚线框。

@@ -185,6 +185,27 @@
     text-shadow: 0 0 10px color-mix(in srgb, currentColor 45%, transparent);
 }
 
+/* ---------- 收益率转轮：每位一个窗口，滚动用的字符放在 data-strip（js/stake-reel.js），::before 把它们垂直排在最终字符上面 ---------- */
+#gameScreen.game-screen--stake .sp-cell,
+#resultScreen.result-screen--stake .sp-cell {
+    display: block;
+    height: 1.2em;
+    line-height: 1.2em;
+    overflow: hidden;
+    text-align: center;
+}
+#gameScreen.game-screen--stake .sp-cell[data-strip]::before,
+#resultScreen.result-screen--stake .sp-cell[data-strip]::before {
+    content: attr(data-strip);
+    display: block;
+    white-space: pre;
+    animation: spRoll var(--t, 500ms) cubic-bezier(0.15, 0.8, 0.25, 1) both;
+}
+@keyframes spRoll {
+    from { margin-top: 0; }
+    to   { margin-top: calc(var(--k, 1) * -1.2em); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     #resultScreen.result-screen--stake .result-hero::before { animation: none; }
     #gameScreen.game-screen--stake .game-progress-shell::before { animation: none; }
