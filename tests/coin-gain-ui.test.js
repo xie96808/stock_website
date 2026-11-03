@@ -47,6 +47,8 @@ test('reduced motion: everything holds still and the card only fades', () => {
   assert.match(block, /\.cg-coin3d\s*\{[^}]*animation:\s*none/);
   assert.match(js, /prefersReduced\(\)/);
   assert.match(js, /if \(!fromRect \|\| prefersReduced\(\)\) return;/, 'no flying coins in reduced motion');
+  assert.match(js, /if \(!target\) return;/, 'no balance chip (guests) → no flying coins');
+  assert.doesNotMatch(js, /sy - 120/, 'the old "rise somewhere" fallback is gone');
 });
 
 test('the card reuses the wheel art that exists on disk', () => {
