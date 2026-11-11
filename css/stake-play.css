@@ -226,16 +226,18 @@
     overflow: hidden;
     text-align: center;
 }
+/* 静止状态 = 已经落定在最终字符上（margin-top 直接是终点）；动画只是「从 0 滚到终点」，fill 只往回填。
+   这样即使浏览器暂停 / 取消 / 节流了动画（省电模式、后台标签、低端 WebView），数字也停在正确的字符上，不会卡在半截。 */
 #gameScreen.game-screen--stake .sp-cell[data-strip]::before,
 #resultScreen.result-screen--stake .sp-cell[data-strip]::before {
     content: attr(data-strip);
     display: block;
     white-space: pre;
-    animation: spRoll var(--t, 500ms) cubic-bezier(0.15, 0.8, 0.25, 1) both;
+    margin-top: calc(var(--k, 1) * -1.2em);
+    animation: spRoll var(--t, 500ms) cubic-bezier(0.15, 0.8, 0.25, 1) backwards;
 }
 @keyframes spRoll {
     from { margin-top: 0; }
-    to   { margin-top: calc(var(--k, 1) * -1.2em); }
 }
 
 @media (prefers-reduced-motion: reduce) {

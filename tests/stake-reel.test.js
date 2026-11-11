@@ -49,3 +49,24 @@ test("identical text, or empty -> empty, has nothing to roll", () => {
   assert.equal(reelTotalMs(reelPlan("+1.00%", "+1.00%")), 0);
   assert.deepEqual(reelPlan("", ""), []);
 });
+
+// 回归：用户反馈收益率数字卡在半截（动画被浏览器冻住 / 取消后没有落定）。
+test("the resting style of a rolling cell is the final character, so a frozen / cancelled animation cannot leave it mid-roll", async () => {
+  const { readFileSync } = await import("node:fs");
+  const css = readFileSync(new URL("../css/stake-play.css", import.meta.url), "utf8");
+  const rule = css.match(/\.sp-cell\[data-strip\]::before[^{]*\{([^}]*)\}/);
+  assert.ok(rule, "rolling ::before rule exists");
+  assert.match(rule[1], /margin-top:\s*calc\(var\(--k, 1\) \* -1\.2em\)/, "base style already sits on the final character");
+  assert.match(rule[1], /animation:[^;]*\bbackwards\b/, "animation only back-fills; it never decides the end state");
+  assert.doesNotMatch(rule[1], /\bboth\b|\bforwards\b/);
+  const kf = css.match(/@keyframes spRoll\s*\{([^}]*\{[^}]*\}[^}]*)\}/);
+  assert.ok(kf && !/\bto\s*\{/.test(kf[1]), "keyframes only define the start");
+});
+
+test("stake-reel.js settles by timer (not animationend) and when the page comes back", async () => {
+  const { readFileSync } = await import("node:fs");
+  const js = readFileSync(new URL("../js/stake-reel.js", import.meta.url), "utf8");
+  assert.match(js, /setTimeout\(\(\) => settle\(el\)/);
+  assert.match(js, /visibilitychange/);
+  assert.match(js, /pageshow/);
+});

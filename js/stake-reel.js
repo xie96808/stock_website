@@ -9,6 +9,9 @@
 import { reelPlan, reelTotalMs } from './stake-reel-pure.js';
 
 let started = false;
+const SETTLE_SLACK_MS = 200;
+// 镜像（returns-layout）会在我们渲染后立刻把同样的文字再写一遍；只在这个窗口内把转动补回去，之后的重写一律按静止字符处理
+const REPAINT_REARM_MS = 150;
 
 function reduced() {
   try { return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches; } catch { return false; }
@@ -29,20 +32,43 @@ function render(el, plan, still) {
   }
 }
 
+/** 转完后把 DOM 收成纯文字（去掉 data-strip）：不依赖 animationend，动画被暂停 / 取消时也能落定。 */
+function scheduleSettle(el, plan) {
+  clearTimeout(el._spTimer);
+  const ms = reelTotalMs(plan) + SETTLE_SLACK_MS;
+  if (!(ms > SETTLE_SLACK_MS)) return;
+  el._spTimer = setTimeout(() => settle(el), ms);
+}
+
+function settle(el) {
+  clearTimeout(el._spTimer);
+  el._spPlan = null;
+  if (!el.querySelector('.sp-cell[data-strip]')) return;
+  const cur = (el.textContent || '').trim();
+  render(el, reelPlan(cur, cur), true);
+}
+
 function handle(el) {
   const cur = (el.textContent || '').trim();
   const hasCells = !!el.querySelector('.sp-cell');
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
   if (cur === el._spLast) {
-    // something repainted the same text (e.g. the mirror in returns-layout) while a roll was running: put the roll back
-    if (!hasCells && el._spPlan && now < el._spUntil) render(el, el._spPlan, false);
+    // the mirror in returns-layout repaints the same text right after us: put the roll back, but only once and only right away
+    if (!hasCells && el._spPlan && now - el._spStart < REPAINT_REARM_MS) {
+      render(el, el._spPlan, false);
+      return;
+    }
+    if (!hasCells && cur) render(el, reelPlan(cur, cur), true);
     return;
   }
   const plan = reelPlan(el._spLast ?? '', cur);
   el._spLast = cur;
   el._spPlan = plan;
-  el._spUntil = now + reelTotalMs(plan) + 120;
-  render(el, plan, reduced());
+  el._spStart = now;
+  const still = reduced();
+  render(el, plan, still);
+  if (still) clearTimeout(el._spTimer);
+  else scheduleSettle(el, plan);
 }
 
 function watch(rootId, selector, stakeClass) {
@@ -61,4 +87,10 @@ export function initStakeReel() {
   started = true;
   watch('gameScreen', '#rlCardPnl', 'game-screen--stake');
   watch('resultScreen', '#finalReturn', 'result-screen--stake');
+  // 页面从后台回来 / 从 bfcache 恢复：动画可能被浏览器掐断，直接落定
+  const settleAll = () => {
+    for (const id of ['rlCardPnl', 'finalReturn']) { const el = document.getElementById(id); if (el) settle(el); }
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) settleAll(); });
+  window.addEventListener('pageshow', settleAll);
 }
